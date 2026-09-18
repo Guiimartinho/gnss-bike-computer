@@ -14,8 +14,14 @@
 #include <zephyr/sys/reboot.h>
 #include <zephyr/task_wdt/task_wdt.h>
 
-#if defined(CONFIG_SOC_SERIES_NRF52)
+/*
+ * The hardware watchdog behind the task watchdog: watchdog0 of the board
+ * (wdt0 on the nRF52840, wdt31 on the nRF54LM20). DT_REG_ADDR gives the
+ * address the CPU sees, secure or not.
+ */
+#if defined(CONFIG_SOC_FAMILY_NORDIC_NRF) && DT_NODE_HAS_STATUS(DT_ALIAS(watchdog0), okay)
 #include <hal/nrf_wdt.h>
+#define HW_WDT_REGS ((NRF_WDT_Type *)DT_REG_ADDR(DT_ALIAS(watchdog0)))
 #endif
 
 #include "app_types.h"
@@ -240,15 +246,16 @@ static app_err_t init_application(void)
  * Only pin, power-on, brownout and watchdog resets stop the nRF52 WDT: after
  * sys_reboot() (fatal error handler, task watchdog) it keeps counting with
  * the previous timeout, and the boot has to feed it until the threads add
- * their task watchdog channels.
+ * their task watchdog channels. The same code serves the nRF54L; if its WDT
+ * stops on a soft reset, the check below finds it idle and does nothing.
  */
 static void wdt_feed_if_running(void)
 {
-#if defined(CONFIG_SOC_SERIES_NRF52)
-    if (nrf_wdt_started_check(NRF_WDT)) {
+#if defined(HW_WDT_REGS)
+    if (nrf_wdt_started_check(HW_WDT_REGS)) {
         for (uint32_t rr = 0U; rr < NRF_WDT_CHANNEL_NUMBER; rr++) {
-            if (nrf_wdt_reload_request_enable_check(NRF_WDT, (nrf_wdt_rr_register_t)rr)) {
-                nrf_wdt_reload_request_set(NRF_WDT, (nrf_wdt_rr_register_t)rr);
+            if (nrf_wdt_reload_request_enable_check(HW_WDT_REGS, (nrf_wdt_rr_register_t)rr)) {
+                nrf_wdt_reload_request_set(HW_WDT_REGS, (nrf_wdt_rr_register_t)rr);
             }
         }
     }

@@ -46,6 +46,7 @@ Revisão completa de 2026-09-18: análise do legacy e do port, migração para o
 - `.gitignore`: builds, caches do clangd, `__pycache__`, `node_modules` e `.claude/settings.local.json`.
 - Imagens de `docs/` movidas para `docs/img/`; os quatro documentos de novembro de 2025 arquivados sem alteração em `docs/historico/2025-11/`.
 - Tamanho: FLASH 294.796 B (−4,3 KB sem o driver QSPI do DK), RAM 118.080 B (+2,9 KB pelas pilhas maiores).
+- A alimentação do WDT no boot, depois de um reset por software, usa o `watchdog0` do devicetree em vez do `NRF_WDT` fixo do nRF52: vale também para o `wdt31` do nRF54LM20; o binário do nRF52840 não mudou.
 - O `crash_recovery` lê a causa do reset pela API `hwinfo` do Zephyr, que vale para o nRF52 (POWER) e o nRF54L (RESET), e decodifica o CFSR em qualquer núcleo ARMv7-M ou ARMv8-M Mainline (Cortex-M4 e M33), não só no M4. FLASH do nRF52840 +112 B.
 - O código chega aos barramentos pelos aliases do devicetree (`gps-uart`, `sensor-i2c`, `lcd-spi`, `sdc-spi`), não pelas instâncias do nRF52 (`uart1`, `i2c0`, `spi1`, `spi2`): passo para compilar em outras placas; o binário do nRF52840 não mudou.
 - O `CMakeLists.txt` não fixa mais a placa nem o overlay: a placa vem do `-b` (`BOARD` no `fw.sh` e no `build.bat`) e o overlay da V3 passou a `boards/nrf52840dk_nrf52840.overlay`, aplicado pelo nome; o overlay de teste de 2025-11 que ocupava esse nome e nunca entrava no build saiu. O binário do nRF52840 não mudou.

@@ -103,7 +103,7 @@ O `task_wdt` do Zephyr dá a cada thread o seu canal de 4 s, o mesmo tempo do WD
 
 - `CONFIG_TASK_WDT_MIN_TIMEOUT=4000`, igual aos canais: o timer do kernel não acorda a CPU a cada 100 ms só para alimentar o WDT.
 - O WDT roda durante o sono e pausa com a CPU parada pelo depurador (`WDT_OPT_PAUSE_HALTED_BY_DBG`). O timer do kernel não pausa: depois de um breakpoint longo o `task_wdt` reinicia a placa. Para depurar passo a passo, compile com `-DCONFIG_TASK_WDT=n`.
-- O WDT do nRF52 só para com reset por pino, por energia, por brownout ou do próprio WDT. Depois de um `sys_reboot()` (erro fatal, `task_wdt`) ele continua contando: o `main()` o alimenta (`wdt_feed_if_running()`) entre as etapas da inicialização, até as threads criarem os canais.
+- O WDT do nRF52 só para com reset por pino, por energia, por brownout ou do próprio WDT. Depois de um `sys_reboot()` (erro fatal, `task_wdt`) ele continua contando: o `main()` o alimenta (`wdt_feed_if_running()`) entre as etapas da inicialização, até as threads criarem os canais. O WDT alimentado é o `watchdog0` do devicetree (`wdt0` no nRF52840, `wdt31` no nRF54LM20), então o mesmo código serve às duas famílias.
 - A carga dos segmentos na partida da `main_loop` não está coberta pelo canal dela, porque pode passar de 4 s com muitos arquivos no SD.
 - Não testado na placa.
 
