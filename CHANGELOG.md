@@ -8,6 +8,7 @@ Revisão completa de 2026-09-18: análise do legacy e do port, migração para o
 
 ### Adicionado
 
+- `zephyr_app/sysbuild.conf` com `SB_CONFIG_PARTITION_MANAGER=n`: build com sysbuild, sem o Partition Manager depreciado.
 - `.gitattributes` (LF no repositório, CRLF nos `.bat`, `hardware/` e os dados de teste de `tools/TDD/` byte a byte) e `.editorconfig`.
 
 ### Alterado
