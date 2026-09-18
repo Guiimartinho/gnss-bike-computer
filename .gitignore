@@ -1,1 +1,22 @@
+# Builds do west/CMake (zephyr_app/build, zephyr_app/build_*, build/, testes de host)
 build*/
+
+# Cache do clangd e de ferramentas
+.cache/
+compile_commands.json
+
+# Python (use um venv fora do repositório: no Windows, Scripts/ e scripts/
+# são a mesma pasta)
+__pycache__/
+*.pyc
+
+# Node (tools/zpm)
+node_modules/
+
+# Editores
+*.swp
+*~
+.vs/
+
+# Configuração local do Claude Code (permissões pessoais)
+.claude/settings.local.json
