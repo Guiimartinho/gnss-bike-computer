@@ -17,3 +17,7 @@ Revisão completa de 2026-09-18: análise do legacy e do port, migração para o
 ### Removido
 
 - Template vazio de app da raiz (`CMakeLists.txt`, `prj.conf`, `src/main.c`), que vinha do commit inicial e não era o firmware.
+
+## Legacy
+
+O stravaV10 original (Vincent Gollé, 2015 a 2020, CC BY-NC 4.0) foi copiado para `legacy/`, `libraries/` e `tools/` em 2025-11-25. Essas pastas não são versionadas aqui como produto: são referência.
