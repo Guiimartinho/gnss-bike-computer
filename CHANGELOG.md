@@ -19,6 +19,7 @@ Revisão completa de 2026-09-18: análise do legacy e do port, migração para o
 - Reset do FXOS8700 flutuando durante a inicialização do driver e com semântica invertida: `reset-gpios` ativo alto no nó e `imu_reset` corrigido.
 - Nós do nRF52840-DK nos pinos da placa: `qspi` e `mx25r64` (CS do LCD), `spi3` (NeoPixel, FIX e standby do GPS) e `pwm0` (botão central) desligados; `uart0` sem RTS/CTS (pinos do GPS); `uart1` sem o pull-up herdado no TX.
 - Erro fatal travava o aparelho: `CONFIG_RESET_ON_FATAL_ERROR=y`.
+- Causa do reset sempre "desconhecida" no NCS v3.3.0: o Zephyr 4.3.99 trocou `CONFIG_SOC_SERIES_NRF52X` por `CONFIG_SOC_SERIES_NRF52` (`src/model/crash_recovery.c`).
 
 ### Adicionado
 

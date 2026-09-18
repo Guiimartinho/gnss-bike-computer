@@ -13,7 +13,7 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/sys/reboot.h>
 
-#if defined(CONFIG_SOC_SERIES_NRF52X)
+#if defined(CONFIG_SOC_SERIES_NRF52)
 #include <hal/nrf_power.h>
 #endif
 
@@ -141,7 +141,7 @@ static bool verify_hardfault_crc(const hardfault_desc_t *desc)
  */
 static reset_reason_t read_hw_reset_reason(void)
 {
-#if defined(CONFIG_SOC_SERIES_NRF52X)
+#if defined(CONFIG_SOC_SERIES_NRF52)
     uint32_t reason = nrf_power_resetreas_get(NRF_POWER);
 
     /* Clear the reset reason register */
