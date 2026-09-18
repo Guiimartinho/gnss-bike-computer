@@ -87,16 +87,20 @@ static float parse_coordinate(const char *field, char dir)
         return 0.0f;
     }
 
-    float raw = (float)atof(field);
-    int32_t degrees = (int32_t)(raw / 100.0f);
-    float minutes = raw - (float)(degrees * 100);
-    float result = (float)degrees + (minutes / 60.0f);
+    /*
+     * Keep DDMM.MMMMM in double until the end: a float holds only ~7 digits,
+     * which costs up to ~2 m on DDDMM.MMMM longitudes before the division.
+     */
+    double raw = atof(field);
+    int32_t degrees = (int32_t)(raw / 100.0);
+    double minutes = raw - ((double)degrees * 100.0);
+    double result = (double)degrees + (minutes / 60.0);
 
     if ((dir == 'S') || (dir == 'W')) {
         result = -result;
     }
 
-    return result;
+    return (float)result;
 }
 
 /**
@@ -109,13 +113,26 @@ static void parse_time(const char *field, nmea_data_t *data)
     }
 
     /* HHMMSS.sss format */
-    if (strlen(field) >= 6U) {
+    size_t len = strlen(field);
+
+    if (len >= 6U) {
         data->hour = (uint8_t)(((field[0] - '0') * 10) + (field[1] - '0'));
         data->minute = (uint8_t)(((field[2] - '0') * 10) + (field[3] - '0'));
         data->second = (uint8_t)(((field[4] - '0') * 10) + (field[5] - '0'));
 
-        if ((strlen(field) > 7U) && (field[6] == '.')) {
-            data->millisecond = (uint16_t)(atoi(&field[7]) * 10);
+        if ((len > 7U) && (field[6] == '.')) {
+            /* Fraction of a second: ".2", ".20" and ".200" are all 200 ms */
+            uint16_t ms = 0U;
+            uint16_t scale = 100U;
+
+            for (size_t i = 7U; (i < len) && (scale > 0U); i++) {
+                if ((field[i] < '0') || (field[i] > '9')) {
+                    break;
+                }
+                ms = (uint16_t)(ms + ((uint16_t)(field[i] - '0') * scale));
+                scale = (uint16_t)(scale / 10U);
+            }
+            data->millisecond = ms;
         }
     }
 }
@@ -445,12 +462,20 @@ static app_err_t parse_vtg(const char *sentence, nmea_data_t *data)
  */
 static nmea_type_t identify_sentence(const char *sentence)
 {
-    if (strlen(sentence) < 6U) {
+    /*
+     * gps_mgmt passes whole lines ("$GPGGA,..."), while nmea_parser_char()
+     * stores the sentence without the '$' ("GPGGA,..."): accept both.
+     */
+    if (sentence[0] == '$') {
+        sentence++;
+    }
+
+    if (strlen(sentence) < 5U) {
         return NMEA_UNKNOWN;
     }
 
     /* Skip talker ID (GP, GL, GN, etc.) */
-    const char *type = &sentence[3];
+    const char *type = &sentence[2];
 
     if (strncmp(type, "GGA", 3) == 0) {
         return NMEA_GGA;
@@ -536,8 +561,10 @@ bool nmea_parser_char(char c)
             nmea_data_t data;
             if (nmea_parser_sentence(sentence_buf, &data) == APP_OK) {
                 last_data = data;
-                if (data.fix_valid && (data.latitude != 0.0f || data.longitude != 0.0f)) {
-                    position_valid = true;
+                /* Only the sentences that carry a position decide it, both ways */
+                if ((data.type == NMEA_GGA) || (data.type == NMEA_RMC)) {
+                    position_valid = data.fix_valid &&
+                                     ((data.latitude != 0.0f) || (data.longitude != 0.0f));
                 }
                 if (data.hour != 0U || data.minute != 0U) {
                     time_valid = true;

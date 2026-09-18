@@ -6,9 +6,13 @@ Mudanças relevantes do projeto. Formato inspirado no [Keep a Changelog](https:/
 
 Revisão completa de 2026-09-18: análise do legacy e do port, migração para o NCS v3.3.0, correções críticas, testes de host e documentação. Nada foi testado na placa nem no nRF52840-DK.
 
+### Corrigido
+
+- Parser NMEA: o caminho caractere a caractere nunca reconhecia uma sentença; milissegundos lidos errado (`.200` virava 2000 ms); coordenadas perdiam precisão ao virar `float` antes da divisão; a posição válida nunca voltava a falso (`src/drivers/gps/nmea_parser.c`).
+
 ### Adicionado
 
-- Testes de host do port (`zephyr_app/tests/host/`, rodados por `tools/fw/host_tests.sh`): Unity 2.6.1 + CTest com o GCC do PC e shims do Zephyr; 3 conjuntos, 20 casos (`vecteur`, `power_zone`, `suffer_score`), com oráculo do legacy.
+- Testes de host do port (`zephyr_app/tests/host/`, rodados por `tools/fw/host_tests.sh`): Unity 2.6.1 + CTest com o GCC do PC e shims do Zephyr; 4 conjuntos, 32 casos (`vecteur`, `power_zone`, `suffer_score`, `nmea_parser`), com oráculo do legacy.
 - `zephyr_app/sysbuild.conf` com `SB_CONFIG_PARTITION_MANAGER=n`: build com sysbuild, sem o Partition Manager depreciado.
 - `.gitattributes` (LF no repositório, CRLF nos `.bat`, `hardware/` e os dados de teste de `tools/TDD/` byte a byte) e `.editorconfig`.
 
