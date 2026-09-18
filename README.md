@@ -109,6 +109,7 @@ flowchart TB
 | [10 · Status do port](docs/10-status-do-port.md) | matriz, correções, defeitos, roteiro, decisões |
 | [11 · Qualidade e MISRA](docs/11-qualidade-misra.md) | regras e análise estática |
 | [12 · Ferramentas e testes](docs/12-ferramentas-testes.md) | testes de host, simulador do legacy, licenças |
+| [13 · Placa nova](docs/13-placa-nova.md) | proposta de hardware da placa própria |
 | [CHANGELOG](CHANGELOG.md) | histórico de mudanças |
 
 ## Estado e próximos passos

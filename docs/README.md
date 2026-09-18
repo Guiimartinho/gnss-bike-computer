@@ -16,5 +16,6 @@
 | 10 | [Status do port](10-status-do-port.md) | matriz legacy × port, defeitos conhecidos, roteiro |
 | 11 | [Qualidade e MISRA](11-qualidade-misra.md) | revisão MISRA do legacy, regras do port, cppcheck |
 | 12 | [Ferramentas e testes](12-ferramentas-testes.md) | simulador TDD do legacy, zpm, testes de host do port, bibliotecas e licenças |
+| 13 | [Placa nova](13-placa-nova.md) | proposta de hardware da placa própria: nRF54LM20A, display colorido, GNSS e antena interna, energia com painel solar, sensores, orçamentos de pinos e de energia |
 
 Imagens da interface e fotos do aparelho ficam em [`img/`](img/). Os documentos de novembro de 2025, substituídos por estes, estão em [`historico/`](historico/).

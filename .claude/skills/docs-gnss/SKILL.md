@@ -94,6 +94,7 @@ python tools/docs/links_check.py        # links relativos e âncoras
 | status do port e roteiro | `docs/10-status-do-port.md` |
 | qualidade, MISRA, análise estática | `docs/11-qualidade-misra.md` |
 | ferramentas e testes | `docs/12-ferramentas-testes.md` |
+| proposta da placa nova | `docs/13-placa-nova.md` |
 | código herdado | `legacy/README.md` |
 
 Quando o comportamento muda, o documento muda **junto** com o código, e o `CHANGELOG.md` ganha uma linha em `[Não lançado]`. Quando um item do port muda de estado, atualize a matriz de `docs/10-status-do-port.md` e a seção "Estado" do `CLAUDE.md`.
