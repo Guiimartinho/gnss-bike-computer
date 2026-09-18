@@ -8,6 +8,7 @@ Revisão completa de 2026-09-18: análise do legacy e do port, migração para o
 
 ### Adicionado
 
+- Testes de host do port (`zephyr_app/tests/host/`, rodados por `tools/fw/host_tests.sh`): Unity 2.6.1 + CTest com o GCC do PC e shims do Zephyr; 3 conjuntos, 20 casos (`vecteur`, `power_zone`, `suffer_score`), com oráculo do legacy.
 - `zephyr_app/sysbuild.conf` com `SB_CONFIG_PARTITION_MANAGER=n`: build com sysbuild, sem o Partition Manager depreciado.
 - `.gitattributes` (LF no repositório, CRLF nos `.bat`, `hardware/` e os dados de teste de `tools/TDD/` byte a byte) e `.editorconfig`.
 
