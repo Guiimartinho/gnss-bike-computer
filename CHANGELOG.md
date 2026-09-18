@@ -27,6 +27,7 @@ Revisão completa de 2026-09-18: análise do legacy e do port, migração para o
 
 - Testes de host do port (`zephyr_app/tests/host/`, rodados por `tools/fw/host_tests.sh`): Unity 2.6.1 + CTest com o GCC do PC, shims do Zephyr, sistema de arquivos em memória e HAL falso do GPS; 6 conjuntos, 42 casos (`vecteur`, `power_zone`, `suffer_score`, `nmea_parser`, `sd_logger`, `gps_mgmt`), com oráculo do legacy e mutação conferida nas correções.
 - `tools/fw/`: `ncs_env.sh` e `ncs_env.bat` (ambiente do NCS a partir do `environment.json` do toolchain) e `fw.sh` (build, flash, recover, devices, size).
+- `tools/docs/`: `mermaid_check.py` (extrai e renderiza os diagramas com o mermaid-cli local e aponta diagramas em texto puro) e `links_check.py`.
 - `zephyr_app/sysbuild.conf` com `SB_CONFIG_PARTITION_MANAGER=n`: build com sysbuild, sem o Partition Manager depreciado.
 - `CONFIG_RING_BUFFER=y` e a função `hal_uart_process()`.
 - `.gitattributes` (LF no repositório, CRLF nos `.bat`, `hardware/` e os dados de teste de `tools/TDD/` byte a byte) e `.editorconfig`.
