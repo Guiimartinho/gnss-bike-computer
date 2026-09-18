@@ -89,12 +89,12 @@ Referência de 2026-09-18: FLASH 296.208 B (28,2 %), RAM 116.928 B (44,6 %), 7 a
 ## 5. Estado e próximos passos
 
 - **Port:** compila no NCS v3.3.0 e passa nos testes de host; **nunca rodou em placa nem no DK**. Matriz completa em [`docs/10-status-do-port.md`](docs/10-status-do-port.md).
-- **Feito em 2026-09-18:** revisão completa do legacy e do port (7 análises), build com sysbuild, scripts novos, testes de host, documentação, e 13 correções críticas: pilha da `main_loop` (4 KB), GPS fora da ISR (ring buffer + processamento na thread), um callback de fix por época, checksum NMEA, parser NMEA, estouro do `sd_logger`, botões, polaridades do GPS e do FXOS, nós do DK desligados, reset em erro fatal, símbolo do SoC.
+- **Feito em 2026-09-18:** revisão completa do legacy e do port (7 análises), build com sysbuild, scripts novos, testes de host, documentação, e 13 correções críticas: pilha da `main_loop` (4 KB), GPS fora da ISR (ring buffer + processamento na thread), um callback de fix por época, checksum NMEA, parser NMEA, estouro do `sd_logger`, botões, polaridades do GPS e do FXOS, nós do DK desligados, reset em erro fatal, símbolo do SoC. Depois, da fase 1: a `main_loop` como única escritora do modelo, com `model_lock()` para a tela; `task_wdt` com um canal de 4 s por thread; auto-off de 15 min e desligamento pelo STC3100 (`power_scheduler`).
 - **Ordem proposta do que falta:**
 
 ```mermaid
 flowchart LR
-    A["1 · base de execução<br/>trava do modelo, watchdog,<br/>latch e auto-off, board própria"] --> B["2 · fidelidade<br/>Kalman, potência,<br/>distância, FDIR"]
+    A["1 · base de execução<br/>feito: trava do modelo, watchdog, auto-off<br/>falta: board própria (MCU)"] --> B["2 · fidelidade<br/>Kalman, potência,<br/>distância, FDIR"]
     B --> C["3 · armazenamento<br/>SD, formatos, segmentos"]
     C --> D["4 · rádio<br/>BLE central, ANT+"]
     D --> E["5 · interface<br/>retrato, menu, telas"]

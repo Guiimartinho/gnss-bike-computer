@@ -98,7 +98,7 @@ Proposta de ordem; cada fase fecha com build, testes de host e, a partir da fase
 ```mermaid
 flowchart TD
     F0["0 · estabilização<br/>feito em 2026-09-18"]:::done --> F1
-    F1["1 · base de execução<br/>thread de modelo única com mensagens, trava do modelo,<br/>watchdog, latch e auto-off pelo STC3100, board própria"]:::pending --> F2
+    F1["1 · base de execução<br/>feito: thread de modelo única, trava do modelo,<br/>watchdog, auto-off pelo STC3100<br/>falta: board própria (aguarda o MCU)"]:::partial --> F2
     F2["2 · fidelidade dos algoritmos<br/>Kalman (ones, bound, taxa), potência, distância,<br/>zonas, FDIR, testes diferenciais contra o legacy"]:::pending --> F3
     F3["3 · armazenamento<br/>SD e FAT montados, formatos do legacy,<br/>log @DDMMYY, loader e allocator de segmentos, liste_points"]:::pending --> F4
     F4["4 · rádio<br/>ANT+ pelo sdk-ant (HRM, BSC, FE-C) e BLE central,<br/>sensores no modelo, pareamento"]:::pending --> F5
@@ -106,6 +106,7 @@ flowchart TD
     F6["6 · comandos e USB<br/>VParser $LOC/$DWN/$QRY, USB device_next CDC e MSC,<br/>stravaAP e tools/zpm"]:::pending --> F7
     F7["7 · extras<br/>Komoot, LNS, EPO e host aiding, WS2812, FRAM"]:::pending
     classDef done fill:#2e7d32,color:#ffffff
+    classDef partial fill:#f9a825,color:#000000
     classDef pending fill:#ef6c00,color:#ffffff
 ```
 
