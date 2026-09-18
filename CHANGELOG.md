@@ -17,6 +17,7 @@ Revisão completa de 2026-09-18: análise do legacy e do port, migração para o
 - Botões lidos com inversão dupla: em repouso pareciam pressionados e, 1 s depois do boot, um `LONG_CENTER` parava e gravava a atividade (`src/hal/hal_gpio.c`).
 - Reset e standby do GPS com polaridade invertida no overlay (o módulo ficaria em reset e em standby).
 - Reset do FXOS8700 flutuando durante a inicialização do driver e com semântica invertida: `reset-gpios` ativo alto no nó e `imu_reset` corrigido.
+- Nós do nRF52840-DK nos pinos da placa: `qspi` e `mx25r64` (CS do LCD), `spi3` (NeoPixel, FIX e standby do GPS) e `pwm0` (botão central) desligados; `uart0` sem RTS/CTS (pinos do GPS); `uart1` sem o pull-up herdado no TX.
 
 ### Adicionado
 
