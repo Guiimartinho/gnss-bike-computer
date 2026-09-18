@@ -111,7 +111,7 @@ Decidido em 2026-09-18: o aparelho mantém **ANT+ e BLE juntos**, porque os sens
 |---|---|
 | Versão atual | `sdk-ant` v2.1.1, acoplada ao **sdk-nrf v3.2.4**; o v3.3.0 instalado não consta da tabela de compatibilidade e a documentação desaconselha usar as bibliotecas ANT com outra revisão |
 | SoCs | nRF52832, nRF52840, nRF5340, nRF54L05, nRF54L10, nRF54L15, nRF54LM20 |
-| Acesso | exige **aceitar o ANT+ Adopter Agreement** antes de usar o repositório |
+| Acesso | o repositório é público, mas o uso exige **aceitar dois acordos**: o ANT+ Adopter Agreement ([página](https://developer.garmin.com/ant-program/licensing/adopter-agreement/), botão "Accept & Download the ANT+ Adopter Agreement") e o ANT License Agreement do add-on ([página do add-on](https://developer.garmin.com/ant-program/nrf-connect-sdk/), botão "Accept & Download the ANT License Agreement"); produto comercial exige a licença comercial ([formulário](https://www.garmin.com/forms/licenserequest-antstacks-softdevices/), US$ 0,08 por unidade, mínimo de US$ 800 por semestre) |
 | Instalação | `west init -m https://github.com/ant-nrfconnect/sdk-ant --mr <versão>` + `west update` (o manifest do add-on puxa o sdk-nrf compatível), ou pelo índice de add-ons da extensão nRF Connect do VS Code |
 | Kconfig | `CONFIG_ANT` e `CONFIG_BT` juntos; `CONFIG_ANT_EVALUATION_KEY=y` para desenvolvimento não comercial; `CONFIG_ANT_LICENSE_KEY` para produto (licença comercial obrigatória antes de vender); no nRF5340, `CONFIG_ANT_LIBRARY_CORE` e imagens de rede pelo sysbuild |
 | Exemplos | HRM, BSC e potência; **sem FE-C**: o perfil do rolo precisa ser escrito a partir do legacy (`legacy/rf/fec.c`) |

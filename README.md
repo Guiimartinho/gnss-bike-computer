@@ -114,8 +114,8 @@ flowchart TB
 ## Estado e próximos passos
 
 - **Feito em 2026-09-18:** build no NCS v3.3.0 com sysbuild; correção de 13 defeitos críticos (estouro de pilha no Kalman, GPS e modelo dentro de ISR, corrupção de memória no log, botões e pinos do GPS invertidos, conflitos de pinos com o DK); testes de host; documentação e contexto para assistentes de IA.
-- **Decidido:** ANT+ e BLE juntos (os equipamentos externos falam ANT+) e board própria com MCU da Nordic, ainda a escolher. Decisões e pendências em [docs/10-status-do-port.md](docs/10-status-do-port.md#decisões-do-dono).
-- **Fase 1 do roteiro, 2026-09-18:** a `main_loop` é a única escritora do modelo e a tela lê com trava, watchdog por thread e desligamento automático pelo STC3100 depois de 15 min parado. Falta a board própria, que espera a escolha do MCU.
+- **Decidido:** ANT+ e BLE juntos (os equipamentos externos falam ANT+) e board própria com o nRF54LM20A e esquemático próprio: GNSS, bateria e display colorido melhores e um painel solar pequeno na caixa. Decisões e pendências em [docs/10-status-do-port.md](docs/10-status-do-port.md#decisões-do-dono).
+- **Fase 1 do roteiro, 2026-09-18:** a `main_loop` é a única escritora do modelo e a tela lê com trava, watchdog por thread e desligamento automático pelo STC3100 depois de 15 min parado. Falta a board própria: o MCU está escolhido (nRF54LM20A) e o esquemático novo está em projeto.
 - **Próximo:** board própria, depois fidelidade dos algoritmos, armazenamento, rádio e interface. Roteiro em [docs/10-status-do-port.md](docs/10-status-do-port.md#roteiro).
 
 ## Créditos e licenças

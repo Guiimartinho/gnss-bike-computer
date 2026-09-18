@@ -38,6 +38,7 @@ Revisão completa de 2026-09-18: análise do legacy e do port, migração para o
 - `.gitattributes` (LF no repositório, CRLF nos `.bat`, `hardware/` e os dados de teste de `tools/TDD/` byte a byte) e `.editorconfig`.
 - CI em `.github/workflows/ci.yml`, **desligado** (só `workflow_dispatch`): testes de host, documentação e build do firmware no container `sdk-nrf-toolchain:v3.3.0`. O `mermaid_check.py` aceita `PUPPETEER_CONFIG` para o Chrome do runner.
 - Decisões do dono registradas em `docs/10`, `docs/07`, `docs/02` e nas skills: ANT+ e BLE juntos, pelo add-on `sdk-ant`, e board própria com MCU da Nordic.
+- Segunda rodada de decisões: nRF54LM20A com esquemático próprio (GNSS, bateria e display melhores, painel solar pequeno na caixa), tela no formato do legacy (2,7", em retrato) e um commit por item verificado como regra do projeto; os links dos acordos do ANT+ entraram em `docs/07`.
 
 ### Alterado
 

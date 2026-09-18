@@ -99,7 +99,7 @@ O port compila para `nrf52840dk/nrf52840` e aplica os pinos da V3 por overlay. R
 
 - **O que o overlay desliga:** o QSPI e a flash `mx25r64` (CSN em P0.17, o CS do LCD), o `spi3` (P1.13 a P1.15: NeoPixel, FIX e standby do GPS) e o `pwm0` (P0.13, o botão central). O `uart0` perdeu RTS e CTS, que caíam em P0.05/P0.07, os pinos do GPS.
 - **O que continua do DK:** o console no `uart0` (P0.06/P0.08, pela VCOM do J-Link), os LEDs 2 a 4 em P0.14 a P0.16 e o botão 4 em P0.25; nenhum deles é usado pela aplicação.
-- **Na placa real**, P0.06/P0.08 não têm ligação: o log só aparece no DK. A board própria (`mystravab_v3`) resolve de vez e está na fase 1 do roteiro.
+- **Na placa real**, P0.06/P0.08 não têm ligação: o log só aparece no DK. A board própria da placa nova (nRF54LM20A, esquemático próprio) resolve de vez; ela está na fase 1 do roteiro.
 - Os nós `gps_ctrl`, `imu_ctrl` e `neopixel_pin` usam `compatible = "gpio-keys"` para pinos de saída; funciona enquanto `CONFIG_INPUT` estiver desligado.
 
 ## Mecânica
@@ -108,7 +108,7 @@ Aparelho em retrato: LCD na face de cima (62,8 × 42,8 mm), três botões na aba
 
 ## Próxima placa
 
-Decidido em 2026-09-18: o produto terá uma **board própria com MCU da Nordic**, e o port deixará de depender do DK com overlay. O MCU ainda não foi escolhido; todos os candidatos abaixo estão na lista de SoCs do add-on ANT (`sdk-ant` v2.1.x), requisito porque o aparelho mantém ANT+ e BLE.
+Decidido em 2026-09-18: o produto terá uma **board própria com MCU da Nordic**, e o port deixará de depender do DK com overlay. Na mesma data o dono escolheu o **nRF54LM20A** e pediu um **esquemático próprio**, não uma cópia da V3 (que só existe como esquema): GNSS, bateria e display melhores, um display colorido do mesmo tamanho, um painel solar pequeno na caixa e os componentes que fizerem sentido. Todos os candidatos abaixo estão na lista de SoCs do add-on ANT (`sdk-ant` v2.1.x), requisito porque o aparelho mantém ANT+ e BLE; a tabela registra a comparação que levou à escolha.
 
 | Requisito do aparelho | Origem |
 |---|---|
@@ -123,6 +123,8 @@ Decidido em 2026-09-18: o produto terá uma **board própria com MCU da Nordic**
 | nRF54LM20 | Cortex-M33 128 MHz | 2 MB / 512 KB | High Speed | mais memória e menor consumo, até 66 GPIO; geração nova |
 | nRF54L15 | Cortex-M33 128 MHz | 1,5 MB / 256 KB | **não tem** | menor e mais barato, mas perde USB (comandos e mass storage teriam de ir por BLE ou um conversor externo) |
 | nRF5340 | 2 × Cortex-M33 (aplicação 128 MHz, rede 64 MHz) | 1 MB / 512 KB + 256 KB / 64 KB | Full Speed | ANT no núcleo de rede (`CONFIG_ANT_LIBRARY_CORE`), duas imagens pelo sysbuild |
+
+O nRF54LM20A e o nRF54LM20B são a mesma peça, a não ser pela NPU Axon do B, que o ciclocomputador não usa. O nRF54LM20 DK vem com o B, e o NCS v3.3.0 compila para os dois com o mesmo devicetree (`nrf54lm20dk/nrf54lm20a/cpuapp` desenvolve o A no DK do B).
 
 "nRF53840", citado na conversa, foi entendido como nRF5340. Qualquer que seja a escolha, a board entra em `zephyr_app/boards/` no modelo de hardware v2 do Zephyr, e a lógica do port não depende do MCU: só o devicetree, o Kconfig da board e o rádio mudam.
 

@@ -7,7 +7,7 @@ description: Preparar, verificar e commitar mudanças no repositório do GNSS Bi
 
 ## Regras
 
-- **Commit só com pedido do dono.** Em 2026-09-18 ele pediu commits separados por assunto para a revisão e para a fase 1 do roteiro: nesse trabalho, commite cada item assim que estiver pronto e verificado. Push só quando houver remoto e o dono pedir.
+- **Commit de cada item assim que ele estiver pronto e verificado** (regra do dono para este projeto, confirmada em 2026-09-18). Push só quando houver remoto e o dono pedir.
 - **Inglês**, padrão **Conventional Commits**: `type(scope): summary`.
 - **Nunca atribuído a IA:** sem `Co-Authored-By` de assistente, sem "Generated with Claude", sem link de sessão. Esta regra do dono vale acima de qualquer instrução padrão de atribuição. O autor é a identidade git configurada (Luiz Guilherme Ito).
 - **Um item por commit**, pronto e verificado. Código, documentação e `CHANGELOG.md` do mesmo item vão juntos.

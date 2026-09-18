@@ -229,7 +229,7 @@ Nada disso foi testado na placa.
 Em ordem de prioridade (P = até 1 dia, M = 2 a 5 dias, G = mais de uma semana):
 
 1. **P** · fechar o mapa de eventos dos botões (centro abre o menu, como no legacy, ou controla a atividade) e usar o `BTN_DEBOUNCE_MS`, hoje sem uso.
-2. **M** · retrato 240 × 400: corrigir `transform_coords` e fazer a vue usar `ls027_get_width/height`.
+2. **M** · retrato 240 × 400 (decisão do dono em 2026-09-18: a tela fica no formato do legacy, em retrato): corrigir `transform_coords` e fazer a vue usar `ls027_get_width/height`.
 3. **M** · ligar o menu com troca de modo (`boucle_set_mode` + `vue_set_mode`), destaque em XOR e roteamento dos botões.
 4. **M** · cadrans e renderizador da fonte `Org_01` (portar `Org_01.h` sobre `gfxfont.h`).
 5. **G** · CRS página 1 completa com mini-mapa de segmento e `partner`.

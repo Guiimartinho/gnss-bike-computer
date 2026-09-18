@@ -41,9 +41,10 @@ Referência completa: `docs/02-hardware.md`. Fonte de verdade da pinagem: `hardw
 
 ## Board própria
 
-**Decidido em 2026-09-18: o produto terá board própria com MCU da Nordic** (candidatos: nRF52840, nRF54LM20, nRF54L15, nRF5340; comparação em `docs/02-hardware.md#próxima-placa`; o nRF54L15 não tem USB).
+**Decidido em 2026-09-18: o produto terá board própria com o nRF54LM20A** e esquemático próprio (GNSS, bateria e display melhores, display colorido de 2,7", painel solar pequeno na caixa). A V3 existe só como esquema: não há placa física para testar. Comparação dos MCUs em `docs/02-hardware.md#próxima-placa`.
 
-- Enquanto o MCU não é escolhido, o alvo é o DK com o overlay da V3.
+- Enquanto a placa própria não existe, o alvo do build é o nRF52840-DK com o overlay da V3; o próximo alvo é o nRF54LM20 DK (`nrf54lm20dk/nrf54lm20a/cpuapp`; o DK vem com o nRF54LM20B, igual ao A mais a NPU).
+- Ao portar para o nRF54L: UARTE, SPIM e TWIM têm outras instâncias (`uart20`, `uart21`, `spi00`, `i2c22`...), o tempo vem do GRTC, a NVM é RRAM (settings no ZMS, não no NVS), o WDT é `wdt30`/`wdt31`, a causa do reset fica no periférico RESET e não há QSPI.
 - A board entra em `zephyr_app/boards/<vendor>/<board>/` no modelo de hardware v2 do Zephyr (`board.yml`, `Kconfig.<board>`, `<board>_<soc>.dts`, pinctrl, `_defconfig`, `board.cmake`), sem nós que não existem na placa, com console por RTT ou USB CDC.
 - Com a board própria, tire `BOARD` e `DTC_OVERLAY_FILE` fixos do `CMakeLists.txt` e deixe o overlay do DK com o nome automático (`boards/nrf52840dk_nrf52840.overlay`).
 - O MCU precisa estar na lista do `sdk-ant` (ANT+ é obrigatório).

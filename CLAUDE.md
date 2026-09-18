@@ -36,7 +36,7 @@ O dono do projeto é um desenvolvedor brasileiro de eletrônica embarcada que qu
 
 ### Commits
 
-- **Commit só com pedido do dono.** Em 2026-09-18 ele pediu commits separados por assunto para a revisão e para a fase 1 do roteiro: nesse trabalho, cada item pronto e verificado vira um commit. Push só com remoto configurado e pedido do dono. Mensagens em **inglês**, Conventional Commits com escopo (`fix(hal): ...`, `feat(model): ...`, `docs(docs): ...`).
+- **Commit de cada item assim que ele estiver pronto e verificado** (regra do dono para este projeto, confirmada em 2026-09-18). Push só com remoto configurado e pedido do dono. Mensagens em **inglês**, Conventional Commits com escopo (`fix(hal): ...`, `feat(model): ...`, `docs(docs): ...`).
 - **Branches:** o trabalho vai na `develop`; a `main` guarda as versões estáveis e só recebe merge da `develop` quando o dono pedir. Não existe `master`.
 - **Nunca atribua commit a IA:** sem `Co-Authored-By` de assistente, sem "Generated with", sem menção a Claude. O autor é a identidade git configurada (Luiz Guilherme Ito). Procedimento na skill `commit-gnss`.
 - Nunca faça commit de credenciais nem de arquivos gerados (`build*/`, `Lib/`, `Scripts/`).
@@ -95,7 +95,7 @@ Referência de 2026-09-18: FLASH 296.208 B (28,2 %), RAM 116.928 B (44,6 %), 7 a
 
 ```mermaid
 flowchart LR
-    A["1 · base de execução<br/>feito: trava do modelo, watchdog, auto-off<br/>falta: board própria (MCU)"] --> B["2 · fidelidade<br/>Kalman, potência,<br/>distância, FDIR"]
+    A["1 · base de execução<br/>feito: trava do modelo, watchdog, auto-off<br/>falta: board própria (nRF54LM20A)"] --> B["2 · fidelidade<br/>Kalman, potência,<br/>distância, FDIR"]
     B --> C["3 · armazenamento<br/>SD, formatos, segmentos"]
     C --> D["4 · rádio<br/>BLE central, ANT+"]
     D --> E["5 · interface<br/>retrato, menu, telas"]
@@ -103,8 +103,8 @@ flowchart LR
     F --> G["7 · extras<br/>Komoot, LNS, EPO, WS2812"]
 ```
 
-- **Decidido em 2026-09-18:** ANT+ **e** BLE (os equipamentos externos são ANT+), pelo add-on `sdk-ant`; **board própria** com MCU da Nordic; CI desligado. Detalhes em [`docs/10-status-do-port.md`](docs/10-status-do-port.md#decisões-do-dono).
-- **Em aberto:** MCU da placa nova (nRF52840, nRF54LM20, nRF54L15 ou nRF5340), instalação do workspace do `sdk-ant` (exige o dono aceitar o ANT+ Adopter Agreement; usa o sdk-nrf v3.2.4), formatos no SD, orientação da tela, licença do port (o legacy é CC BY-NC 4.0).
+- **Decidido em 2026-09-18:** ANT+ **e** BLE (os equipamentos externos são ANT+), pelo add-on `sdk-ant`; **board própria** com o **nRF54LM20A** e esquemático próprio (GNSS, bateria e display melhores, painel solar pequeno na caixa); tela retangular no formato do legacy (2,7", em retrato); CI desligado; um commit por item verificado, na `develop`. Detalhes em [`docs/10-status-do-port.md`](docs/10-status-do-port.md#decisões-do-dono).
+- **Em aberto:** componentes da placa nova (display colorido, GNSS, energia com painel solar, sensores), hardware de teste (nRF54LM20 DK), instalação do workspace do `sdk-ant` (exige o dono aceitar os acordos do ANT+; usa o sdk-nrf v3.2.4), formatos no SD, licença do port (o legacy é CC BY-NC 4.0).
 
 ## 6. Armadilhas conhecidas
 
