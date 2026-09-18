@@ -20,6 +20,12 @@ source "$ROOT/tools/fw/ncs_env.sh"
 
 APP_DIR="$ROOT/zephyr_app"
 BUILD_DIR="${BUILD_DIR:-$APP_DIR/build}"
+# Um BUILD_DIR relativo vale a partir da pasta de quem chamou: o build roda
+# dentro do zephyr_app e o west o resolveria a partir de lá.
+case "$BUILD_DIR" in
+    /*|[A-Za-z]:*) ;;
+    *) BUILD_DIR="$PWD/$BUILD_DIR" ;;
+esac
 BOARD="${BOARD:-nrf52840dk/nrf52840}"
 case "$BOARD" in
     *nrf54l*) DEFAULT_FAMILY=nrf54l ;;

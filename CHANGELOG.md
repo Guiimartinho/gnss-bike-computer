@@ -8,6 +8,7 @@ Revisão completa de 2026-09-18: análise do legacy e do port, migração para o
 
 ### Corrigido
 
+- `BUILD_DIR` relativo no `fw.sh` e no `build.bat` era resolvido a partir do `zephyr_app`, onde o build roda: o `BUILD_DIR=zephyr_app/build_54` da documentação criava `zephyr_app/zephyr_app/build_54`. Agora ele vale a partir da pasta de quem chama; o binário não muda.
 - Estouro de pilha na thread `main_loop`: a cadeia do Kalman de altitude usa ~2.200 B e a pilha tinha 2.048 B; agora 4.096 B (`src/main.c`). A thread `display` passou de 1.024 para 2.048 B.
 - O GPS e todo o modelo rodavam dentro da ISR da UARTE1, uma vez por sentença NMEA: a ISR agora só enfileira bytes num `ring_buf` e `hal_uart_process()` monta as linhas na `main_loop` (`src/hal/hal_uart.c`, `src/drivers/gps/gps_mgmt.c`).
 - O callback de fix disparava 5 a 7 vezes por segundo com o mesmo ponto: agora uma vez por época, no RMC válido, e um RMC `V` encerra o fix na hora.

@@ -19,6 +19,8 @@ if errorlevel 1 goto :fail
 
 set "APP_DIR=%~dp0zephyr_app"
 if not defined BUILD_DIR set "BUILD_DIR=%APP_DIR%\build"
+REM Um BUILD_DIR relativo vale a partir da pasta atual: o build roda no zephyr_app.
+for %%I in ("%BUILD_DIR%") do set "BUILD_DIR=%%~fI"
 if not defined BOARD set "BOARD=nrf52840dk/nrf52840"
 set "PRISTINE=auto"
 if /i "%~1"=="pristine" set "PRISTINE=always"
