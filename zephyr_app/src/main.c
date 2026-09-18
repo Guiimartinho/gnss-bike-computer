@@ -55,10 +55,18 @@ LOG_MODULE_REGISTER(main, CONFIG_LOG_DEFAULT_LEVEL);
  * Thread Definitions
  * ========================================================================== */
 
-#define MAIN_STACK_SIZE     2048U
+/*
+ * main_loop runs the altitude Kalman filter: measurement_update() alone has a
+ * 1672-byte frame (udmatrix_t temporaries) and the chain passes 2200 bytes,
+ * which overflowed the former 2048-byte stack into the MPU guard. It also
+ * runs the GPS pipeline (NMEA parsing and the fix callback) since that left
+ * the UART ISR.
+ */
+#define MAIN_STACK_SIZE     4096U
 #define MAIN_PRIORITY       5
 
-#define DISPLAY_STACK_SIZE  1024U
+/* vue_update() formats floats with snprintf() (~700-850 bytes deep) */
+#define DISPLAY_STACK_SIZE  2048U
 #define DISPLAY_PRIORITY    7
 
 #define SENSOR_STACK_SIZE   1024U

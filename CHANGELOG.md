@@ -8,6 +8,7 @@ Revisão completa de 2026-09-18: análise do legacy e do port, migração para o
 
 ### Corrigido
 
+- Estouro de pilha na thread `main_loop`: a cadeia do Kalman de altitude usa ~2.200 B e a pilha tinha 2.048 B; agora 4.096 B (`src/main.c`). A thread `display` passou de 1.024 para 2.048 B.
 - O GPS e todo o modelo rodavam dentro da ISR da UARTE1, uma vez por sentença NMEA: a ISR agora só enfileira bytes num `ring_buf` e `hal_uart_process()` monta as linhas na `main_loop` (`src/hal/hal_uart.c`, `src/drivers/gps/gps_mgmt.c`).
 - Parser NMEA: o caminho caractere a caractere nunca reconhecia uma sentença; milissegundos lidos errado (`.200` virava 2000 ms); coordenadas perdiam precisão ao virar `float` antes da divisão; a posição válida nunca voltava a falso (`src/drivers/gps/nmea_parser.c`).
 
