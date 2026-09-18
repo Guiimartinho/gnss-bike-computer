@@ -54,15 +54,16 @@
         };
     };
 
-    /* GPS Control Pins */
+    /* GPS Control Pins (Antenova M10578-A3: HW_R and HW_S are active low,
+     * legacy/source/sensors/GPSMGMT.cpp:114-136 and :204-207) */
     gps_ctrl {
         compatible = "gpio-keys";
         gps_reset: gps_reset {
-            gpios = <&gpio0 3 GPIO_ACTIVE_HIGH>;
+            gpios = <&gpio0 3 GPIO_ACTIVE_LOW>;
             label = "GPS Reset";
         };
         gps_stdby: gps_stdby {
-            gpios = <&gpio1 15 GPIO_ACTIVE_HIGH>;
+            gpios = <&gpio1 15 GPIO_ACTIVE_LOW>;
             label = "GPS Standby";
         };
         gps_fix: gps_fix {

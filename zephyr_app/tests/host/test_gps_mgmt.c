@@ -110,6 +110,23 @@ static void test_a_void_rmc_ends_the_fix_at_once(void)
     TEST_ASSERT_EQUAL_UINT(1U, s_callbacks);
 }
 
+static void test_start_takes_the_gps_out_of_standby_and_standby_puts_it_back(void)
+{
+    /* Logical levels: the devicetree makes HW_S active low, so false = awake */
+    TEST_ASSERT_EQUAL(APP_OK, gps_mgmt_start());
+    TEST_ASSERT_FALSE(fake_gpio_level(HAL_GPIO_GPS_STDBY));
+    TEST_ASSERT_EQUAL(APP_OK, gps_mgmt_standby());
+    TEST_ASSERT_TRUE(fake_gpio_level(HAL_GPIO_GPS_STDBY));
+    TEST_ASSERT_EQUAL(APP_OK, gps_mgmt_wake());
+    TEST_ASSERT_FALSE(fake_gpio_level(HAL_GPIO_GPS_STDBY));
+}
+
+static void test_reset_releases_the_reset_line(void)
+{
+    TEST_ASSERT_EQUAL(APP_OK, gps_mgmt_reset());
+    TEST_ASSERT_FALSE(fake_gpio_level(HAL_GPIO_GPS_RESET));
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -117,5 +134,7 @@ int main(void)
     RUN_TEST(test_three_epochs_give_three_callbacks);
     RUN_TEST(test_a_line_with_a_bad_checksum_is_ignored);
     RUN_TEST(test_a_void_rmc_ends_the_fix_at_once);
+    RUN_TEST(test_start_takes_the_gps_out_of_standby_and_standby_puts_it_back);
+    RUN_TEST(test_reset_releases_the_reset_line);
     return UNITY_END();
 }
