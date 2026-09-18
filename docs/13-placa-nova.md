@@ -108,7 +108,7 @@ Para a primeira placa, a proposta é usar um **módulo certificado** em vez do c
 | Fanstel BM20M | 10,0 × 14,0 × 2 mm | trilha na placa | US$ 6,00 (US$ 5,12) |
 | Fanstel BM20E | 10,0 × 15,0 × 2 mm | u.FL para antena externa | US$ 6,00 (US$ 5,57) |
 
-Os três usam o nRF54LM20A (as versões com B no nome trazem o nRF54LM20B), expõem 66 GPIO, embutem os cristais de 32 MHz e de 32,768 kHz e têm certificação FCC, ISED, europeia e TELEC; a Fanstel prevê produção em 09/2026. A página não detalha os pinos de USB e de NFC: confira no datasheet do módulo antes do esquemático.
+Os três usam o nRF54LM20A (as versões com B no nome trazem o nRF54LM20B), expõem 66 GPIO, embutem os cristais de 32 MHz e de 32,768 kHz (o de 32,768 kHz é obrigatório para o ANT, que pede no máximo ±50 ppm: confira a tolerância no datasheet do módulo) e têm certificação FCC, ISED, europeia e TELEC; a Fanstel prevê produção em 09/2026. A página não detalha os pinos de USB e de NFC: confira no datasheet do módulo antes do esquemático.
 
 Alternativa: o nRF54LM20A solto, no CSP98 (66 GPIO), com antena própria: mais barato em volume, mas com projeto de RF, casamento de antena e certificação por nossa conta. O QFN52, mais fácil de soldar, tem só 32 GPIO e não comporta o [orçamento de pinos](#orçamento-de-pinos).
 
