@@ -381,6 +381,12 @@ void gps_mgmt_process(void)
         return;
     }
 
+    /*
+     * Parse what the UART ISR queued and run the fix callback here, in the
+     * caller's thread (main_loop). The ISR only stores bytes.
+     */
+    hal_uart_process(HAL_UART_GPS);
+
     /* Check for fix timeout */
     if ((gps_state == GPS_STATE_FIX_2D) || (gps_state == GPS_STATE_FIX_3D)) {
         uint32_t now = k_uptime_get_32();

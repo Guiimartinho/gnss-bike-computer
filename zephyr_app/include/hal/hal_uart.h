@@ -21,8 +21,12 @@ extern "C" {
  * Constants
  * ========================================================================== */
 
-/** UART RX buffer size */
-#define HAL_UART_RX_BUF_SIZE    256U
+/**
+ * UART RX ring buffer size. The ISR fills it and hal_uart_process() drains it
+ * every 100 ms from main_loop: 512 bytes hold about 530 ms of GPS data at
+ * 9600 baud (only about 45 ms at 115200: revisit before raising the baud).
+ */
+#define HAL_UART_RX_BUF_SIZE    512U
 
 /** UART TX buffer size */
 #define HAL_UART_TX_BUF_SIZE    128U
@@ -82,7 +86,8 @@ app_err_t hal_uart_register_rx_callback(hal_uart_port_t port,
 /**
  * @brief Register callback for received lines (NMEA sentences)
  * @param port UART port identifier
- * @param callback Function to call when a complete line is received
+ * @param callback Function to call when a complete line is received; it runs
+ *                 inside hal_uart_process(), in the thread that calls it
  * @return APP_OK on success, error code otherwise
  */
 app_err_t hal_uart_register_line_callback(hal_uart_port_t port,
@@ -102,6 +107,18 @@ size_t hal_uart_rx_available(hal_uart_port_t port);
  * @return APP_OK on success, APP_ERR_NOT_FOUND if buffer empty
  */
 app_err_t hal_uart_read_byte(hal_uart_port_t port, uint8_t *byte);
+
+/**
+ * @brief Drain the RX ring buffer in the calling thread
+ *
+ * Calls the RX callback with each chunk and the line callback with each
+ * complete '$'...'\n' line (CR removed). Both run in the caller's context,
+ * never in the ISR. Use either this or hal_uart_read_byte() on a port, not
+ * both: they consume the same ring buffer.
+ *
+ * @param port UART port identifier
+ */
+void hal_uart_process(hal_uart_port_t port);
 
 /**
  * @brief Flush UART RX buffer

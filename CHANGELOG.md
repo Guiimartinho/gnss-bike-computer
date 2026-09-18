@@ -8,12 +8,14 @@ Revisão completa de 2026-09-18: análise do legacy e do port, migração para o
 
 ### Corrigido
 
+- O GPS e todo o modelo rodavam dentro da ISR da UARTE1, uma vez por sentença NMEA: a ISR agora só enfileira bytes num `ring_buf` e `hal_uart_process()` monta as linhas na `main_loop` (`src/hal/hal_uart.c`, `src/drivers/gps/gps_mgmt.c`).
 - Parser NMEA: o caminho caractere a caractere nunca reconhecia uma sentença; milissegundos lidos errado (`.200` virava 2000 ms); coordenadas perdiam precisão ao virar `float` antes da divisão; a posição válida nunca voltava a falso (`src/drivers/gps/nmea_parser.c`).
 
 ### Adicionado
 
 - Testes de host do port (`zephyr_app/tests/host/`, rodados por `tools/fw/host_tests.sh`): Unity 2.6.1 + CTest com o GCC do PC e shims do Zephyr; 4 conjuntos, 32 casos (`vecteur`, `power_zone`, `suffer_score`, `nmea_parser`), com oráculo do legacy.
 - `zephyr_app/sysbuild.conf` com `SB_CONFIG_PARTITION_MANAGER=n`: build com sysbuild, sem o Partition Manager depreciado.
+- `CONFIG_RING_BUFFER=y` e a função `hal_uart_process()`.
 - `.gitattributes` (LF no repositório, CRLF nos `.bat`, `hardware/` e os dados de teste de `tools/TDD/` byte a byte) e `.editorconfig`.
 
 ### Alterado

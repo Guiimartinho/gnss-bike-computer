@@ -1,12 +1,17 @@
 /**
  * @file hal_uart.c
  * @brief UART Hardware Abstraction Layer implementation
+ *
+ * The RX interrupt only copies bytes into a ring buffer. Lines are assembled
+ * and handed to the line callback by hal_uart_process(), in the calling
+ * thread: the NMEA parser and the whole model used to run inside the ISR.
  */
 
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/uart.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/sys/ring_buffer.h>
 #include <string.h>
 
 #include "hal/hal_uart.h"
@@ -19,6 +24,9 @@ LOG_MODULE_REGISTER(hal_uart, CONFIG_LOG_DEFAULT_LEVEL);
 
 /** Maximum NMEA line length */
 #define MAX_LINE_LEN    128U
+
+/** Bytes moved per ring buffer access */
+#define RX_CHUNK_LEN    32U
 
 /* ==========================================================================
  * Device Tree Bindings
@@ -34,9 +42,9 @@ static const struct device *uart_gps_dev = DEVICE_DT_GET(DT_NODELABEL(uart1));
 /** UART port context structure */
 typedef struct {
     const struct device *dev;
-    uint8_t rx_buf[HAL_UART_RX_BUF_SIZE];
-    volatile uint16_t rx_head;
-    volatile uint16_t rx_tail;
+    struct ring_buf rx_rb;                      /**< ISR producer, thread consumer */
+    uint8_t rx_rb_data[HAL_UART_RX_BUF_SIZE];
+    uint32_t rx_dropped;                        /**< Bytes lost on a full ring */
     char line_buf[MAX_LINE_LEN];
     uint8_t line_idx;
     hal_uart_rx_callback_t rx_callback;
@@ -55,7 +63,7 @@ static bool is_initialized;
  * ========================================================================== */
 
 /**
- * @brief UART ISR callback
+ * @brief UART ISR callback: move received bytes into the ring buffer only
  */
 static void uart_isr_callback(const struct device *dev, void *user_data)
 {
@@ -66,51 +74,51 @@ static void uart_isr_callback(const struct device *dev, void *user_data)
     }
 
     while (uart_irq_update(dev) && uart_irq_is_pending(dev)) {
-        if (uart_irq_rx_ready(dev)) {
-            uint8_t byte;
-            int ret = uart_fifo_read(dev, &byte, 1);
+        if (!uart_irq_rx_ready(dev)) {
+            break;
+        }
 
-            if (ret == 1) {
-                /* Store in circular buffer */
-                uint16_t next_head = (ctx->rx_head + 1U) % HAL_UART_RX_BUF_SIZE;
+        uint8_t chunk[RX_CHUNK_LEN];
+        int ret = uart_fifo_read(dev, chunk, sizeof(chunk));
 
-                if (next_head != ctx->rx_tail) {
-                    ctx->rx_buf[ctx->rx_head] = byte;
-                    ctx->rx_head = next_head;
-                }
+        if (ret > 0) {
+            uint32_t stored = ring_buf_put(&ctx->rx_rb, chunk, (uint32_t)ret);
 
-                /* Build line for NMEA parsing */
-                if (byte == '\n') {
-                    if (ctx->line_idx > 0U) {
-                        ctx->line_buf[ctx->line_idx] = '\0';
+            ctx->rx_dropped += (uint32_t)ret - stored;
+        }
+    }
+}
 
-                        /* Remove trailing CR if present */
-                        if ((ctx->line_idx > 0U) &&
-                            (ctx->line_buf[ctx->line_idx - 1U] == '\r')) {
-                            ctx->line_buf[ctx->line_idx - 1U] = '\0';
-                        }
+/**
+ * @brief Assemble NMEA lines ('$' ... '\n') and hand them to the line callback
+ */
+static void assemble_line(uart_ctx_t *ctx, uint8_t byte)
+{
+    if (byte == (uint8_t)'\n') {
+        if (ctx->line_idx > 0U) {
+            ctx->line_buf[ctx->line_idx] = '\0';
 
-                        /* Call line callback if registered */
-                        if (ctx->line_callback != NULL) {
-                            ctx->line_callback(ctx->line_buf);
-                        }
-                    }
-                    ctx->line_idx = 0U;
-                } else if (byte == '$') {
-                    /* Start of NMEA sentence */
-                    ctx->line_idx = 0U;
-                    ctx->line_buf[ctx->line_idx] = (char)byte;
-                    ctx->line_idx++;
-                } else if (ctx->line_idx > 0U) {
-                    if (ctx->line_idx < (MAX_LINE_LEN - 1U)) {
-                        ctx->line_buf[ctx->line_idx] = (char)byte;
-                        ctx->line_idx++;
-                    }
-                } else {
-                    /* Ignore bytes before start marker */
-                }
+            /* Remove trailing CR if present */
+            if (ctx->line_buf[ctx->line_idx - 1U] == '\r') {
+                ctx->line_buf[ctx->line_idx - 1U] = '\0';
+            }
+
+            if (ctx->line_callback != NULL) {
+                ctx->line_callback(ctx->line_buf);
             }
         }
+        ctx->line_idx = 0U;
+    } else if (byte == (uint8_t)'$') {
+        /* Start of NMEA sentence */
+        ctx->line_buf[0] = (char)byte;
+        ctx->line_idx = 1U;
+    } else if (ctx->line_idx > 0U) {
+        if (ctx->line_idx < (MAX_LINE_LEN - 1U)) {
+            ctx->line_buf[ctx->line_idx] = (char)byte;
+            ctx->line_idx++;
+        }
+    } else {
+        /* Ignore bytes before start marker */
     }
 }
 
@@ -131,13 +139,15 @@ app_err_t hal_uart_init(void)
     }
 
     /* Initialize context */
-    (void)memset(&uart_ctx[HAL_UART_GPS], 0, sizeof(uart_ctx_t));
-    uart_ctx[HAL_UART_GPS].dev = uart_gps_dev;
-    uart_ctx[HAL_UART_GPS].enabled = true;
+    uart_ctx_t *ctx = &uart_ctx[HAL_UART_GPS];
+
+    (void)memset(ctx, 0, sizeof(uart_ctx_t));
+    ctx->dev = uart_gps_dev;
+    ring_buf_init(&ctx->rx_rb, sizeof(ctx->rx_rb_data), ctx->rx_rb_data);
+    ctx->enabled = true;
 
     /* Configure UART interrupt */
-    uart_irq_callback_user_data_set(uart_gps_dev, uart_isr_callback,
-                                     &uart_ctx[HAL_UART_GPS]);
+    uart_irq_callback_user_data_set(uart_gps_dev, uart_isr_callback, ctx);
     uart_irq_rx_enable(uart_gps_dev);
 
     is_initialized = true;
@@ -208,20 +218,38 @@ app_err_t hal_uart_register_line_callback(hal_uart_port_t port,
     return APP_OK;
 }
 
+void hal_uart_process(hal_uart_port_t port)
+{
+    if (!is_initialized || (port >= HAL_UART_PORT_COUNT)) {
+        return;
+    }
+
+    uart_ctx_t *ctx = &uart_ctx[port];
+    uint8_t chunk[RX_CHUNK_LEN];
+    uint32_t len;
+
+    if (ctx->rx_dropped > 0U) {
+        LOG_WRN("UART %d: %u bytes dropped (RX ring full)", port, (unsigned)ctx->rx_dropped);
+        ctx->rx_dropped = 0U;
+    }
+
+    while ((len = ring_buf_get(&ctx->rx_rb, chunk, sizeof(chunk))) > 0U) {
+        if (ctx->rx_callback != NULL) {
+            ctx->rx_callback(chunk, len);
+        }
+        for (uint32_t i = 0U; i < len; i++) {
+            assemble_line(ctx, chunk[i]);
+        }
+    }
+}
+
 size_t hal_uart_rx_available(hal_uart_port_t port)
 {
     if (!is_initialized || (port >= HAL_UART_PORT_COUNT)) {
         return 0U;
     }
 
-    uart_ctx_t *ctx = &uart_ctx[port];
-    uint16_t head = ctx->rx_head;
-    uint16_t tail = ctx->rx_tail;
-
-    if (head >= tail) {
-        return (size_t)(head - tail);
-    }
-    return (size_t)(HAL_UART_RX_BUF_SIZE - tail + head);
+    return (size_t)ring_buf_size_get(&uart_ctx[port].rx_rb);
 }
 
 app_err_t hal_uart_read_byte(hal_uart_port_t port, uint8_t *byte)
@@ -234,14 +262,9 @@ app_err_t hal_uart_read_byte(hal_uart_port_t port, uint8_t *byte)
         return APP_ERR_INVALID_PARAM;
     }
 
-    uart_ctx_t *ctx = &uart_ctx[port];
-
-    if (ctx->rx_head == ctx->rx_tail) {
+    if (ring_buf_get(&uart_ctx[port].rx_rb, byte, 1U) != 1U) {
         return APP_ERR_NOT_FOUND;
     }
-
-    *byte = ctx->rx_buf[ctx->rx_tail];
-    ctx->rx_tail = (ctx->rx_tail + 1U) % HAL_UART_RX_BUF_SIZE;
 
     return APP_OK;
 }
@@ -253,8 +276,12 @@ void hal_uart_flush_rx(hal_uart_port_t port)
     }
 
     uart_ctx_t *ctx = &uart_ctx[port];
-    ctx->rx_head = 0U;
-    ctx->rx_tail = 0U;
+
+    /* The ISR is the producer: keep it out while the ring is reset */
+    unsigned int key = irq_lock();
+
+    ring_buf_reset(&ctx->rx_rb);
+    irq_unlock(key);
     ctx->line_idx = 0U;
 }
 
