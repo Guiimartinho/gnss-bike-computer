@@ -14,7 +14,7 @@ Funcionalidades do stravaV10 original e o estado no port em 2026-09-18 (detalhes
 | Percurso GPX com mapa e zoom | sim (`.PAR`) | parcial, não ligado |
 | Altitude por fusão barômetro + acelerômetro (Kalman de 3 estados), subida, inclinação | sim | portado com diferenças |
 | Potência estimada pela física (peso, subida, rolamento, arrasto) | sim | fórmula diferente |
-| Sensores ANT+: frequência cardíaca, velocidade e cadência, rolo FE-C | sim | trocados por BLE, não funcionais |
+| Sensores ANT+: frequência cardíaca, velocidade e cadência, rolo FE-C | sim | pilha ANT com `ANT=1`, perfis ainda não portados; clientes BLE não funcionais |
 | BLE: medidor de potência, posição do celular (LNS), navegação Komoot | sim | parcial |
 | Zonas de potência, suffer score, variabilidade da FC | sim | módulos portados, sem dados reais |
 | Log da atividade no microSD e download pelo PC (stravaAP) | sim | log em stub, sem comandos |

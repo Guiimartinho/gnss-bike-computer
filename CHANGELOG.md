@@ -29,6 +29,7 @@ Revisão completa de 2026-09-18: análise do legacy e do port, migração para o
 
 ### Adicionado
 
+- Build com ANT (`ANT=1` no `fw.sh` e no `build.bat`): o add-on `sdk-ant` v2.1.1, clonado em `C:\ncs\sdk-ant`, roda sobre o NCS v3.3.0 como módulo extra do Zephyr, com `zephyr_app/modules/ant_ncs33_compat` (religa `SOC_SERIES_NRF52X` e `SOC_SERIES_NRF54LX`, obsoletos no NCS v3.3.0) e `zephyr_app/ant.conf`; `rf_ant_init()` (`src/rf/ant/ant.c`, port do `ant_stack_init()` do legacy) sobe a pilha e grava a chave ANT+ antes do BLE. Compila nos dois alvos (+28,6 KB de FLASH e +4,6 KB de RAM no nRF52840); o build sem `ANT` não muda; não testado em placa. `docs/07` ganhou o mapa do que o ANT e o ANT+ podem integrar ao port.
 - Testes de host do port (`zephyr_app/tests/host/`, rodados por `tools/fw/host_tests.sh`): Unity 2.6.1 + CTest com o GCC do PC, shims do Zephyr, sistema de arquivos em memória e HAL falso do GPS; 6 conjuntos, 42 casos (`vecteur`, `power_zone`, `suffer_score`, `nmea_parser`, `sd_logger`, `gps_mgmt`), com oráculo do legacy e mutação conferida nas correções.
 - `tools/fw/`: `ncs_env.sh` e `ncs_env.bat` (ambiente do NCS a partir do `environment.json` do toolchain) e `fw.sh` (build, flash, recover, devices, size).
 - `tools/docs/`: `mermaid_check.py` (extrai e renderiza os diagramas com o mermaid-cli local e aponta diagramas em texto puro) e `links_check.py`.
@@ -61,6 +62,7 @@ Revisão completa de 2026-09-18: análise do legacy e do port, migração para o
 
 ### Removido
 
+- `include/rf/glasses.h`: stub sem uso que afirmava que o ANT+ não existia no Zephyr; o `include/rf/ant.h` deixou de ser stub.
 - Template vazio de app da raiz (`CMakeLists.txt`, `prj.conf`, `src/main.c`), que vinha do commit inicial e não era o firmware.
 
 ## [2.0.0] - 2025-12-01

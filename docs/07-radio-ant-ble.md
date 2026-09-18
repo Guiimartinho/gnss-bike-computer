@@ -96,7 +96,7 @@ Sem autenticação: qualquer periférico chamado "stravaAP" pode formatar a mem�
 | `rf/ble_bsc_client.c` | cliente CSC | mesma inscrição; velocidade 3600 vezes menor |
 | `rf/ble_fec_client.c` | cliente FTMS (substitui o FE-C) | mesma inscrição; flags e offsets errados; control point sem indicações |
 | `rf/ble_komoot_client.c` | cliente Komoot | UUID de característica, layout e papel errados |
-| `include/rf/ant.h`, `glasses.h` | só stubs `static inline` | ninguém inclui |
+| `rf/ant/ant.c`, `include/rf/ant.h` | `rf_ant_init()`: sobe a pilha ANT e grava a chave ANT+, antes do BLE (só com `ANT=1`) | compila; sem perfis; não testado em placa |
 
 - Os dados dos sensores BLE chegam só à tela; o modelo (log, suffer score, zonas) não recebe BPM, cadência nem potência medida.
 - `CONFIG_BT_MAX_CONN=4` dá 1 conexão periférica e 3 centrais no SoftDevice Controller: exatamente o que o código tenta (1 celular, HRS, CSC, FTMS), sem folga.
@@ -109,21 +109,75 @@ Decidido em 2026-09-18: o aparelho mantém **ANT+ e BLE juntos**, porque os sens
 
 | Item | Situação conferida em 2026-09-18 |
 |---|---|
-| Versão atual | `sdk-ant` v2.1.1, acoplada ao **sdk-nrf v3.2.4**; o v3.3.0 instalado não consta da tabela de compatibilidade e a documentação desaconselha usar as bibliotecas ANT com outra revisão |
+| Versão atual | `sdk-ant` v2.1.1, acoplada ao **sdk-nrf v3.2.4**; o v3.3.0 instalado não consta da tabela de compatibilidade e a documentação desaconselha usar as bibliotecas ANT com outra revisão; o port a usa no NCS v3.3.0 por decisão do dono ([ANT no NCS v3.3.0](#ant-no-ncs-v330)) |
 | SoCs | nRF52832, nRF52840, nRF5340, nRF54L05, nRF54L10, nRF54L15, nRF54LM20 |
 | Acesso | o repositório é público, mas o uso exige **aceitar dois acordos**: o ANT+ Adopter Agreement ([página](https://developer.garmin.com/ant-program/licensing/adopter-agreement/), botão "Accept & Download the ANT+ Adopter Agreement") e o ANT License Agreement do add-on ([página do add-on](https://developer.garmin.com/ant-program/nrf-connect-sdk/), botão "Accept & Download the ANT License Agreement"); produto comercial exige a licença comercial ([formulário](https://www.garmin.com/forms/licenserequest-antstacks-softdevices/), US$ 0,08 por unidade, mínimo de US$ 800 por semestre) |
 | ANT+ Adopter Agreement | versão 20250103 ([PDF](https://developer.garmin.com/downloads/ant/ANT+_Adopter_Agreement.pdf)); aceito por pessoa física, vale só para uso pessoal e não se transfere. Cláusula (c): os ANT+ Documents (os perfis de dispositivo) e as ANT+ Design Tools não podem ser distribuídos a ninguém fora da organização, então **nada deles entra neste repositório, que é público**. Cláusula (a): o produto segue os requisitos mínimos de interoperabilidade dos perfis. Cláusula (e): a marca e o logo ANT+ só aparecem num produto vendido ou público se ele cumprir esses requisitos, testados por você |
 | Programas ANT+ | o programa de membros ANT+ e a certificação de produtos ANT+, com o suporte de engenharia, **terminaram em 2025-06-30** (aviso na [página de downloads](https://developer.garmin.com/ant-program/downloads/)); a página não diz o que os substitui |
 | Downloads | depois do aceite, a [página de downloads](https://developer.garmin.com/ant-program/downloads/) oferece as ferramentas de PC (ANTware II, testes IQC), o SimulANT+ (simula sensores ANT+ no PC, com um adaptador ANT USB), as ANT Libraries, os projetos de referência embarcados ANT e ANT+ (potência, velocidade e cadência, cinta, passo, balança) e o ANT-FS; software com o logo ANT+ segue a ANT+ Shared Source License, e o software aberto, a Apache 2.0 ou a licença do FIT |
-| Instalação | `west init -m https://github.com/ant-nrfconnect/sdk-ant --mr v2.1.1` + `west update` (o manifest do add-on puxa o sdk-nrf compatível; o [guia](https://ant-nrfconnect.github.io/doc/getting_started.html) usa `--mr main`, mas a tag fixa a versão), ou pelo [índice de add-ons](https://nrfconnect.github.io/ncs-app-index/) da extensão nRF Connect do VS Code ("ANT Wireless SDK"), que instala o add-on e o SDK compatível |
+| Instalação | no port, clone da tag em `C:\ncs\sdk-ant` e build com `ANT=1` ([ANT no NCS v3.3.0](#ant-no-ncs-v330)); o caminho do [guia](https://ant-nrfconnect.github.io/doc/getting_started.html) (`west init -m https://github.com/ant-nrfconnect/sdk-ant --mr main` + `west update`, ou o [índice de add-ons](https://nrfconnect.github.io/ncs-app-index/) do VS Code, "ANT Wireless SDK") monta um workspace com o sdk-nrf v3.2.4 |
 | Relógio | a pilha ANT exige o relógio de baixa frequência de 32,768 kHz com no máximo ±50 ppm, ou seja, cristal (o X2 dos DKs), segundo a [compatibilidade](https://ant-nrfconnect.github.io/doc/compatibility.html); os dois alvos do port já compilam com `CONFIG_CLOCK_CONTROL_NRF_K32SRC_XTAL=y` e `CONFIG_CLOCK_CONTROL_NRF_K32SRC_50PPM=y`, e a V3 tem o cristal Y3 |
 | Kconfig | `CONFIG_ANT` e `CONFIG_BT` juntos; `CONFIG_ANT_EVALUATION_KEY=y` para desenvolvimento não comercial; `CONFIG_ANT_LICENSE_KEY` para produto (licença comercial obrigatória antes de vender); no nRF5340, `CONFIG_ANT_LIBRARY_CORE` e imagens de rede pelo sysbuild |
 | Exemplos | HRM, BSC e potência; **sem FE-C**: o perfil do rolo precisa ser escrito a partir do legacy (`legacy/rf/fec.c`) |
 | Conexões | ANT e BLE dividem o rádio: `CONFIG_BT_MAX_CONN` pode precisar cair |
 
-Próximos passos, na fase 4 do roteiro: aceitar o acordo, criar o workspace do `sdk-ant` ao lado do NCS v3.3.0, compilar o port nele (verificar as diferenças entre o v3.2.4 e o v3.3.0) e portar HRM, BSC e FE-C sobre a API do add-on, com a busca em background e o pareamento do `ant_device_manager` do legacy. O BLE continua para o celular (Komoot, LNS), o medidor de potência e os comandos.
+Próximos passos, na fase 4 do roteiro: portar HRM, BSC e FE-C sobre a API do add-on (o port já compila com ele no NCS v3.3.0, ver abaixo), com a busca em background e o pareamento do `ant_device_manager` do legacy. O BLE continua para o celular (Komoot, LNS), o medidor de potência e os comandos.
 
 Alternativas descartadas: só BLE (os equipamentos externos são ANT+), SoftDevice S340 com Zephyr e ANT sobre rádio bruto (inviáveis).
+
+## ANT no NCS v3.3.0
+
+Decidido pelo dono em 2026-09-18: o ANT roda sobre o **NCS v3.3.0**, o mesmo SDK do resto do port, e não sobre o sdk-nrf v3.2.4 para o qual o `sdk-ant` v2.1.1 foi feito. Instalado e verificado por build na mesma data; **não testado em placa** (não há DK).
+
+```mermaid
+flowchart LR
+    ANT1["fw.sh ou build.bat<br/>com ANT=1"] --> MODS["módulos extras do Zephyr<br/>sdk-ant e ant_ncs33_compat"]
+    ANT1 --> CONF["ant.conf na imagem do app<br/>ANT, chave de avaliação,<br/>gerenciador de chaves"]
+    MODS --> WEST["west build com sysbuild<br/>NCS v3.3.0"]
+    CONF --> WEST
+    WEST --> FW["zephyr_app com a libant.a<br/>rf_ant_init antes do BLE"]
+```
+
+| Item | Situação |
+|---|---|
+| Instalação | `git clone --branch v2.1.1 https://github.com/ant-nrfconnect/sdk-ant C:\ncs\sdk-ant` (5,2 MB), sem `west update`: o manifesto do add-on só traz o sdk-nrf v3.2.4, que o port não usa. O add-on fica fora do repositório (a licença dele não permite redistribuir) e fora do NCS v3.3.0, que não muda |
+| Build | `ANT=1 bash tools/fw/fw.sh build pristine`, ou `set ANT=1` antes do `build.bat`: o add-on e `zephyr_app/modules/ant_ncs33_compat` entram como módulos extras do Zephyr, e `zephyr_app/ant.conf` liga o ANT só na imagem do app; `SDK_ANT_DIR` troca o caminho do add-on |
+| Incompatibilidade | o add-on testa `SOC_SERIES_NRF52X` (pasta da `libant.a` do nRF52) e `SOC_SERIES_NRF54LX` (pasta do nRF54L e nomes `SWI0x_IRQn` das interrupções de software), que o NCS v3.3.0 deixou obsoletos e não liga mais: sem eles o caminho da biblioteca sai `lib/soft-float/libant.a` e o link falha. O `ant_ncs33_compat` os religa a partir dos símbolos do SoC (condicionar pela série daria laço de dependência no Kconfig), e o build mostra um aviso esperado, "Deprecated symbol ... is enabled" |
+| Nome | o add-on já define `ant_stack_init()` na API da pilha: a função do port que substitui a do legacy chama `rf_ant_init()` (`src/rf/ant/ant.c`) |
+| Interfaces binárias | a `libant.a` vem compilada e chama 4 funções do MPSL (relógio de alta frequência e criptografia ECB), 4 do nrfx (`nrfx_gppi_conn_*`), o `SystemCoreClock` e símbolos internos do MPSL; os headers dessas funções são idênticos no v3.2.4 e no v3.3.0 e o link fecha, o que não prova o comportamento em tempo de execução |
+| Chave de rede ANT+ | vem do `ant_key_manager` do add-on (`ant_plus_key_set()`); nunca entra no repositório |
+| Relógio | cristal de 32,768 kHz a 50 ppm, já configurado nos dois alvos |
+
+Builds verificados em 2026-09-18 com o NCS v3.3.0 e a chave de avaliação (FLASH / RAM):
+
+| Build | nRF52840 DK | nRF54LM20 DK |
+|---|---|---|
+| exemplo `hrm_rx` (HRM) | 99.196 B / 25.216 B | 96 KB / 24.616 B |
+| exemplo `ble_ant_app_hrm` (BLE e ANT juntos) | 211.500 B / 44.520 B | 210.088 B / 44.360 B |
+| exemplo `bsc_rx` (velocidade e cadência) | 100.200 B / 25.280 B | 99.292 B / 24.688 B |
+| exemplo `bpwr_rx` (potência) | 103.812 B / 25.344 B | 102.552 B / 24.752 B |
+| exemplo `ant_bgnd_scan` (busca em background) | 99.304 B / 25.152 B | 98.400 B / 24.584 B |
+| **port com `ANT=1`** | 324.912 B / 121.536 B (+28.592 / +4.608) | 328.408 B / 122.248 B (+29.940 / +4.592) |
+
+O build padrão, sem `ANT`, continua idêntico byte a byte ao anterior.
+
+### Mapa de integração
+
+| Recurso | Legacy | `sdk-ant` v2.1.1 | No port | Quando |
+|---|---|---|---|---|
+| Pilha ANT e chave ANT+ | `ant_stack_init()` (`legacy/rf/ant.c:139-146`) | `ant_init()` e `ant_plus_key_set()` | **feito**: `rf_ant_init()` antes do BLE, com `ANT=1` | 2026-09-18 |
+| Cinta de frequência cardíaca (HRM) | canal 2, `legacy/rf/hrm.c` | perfil `ant_hrm` e exemplo `hrm_rx` | portar o `hrm.c`: as funções do nRF5 SDK que ele usa existem no add-on | fase 4 |
+| Velocidade e cadência (BSC) | canal 1, sensor combinado, `legacy/rf/bsc.c` | perfil `ant_bsc` e exemplo `bsc_rx` | portar o `bsc.c` | fase 4 |
+| Rolo (FE-C) | canal 3, `legacy/rf/fec.c` (páginas 16 e 25; 49 e 51 nunca enviadas) | **não existe** | portar o `fec.c` do legacy sobre `ant_channel_config` e `ant_common`; o controle ERG e SIM seria novo | fase 4 |
+| Busca e pareamento | canal 0 curinga, `legacy/rf/ant_device_manager.cpp` (até 7 sensores com RSSI) | exemplo `ant_bgnd_scan` e `ant_search_config` | portar o `ant_device_manager` | fase 4 |
+| Convivência com o BLE | prioridade de busca e coexistência (`legacy/rf/ant.c:297-313`) | `ant_search_channel_priority_set()`, `ant_coex_config_set()` e o exemplo `ble_ant_app_hrm` | os mesmos ajustes | fase 4 |
+| Potência ANT+ (BPWR) | não usa: lê potência pelo BLE CPS | perfil `ant_bpwr` e exemplo `bpwr_rx` | novo: medidores de potência ANT+ | fase 4, opcional |
+| Páginas comuns (bateria do sensor, fabricante) | parcial no FE-C | `ant_common` (`ant_request_controller`) | novo: bateria dos sensores na tela | fase 4, opcional |
+| "Glasses" (tela remota) | canal 4, desligado | transmissão (exemplo `ant_broadcast_tx`) | opcional | futuro |
+| Criptografia, burst, ANT-FS | não usa | `ant_encryption` e o exemplo `ant_advanced_burst`; o ANT-FS fica nos downloads da Garmin, fora do add-on | não previsto | — |
+| Outros perfis de ciclismo (radar, luzes, câmbio eletrônico, e-bike, controle remoto, temperatura) | não usa | não existem no add-on | exigem os documentos de perfil ANT+ (acordo do dono; nada deles entra no repositório) | futuro |
+
+API: as 12 funções `sd_ant_*` que o legacy chama (em `ant.c`, `hrm.c`, `bsc.c` e `fec.c`) existem no add-on como `ant_*` (`include/ant_interface.h`), uma para uma. Dos 21 identificadores de perfis e bibliotecas do nRF5 SDK que o legacy usa, os únicos ausentes no add-on (`ant_search_start`, `ant_search_end` e os dois `*_evt_handler`) são funções do próprio legacy: o port dos perfis pode seguir o legacy linha a linha.
 
 ## O que falta
 

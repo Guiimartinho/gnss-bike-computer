@@ -5,7 +5,7 @@ description: Trabalhar com o rádio do GNSS Bike Computer no port Zephyr - BLE c
 
 # Rádio: BLE e ANT+
 
-Referência: `docs/07-radio-ant-ble.md`. Topologia do legacy: BLE **só central** (NUS para o stravaAP, LNS, Cycling Power, Komoot) + ANT+ (HRM, BSC, FE-C). O port é periférico + central e **não tem ANT+**.
+Referência: `docs/07-radio-ant-ble.md`. Topologia do legacy: BLE **só central** (NUS para o stravaAP, LNS, Cycling Power, Komoot) + ANT+ (HRM, BSC, FE-C). O port é periférico + central; com `ANT=1` a pilha ANT sobe no boot, ainda sem perfis.
 
 ## Estado no port (2026-09-18)
 
@@ -33,8 +33,9 @@ Referência: `docs/07-radio-ant-ble.md`. Topologia do legacy: BLE **só central*
 
 **Decidido em 2026-09-18: ANT+ e BLE juntos** (os equipamentos externos falam ANT+). Detalhes em `docs/07-radio-ant-ble.md#decisão-ant-e-ble`.
 
-- Caminho: add-on **ANT for nRF Connect SDK** (`sdk-ant`). A v2.1.1 é presa ao **sdk-nrf v3.2.4**; não use as bibliotecas ANT com o NCS v3.3.0.
-- Antes de tudo, o **dono** aceita o ANT+ Adopter Agreement; só então crie o workspace (`west init -m https://github.com/ant-nrfconnect/sdk-ant --mr <versão>` + `west update`), ao lado do NCS atual, e confirme com ele antes de baixar (vários GB).
+- Caminho: add-on **ANT for nRF Connect SDK** (`sdk-ant` v2.1.1) **sobre o NCS v3.3.0**, por decisão do dono: clone da tag em `C:\ncs\sdk-ant` e build com `ANT=1` (`fw.sh` ou `build.bat`), que acrescenta o add-on, `zephyr_app/modules/ant_ncs33_compat` e `zephyr_app/ant.conf`. Detalhes e mapa de integração em `docs/07-radio-ant-ble.md#ant-no-ncs-v330`.
+- Nomes: o add-on usa o prefixo `ant_` (`ant_init`, `ant_stack_init`, `ant_channel_*`); funções nossas ficam fora dele (`rf_ant_init()` em `src/rf/ant/ant.c`). As `sd_ant_*` do legacy viram `ant_*`, uma para uma.
+- Nada do material do ANT+ entra no repositório (acordo do dono): nem código do add-on, nem chave de rede, nem documentos de perfil.
 - Kconfig: `CONFIG_ANT` + `CONFIG_BT`; `CONFIG_ANT_EVALUATION_KEY=y` no desenvolvimento; `CONFIG_ANT_LICENSE_KEY` só com licença comercial; nRF5340 usa `CONFIG_ANT_LIBRARY_CORE` e imagem de rede.
 - O add-on tem exemplos de HRM, BSC e potência, **sem FE-C**: o perfil do rolo sai do legacy (`legacy/rf/fec.c`, páginas 16 e 25; o controle das páginas 49/51 nunca foi enviado no legacy).
 - Pareamento: porte o `ant_device_manager` (canal de busca em background, lista de até 7 sensores com RSSI, número salvo nas configurações).

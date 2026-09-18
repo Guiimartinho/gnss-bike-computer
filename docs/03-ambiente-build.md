@@ -49,8 +49,10 @@ flowchart LR
 | Variável | Onde vale | Efeito |
 |---|---|---|
 | `NCS_ROOT`, `NCS_VERSION`, `NCS_TOOLCHAIN` | `ncs_env.*` | trocam o SDK (padrão `C:\ncs`, `v3.3.0`, `936afb6332`; o `.sh` descobre o toolchain pelo `toolchains.json`) |
-| `BUILD_DIR` | `build.bat`, `flash.bat`, `fw.sh` | outra pasta de build (padrão `zephyr_app/build`) |
+| `BUILD_DIR` | `build.bat`, `flash.bat`, `fw.sh` | outra pasta de build (padrão `zephyr_app/build`); relativa, vale a partir da pasta atual |
 | `BOARD` | `build.bat`, `flash.bat`, `recover.bat`, `fw.sh` | outro alvo (padrão `nrf52840dk/nrf52840`; o nRF54LM20 DK é `nrf54lm20dk/nrf54lm20a/cpuapp`); o overlay `zephyr_app/boards/<placa>.overlay` entra pelo nome |
+| `ANT` | `build.bat`, `fw.sh` | `1` compila com o ANT: o add-on `sdk-ant` em `SDK_ANT_DIR`, `zephyr_app/modules/ant_ncs33_compat` e `zephyr_app/ant.conf`; ao trocar, use `pristine` ou outra `BUILD_DIR` |
+| `SDK_ANT_DIR` | `build.bat`, `fw.sh` | pasta do add-on (padrão `C:\ncs\sdk-ant`) |
 | `FAMILY` | `flash.bat`, `recover.bat`, `fw.sh` | família do `nrfutil`; sem ela, vem da `BOARD` (`nrf54l` para as placas nRF54L, `nrf52` no resto) |
 | `NRF_SERIAL` | `flash.bat`, `recover.bat`, `fw.sh` | escolhe o J-Link pelo número de série |
 | `SERIAL_PORT` | `serial.bat` | porta padrão do console (padrão `COM11`) |
@@ -75,6 +77,7 @@ python -m west build -p auto -b nrf52840dk/nrf52840 -d build --sysbuild .
 
 - **Alvo:** `nrf52840dk/nrf52840`, com os pinos da placa myStravaB em `zephyr_app/boards/nrf52840dk_nrf52840.overlay`, que o Zephyr aplica pelo nome da placa. Outro alvo: `BOARD=<placa> bash tools/fw/fw.sh build` ou `set BOARD=<placa>` antes do `build.bat`.
 - **nRF54LM20 DK:** `BOARD=nrf54lm20dk/nrf54lm20a/cpuapp BUILD_DIR=zephyr_app/build_54 bash tools/fw/fw.sh build`. Usa `boards/nrf54lm20dk_nrf54lm20a_cpuapp.overlay` (pinos no conector de expansão do DK) e `boards/nrf54lm20dk_nrf54lm20a_cpuapp.conf` (configurações no ZMS). Detalhes em [05](05-arquitetura-zephyr.md#nrf54lm20-dk).
+- **ANT:** `ANT=1 bash tools/fw/fw.sh build pristine` (ou `set ANT=1` antes do `build.bat`), com `BOARD` para o nRF54LM20 DK. Precisa do add-on em `C:\ncs\sdk-ant` ([07](07-radio-ant-ble.md#ant-no-ncs-v330)); mostra um aviso esperado a mais, `Deprecated symbol SOC_SERIES_NRF52X is enabled` (ou `SOC_SERIES_NRF54LX`).
 - **Sysbuild** é o fluxo padrão do NCS. O `zephyr_app/sysbuild.conf` desliga o Partition Manager (`SB_CONFIG_PARTITION_MANAGER=n`), depreciado no NCS 3.3; o layout vem do devicetree.
 - **Saída:** `zephyr_app/build/zephyr_app/zephyr/zephyr.hex` (e `.elf`, `.map`, `.config`, `zephyr.dts`). Sem MCUboot não há `merged.hex`.
 
@@ -98,6 +101,7 @@ Build com sysbuild da `develop` em 2026-09-18 (atualizado a cada commit que muda
 | Erros | 0 |
 | Tempo | cerca de 1 min 45 s do zero |
 | nRF54LM20 DK | FLASH 298.468 B (15,02 % de 1.940 KB), RAM 117.656 B (22,49 % de 511 KB), os mesmos 7 avisos |
+| Com `ANT=1` | nRF52840 DK: FLASH 324.912 B, RAM 121.536 B; nRF54LM20 DK: FLASH 328.408 B, RAM 122.248 B; os 7 avisos e o do símbolo obsoleto |
 
 Maiores consumidores de RAM (`bash tools/fw/fw.sh size`): `seg_runtime` 22.000 B, heap do sistema 16.384 B (`CONFIG_HEAP_MEM_POOL_SIZE`), framebuffer `spi_buffer` 12.482 B, `points` 8.000 B, pool do controlador BLE 5.247 B.
 
@@ -164,6 +168,8 @@ O firmware original não compila nesta máquina: exige **nRF5 SDK 16.0.0**, **So
 | `include could not find requested file: ...\936afb6332\cmake\toolchain\zephyr\generic.cmake` | a variável de ambiente `TOOLCHAIN_ROOT` está definida: o Zephyr a lê como raiz das definições de toolchain. Não a defina; os `.bat` antigos a definiam |
 | `Build directory ... is for application ...` | build antigo de outra pasta; `-p auto` (padrão dos scripts) refaz do zero |
 | aviso `SB_CONFIG_PARTITION_MANAGER is enabled ... deprecated` | falta o `zephyr_app/sysbuild.conf` |
+| `multiple definition of 'ant_stack_init'` | o add-on já define `ant_stack_init()`; no código do port use nomes fora do prefixo `ant_` (`rf_ant_init()`) |
+| `lib/soft-float/libant.a ... missing` | o `ant_ncs33_compat` não entrou no build: compile pelos scripts com `ANT=1` |
 | `--no-sysbuild` | ainda funciona para imagem única, mas está depreciado desde o NCS 2.7 |
 | `JLink.exe` abre a ferramenta do Java | o `JLink.exe` do PATH é do Eclipse Adoptium; o da SEGGER fica em `C:\Program Files\SEGGER\JLink_V924a\` |
 | pino da placa se comportando como outro periférico no DK | um nó do DK voltou a ocupar o pino; o overlay desliga `qspi` e `mx25r64`, `spi3` e `pwm0` e tira RTS/CTS do `uart0` (ver [02-hardware.md](02-hardware.md#alvo-híbrido-no-dk)) |

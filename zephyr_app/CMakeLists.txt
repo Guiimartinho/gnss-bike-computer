@@ -114,6 +114,11 @@ target_sources(app PRIVATE
     src/rf/ble_komoot_client.c
 )
 
+# ANT on the sdk-ant add-on, only in ANT builds (ANT=1 in tools/fw/fw.sh)
+target_sources_ifdef(CONFIG_ANT app PRIVATE
+    src/rf/ant/ant.c
+)
+
 # Vue Layer - User Interface
 target_sources(app PRIVATE
     src/vue/vue.c

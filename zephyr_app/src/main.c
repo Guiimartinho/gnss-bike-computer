@@ -38,6 +38,7 @@
 #include "model/model_lock.h"
 #include "model/power_scheduler.h"
 #include "model/segment.h"
+#include "rf/ant.h"
 #include "rf/ble_manager.h"
 #include "vue/vue.h"
 
@@ -211,6 +212,20 @@ static app_err_t init_application(void)
     app_err_t err;
 
     LOG_INF("Initializing application...");
+
+#if defined(CONFIG_ANT)
+    /*
+     * ANT before bt_enable(), as in the sdk-ant sample with BLE and ANT. The
+     * legacy enabled the S340 first (sdh_init) and started ANT after BLE
+     * (legacy/main.cpp:480-493); the add-on has no shared SoftDevice. A
+     * failure stops the start-up, as APP_ERROR_CHECK did in legacy/rf/ant.c.
+     */
+    err = rf_ant_init();
+    if (err != APP_OK) {
+        LOG_ERR("ANT init failed: %d", err);
+        return err;
+    }
+#endif
 
     /* BLE Manager */
     err = ble_manager_init();

@@ -56,7 +56,7 @@ flowchart LR
 | Percurso com mapa e zoom | sim | parcial, não ligado |
 | Altitude por Kalman de 3 estados, subida, inclinação | sim | portado com diferenças |
 | Potência estimada | sim | fórmula diferente |
-| Sensores ANT+ (FC, velocidade e cadência, rolo FE-C) | sim | ausentes; voltam pelo add-on `sdk-ant` (decisão de 2026-09-18) |
+| Sensores ANT+ (FC, velocidade e cadência, rolo FE-C) | sim | a pilha do add-on `sdk-ant` compila com o NCS v3.3.0 (`ANT=1`); perfis na fase 4 |
 | BLE (potência, posição do celular, Komoot) | sim | parcial |
 | Zonas de potência, suffer score, variabilidade da FC | sim | portados e testados, sem dados reais |
 | Log no microSD e download pelo PC | sim | log em stub |

@@ -12,6 +12,9 @@
 # FAMILY (família do nrfutil, deduzida da BOARD: nrf52 ou nrf54l),
 # NRF_SERIAL (número de série do J-Link) e as de tools/fw/ncs_env.sh
 # (NCS_ROOT, NCS_VERSION, NCS_TOOLCHAIN).
+# ANT=1 compila com o ANT: o add-on sdk-ant em SDK_ANT_DIR (padrão
+# $NCS_ROOT/sdk-ant), zephyr_app/modules/ant_ncs33_compat e zephyr_app/ant.conf;
+# ao trocar ANT, use pristine ou outra BUILD_DIR.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -32,6 +35,7 @@ case "$BOARD" in
     *) DEFAULT_FAMILY=nrf52 ;;
 esac
 FAMILY="${FAMILY:-$DEFAULT_FAMILY}"
+SDK_ANT_DIR="${SDK_ANT_DIR:-$NCS_ROOT/sdk-ant}"
 
 select_probe() {
     if [ -n "${NRF_SERIAL:-}" ]; then
@@ -74,9 +78,21 @@ case "$cmd" in
         if [ "${1:-}" = "pristine" ]; then
             pristine=always
         fi
+        extra=()
+        if [ "${ANT:-0}" = "1" ]; then
+            if [ ! -f "$SDK_ANT_DIR/zephyr/module.yml" ]; then
+                echo "fw.sh: sdk-ant não encontrado em $SDK_ANT_DIR (defina SDK_ANT_DIR)" >&2
+                exit 1
+            fi
+            # O add-on e o módulo de compatibilidade com o NCS v3.3.0 entram como
+            # módulos extras; ant.conf liga o ANT só na imagem do app.
+            ZEPHYR_EXTRA_MODULES="$(cygpath -m "$SDK_ANT_DIR");$(cygpath -m "$APP_DIR/modules/ant_ncs33_compat")"
+            export ZEPHYR_EXTRA_MODULES
+            extra=(-- -Dzephyr_app_EXTRA_CONF_FILE=ant.conf)
+        fi
         # O west precisa rodar no drive do projeto (F:), não no do NCS (C:).
         cd "$APP_DIR"
-        python -m west build -p "$pristine" -b "$BOARD" -d "$BUILD_DIR" --sysbuild "$APP_DIR"
+        python -m west build -p "$pristine" -b "$BOARD" -d "$BUILD_DIR" --sysbuild "$APP_DIR" "${extra[@]}"
         ;;
     flash)
         erase=ERASE_ALL
@@ -107,7 +123,7 @@ case "$cmd" in
         arm-zephyr-eabi-nm --size-sort -S -t d "$elf" | awk '$3 ~ /[tTrR]/ {print $2+0, $4}' | sort -rn | head -20
         ;;
     *)
-        sed -n '2,13p' "$0"
+        sed -n '2,17p' "$0"
         exit 2
         ;;
 esac

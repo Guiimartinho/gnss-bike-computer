@@ -9,7 +9,7 @@ Onde o port Zephyr (`zephyr_app/`) está em relação ao firmware original (`leg
 - **Compila** no NCS v3.3.0 (FLASH 296.320 B, RAM 116.928 B, 7 avisos conhecidos) e **passa em 7 conjuntos de testes de host** (50 casos). **Nada foi testado na placa** nem no nRF52840-DK.
 - A maior parte dos módulos do legacy **existe** no port, mas muitos **não estão ligados** ao fluxo principal (menu, FEC, notificações, zonas RR, fontes de posição, allocator de segmentos, parcours, EPO, USB) e alguns **não funcionariam** mesmo ligados (BLE central, segmentos, formatos de arquivo).
 - A interface do port é **nova**, em paisagem; o aparelho é retrato.
-- ANT+ **não existe** no port; os sensores foram trocados por clientes BLE que ainda não funcionam de ponta a ponta.
+- ANT+: a pilha do add-on `sdk-ant` entra no build com `ANT=1` e sobe no boot (`rf_ant_init()`), mas os perfis (HRM, BSC, FE-C) ainda não foram portados; os clientes BLE ainda não funcionam de ponta a ponta.
 
 ```mermaid
 pie showData
@@ -42,7 +42,7 @@ Estados: **fiel** (mesmo comportamento), **diferente** (existe com regras ou con
 | Configurações | FRAM 0x50, versão 0x0002 | NVS (`user_settings.c`) | diferente | sem enforce no boot, setters mortos |
 | Recuperação de falha (FDIR) | `.noinit` + CRC-8, restauração por data | `crash_recovery.c` | quebrado | CRC cobre o próprio campo; `has_data` nunca verdadeiro |
 | BLE | só central (NUS→stravaAP, LNS, CPS, Komoot) | periférico + central (HRS, CSC, FTMS) | quebrado | scan nunca iniciado; `bt_gatt_subscribe` com `ccc_handle=0` faria `memset(NULL)` ([07](07-radio-ant-ble.md)) |
-| ANT+ | HRM, BSC, FE-C, busca em background | stubs em `ant.h` | ausente | há o add-on ANT para NCS (licenciado) |
+| ANT+ | HRM, BSC, FE-C, busca em background | pilha do `sdk-ant` com `ANT=1` (`src/rf/ant/ant.c`), sem perfis | parcial | compila no NCS v3.3.0; mapa de integração em [07](07-radio-ant-ble.md#ant-no-ncs-v330) |
 | Interface | retrato, `Org_01`, cadrans, menu, notificações | paisagem, 5×7, 9 páginas | diferente | menu, FEC e notificações não ligados ([08](08-interface.md)) |
 | Comandos (`$LOC`, `$DWN`, `$QRY`) e USB | VParser via USB CDC e NUS; MSC | nada; USB fora do build | ausente | stack USB antigo depreciado no Zephyr 4.3 |
 
@@ -129,7 +129,8 @@ Tomadas em 2026-09-18:
 
 | Decisão | Escolha | Consequência |
 |---|---|---|
-| Rádio | **ANT+ e BLE juntos**: os sensores e equipamentos externos falam ANT+ | ANT+ pelo add-on **ANT for nRF Connect SDK** (`sdk-ant`); a versão atual, v2.1.1, é acoplada ao **sdk-nrf v3.2.4**, não ao v3.3.0 instalado; exige aceitar o ANT+ Adopter Agreement e usar a chave de avaliação (`CONFIG_ANT_EVALUATION_KEY`) até haver licença comercial (ver [07](07-radio-ant-ble.md#decisão-ant-e-ble)) |
+| Rádio | **ANT+ e BLE juntos**: os sensores e equipamentos externos falam ANT+ | ANT+ pelo add-on **ANT for nRF Connect SDK** (`sdk-ant`); a v2.1.1 foi feita para o **sdk-nrf v3.2.4**, e o port a usa no NCS v3.3.0 com o módulo `ant_ncs33_compat` (ver a linha seguinte); exige aceitar o ANT+ Adopter Agreement e usar a chave de avaliação (`CONFIG_ANT_EVALUATION_KEY`) até haver licença comercial (ver [07](07-radio-ant-ble.md#decisão-ant-e-ble)) |
+| ANT no NCS v3.3.0 | **obrigatório**: o `sdk-ant` v2.1.1 roda sobre o NCS v3.3.0, não sobre o v3.2.4 | add-on clonado em `C:\ncs\sdk-ant` e usado como módulo extra do Zephyr com `ANT=1`; compila nos dois alvos; não testado em placa ([07](07-radio-ant-ble.md#ant-no-ncs-v330)) |
 | Placa | **board própria com o nRF54LM20A**, no lugar do DK com overlay, e **esquemático próprio**: GNSS, bateria e display melhores, painel solar pequeno na caixa e o que mais fizer sentido | a V3 existe só como esquema, não há placa física; o nRF54LM20 DK vem com o nRF54LM20B (a mesma peça com NPU) e o NCS v3.3.0 e o `sdk-ant` v2.1.x suportam os dois (ver [02](02-hardware.md#próxima-placa)) |
 | Tela | **retangular, no formato do legacy**: 2,7", 400 × 240, em retrato | a interface do port, hoje em paisagem, passa para retrato (fase 5); o display novo mantém o tamanho |
 | CI | **desligado**: `.github/workflows/ci.yml` só roda à mão | não gasta minutos do GitHub Actions; ligar só com pedido do dono |
@@ -141,6 +142,5 @@ Ainda em aberto:
 |---|---|---|
 | Componentes da placa nova | proposta em [13](13-placa-nova.md): nRF54LM20A no módulo Fanstel BM20C, display JDI LPM027M128C (MIP de 8 cores), GNSS u-blox MAX-F10S ou MAX-M10N no mesmo footprint com antena linear na borda de cima, nPM1300 com MAX17262 e carregador solar AEM10900, BMP585, LSM6DSV16X, LIS2MDL e OPT3001 | o dono aprova ou troca cada item; amostras e placas de avaliação antes do esquemático |
 | Hardware de teste | nRF54LM20 DK para desenvolver até a placa própria existir, e as placas de avaliação da [proposta](13-placa-nova.md#próximos-passos) | sem placa, nada roda de verdade: hoje só há build e testes de host |
-| Workspace do ANT+ | instalar o `sdk-ant` (com o sdk-nrf v3.2.4 e o toolchain dele) depois que o dono aceitar os acordos ([07](07-radio-ant-ble.md#decisão-ant-e-ble)) | o port compila hoje no v3.3.0; voltar ao v3.2.4 precisa ser verificado |
 | Formatos no SD | compatíveis com o legacy (segmentos em texto com nome base36, `.PAR`, `@DDMMYY.txt`) ou formatos novos com conversor | há 138 segmentos e 2 percursos de exemplo em `tools/TDD/DB` no formato do legacy |
 | Licença do projeto | o legacy é CC BY-NC 4.0; o port deriva dele | afeta uso comercial e a escolha da licença do repositório |

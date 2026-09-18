@@ -29,6 +29,7 @@ flowchart TB
     subgraph RF["rf/"]
         BLE["ble_manager · ble_nus · ble_lns"]
         CLI["clientes HRS · CSC · FTMS · Komoot"]
+        ANTN["ant (só com ANT=1)"]
     end
     subgraph DRV["drivers/"]
         GPS["gps_mgmt · nmea_parser · gps_epo"]
@@ -164,6 +165,7 @@ find build_su/CMakeFiles/app.dir -name "*.su" -exec cat {} + | sort -t$'\t' -k2 
 | `src/model/` | `parcours` | parcial (`load`/`start` sem chamador) |
 | `src/model/` | `loc_source`, `baro_drift`, `rr_zone`, `zwift` | não (descartados pelo linker) |
 | `src/rf/` | `ble/ble_manager.c`, `ble_nus.c`, `ble_lns.c`, `ble_*_client.c` | parcial (scan nunca iniciado) |
+| `src/rf/ant/` | `ant.c` (`rf_ant_init()`, pilha do `sdk-ant`) | só com `ANT=1` |
 | `src/vue/` | `vue.c` | sim |
 | `src/vue/` | `menu.c`, `vue_fec.c`, `vue_crs.c` | não |
 | `src/usb/` | `usb_cdc.c`, `usb_msc.c` | fora do `CMakeLists.txt` |
