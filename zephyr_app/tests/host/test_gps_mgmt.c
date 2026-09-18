@@ -2,9 +2,9 @@
  * @file test_gps_mgmt.c
  * @brief Host tests for drivers/gps/gps_mgmt.c with a fake UART and GPIO.
  *
- * The rules under test: the fix callback runs once per epoch (on the RMC),
- * not once per sentence; an RMC with status V ends the fix at once. The
- * legacy ran the model once per location update
+ * The rules under test: corrupted lines are dropped; the fix callback runs
+ * once per epoch (on the RMC), not once per sentence; an RMC with status V
+ * ends the fix at once. The legacy ran the model once per location update
  * (legacy/source/model/Locator.cpp, TASK_EVENT_LOCATION).
  */
 
@@ -88,6 +88,15 @@ static void test_three_epochs_give_three_callbacks(void)
     TEST_ASSERT_EQUAL_UINT(3U, s_callbacks);
 }
 
+static void test_a_line_with_a_bad_checksum_is_ignored(void)
+{
+    fake_uart_push_line("$GPRMC,123519.200,A,4841.5260,N,00611.0640,E,12.5,054.7,180926,,,A*58");
+    gps_mgmt_process();
+
+    TEST_ASSERT_EQUAL_UINT(0U, s_callbacks);
+    TEST_ASSERT_FALSE(gps_mgmt_has_fix());
+}
+
 static void test_a_void_rmc_ends_the_fix_at_once(void)
 {
     push_epoch();
@@ -106,6 +115,7 @@ int main(void)
     UNITY_BEGIN();
     RUN_TEST(test_a_full_epoch_triggers_the_fix_callback_once);
     RUN_TEST(test_three_epochs_give_three_callbacks);
+    RUN_TEST(test_a_line_with_a_bad_checksum_is_ignored);
     RUN_TEST(test_a_void_rmc_ends_the_fix_at_once);
     return UNITY_END();
 }

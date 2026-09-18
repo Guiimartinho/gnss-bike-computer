@@ -71,6 +71,12 @@ static void nmea_line_callback(const char *line)
         return;
     }
 
+    /* Drop corrupted lines: the parser itself does not check the checksum */
+    if (!nmea_verify_checksum(line)) {
+        LOG_DBG("NMEA checksum error: %s", line);
+        return;
+    }
+
     /* Parse the NMEA sentence */
     if (nmea_parser_sentence(line, &nmea_data) == APP_OK) {
         /* Update GPS data based on sentence type */
