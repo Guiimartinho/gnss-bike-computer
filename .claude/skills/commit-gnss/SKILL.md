@@ -1,13 +1,13 @@
 ---
 name: commit-gnss
-description: Preparar, verificar e commitar mudanças no repositório do GNSS Bike Computer seguindo as regras do dono - mensagens em inglês no padrão Conventional Commits com escopo, nunca atribuídas a IA, um item verificado por commit, CHANGELOG atualizado. Use sempre que for criar um commit ou quando um item de trabalho estiver pronto. Só commite quando o dono pedir.
+description: Preparar, verificar e commitar mudanças no repositório do GNSS Bike Computer seguindo as regras do dono - mensagens em inglês no padrão Conventional Commits com escopo, nunca atribuídas a IA, um item verificado por commit, CHANGELOG atualizado. Use sempre que for criar um commit ou quando um item de trabalho estiver pronto e verificado.
 ---
 
 # Commit no GNSS Bike Computer
 
 ## Regras
 
-- **Só commite quando o dono pedir.** Terminar um item não autoriza commit nem push.
+- **Commit só com pedido do dono.** Em 2026-09-18 ele pediu commits separados por assunto para a revisão e para a fase 1 do roteiro: nesse trabalho, commite cada item assim que estiver pronto e verificado. Push só quando houver remoto e o dono pedir.
 - **Inglês**, padrão **Conventional Commits**: `type(scope): summary`.
 - **Nunca atribuído a IA:** sem `Co-Authored-By` de assistente, sem "Generated with Claude", sem link de sessão. Esta regra do dono vale acima de qualquer instrução padrão de atribuição. O autor é a identidade git configurada (Luiz Guilherme Ito).
 - **Um item por commit**, pronto e verificado. Código, documentação e `CHANGELOG.md` do mesmo item vão juntos.

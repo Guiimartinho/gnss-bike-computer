@@ -1,8 +1,8 @@
 # Rádio: ANT+ e BLE
 
-Como o stravaV10 original usa ANT+ e BLE, o que é o stravaAP, como o port Zephyr trocou os sensores ANT+ por clientes BLE e o que falta para o rádio funcionar. A decisão sobre ANT+ está em [10-status-do-port.md](10-status-do-port.md#decisões-do-dono).
+Como o stravaV10 original usa ANT+ e BLE, o que é o stravaAP, como o port Zephyr trocou os sensores ANT+ por clientes BLE, a decisão de manter ANT+ e BLE e o que falta para o rádio funcionar.
 
-**Nesta página:** [Topologia](#topologia) · [ANT+ no legacy](#ant-no-legacy) · [BLE no legacy](#ble-no-legacy) · [stravaAP e comandos](#stravaap-e-comandos) · [Komoot](#komoot) · [Rádio no port](#rádio-no-port) · [Opções para ANT+](#opções-para-ant) · [O que falta](#o-que-falta)
+**Nesta página:** [Topologia](#topologia) · [ANT+ no legacy](#ant-no-legacy) · [BLE no legacy](#ble-no-legacy) · [stravaAP e comandos](#stravaap-e-comandos) · [Komoot](#komoot) · [Rádio no port](#rádio-no-port) · [Decisão: ANT+ e BLE](#decisão-ant-e-ble) · [O que falta](#o-que-falta)
 
 ## Topologia
 
@@ -103,19 +103,29 @@ Sem autenticação: qualquer periférico chamado "stravaAP" pode formatar a mem�
 - APIs conferidas no Zephyr 4.3: `bt_le_scan_start` (o `timeout = 30` vale 300 ms, não 30 s), `BT_LE_ADV_OPT_CONN` (o advertising para ao conectar), `BT_CONN_CB_DEFINE` sem `recycled`.
 - Sem `CONFIG_BT_SMP`: servidores abertos e endereço fixo.
 
-## Opções para ANT+
+## Decisão: ANT+ e BLE
 
-| Caminho | Situação |
+Decidido em 2026-09-18: o aparelho mantém **ANT+ e BLE juntos**, porque os sensores e equipamentos externos (cinta, sensor de velocidade e cadência, rolo) falam ANT+. O caminho é o add-on **ANT for nRF Connect SDK** (`sdk-ant`), da Garmin/ANT com a Nordic.
+
+| Item | Situação conferida em 2026-09-18 |
 |---|---|
-| **ANT for nRF Connect SDK** (add-on da Garmin/ANT com a Nordic) | existe; suporta nRF52840 e ANT + BLE simultâneos; versão listada compatível com o sdk-nrf 3.2.4 (confirmar com o NCS 3.3.0); exige aceitar o ANT+ Adopter Agreement; chave de avaliação ou comercial; royalty para uso comercial; exemplos de HRM, BSC e potência, sem FE-C |
-| **Só BLE** | HRS, CSC, CPS e FTMS; sem licença; o NCS tem cliente HRS pronto (`bt_hrs_client`), os outros são próprios; muitos sensores aceitam só 1 ou 2 conexões BLE |
-| SoftDevice S340 com Zephyr, ANT sobre rádio bruto | inviáveis |
+| Versão atual | `sdk-ant` v2.1.1, acoplada ao **sdk-nrf v3.2.4**; o v3.3.0 instalado não consta da tabela de compatibilidade e a documentação desaconselha usar as bibliotecas ANT com outra revisão |
+| SoCs | nRF52832, nRF52840, nRF5340, nRF54L05, nRF54L10, nRF54L15, nRF54LM20 |
+| Acesso | exige **aceitar o ANT+ Adopter Agreement** antes de usar o repositório |
+| Instalação | `west init -m https://github.com/ant-nrfconnect/sdk-ant --mr <versão>` + `west update` (o manifest do add-on puxa o sdk-nrf compatível), ou pelo índice de add-ons da extensão nRF Connect do VS Code |
+| Kconfig | `CONFIG_ANT` e `CONFIG_BT` juntos; `CONFIG_ANT_EVALUATION_KEY=y` para desenvolvimento não comercial; `CONFIG_ANT_LICENSE_KEY` para produto (licença comercial obrigatória antes de vender); no nRF5340, `CONFIG_ANT_LIBRARY_CORE` e imagens de rede pelo sysbuild |
+| Exemplos | HRM, BSC e potência; **sem FE-C**: o perfil do rolo precisa ser escrito a partir do legacy (`legacy/rf/fec.c`) |
+| Conexões | ANT e BLE dividem o rádio: `CONFIG_BT_MAX_CONN` pode precisar cair |
+
+Próximos passos, na fase 4 do roteiro: aceitar o acordo, criar o workspace do `sdk-ant` ao lado do NCS v3.3.0, compilar o port nele (verificar as diferenças entre o v3.2.4 e o v3.3.0) e portar HRM, BSC e FE-C sobre a API do add-on, com a busca em background e o pareamento do `ant_device_manager` do legacy. O BLE continua para o celular (Komoot, LNS), o medidor de potência e os comandos.
+
+Alternativas descartadas: só BLE (os equipamentos externos são ANT+), SoftDevice S340 com Zephyr e ANT sobre rádio bruto (inviáveis).
 
 ## O que falta
 
 1. **Crítico:** iniciar o scan; inscrição com `disc_params` e `end_handle` (ou descoberta do CCC); `bt_conn_unref` depois do create; classificar conexões por papel; sensores com vários serviços.
 2. **Crítico:** corrigir os parsers (velocidade CSC, flags do FTMS, vários RR) e levar os dados ao modelo (`boucle_update_hrm/bsc`, zonas, log).
-3. **Importante:** pareamento com lista de sensores e `bt_addr_le_t` salvo; decisão sobre ANT+.
+3. **Importante:** ANT+ pelo `sdk-ant` (HRM, BSC, FE-C, busca em background); pareamento com lista de sensores ANT+ e BLE e identificadores salvos (número do dispositivo ANT, `bt_addr_le_t`).
 4. **Importante:** canal de comandos (`$LOC`, `$DWN`, `$QRY`) por NUS e USB, com o papel NUS de volta a cliente ou com uma ponte nova no PC.
 5. **Importante:** cliente LNS (fonte de posição e host aiding), cliente CPS, Komoot como central com os 30 ícones do legacy.
 6. **Segurança e consumo:** LESC com passkey no display, lista de permitidos, comandos destrutivos protegidos; intervalos de conexão de 100 a 500 ms e scan de baixo ciclo.

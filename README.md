@@ -55,7 +55,7 @@ flowchart LR
 | Percurso com mapa e zoom | sim | parcial, não ligado |
 | Altitude por Kalman de 3 estados, subida, inclinação | sim | portado com diferenças |
 | Potência estimada | sim | fórmula diferente |
-| Sensores ANT+ (FC, velocidade e cadência, rolo FE-C) | sim | trocados por BLE, não funcionais |
+| Sensores ANT+ (FC, velocidade e cadência, rolo FE-C) | sim | ausentes; voltam pelo add-on `sdk-ant` (decisão de 2026-09-18) |
 | BLE (potência, posição do celular, Komoot) | sim | parcial |
 | Zonas de potência, suffer score, variabilidade da FC | sim | portados e testados, sem dados reais |
 | Log no microSD e download pelo PC | sim | log em stub |
@@ -111,6 +111,7 @@ flowchart TB
 ## Estado e próximos passos
 
 - **Feito em 2026-09-18:** build no NCS v3.3.0 com sysbuild; correção de 13 defeitos críticos (estouro de pilha no Kalman, GPS e modelo dentro de ISR, corrupção de memória no log, botões e pinos do GPS invertidos, conflitos de pinos com o DK); testes de host; documentação e contexto para assistentes de IA.
+- **Decidido:** ANT+ e BLE juntos (os equipamentos externos falam ANT+) e board própria com MCU da Nordic, ainda a escolher. Decisões e pendências em [docs/10-status-do-port.md](docs/10-status-do-port.md#decisões-do-dono).
 - **Próximo:** base de execução (trava do modelo, watchdog, desligamento pelo STC3100, board própria), depois fidelidade dos algoritmos, armazenamento, rádio e interface. Roteiro em [docs/10-status-do-port.md](docs/10-status-do-port.md#roteiro).
 
 ## Créditos e licenças

@@ -103,7 +103,7 @@ flowchart TD
     F1["1 · base de execução<br/>thread de modelo única com mensagens, trava do modelo,<br/>watchdog, latch e auto-off pelo STC3100, board própria"]:::pending --> F2
     F2["2 · fidelidade dos algoritmos<br/>Kalman (ones, bound, taxa), potência, distância,<br/>zonas, FDIR, testes diferenciais contra o legacy"]:::pending --> F3
     F3["3 · armazenamento<br/>SD e FAT montados, formatos do legacy,<br/>log @DDMMYY, loader e allocator de segmentos, liste_points"]:::pending --> F4
-    F4["4 · rádio<br/>BLE central funcionando, sensores no modelo,<br/>pareamento, decisão sobre ANT+"]:::pending --> F5
+    F4["4 · rádio<br/>ANT+ pelo sdk-ant (HRM, BSC, FE-C) e BLE central,<br/>sensores no modelo, pareamento"]:::pending --> F5
     F5["5 · interface<br/>retrato, Org_01 e cadrans, menu com modos,<br/>telas CRS, PRC, FEC, notificações"]:::pending --> F6
     F6["6 · comandos e USB<br/>VParser $LOC/$DWN/$QRY, USB device_next CDC e MSC,<br/>stravaAP e tools/zpm"]:::pending --> F7
     F7["7 · extras<br/>Komoot, LNS, EPO e host aiding, WS2812, FRAM"]:::pending
@@ -115,10 +115,20 @@ Tamanhos estimados pelos relatórios de análise: fase 1 M, fase 2 M, fase 3 G, 
 
 ## Decisões do dono
 
+Tomadas em 2026-09-18:
+
+| Decisão | Escolha | Consequência |
+|---|---|---|
+| Rádio | **ANT+ e BLE juntos**: os sensores e equipamentos externos falam ANT+ | ANT+ pelo add-on **ANT for nRF Connect SDK** (`sdk-ant`); a versão atual, v2.1.1, é acoplada ao **sdk-nrf v3.2.4**, não ao v3.3.0 instalado; exige aceitar o ANT+ Adopter Agreement e usar a chave de avaliação (`CONFIG_ANT_EVALUATION_KEY`) até haver licença comercial (ver [07](07-radio-ant-ble.md#decisão-ant-e-ble)) |
+| Placa | **board própria com MCU da Nordic**, no lugar do DK com overlay | MCU a escolher entre nRF52840 (placa V3 atual), nRF54LM20, nRF54L15 e nRF5340, todos suportados pelo `sdk-ant` (ver [02](02-hardware.md#próxima-placa)) |
+| Commits | Conventional Commits em inglês, nunca atribuídos a IA | regra da skill `commit-gnss` |
+
+Ainda em aberto:
+
 | Decisão | Opções | Consequência |
 |---|---|---|
-| ANT+ | add-on "ANT for nRF Connect SDK" (licença ANT+, compatível com sdk-nrf 3.2.4, royalty comercial) ou só BLE (HRS, CSC, CPS, FTMS) | ANT+ mantém os sensores do legacy; BLE-only dispensa licença mas limita conexões por sensor |
+| MCU da placa nova | nRF52840, nRF54LM20, nRF54L15 ou nRF5340 | ver a comparação em [02](02-hardware.md#próxima-placa) |
+| Workspace do ANT+ | instalar o `sdk-ant` (com o sdk-nrf v3.2.4 e o toolchain dele) ou esperar uma versão para o v3.3 | o port compila hoje no v3.3.0; voltar ao v3.2.4 precisa ser verificado |
 | Formatos no SD | compatíveis com o legacy (segmentos em texto com nome base36, `.PAR`, `@DDMMYY.txt`) ou formatos novos com conversor | há 138 segmentos e 2 percursos de exemplo em `tools/TDD/DB` no formato do legacy |
 | Orientação da tela | retrato como o legacy e o aparelho, ou manter a paisagem | a caixa e os botões são de um aparelho em retrato |
 | Licença do projeto | o legacy é CC BY-NC 4.0; o port deriva dele | afeta uso comercial e a escolha da licença do repositório |
-| Alvo de build | continuar no DK com overlay ou criar a board `mystravab_v3` | a board própria remove os conflitos de pinos de vez e libera o console para RTT ou USB |

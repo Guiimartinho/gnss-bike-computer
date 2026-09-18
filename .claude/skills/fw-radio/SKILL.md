@@ -31,9 +31,14 @@ Referência: `docs/07-radio-ant-ble.md`. Topologia do legacy: BLE **só central*
 
 ## ANT+
 
-- O legacy usa o S340; não existe caminho para ele no NCS. O caminho real é o add-on **ANT for nRF Connect SDK** (Garmin/ANT com a Nordic): suporta nRF52840 com ANT e BLE juntos, licença ANT+ (chave de avaliação ou comercial), versão listada compatível com o sdk-nrf 3.2.4 (confirmar com o 3.3.0), exemplos de HRM, BSC e potência, sem FE-C.
-- A alternativa é ficar só em BLE (HRS, CSC, CPS, FTMS).
-- **Decisão do dono** (`docs/10-status-do-port.md#decisões-do-dono`): não comece nenhum dos dois sem ela.
+**Decidido em 2026-09-18: ANT+ e BLE juntos** (os equipamentos externos falam ANT+). Detalhes em `docs/07-radio-ant-ble.md#decisão-ant-e-ble`.
+
+- Caminho: add-on **ANT for nRF Connect SDK** (`sdk-ant`). A v2.1.1 é presa ao **sdk-nrf v3.2.4**; não use as bibliotecas ANT com o NCS v3.3.0.
+- Antes de tudo, o **dono** aceita o ANT+ Adopter Agreement; só então crie o workspace (`west init -m https://github.com/ant-nrfconnect/sdk-ant --mr <versão>` + `west update`), ao lado do NCS atual, e confirme com ele antes de baixar (vários GB).
+- Kconfig: `CONFIG_ANT` + `CONFIG_BT`; `CONFIG_ANT_EVALUATION_KEY=y` no desenvolvimento; `CONFIG_ANT_LICENSE_KEY` só com licença comercial; nRF5340 usa `CONFIG_ANT_LIBRARY_CORE` e imagem de rede.
+- O add-on tem exemplos de HRM, BSC e potência, **sem FE-C**: o perfil do rolo sai do legacy (`legacy/rf/fec.c`, páginas 16 e 25; o controle das páginas 49/51 nunca foi enviado no legacy).
+- Pareamento: porte o `ant_device_manager` (canal de busca em background, lista de até 7 sensores com RSSI, número salvo nas configurações).
+- ANT e BLE dividem o rádio: reveja `CONFIG_BT_MAX_CONN` e a RAM do controlador.
 
 ## stravaAP e comandos
 

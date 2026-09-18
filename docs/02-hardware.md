@@ -2,7 +2,7 @@
 
 A placa myStravaB V3 de Vincent Gollé (`hardware/`), seus componentes, a pinagem das três revisões usadas pelo legacy, a alimentação com latch pelo STC3100 e como o port a reproduz em cima do nRF52840-DK. Os dados vêm do esquema e da placa Eagle, conferidos contra `legacy/custom_board_v3.h` e o overlay do port.
 
-**Nesta página:** [Arquivos](#arquivos) · [Componentes](#componentes) · [Pinagem](#pinagem) · [Alimentação](#alimentação) · [Endereços I2C](#endereços-i2c) · [Alvo híbrido no DK](#alvo-híbrido-no-dk) · [Mecânica](#mecânica) · [Riscos](#riscos)
+**Nesta página:** [Arquivos](#arquivos) · [Componentes](#componentes) · [Pinagem](#pinagem) · [Alimentação](#alimentação) · [Endereços I2C](#endereços-i2c) · [Alvo híbrido no DK](#alvo-híbrido-no-dk) · [Mecânica](#mecânica) · [Próxima placa](#próxima-placa) · [Riscos](#riscos)
 
 ## Arquivos
 
@@ -105,6 +105,26 @@ O port compila para `nrf52840dk/nrf52840` e aplica os pinos da V3 por overlay. R
 ## Mecânica
 
 Aparelho em retrato: LCD na face de cima (62,8 × 42,8 mm), três botões na aba inferior, WS2812B e antena GNSS na faixa direita fora do LCD; MCU, GPS, slot SD, J1, sensores e fonte na face de baixo; micro-USB na borda direita. Fotos em [`img/front1.png`](img/front1.png), [`img/side1.png`](img/side1.png) e [`img/back1.png`](img/back1.png).
+
+## Próxima placa
+
+Decidido em 2026-09-18: o produto terá uma **board própria com MCU da Nordic**, e o port deixará de depender do DK com overlay. O MCU ainda não foi escolhido; todos os candidatos abaixo estão na lista de SoCs do add-on ANT (`sdk-ant` v2.1.x), requisito porque o aparelho mantém ANT+ e BLE.
+
+| Requisito do aparelho | Origem |
+|---|---|
+| ANT+ e BLE ao mesmo tempo, vários sensores | [07-radio-ant-ble.md](07-radio-ant-ble.md#decisão-ant-e-ble) |
+| USB para carregar, comandos e mass storage do cartão | legacy (CDC + MSC) |
+| SPI para o LCD e para o microSD, UART para o GNSS, I2C para os sensores | placa V3 |
+| RAM para framebuffer (12,5 KB), segmentos, pilhas e rádio | o port usa 118 KB hoje, com segmentos ainda sem dados |
+
+| MCU | CPU | NVM / RAM | USB | Observação |
+|---|---|---|---|---|
+| nRF52840 | Cortex-M4F 64 MHz | 1 MB / 256 KB | Full Speed | o da placa V3 (módulo BMD-340); o port já roda nele; menor risco |
+| nRF54LM20 | Cortex-M33 128 MHz | 2 MB / 512 KB | High Speed | mais memória e menor consumo, até 66 GPIO; geração nova |
+| nRF54L15 | Cortex-M33 128 MHz | 1,5 MB / 256 KB | **não tem** | menor e mais barato, mas perde USB (comandos e mass storage teriam de ir por BLE ou um conversor externo) |
+| nRF5340 | 2 × Cortex-M33 (aplicação 128 MHz, rede 64 MHz) | 1 MB / 512 KB + 256 KB / 64 KB | Full Speed | ANT no núcleo de rede (`CONFIG_ANT_LIBRARY_CORE`), duas imagens pelo sysbuild |
+
+"nRF53840", citado na conversa, foi entendido como nRF5340. Qualquer que seja a escolha, a board entra em `zephyr_app/boards/` no modelo de hardware v2 do Zephyr, e a lógica do port não depende do MCU: só o devicetree, o Kconfig da board e o rádio mudam.
 
 ## Riscos
 

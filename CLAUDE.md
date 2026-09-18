@@ -36,7 +36,7 @@ O dono do projeto é um desenvolvedor brasileiro de eletrônica embarcada que qu
 
 ### Commits
 
-- **Só commite quando o dono pedir.** Mensagens em **inglês**, Conventional Commits com escopo (`fix(hal): ...`, `feat(model): ...`, `docs(docs): ...`).
+- **Commit só com pedido do dono.** Em 2026-09-18 ele pediu commits separados por assunto para a revisão e para a fase 1 do roteiro: nesse trabalho, cada item pronto e verificado vira um commit. Push só com remoto configurado e pedido do dono. Mensagens em **inglês**, Conventional Commits com escopo (`fix(hal): ...`, `feat(model): ...`, `docs(docs): ...`).
 - **Nunca atribua commit a IA:** sem `Co-Authored-By` de assistente, sem "Generated with", sem menção a Claude. O autor é a identidade git configurada (Luiz Guilherme Ito). Procedimento na skill `commit-gnss`.
 - Nunca faça commit de credenciais nem de arquivos gerados (`build*/`, `Lib/`, `Scripts/`).
 
@@ -102,7 +102,8 @@ flowchart LR
     F --> G["7 · extras<br/>Komoot, LNS, EPO, WS2812"]
 ```
 
-- **Decisões pendentes do dono:** ANT+ (add-on licenciado ou só BLE), formatos no SD (legacy ou novos), orientação da tela, licença do port (o legacy é CC BY-NC 4.0), board própria.
+- **Decidido em 2026-09-18:** ANT+ **e** BLE (os equipamentos externos são ANT+), pelo add-on `sdk-ant`; **board própria** com MCU da Nordic. Detalhes em [`docs/10-status-do-port.md`](docs/10-status-do-port.md#decisões-do-dono).
+- **Em aberto:** MCU da placa nova (nRF52840, nRF54LM20, nRF54L15 ou nRF5340), instalação do workspace do `sdk-ant` (exige o dono aceitar o ANT+ Adopter Agreement; usa o sdk-nrf v3.2.4), formatos no SD, orientação da tela, licença do port (o legacy é CC BY-NC 4.0).
 
 ## 6. Armadilhas conhecidas
 
@@ -111,6 +112,7 @@ flowchart LR
 | `ValueError: path is on mount 'F:', start on mount 'C:'` no `west` | rode o `west` de dentro do `zephyr_app` (os scripts fazem isso); o NCS está em `C:` e o projeto em `F:` |
 | `TOOLCHAIN_ROOT` definido quebra o CMake do Zephyr (`.../cmake/toolchain/zephyr/generic.cmake` não encontrado) | nunca exporte esse nome; os scripts usam `NCS_TOOLCHAIN_DIR` |
 | No Windows, `Scripts/` (o que um `pip install` sem venv cria na raiz) e `scripts/` são a mesma pasta | ferramentas do projeto ficam em `tools/fw/` e `tools/docs/`; nunca rode `pip install` na raiz sem venv |
+| ANT+ só funciona no workspace do add-on `sdk-ant`, preso ao sdk-nrf v3.2.4 | não misture as bibliotecas ANT com o NCS v3.3.0; o workspace do add-on fica ao lado do atual (fase 4 do roteiro) |
 | A camada de comandos do Git Bash transforma `\\n` em quebra de linha real | para caminhos com `\` (arquivos `.bat`), use a ferramenta de edição, não `sed` com `\\` |
 | As ferramentas de escrita gravam LF | depois de editar um `.bat`, volte para CRLF: `sed -i 's/\r$//; s/$/\r/' arquivo.bat` |
 | `DTC_OVERLAY_FILE` fixo no `CMakeLists.txt` | o `boards/nrf52840dk_nrf52840.overlay` nunca entra no build |

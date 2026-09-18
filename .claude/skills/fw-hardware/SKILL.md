@@ -40,7 +40,12 @@ Referência completa: `docs/02-hardware.md`. Fonte de verdade da pinagem: `hardw
 
 ## Board própria
 
-O alvo atual é o DK com overlay. Uma board `mystravab_v3` (em `zephyr_app/boards/<vendor>/mystravab_v3/`, hardware model v2 do Zephyr) removeria de vez os nós do DK, levaria o console para RTT ou USB CDC e deixaria de exigir `DTC_OVERLAY_FILE` fixo no `CMakeLists.txt`. Está na fase 1 do roteiro; combine com o dono antes.
+**Decidido em 2026-09-18: o produto terá board própria com MCU da Nordic** (candidatos: nRF52840, nRF54LM20, nRF54L15, nRF5340; comparação em `docs/02-hardware.md#próxima-placa`; o nRF54L15 não tem USB).
+
+- Enquanto o MCU não é escolhido, o alvo é o DK com o overlay da V3.
+- A board entra em `zephyr_app/boards/<vendor>/<board>/` no modelo de hardware v2 do Zephyr (`board.yml`, `Kconfig.<board>`, `<board>_<soc>.dts`, pinctrl, `_defconfig`, `board.cmake`), sem nós que não existem na placa, com console por RTT ou USB CDC.
+- Com a board própria, tire `BOARD` e `DTC_OVERLAY_FILE` fixos do `CMakeLists.txt` e deixe o overlay do DK com o nome automático (`boards/nrf52840dk_nrf52840.overlay`).
+- O MCU precisa estar na lista do `sdk-ant` (ANT+ é obrigatório).
 
 ## Cuidados com a placa real
 
