@@ -2,14 +2,16 @@
 # Comandos do firmware Zephyr no Git Bash, com o mesmo fluxo dos .bat da raiz.
 #
 #   tools/fw/fw.sh build [pristine]   compila zephyr_app (sysbuild)
-#   tools/fw/fw.sh flash [keep]       grava no nRF52840-DK pelo J-Link
+#   tools/fw/fw.sh flash [keep]       grava no DK pelo J-Link
 #   tools/fw/fw.sh recover            desbloqueia um chip protegido (apaga tudo)
 #   tools/fw/fw.sh devices            lista as placas conectadas
 #   tools/fw/fw.sh size               memória por região e maiores símbolos de RAM/flash
 #
 # Variáveis: BUILD_DIR (padrão: zephyr_app/build), BOARD (padrão:
-# nrf52840dk/nrf52840), NRF_SERIAL (número de série do J-Link) e as de
-# tools/fw/ncs_env.sh (NCS_ROOT, NCS_VERSION, NCS_TOOLCHAIN).
+# nrf52840dk/nrf52840; o nRF54LM20 DK é nrf54lm20dk/nrf54lm20a/cpuapp),
+# FAMILY (família do nrfutil, deduzida da BOARD: nrf52 ou nrf54l),
+# NRF_SERIAL (número de série do J-Link) e as de tools/fw/ncs_env.sh
+# (NCS_ROOT, NCS_VERSION, NCS_TOOLCHAIN).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -19,6 +21,11 @@ source "$ROOT/tools/fw/ncs_env.sh"
 APP_DIR="$ROOT/zephyr_app"
 BUILD_DIR="${BUILD_DIR:-$APP_DIR/build}"
 BOARD="${BOARD:-nrf52840dk/nrf52840}"
+case "$BOARD" in
+    *nrf54l*) DEFAULT_FAMILY=nrf54l ;;
+    *) DEFAULT_FAMILY=nrf52 ;;
+esac
+FAMILY="${FAMILY:-$DEFAULT_FAMILY}"
 
 select_probe() {
     if [ -n "${NRF_SERIAL:-}" ]; then
@@ -73,12 +80,12 @@ case "$cmd" in
         hex="$(firmware_hex)"
         echo "Gravando $hex (apagamento: $erase)"
         # shellcheck disable=SC2046
-        nrfutil device program $(select_probe) --family nrf52 --firmware "$hex" \
+        nrfutil device program $(select_probe) --family "$FAMILY" --firmware "$hex" \
             --options "chip_erase_mode=$erase,verify=VERIFY_READ,reset=RESET_SYSTEM"
         ;;
     recover)
         # shellcheck disable=SC2046
-        nrfutil device recover $(select_probe) --family nrf52
+        nrfutil device recover $(select_probe) --family "$FAMILY"
         ;;
     devices)
         nrfutil device list

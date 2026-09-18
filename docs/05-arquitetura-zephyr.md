@@ -185,7 +185,25 @@ O build usa a placa `nrf52840dk/nrf52840` com o overlay `boards/nrf52840dk_nrf52
 
 O código chega aos barramentos só pelos aliases da tabela e aos pinos pelos rótulos da aplicação (`gps_reset`, `gps_stdby`, `gps_fix`, `imu_int1`, `imu_reset`, `neo_data`, `baro`, `fxos`, `led0`): uma placa nova só precisa definir esses nomes no overlay dela, sem mexer no C.
 
-Nós do DK desligados no overlay porque ocupam pinos da placa: `qspi` e `mx25r64`, `spi3`, `pwm0`; o `uart0` perdeu RTS/CTS. Detalhes e divergências em [02-hardware.md](02-hardware.md).
+Nós do DK desligados no overlay da V3 porque ocupam pinos da placa: `qspi` e `mx25r64`, `spi3`, `pwm0`; o `uart0` perdeu RTS/CTS. Detalhes e divergências em [02-hardware.md](02-hardware.md).
+
+### nRF54LM20 DK
+
+Alvo de desenvolvimento da placa própria (nRF54LM20A); o DK traz o nRF54LM20B, a mesma peça com NPU. Ele não tem os periféricos da myStravaB: o overlay `boards/nrf54lm20dk_nrf54lm20a_cpuapp.overlay` só dá à aplicação os nomes de que ela precisa, em pinos livres do conector de expansão, respeitando os domínios do nRF54L (blocos seriais 20 a 24 nas portas P1 e P3, `spi00` na P2).
+
+| Periférico | Alias no código | Instância | Pinos |
+|---|---|---|---|
+| GPS | `gps-uart` | `uart21` 9600 | TX P1.04, RX P1.05; reset P1.06, standby P1.07, FIX P1.13 |
+| I2C dos sensores | `sensor-i2c` | `i2c23` 400 kHz | SDA P1.02, SCL P1.03; INT1 do IMU P3.04, RST P3.05 |
+| LCD | `lcd-spi` | `spi22` 2 MHz | SCK P3.03, MOSI P3.00, CS P3.02 (ativo alto) |
+| SD | `sdc-spi` | `spi00` 8 MHz | SCK P2.01, MOSI P2.02, MISO P2.04, CS P2.03 (a flash MX25R64 do DK, no mesmo barramento, sai do devicetree) |
+| Console | `zephyr,console` | `uart20` 115200 | VCOM0 do DK |
+| Botões e LED | `sw0`–`sw2`, `led0` | GPIO | os do DK: P1.26, P1.09, P1.08; LED P1.22 |
+| Watchdog | `watchdog0` | `wdt31` | ligado no overlay (o DK o deixa desligado) |
+
+- `boards/nrf54lm20dk_nrf54lm20a_cpuapp.conf` troca o NVS pelo ZMS: a NVM do nRF54L é RRAM, e a Nordic recomenda o ZMS nela; as configurações e os bonds usam o backend `SETTINGS_ZMS` sem mudança no código.
+- Build: `BOARD=nrf54lm20dk/nrf54lm20a/cpuapp bash tools/fw/fw.sh build`; gravar com a mesma `BOARD` (o `nrfutil` recebe `--family nrf54l`).
+- Nada disso rodou num DK: é build verificado, não teste em placa.
 
 ## Configuração
 

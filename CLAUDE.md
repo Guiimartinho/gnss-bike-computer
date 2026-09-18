@@ -59,7 +59,7 @@ flowchart TB
     ROOT["gnss_bike_computer/"]
     ROOT --> ZA["zephyr_app/"]
     ZA --> ZS["src/ e include/<br/>hal · drivers · model · rf · vue · usb · utils"]
-    ZA --> ZB["boards/&lt;placa&gt;.overlay<br/>nrf52840dk_nrf52840: pinos da V3"]
+    ZA --> ZB["boards/&lt;placa&gt;.overlay e .conf<br/>nRF52840 DK (pinos da V3) e nRF54LM20 DK"]
     ZA --> ZT["tests/host/<br/>Unity + CTest, shims e falsos"]
     ZA --> ZC["CMakeLists.txt · prj.conf · sysbuild.conf"]
     ROOT --> LEG["legacy/ · libraries/<br/>stravaV10 original"]
@@ -75,6 +75,7 @@ flowchart TB
 | Tarefa | Comando (Git Bash, na raiz) |
 |---|---|
 | Build incremental / do zero | `bash tools/fw/fw.sh build` / `bash tools/fw/fw.sh build pristine` |
+| Build para o nRF54LM20 DK | `BOARD=nrf54lm20dk/nrf54lm20a/cpuapp BUILD_DIR=zephyr_app/build_54 bash tools/fw/fw.sh build` |
 | Gravar no DK (apaga tudo / mantém settings) | `bash tools/fw/fw.sh flash` / `bash tools/fw/fw.sh flash keep` |
 | Desbloquear chip | `bash tools/fw/fw.sh recover` |
 | Placas conectadas | `bash tools/fw/fw.sh devices` |
@@ -85,7 +86,7 @@ flowchart TB
 
 Equivalentes no `cmd`: `build.bat [pristine]`, `flash.bat [keep]`, `recover.bat`, `serial.bat COMx`. Variáveis: `BUILD_DIR`, `NRF_SERIAL`, `NCS_VERSION`, `NCS_TOOLCHAIN`, `NOPAUSE`.
 
-Referência de 2026-09-18: FLASH 296.320 B (28,3 %), RAM 116.928 B (44,6 %), 7 avisos (`vue.c`).
+Referência de 2026-09-18: FLASH 296.320 B (28,3 %), RAM 116.928 B (44,6 %), 7 avisos (`vue.c`). nRF54LM20 DK: FLASH 298.468 B, RAM 117.656 B, os mesmos 7 avisos.
 
 ## 5. Estado e próximos passos
 

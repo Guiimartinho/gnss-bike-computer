@@ -50,7 +50,8 @@ flowchart LR
 |---|---|---|
 | `NCS_ROOT`, `NCS_VERSION`, `NCS_TOOLCHAIN` | `ncs_env.*` | trocam o SDK (padrão `C:\ncs`, `v3.3.0`, `936afb6332`; o `.sh` descobre o toolchain pelo `toolchains.json`) |
 | `BUILD_DIR` | `build.bat`, `flash.bat`, `fw.sh` | outra pasta de build (padrão `zephyr_app/build`) |
-| `BOARD` | `build.bat`, `fw.sh` | outro alvo (padrão `nrf52840dk/nrf52840`); o overlay `zephyr_app/boards/<placa>.overlay` entra pelo nome |
+| `BOARD` | `build.bat`, `flash.bat`, `recover.bat`, `fw.sh` | outro alvo (padrão `nrf52840dk/nrf52840`; o nRF54LM20 DK é `nrf54lm20dk/nrf54lm20a/cpuapp`); o overlay `zephyr_app/boards/<placa>.overlay` entra pelo nome |
+| `FAMILY` | `flash.bat`, `recover.bat`, `fw.sh` | família do `nrfutil`; sem ela, vem da `BOARD` (`nrf54l` para as placas nRF54L, `nrf52` no resto) |
 | `NRF_SERIAL` | `flash.bat`, `recover.bat`, `fw.sh` | escolhe o J-Link pelo número de série |
 | `SERIAL_PORT` | `serial.bat` | porta padrão do console (padrão `COM11`) |
 | `NOPAUSE` | todos os `.bat` | não espera tecla no fim |
@@ -73,6 +74,7 @@ python -m west build -p auto -b nrf52840dk/nrf52840 -d build --sysbuild .
 ```
 
 - **Alvo:** `nrf52840dk/nrf52840`, com os pinos da placa myStravaB em `zephyr_app/boards/nrf52840dk_nrf52840.overlay`, que o Zephyr aplica pelo nome da placa. Outro alvo: `BOARD=<placa> bash tools/fw/fw.sh build` ou `set BOARD=<placa>` antes do `build.bat`.
+- **nRF54LM20 DK:** `BOARD=nrf54lm20dk/nrf54lm20a/cpuapp BUILD_DIR=zephyr_app/build_54 bash tools/fw/fw.sh build`. Usa `boards/nrf54lm20dk_nrf54lm20a_cpuapp.overlay` (pinos no conector de expansão do DK) e `boards/nrf54lm20dk_nrf54lm20a_cpuapp.conf` (configurações no ZMS). Detalhes em [05](05-arquitetura-zephyr.md#nrf54lm20-dk).
 - **Sysbuild** é o fluxo padrão do NCS. O `zephyr_app/sysbuild.conf` desliga o Partition Manager (`SB_CONFIG_PARTITION_MANAGER=n`), depreciado no NCS 3.3; o layout vem do devicetree.
 - **Saída:** `zephyr_app/build/zephyr_app/zephyr/zephyr.hex` (e `.elf`, `.map`, `.config`, `zephyr.dts`). Sem MCUboot não há `merged.hex`.
 
@@ -95,6 +97,7 @@ Build com sysbuild da `develop` em 2026-09-18 (atualizado a cada commit que muda
 | Avisos | 7, todos `defined but not used` em `src/vue/vue.c` |
 | Erros | 0 |
 | Tempo | cerca de 1 min 45 s do zero |
+| nRF54LM20 DK | FLASH 298.468 B (15,02 % de 1.940 KB), RAM 117.656 B (22,49 % de 511 KB), os mesmos 7 avisos |
 
 Maiores consumidores de RAM (`bash tools/fw/fw.sh size`): `seg_runtime` 22.000 B, heap do sistema 16.384 B (`CONFIG_HEAP_MEM_POOL_SIZE`), framebuffer `spi_buffer` 12.482 B, `points` 8.000 B, pool do controlador BLE 5.247 B.
 
@@ -107,7 +110,7 @@ bash tools/fw/fw.sh flash keep   # apaga só as faixas do firmware: mantém a st
 bash tools/fw/fw.sh recover      # chip protegido: apaga tudo e libera o APPROTECT
 ```
 
-- Os scripts filtram `--traits jlink` e `--family nrf52`: nesta máquina costuma haver um ST-LINK e outras seriais USB conectados.
+- Os scripts filtram `--traits jlink` e a família do chip (`nrf52`, ou `nrf54l` quando a `BOARD` é uma placa nRF54L): nesta máquina costuma haver um ST-LINK e outras seriais USB conectados.
 - **Console:** `zephyr,console` é o `uart0` do DK (TX P0.06, RX P0.08, 115200 baud), exposto pela porta VCOM do J-Link. `serial.bat COMx` abre o miniterm do Python do toolchain (pyserial 3.5); `Ctrl+]` sai. O log usa o backend UART; o RTT está desligado no `prj.conf`.
 - Em 2026-09-18 não havia nRF52840-DK conectado: **nada foi gravado nem testado em placa** nesta revisão.
 

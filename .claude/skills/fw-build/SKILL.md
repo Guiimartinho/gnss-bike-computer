@@ -13,7 +13,7 @@ Tudo parte da raiz do repositório. O firmware ativo é o `zephyr_app/`; o `lega
 |---|---|
 | SDK | nRF Connect SDK v3.3.0 em `C:\ncs\v3.3.0` (Zephyr 4.3.99) |
 | Toolchain | `C:\ncs\toolchains\936afb6332` (Zephyr SDK 0.17.0, GCC 12.2.0, CMake 4.2.1, west 1.5.0, Python 3.12.4) |
-| Alvo | `nrf52840dk/nrf52840` com os pinos da placa myStravaB (`zephyr_app/boards/nrf52840dk_nrf52840.overlay`); outro alvo com `BOARD=...` |
+| Alvo | `nrf52840dk/nrf52840` com os pinos da placa myStravaB (`zephyr_app/boards/nrf52840dk_nrf52840.overlay`); nRF54LM20 DK com `BOARD=nrf54lm20dk/nrf54lm20a/cpuapp` (use outra `BUILD_DIR`, por exemplo `zephyr_app/build_54`) |
 | Gravação | `nrfutil device` 2.17.5 do toolchain, pelo J-Link OB do DK |
 | Debug | SEGGER J-Link V8.76, V8.96 e V9.24a em `C:\Program Files\SEGGER` |
 
@@ -32,7 +32,7 @@ O `tools/fw/ncs_env.sh` (Git Bash) e o `tools/fw/ncs_env.bat` (cmd) montam o amb
 | Memória e maiores símbolos | `bash tools/fw/fw.sh size` | — |
 | Console serial | — | `serial.bat COMx` (115200) |
 
-Variáveis úteis: `BUILD_DIR` (outra pasta de build), `NRF_SERIAL` (escolhe o J-Link quando há mais de um), `NOPAUSE=1` (os `.bat` não esperam tecla).
+Variáveis úteis: `BUILD_DIR` (outra pasta de build), `BOARD` (outro alvo; a família do `nrfutil` vem dela, ou de `FAMILY`), `NRF_SERIAL` (escolhe o J-Link quando há mais de um), `NOPAUSE=1` (os `.bat` não esperam tecla).
 
 ## Como o build funciona
 

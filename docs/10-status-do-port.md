@@ -121,7 +121,7 @@ Tamanhos estimados pelos relatórios de análise: fase 1 M, fase 2 M, fase 3 G, 
 | Mensagens dos clientes BLE para a `main_loop` | fica para a fase 4, quando os callbacks de dados forem registrados | — |
 | Watchdog | feito em 2026-09-18: `task_wdt` com canais de 4 s da `main_loop` e da `display` sobre o WDT do nRF; não testado na placa | `src/main.c`, `prj.conf` |
 | Latch e auto-off pelo STC3100 | feito em 2026-09-18: 15 min sem posição em CRS/PRC desligam pelo STC3100; item "Power Off" no menu; o ping do rolo fica para quando houver modo FEC; não testado na placa | `src/model/power_scheduler.c`, `src/drivers/sensors/stc3100.c`, `test_power_scheduler` |
-| Board própria | MCU escolhido em 2026-09-18 (nRF54LM20A) e esquemático próprio em projeto; o firmware ainda só compila para o nRF52840 | — |
+| Board própria | MCU escolhido em 2026-09-18 (nRF54LM20A) e esquemático próprio em projeto; o firmware já compila para o nRF54LM20 DK (placa pelo `-b`, aliases no lugar das instâncias do nRF52, configurações no ZMS, `hwinfo` para a causa do reset); não testado em placa | `boards/nrf54lm20dk_nrf54lm20a_cpuapp.overlay` e `.conf` |
 
 ## Decisões do dono
 
