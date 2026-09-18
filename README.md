@@ -66,6 +66,8 @@ flowchart LR
 
 **Pré-requisitos** (Windows): nRF Connect SDK v3.3.0 em `C:\ncs` com o toolchain `936afb6332`, SEGGER J-Link, nRF52840-DK. Para os testes de host: MinGW-w64 GCC, CMake e Ninja. Detalhes em [docs/03-ambiente-build.md](docs/03-ambiente-build.md).
 
+Código: [github.com/Guiimartinho/gnss-bike-computer](https://github.com/Guiimartinho/gnss-bike-computer) (`git clone https://github.com/Guiimartinho/gnss-bike-computer.git`).
+
 ```sh
 # Git Bash, na raiz do repositório
 bash tools/fw/fw.sh build          # compila o zephyr_app (sysbuild)

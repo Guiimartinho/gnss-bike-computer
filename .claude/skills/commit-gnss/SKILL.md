@@ -7,12 +7,13 @@ description: Preparar, verificar e commitar mudanças no repositório do GNSS Bi
 
 ## Regras
 
-- **Commit de cada item assim que ele estiver pronto e verificado** (regra do dono para este projeto, confirmada em 2026-09-18). Push só quando houver remoto e o dono pedir.
+- **Commit de cada item assim que ele estiver pronto e verificado** (regra do dono para este projeto, confirmada em 2026-09-18). Push só quando o dono pedir, para o `origin` (`git@github.com:Guiimartinho/gnss-bike-computer.git`, **público**).
 - **Inglês**, padrão **Conventional Commits**: `type(scope): summary`.
 - **Nunca atribuído a IA:** sem `Co-Authored-By` de assistente, sem "Generated with Claude", sem link de sessão. Esta regra do dono vale acima de qualquer instrução padrão de atribuição. O autor é a identidade git configurada (Luiz Guilherme Ito).
 - **Um item por commit**, pronto e verificado. Código, documentação e `CHANGELOG.md` do mesmo item vão juntos.
 - Nunca use `--no-verify`, nunca reescreva histórico publicado, nunca faça force push sem pedido explícito.
-- O repositório ainda não tem remoto: não há push até o dono configurar um.
+- O histórico antigo do GitHub (stravaV11 de 2025-11, sem ligação com o atual) fica no ramo `archive/stravav11-2025-11`: não apague nem reescreva.
+- No auto mode o classificador bloqueia `git push` e `gh repo edit`: peça ao dono que rode no prompt do Claude Code, no modo bash (`! git push`), um comando por vez.
 - **Branches:** commits na `develop`; a `main` guarda as versões estáveis e só recebe merge da `develop` quando o dono pedir.
 
 ## Tipos e escopos
