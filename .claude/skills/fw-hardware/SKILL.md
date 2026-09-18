@@ -1,6 +1,6 @@
 ---
 name: fw-hardware
-description: Trabalhar com a placa myStravaB V3 e o devicetree do port Zephyr do GNSS Bike Computer - pinagem das revisões v1/v2/v3, overlay nrf52840_strava.overlay sobre o nRF52840-DK, polaridades de GPIO, nós do DK que colidem com a placa, alimentação e latch pelo STC3100, esquema e placa Eagle. Use ao mexer em zephyr_app/boards/, em pinos, em GPIO, ao criar uma board própria ou ao investigar comportamento elétrico.
+description: Trabalhar com a placa myStravaB V3 e o devicetree do port Zephyr do GNSS Bike Computer - pinagem das revisões v1/v2/v3, overlay nrf52840dk_nrf52840.overlay sobre o nRF52840-DK, polaridades de GPIO, nós do DK que colidem com a placa, alimentação e latch pelo STC3100, esquema e placa Eagle. Use ao mexer em zephyr_app/boards/, em pinos, em GPIO, ao criar uma board própria ou ao investigar comportamento elétrico.
 ---
 
 # Placa e devicetree
@@ -47,7 +47,7 @@ Referência completa: `docs/02-hardware.md`. Fonte de verdade da pinagem: `hardw
 - Enquanto a placa própria não existe, o alvo do build é o nRF52840-DK com o overlay da V3; o próximo alvo é o nRF54LM20 DK (`nrf54lm20dk/nrf54lm20a/cpuapp`; o DK vem com o nRF54LM20B, igual ao A mais a NPU).
 - Ao portar para o nRF54L: UARTE, SPIM e TWIM têm outras instâncias (`uart20`, `uart21`, `spi00`, `i2c22`...), o tempo vem do GRTC, a NVM é RRAM (settings no ZMS, não no NVS), o WDT é `wdt30`/`wdt31`, a causa do reset fica no periférico RESET e não há QSPI.
 - A board entra em `zephyr_app/boards/<vendor>/<board>/` no modelo de hardware v2 do Zephyr (`board.yml`, `Kconfig.<board>`, `<board>_<soc>.dts`, pinctrl, `_defconfig`, `board.cmake`), sem nós que não existem na placa, com console por RTT ou USB CDC.
-- Com a board própria, tire `BOARD` e `DTC_OVERLAY_FILE` fixos do `CMakeLists.txt` e deixe o overlay do DK com o nome automático (`boards/nrf52840dk_nrf52840.overlay`).
+- A placa já vem do `-b` e o overlay de cada alvo tem o nome automático (`boards/<placa>.overlay`): a board própria entra sem mexer no `CMakeLists.txt`.
 - O MCU precisa estar na lista do `sdk-ant` (ANT+ é obrigatório).
 
 ## Cuidados com a placa real

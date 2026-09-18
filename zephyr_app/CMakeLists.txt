@@ -4,10 +4,11 @@
 
 cmake_minimum_required(VERSION 3.20.0)
 
-# Board configuration
-set(BOARD nrf52840dk/nrf52840)
+# Board: chosen with west build -b (tools/fw/fw.sh and build.bat default to
+# nrf52840dk/nrf52840). Zephyr adds boards/<board>.overlay by name, so each
+# target keeps its pins in its own overlay. BOARD_ROOT lets a board of our
+# own live in boards/.
 set(BOARD_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
-set(DTC_OVERLAY_FILE ${CMAKE_CURRENT_SOURCE_DIR}/boards/nrf52840_strava.overlay)
 
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 

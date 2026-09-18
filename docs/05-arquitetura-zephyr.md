@@ -172,7 +172,7 @@ find build_su/CMakeFiles/app.dir -name "*.su" -exec cat {} + | sort -t$'\t' -k2 
 
 ## Devicetree e alvo
 
-O build usa a placa `nrf52840dk/nrf52840` com o overlay `boards/nrf52840_strava.overlay`, que aplica os pinos da placa myStravaB V3. O `CMakeLists.txt` fixa `BOARD` e `DTC_OVERLAY_FILE`; por isso o `boards/nrf52840dk_nrf52840.overlay` (console USB CDC) **não é usado**.
+O build usa a placa `nrf52840dk/nrf52840` com o overlay `boards/nrf52840dk_nrf52840.overlay`, que aplica os pinos da placa myStravaB V3 e que o Zephyr acha pelo nome da placa. A placa vem do `-b` (variável `BOARD` dos scripts); o `CMakeLists.txt` não fixa nenhuma.
 
 | Periférico | Alias no código | Instância | Pinos | Observação |
 |---|---|---|---|---|

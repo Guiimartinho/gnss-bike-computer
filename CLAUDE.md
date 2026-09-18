@@ -59,7 +59,7 @@ flowchart TB
     ROOT["gnss_bike_computer/"]
     ROOT --> ZA["zephyr_app/"]
     ZA --> ZS["src/ e include/<br/>hal · drivers · model · rf · vue · usb · utils"]
-    ZA --> ZB["boards/nrf52840_strava.overlay<br/>(o outro overlay não é usado)"]
+    ZA --> ZB["boards/&lt;placa&gt;.overlay<br/>nrf52840dk_nrf52840: pinos da V3"]
     ZA --> ZT["tests/host/<br/>Unity + CTest, shims e falsos"]
     ZA --> ZC["CMakeLists.txt · prj.conf · sysbuild.conf"]
     ROOT --> LEG["legacy/ · libraries/<br/>stravaV10 original"]
@@ -116,7 +116,7 @@ flowchart LR
 | ANT+ só funciona no workspace do add-on `sdk-ant`, preso ao sdk-nrf v3.2.4 | não misture as bibliotecas ANT com o NCS v3.3.0; o workspace do add-on fica ao lado do atual (fase 4 do roteiro) |
 | A camada de comandos do Git Bash transforma `\\n` em quebra de linha real | para caminhos com `\` (arquivos `.bat`), use a ferramenta de edição, não `sed` com `\\` |
 | As ferramentas de escrita gravam LF | depois de editar um `.bat`, volte para CRLF: `sed -i 's/\r$//; s/$/\r/' arquivo.bat` |
-| `DTC_OVERLAY_FILE` fixo no `CMakeLists.txt` | o `boards/nrf52840dk_nrf52840.overlay` nunca entra no build |
+| O overlay entra pelo nome da placa | `boards/<placa>.overlay`, com `/` trocado por `_` (`nrf52840dk_nrf52840.overlay`); com outro nome ele é ignorado sem aviso |
 | Desligar um nó do DK não desliga os filhos | o `mx25r64` precisa de `status = "disabled"` próprio, senão o driver `qspi-nor` volta |
 | Build incremental guarda símbolos Kconfig que saíram (`NRFX_QSPI=y` continuou depois de desligar o QSPI) | afirmações sobre `.config`, devicetree ou tamanho só com `bash tools/fw/fw.sh build pristine` |
 | Caminho de build longo (pasta temporária do usuário) passa do limite de 250 caracteres dos objetos | compile dentro do repositório: `zephyr_app/build` ou uma pasta `build/` da raiz |

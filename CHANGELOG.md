@@ -47,6 +47,7 @@ Revisão completa de 2026-09-18: análise do legacy e do port, migração para o
 - Imagens de `docs/` movidas para `docs/img/`; os quatro documentos de novembro de 2025 arquivados sem alteração em `docs/historico/2025-11/`.
 - Tamanho: FLASH 294.796 B (−4,3 KB sem o driver QSPI do DK), RAM 118.080 B (+2,9 KB pelas pilhas maiores).
 - O código chega aos barramentos pelos aliases do devicetree (`gps-uart`, `sensor-i2c`, `lcd-spi`, `sdc-spi`), não pelas instâncias do nRF52 (`uart1`, `i2c0`, `spi1`, `spi2`): passo para compilar em outras placas; o binário do nRF52840 não mudou.
+- O `CMakeLists.txt` não fixa mais a placa nem o overlay: a placa vem do `-b` (`BOARD` no `fw.sh` e no `build.bat`) e o overlay da V3 passou a `boards/nrf52840dk_nrf52840.overlay`, aplicado pelo nome; o overlay de teste de 2025-11 que ocupava esse nome e nunca entrava no build saiu. O binário do nRF52840 não mudou.
 - Branches `main` (versões estáveis) e `develop` (trabalho) no lugar da `master`; regra registrada no `CLAUDE.md`, no `AGENTS.md` e na skill `commit-gnss`.
 - Armadilhas de build registradas no `CLAUDE.md` e na skill `fw-build` (o build incremental guarda símbolos Kconfig antigos; caminhos de build longos demais) e menções aos builds antigos, já apagados, retiradas.
 

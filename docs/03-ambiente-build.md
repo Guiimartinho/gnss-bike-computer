@@ -50,7 +50,7 @@ flowchart LR
 |---|---|---|
 | `NCS_ROOT`, `NCS_VERSION`, `NCS_TOOLCHAIN` | `ncs_env.*` | trocam o SDK (padrão `C:\ncs`, `v3.3.0`, `936afb6332`; o `.sh` descobre o toolchain pelo `toolchains.json`) |
 | `BUILD_DIR` | `build.bat`, `flash.bat`, `fw.sh` | outra pasta de build (padrão `zephyr_app/build`) |
-| `BOARD` | `fw.sh` | outro alvo (padrão `nrf52840dk/nrf52840`) |
+| `BOARD` | `build.bat`, `fw.sh` | outro alvo (padrão `nrf52840dk/nrf52840`); o overlay `zephyr_app/boards/<placa>.overlay` entra pelo nome |
 | `NRF_SERIAL` | `flash.bat`, `recover.bat`, `fw.sh` | escolhe o J-Link pelo número de série |
 | `SERIAL_PORT` | `serial.bat` | porta padrão do console (padrão `COM11`) |
 | `NOPAUSE` | todos os `.bat` | não espera tecla no fim |
@@ -72,7 +72,7 @@ cd zephyr_app
 python -m west build -p auto -b nrf52840dk/nrf52840 -d build --sysbuild .
 ```
 
-- **Alvo:** `nrf52840dk/nrf52840`, com os pinos da placa myStravaB. O `zephyr_app/CMakeLists.txt` fixa `BOARD` e `DTC_OVERLAY_FILE=boards/nrf52840_strava.overlay`; por isso o `boards/nrf52840dk_nrf52840.overlay` não entra no build.
+- **Alvo:** `nrf52840dk/nrf52840`, com os pinos da placa myStravaB em `zephyr_app/boards/nrf52840dk_nrf52840.overlay`, que o Zephyr aplica pelo nome da placa. Outro alvo: `BOARD=<placa> bash tools/fw/fw.sh build` ou `set BOARD=<placa>` antes do `build.bat`.
 - **Sysbuild** é o fluxo padrão do NCS. O `zephyr_app/sysbuild.conf` desliga o Partition Manager (`SB_CONFIG_PARTITION_MANAGER=n`), depreciado no NCS 3.3; o layout vem do devicetree.
 - **Saída:** `zephyr_app/build/zephyr_app/zephyr/zephyr.hex` (e `.elf`, `.map`, `.config`, `zephyr.dts`). Sem MCUboot não há `merged.hex`.
 

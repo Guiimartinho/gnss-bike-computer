@@ -6,10 +6,11 @@ REM
 REM   build.bat            build incremental em zephyr_app\build
 REM   build.bat pristine   apaga zephyr_app\build e compila do zero
 REM
-REM Alvo: nrf52840dk/nrf52840 com os pinos da placa myStravaB
-REM (zephyr_app\boards\nrf52840_strava.overlay), com sysbuild.
+REM Alvo: BOARD (padrao nrf52840dk/nrf52840, com os pinos da placa
+REM myStravaB em zephyr_app\boards\nrf52840dk_nrf52840.overlay), com sysbuild.
 REM Versao do SDK e do toolchain: tools\fw\ncs_env.bat.
-REM Defina BUILD_DIR para compilar em outra pasta.
+REM Defina BUILD_DIR para compilar em outra pasta e BOARD para outro alvo
+REM (por exemplo nrf54lm20dk/nrf54lm20a/cpuapp).
 REM Defina NOPAUSE=1 para nao esperar tecla no fim.
 REM ============================================================================
 
@@ -18,19 +19,21 @@ if errorlevel 1 goto :fail
 
 set "APP_DIR=%~dp0zephyr_app"
 if not defined BUILD_DIR set "BUILD_DIR=%APP_DIR%\build"
+if not defined BOARD set "BOARD=nrf52840dk/nrf52840"
 set "PRISTINE=auto"
 if /i "%~1"=="pristine" set "PRISTINE=always"
 
 echo ============================================================================
 echo Compilando %APP_DIR%
 echo SDK: NCS %NCS_VERSION% (toolchain %NCS_TOOLCHAIN%)
+echo Placa: %BOARD%
 echo Build: %BUILD_DIR%
 echo ============================================================================
 
 REM O west precisa rodar no drive do projeto: com o NCS em C: e o projeto
 REM em F:, rodar a partir de C: quebra o os.path.relpath do west.
 cd /d "%APP_DIR%"
-python -m west build -p %PRISTINE% -b nrf52840dk/nrf52840 -d "%BUILD_DIR%" --sysbuild "%APP_DIR%"
+python -m west build -p %PRISTINE% -b %BOARD% -d "%BUILD_DIR%" --sysbuild "%APP_DIR%"
 if errorlevel 1 goto :fail
 
 echo ============================================================================
