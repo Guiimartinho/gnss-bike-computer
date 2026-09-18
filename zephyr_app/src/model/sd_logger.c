@@ -126,9 +126,9 @@ static app_err_t write_buffer_to_file(sd_logger_t *logger)
     }
 
     (void)fs_close(&file);
-    logger->buffer_count = 0U;
 
     LOG_DBG("Wrote %u entries to %s", logger->buffer_count, logger->filename);
+    logger->buffer_count = 0U;
 
     return APP_OK;
 }
@@ -223,6 +223,19 @@ app_err_t sd_logger_add_entry(sd_logger_t *logger,
     /* Check distance threshold */
     if ((current_distance - logger->last_log_distance) < SD_LOG_MIN_DISTANCE_M) {
         return APP_OK; /* Not enough distance traveled */
+    }
+
+    /*
+     * A failed flush leaves the buffer full. Retry it; if the card is still
+     * unavailable, drop the unwritten entries instead of writing past the
+     * end of the buffer (which corrupted the rest of .bss).
+     */
+    if (logger->buffer_count >= SD_LOG_BUFFER_SIZE) {
+        if (write_buffer_to_file(logger) != APP_OK) {
+            LOG_WRN("Log storage unavailable, dropping %u entries",
+                    (unsigned)logger->buffer_count);
+            logger->buffer_count = 0U;
+        }
     }
 
     /* Add to buffer */

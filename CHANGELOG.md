@@ -13,10 +13,11 @@ Revisão completa de 2026-09-18: análise do legacy e do port, migração para o
 - O callback de fix disparava 5 a 7 vezes por segundo com o mesmo ponto: agora uma vez por época, no RMC válido, e um RMC `V` encerra o fix na hora.
 - Linhas NMEA sem validação de checksum no caminho usado pelo `gps_mgmt`.
 - Parser NMEA: o caminho caractere a caractere nunca reconhecia uma sentença; milissegundos lidos errado (`.200` virava 2000 ms); coordenadas perdiam precisão ao virar `float` antes da divisão; a posição válida nunca voltava a falso (`src/drivers/gps/nmea_parser.c`).
+- `sd_logger_add_entry()` escrevia além do buffer quando o cartão não estava disponível, corrompendo a memória depois de ~90 m de atividade (`src/model/sd_logger.c`).
 
 ### Adicionado
 
-- Testes de host do port (`zephyr_app/tests/host/`, rodados por `tools/fw/host_tests.sh`): Unity 2.6.1 + CTest com o GCC do PC, shims do Zephyr e HAL falso do GPS; 5 conjuntos, 36 casos (`vecteur`, `power_zone`, `suffer_score`, `nmea_parser`, `gps_mgmt`), com oráculo do legacy e mutação conferida nas correções.
+- Testes de host do port (`zephyr_app/tests/host/`, rodados por `tools/fw/host_tests.sh`): Unity 2.6.1 + CTest com o GCC do PC, shims do Zephyr, sistema de arquivos em memória e HAL falso do GPS; 6 conjuntos, 40 casos (`vecteur`, `power_zone`, `suffer_score`, `nmea_parser`, `sd_logger`, `gps_mgmt`), com oráculo do legacy e mutação conferida nas correções.
 - `zephyr_app/sysbuild.conf` com `SB_CONFIG_PARTITION_MANAGER=n`: build com sysbuild, sem o Partition Manager depreciado.
 - `CONFIG_RING_BUFFER=y` e a função `hal_uart_process()`.
 - `.gitattributes` (LF no repositório, CRLF nos `.bat`, `hardware/` e os dados de teste de `tools/TDD/` byte a byte) e `.editorconfig`.
