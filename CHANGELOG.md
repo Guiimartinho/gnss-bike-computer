@@ -21,16 +21,19 @@ Revisão completa de 2026-09-18: análise do legacy e do port, migração para o
 - Erro fatal travava o aparelho: `CONFIG_RESET_ON_FATAL_ERROR=y`.
 - Causa do reset sempre "desconhecida" no NCS v3.3.0: o Zephyr 4.3.99 trocou `CONFIG_SOC_SERIES_NRF52X` por `CONFIG_SOC_SERIES_NRF52` (`src/model/crash_recovery.c`).
 - Aparência BLE 1157 (sensor de velocidade e cadência) trocada por 1153 (Cycling Computer).
+- Scripts `.bat` apontavam para o NCS v3.1.0 e o toolchain `b8b84efebd`, que não existem mais, para caminhos de uma pasta antiga, e definiam `TOOLCHAIN_ROOT`, que quebra o CMake do Zephyr; o `build.bat` rodava o `west` no drive `C:` com o projeto em `F:`.
 
 ### Adicionado
 
 - Testes de host do port (`zephyr_app/tests/host/`, rodados por `tools/fw/host_tests.sh`): Unity 2.6.1 + CTest com o GCC do PC, shims do Zephyr, sistema de arquivos em memória e HAL falso do GPS; 6 conjuntos, 42 casos (`vecteur`, `power_zone`, `suffer_score`, `nmea_parser`, `sd_logger`, `gps_mgmt`), com oráculo do legacy e mutação conferida nas correções.
+- `tools/fw/`: `ncs_env.sh` e `ncs_env.bat` (ambiente do NCS a partir do `environment.json` do toolchain) e `fw.sh` (build, flash, recover, devices, size).
 - `zephyr_app/sysbuild.conf` com `SB_CONFIG_PARTITION_MANAGER=n`: build com sysbuild, sem o Partition Manager depreciado.
 - `CONFIG_RING_BUFFER=y` e a função `hal_uart_process()`.
 - `.gitattributes` (LF no repositório, CRLF nos `.bat`, `hardware/` e os dados de teste de `tools/TDD/` byte a byte) e `.editorconfig`.
 
 ### Alterado
 
+- `build.bat`, `build_ncs.bat`, `flash.bat`, `recover.bat` e `serial.bat` reescritos para o NCS v3.3.0: ambiente em `tools/fw/ncs_env.bat`, `west` rodando no drive do projeto, sysbuild, `-p auto`, gravação filtrada por J-Link (`--traits jlink` ou `NRF_SERIAL`), opção de preservar a partição de settings, porta serial por parâmetro.
 - `.gitignore`: builds, caches do clangd, `__pycache__`, `node_modules` e `.claude/settings.local.json`.
 
 ### Removido

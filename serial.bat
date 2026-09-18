@@ -1,22 +1,35 @@
 @echo off
+setlocal
 REM ============================================================================
-REM Serial Monitor for stravaV10 - GNSS Bike Computer
-REM Target: nRF52840DK
+REM Monitor serial do console do firmware (log do Zephyr).
+REM
+REM   serial.bat            usa a porta de SERIAL_PORT ou COM11
+REM   serial.bat COM7       usa a porta indicada
+REM   serial.bat COM7 9600  porta e baud rate
+REM
+REM No nRF52840-DK o console e o uart0 (115200 baud), exposto pela porta
+REM VCOM do J-Link. Descubra a porta com: nrfutil device list
+REM Ctrl+] encerra o miniterm.
 REM ============================================================================
 
-set TOOLCHAIN_ROOT=C:\ncs\toolchains\b8b84efebd
-set COMPORT=COM11
-set BAUDRATE=115200
+call "%~dp0tools\fw\ncs_env.bat"
+if errorlevel 1 goto :fail
+
+if not defined SERIAL_PORT set "SERIAL_PORT=COM11"
+if not "%~1"=="" set "SERIAL_PORT=%~1"
+set "BAUDRATE=115200"
+if not "%~2"=="" set "BAUDRATE=%~2"
 
 echo ============================================================================
-echo Serial Monitor - stravaV10
+echo Monitor serial: %SERIAL_PORT% a %BAUDRATE% baud (Ctrl+] para sair)
 echo ============================================================================
-echo Port: %COMPORT%
-echo Baud: %BAUDRATE%
-echo Press Ctrl+C to exit
-echo ============================================================================
-echo.
+python -m serial.tools.miniterm %SERIAL_PORT% %BAUDRATE%
+set "RC=%ERRORLEVEL%"
+goto :end
 
-"%TOOLCHAIN_ROOT%\opt\bin\python.exe" -m serial.tools.miniterm %COMPORT% %BAUDRATE%
+:fail
+set "RC=1"
 
-pause
+:end
+if not defined NOPAUSE pause
+exit /b %RC%

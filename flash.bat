@@ -1,44 +1,58 @@
 @echo off
+setlocal
 REM ============================================================================
-REM Flash script for stravaV10 - GNSS Bike Computer
-REM Target: nRF52840DK
+REM Grava o firmware do zephyr_app no nRF52840-DK pelo J-Link da placa.
+REM
+REM   flash.bat          apaga a flash inteira antes (perde configuracoes e bonds BLE)
+REM   flash.bat keep     apaga so as faixas do firmware (mantem a particao de settings)
+REM
+REM Com mais de um J-Link conectado, defina NRF_SERIAL com o numero de serie
+REM mostrado por: nrfutil device list
+REM Defina NOPAUSE=1 para nao esperar tecla no fim.
 REM ============================================================================
 
-set TOOLCHAIN_ROOT=C:\ncs\toolchains\b8b84efebd
-set FIRMWARE=%~dp0zephyr_app\build\zephyr\zephyr.hex
+call "%~dp0tools\fw\ncs_env.bat"
+if errorlevel 1 goto :fail
 
-echo ============================================================================
-echo Flashing stravaV10 to nRF52840DK
-echo ============================================================================
-echo Firmware: %FIRMWARE%
-echo ============================================================================
-
-REM Check if firmware exists
-if not exist "%FIRMWARE%" (
-    echo ERROR: Firmware not found!
-    echo Run build.bat first to compile the project.
-    pause
-    exit /b 1
+if not defined BUILD_DIR set "BUILD_DIR=%~dp0zephyr_app\build"
+set "FIRMWARE="
+if exist "%BUILD_DIR%\merged.hex" set "FIRMWARE=%BUILD_DIR%\merged.hex"
+if not defined FIRMWARE if exist "%BUILD_DIR%\zephyr_app\zephyr\zephyr.hex" set "FIRMWARE=%BUILD_DIR%\zephyr_app\zephyr\zephyr.hex"
+if not defined FIRMWARE if exist "%BUILD_DIR%\zephyr\zephyr.hex" set "FIRMWARE=%BUILD_DIR%\zephyr\zephyr.hex"
+if not defined FIRMWARE (
+    echo ERRO: firmware nao encontrado em %BUILD_DIR%. Rode build.bat antes.
+    goto :fail
 )
 
-REM List connected devices
-echo.
-echo Detecting devices...
-"%TOOLCHAIN_ROOT%\nrfutil\bin\nrfutil.exe" device list
+set "ERASE=ERASE_ALL"
+if /i "%~1"=="keep" set "ERASE=ERASE_RANGES_TOUCHED_BY_FIRMWARE"
 
-echo.
-echo Flashing firmware...
-"%TOOLCHAIN_ROOT%\nrfutil\bin\nrfutil.exe" device program --firmware "%FIRMWARE%" --options chip_erase_mode=ERASE_ALL,verify=VERIFY_READ,reset=RESET_SYSTEM
+set "SELECT=--traits jlink"
+if defined NRF_SERIAL set "SELECT=--serial-number %NRF_SERIAL%"
 
-if %ERRORLEVEL% EQU 0 (
-    echo ============================================================================
-    echo FLASH SUCCESS!
-    echo ============================================================================
-) else (
-    echo ============================================================================
-    echo FLASH FAILED!
-    echo ============================================================================
-    echo If device is protected, run recover.bat first
+echo ============================================================================
+echo Gravando %FIRMWARE%
+echo Apagamento: %ERASE%
+echo ============================================================================
+nrfutil device list --traits jlink
+nrfutil device program %SELECT% --family nrf52 --firmware "%FIRMWARE%" --options chip_erase_mode=%ERASE%,verify=VERIFY_READ,reset=RESET_SYSTEM
+if errorlevel 1 (
+    echo Se a placa estiver protegida, rode recover.bat antes.
+    goto :fail
 )
 
-pause
+echo ============================================================================
+echo GRAVACAO OK
+echo ============================================================================
+set "RC=0"
+goto :end
+
+:fail
+echo ============================================================================
+echo GRAVACAO FALHOU
+echo ============================================================================
+set "RC=1"
+
+:end
+if not defined NOPAUSE pause
+exit /b %RC%
