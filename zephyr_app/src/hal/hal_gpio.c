@@ -223,8 +223,9 @@ app_err_t hal_gpio_init(void)
         }
     }
 
+    /* RST is active high in the devicetree: inactive keeps the FXOS running */
     if (gpio_is_ready_dt(&imu_reset)) {
-        ret = gpio_pin_configure_dt(&imu_reset, GPIO_OUTPUT_ACTIVE);
+        ret = gpio_pin_configure_dt(&imu_reset, GPIO_OUTPUT_INACTIVE);
         if (ret < 0) {
             LOG_WRN("Failed to configure IMU reset: %d", ret);
         }

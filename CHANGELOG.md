@@ -16,6 +16,7 @@ Revisão completa de 2026-09-18: análise do legacy e do port, migração para o
 - `sd_logger_add_entry()` escrevia além do buffer quando o cartão não estava disponível, corrompendo a memória depois de ~90 m de atividade (`src/model/sd_logger.c`).
 - Botões lidos com inversão dupla: em repouso pareciam pressionados e, 1 s depois do boot, um `LONG_CENTER` parava e gravava a atividade (`src/hal/hal_gpio.c`).
 - Reset e standby do GPS com polaridade invertida no overlay (o módulo ficaria em reset e em standby).
+- Reset do FXOS8700 flutuando durante a inicialização do driver e com semântica invertida: `reset-gpios` ativo alto no nó e `imu_reset` corrigido.
 
 ### Adicionado
 

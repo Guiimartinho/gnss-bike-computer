@@ -79,8 +79,9 @@
             gpios = <&gpio1 2 (GPIO_PULL_DOWN | GPIO_ACTIVE_HIGH)>;
             label = "IMU INT1";
         };
+        /* FXOS8700CQ RST is active high (legacy/source/sensors/fxos.cpp:350-353) */
         imu_reset: imu_reset {
-            gpios = <&gpio1 3 GPIO_ACTIVE_LOW>;
+            gpios = <&gpio1 3 GPIO_ACTIVE_HIGH>;
             label = "IMU Reset";
         };
     };
@@ -116,11 +117,13 @@
         label = "BARO";
     };
 
-    /* FXOS8700 Accelerometer/Magnetometer */
+    /* FXOS8700 Accelerometer/Magnetometer. RST has no pull resistor on the
+     * board: the driver drives it (reset pulse, then low) before main(). */
     fxos: fxos8700@1e {
         compatible = "nxp,fxos8700";
         reg = <0x1e>;
         label = "FXOS";
+        reset-gpios = <&gpio1 3 GPIO_ACTIVE_HIGH>;
         int1-gpios = <&gpio1 2 GPIO_ACTIVE_HIGH>;
     };
 
