@@ -16,6 +16,7 @@
 #include "drivers/ls027.h"
 #include "model/boucle.h"
 #include "model/attitude.h"
+#include "model/model_lock.h"
 #include "model/segment.h"
 #include "model/parcours.h"
 #include "drivers/gps_mgmt.h"
@@ -1604,6 +1605,13 @@ void vue_update(void)
         return;
     }
 
+    /*
+     * Compose the frame under the model lock: main_loop writes the model and,
+     * through vue_handle_button(), the page and menu state. The SPI transfer
+     * at the end only reads the frame buffer, which only this thread writes.
+     */
+    model_lock();
+
     /* Clear buffer */
     ls027_clear();
 
@@ -1646,6 +1654,8 @@ void vue_update(void)
 
     /* Draw notification if active */
     draw_notification();
+
+    model_unlock();
 
     /* Update display */
     (void)ls027_update();

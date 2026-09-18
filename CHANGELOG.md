@@ -22,6 +22,7 @@ Revisão completa de 2026-09-18: análise do legacy e do port, migração para o
 - Causa do reset sempre "desconhecida" no NCS v3.3.0: o Zephyr 4.3.99 trocou `CONFIG_SOC_SERIES_NRF52X` por `CONFIG_SOC_SERIES_NRF52` (`src/model/crash_recovery.c`).
 - Aparência BLE 1157 (sensor de velocidade e cadência) trocada por 1153 (Cycling Computer).
 - Scripts `.bat` apontavam para o NCS v3.1.0 e o toolchain `b8b84efebd`, que não existem mais, para caminhos de uma pasta antiga, e definiam `TOOLCHAIN_ROOT`, que quebra o CMake do Zephyr; o `build.bat` rodava o `west` no drive `C:` com o projeto em `F:`.
+- Corrida entre threads no modelo: a thread `sensor` repetia a cada 1 s as leituras I2C que o `boucle_process()` já faz e escrevia os caches dos drivers lidos pela `main_loop`, e a `display` lia o modelo sem trava. A `sensor` saiu, a `main_loop` é a única escritora do modelo e a `display` compõe o quadro sob `model_lock()`; o nível de bateria vai ao BLE só quando muda (`src/main.c`, `src/model/model_lock.c`, `src/vue/vue.c`). RAM −1.280 B.
 
 ### Adicionado
 

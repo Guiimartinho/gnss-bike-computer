@@ -57,7 +57,7 @@ A revisão de novembro de 2025 contou no legacy 12 violações críticas, 28 alt
 |---|---|
 | `String` do Arduino e alocação dinâmica (`std::vector`, `new`, `std::list`) | eliminados: C puro com buffers estáticos |
 | mutex do LCD por espera ativa com condição de corrida | `k_mutex` no `ls027.c`, mas as primitivas de desenho e o VCOM não o usam |
-| variáveis `static` de função guardando estado (`Attitude.cpp`) | parcialmente: o port concentra estado em `static` de arquivo, sem trava entre threads |
+| variáveis `static` de função guardando estado (`Attitude.cpp`) | parcialmente: o port concentra estado em `static` de arquivo, escrito só pela `main_loop` e lido pela `display` sob `model_lock()` |
 | conversões com perda sem saturação | continuam: `attitude.c:179`, `attitude.c:286`, `boucle.c:118` |
 | funções longas (`computeFusion`, `run_internal`, `majPerformance`) | continuam longas no port (`vue.c` tem 1747 linhas) |
 | sem testes | 42 casos de host cobrindo vetores, zonas, suffer score, NMEA, log e gestão do GPS |

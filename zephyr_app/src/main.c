@@ -23,6 +23,7 @@
 #include "drivers/stc3100.h"
 #include "drivers/gps_mgmt.h"
 #include "model/boucle.h"
+#include "model/model_lock.h"
 #include "model/segment.h"
 #include "rf/ble_manager.h"
 #include "vue/vue.h"
@@ -38,9 +39,6 @@ LOG_MODULE_REGISTER(main, CONFIG_LOG_DEFAULT_LEVEL);
 
 /** Display update interval in milliseconds */
 #define DISPLAY_UPDATE_INTERVAL_MS  250U
-
-/** Sensor update interval in milliseconds */
-#define SENSOR_UPDATE_INTERVAL_MS   1000U
 
 /** VCOM toggle interval in milliseconds */
 #define VCOM_TOGGLE_INTERVAL_MS     1000U
@@ -69,16 +67,16 @@ LOG_MODULE_REGISTER(main, CONFIG_LOG_DEFAULT_LEVEL);
 #define DISPLAY_STACK_SIZE  2048U
 #define DISPLAY_PRIORITY    7
 
-#define SENSOR_STACK_SIZE   1024U
-#define SENSOR_PRIORITY     6
-
+/*
+ * There is no sensor thread: boucle_process() already reads the barometer,
+ * IMU and fuel gauge in main_loop, which keeps main_loop the only writer of
+ * the model and of the sensor driver caches.
+ */
 K_THREAD_STACK_DEFINE(main_stack, MAIN_STACK_SIZE);
 K_THREAD_STACK_DEFINE(display_stack, DISPLAY_STACK_SIZE);
-K_THREAD_STACK_DEFINE(sensor_stack, SENSOR_STACK_SIZE);
 
 static struct k_thread main_thread_data;
 static struct k_thread display_thread_data;
-static struct k_thread sensor_thread_data;
 
 /* ==========================================================================
  * Private Variables
@@ -89,9 +87,6 @@ static volatile bool system_initialized;
 
 /** Last display update time */
 static uint32_t last_display_update;
-
-/** Last sensor update time */
-static uint32_t last_sensor_update;
 
 /** Last VCOM toggle time */
 static uint32_t last_vcom_toggle;
@@ -271,37 +266,19 @@ static void display_thread(void *p1, void *p2, void *p3)
 }
 
 /**
- * @brief Sensor polling thread
+ * @brief Publish the battery level on the BLE Battery Service when it changes
+ *
+ * Called outside the model lock: bt_bas_set_battery_level() sends a GATT
+ * notification. The fuel gauge cache is written by main_loop only.
  */
-static void sensor_thread(void *p1, void *p2, void *p3)
+static void update_battery_service(void)
 {
-    (void)p1;
-    (void)p2;
-    (void)p3;
+    static int16_t last_soc = -1;
+    uint8_t soc = stc3100_get_soc();
 
-    LOG_INF("Sensor thread started");
-
-    while (true) {
-        uint32_t now = k_uptime_get_32();
-
-        /* Poll sensors */
-        if ((now - last_sensor_update) >= SENSOR_UPDATE_INTERVAL_MS) {
-            /* Barometer */
-            (void)baro_trigger();
-
-            /* IMU */
-            (void)fxos_trigger();
-
-            /* Battery */
-            (void)stc3100_trigger();
-
-            /* Update BLE battery level */
-            ble_manager_update_battery(stc3100_get_soc());
-
-            last_sensor_update = now;
-        }
-
-        k_msleep(100);
+    if ((int16_t)soc != last_soc) {
+        ble_manager_update_battery(soc);
+        last_soc = (int16_t)soc;
     }
 }
 
@@ -321,11 +298,14 @@ static void main_thread(void *p1, void *p2, void *p3)
         k_msleep(10);
     }
 
-    /* Start GPS */
-    (void)gps_mgmt_start();
-
     /* Start BLE advertising */
     (void)ble_manager_start_advertising();
+
+    /* The display thread already runs: model writes go under the lock */
+    model_lock();
+
+    /* Start GPS */
+    (void)gps_mgmt_start();
 
     /* Load segments from SD card */
     int seg_count = segment_load_all();
@@ -334,8 +314,13 @@ static void main_thread(void *p1, void *p2, void *p3)
     /* Set initial mode */
     (void)boucle_set_mode(APP_MODE_CRS);
 
+    model_unlock();
+
     /* Main processing loop */
     while (true) {
+        /* One model step: buttons, GPS and sensors all write the model */
+        model_lock();
+
         /* Process button events */
         hal_gpio_btn_process();
 
@@ -344,6 +329,10 @@ static void main_thread(void *p1, void *p2, void *p3)
 
         /* Process main loop */
         boucle_process();
+
+        model_unlock();
+
+        update_battery_service();
 
         /* Toggle LED to show we're alive */
         static uint32_t led_toggle_time;
@@ -409,11 +398,6 @@ int main(void)
                     display_thread, NULL, NULL, NULL,
                     DISPLAY_PRIORITY, 0, K_NO_WAIT);
     k_thread_name_set(&display_thread_data, "display");
-
-    k_thread_create(&sensor_thread_data, sensor_stack, SENSOR_STACK_SIZE,
-                    sensor_thread, NULL, NULL, NULL,
-                    SENSOR_PRIORITY, 0, K_NO_WAIT);
-    k_thread_name_set(&sensor_thread_data, "sensor");
 
     LOG_INF("All threads started");
 

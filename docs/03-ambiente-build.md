@@ -86,12 +86,12 @@ python -m west build -p auto -b nrf52840dk/nrf52840 -d build --sysbuild .
 
 ### Resultado de referência
 
-Build com sysbuild em 2026-09-18, já com as correções da revisão:
+Build com sysbuild do `master` em 2026-09-18 (atualizado a cada commit que muda o tamanho):
 
 | Item | Valor |
 |---|---|
-| FLASH | 294.796 B (28,11 % de 1 MB) |
-| RAM | 118.080 B (45,04 % de 256 KB) |
+| FLASH | 294.740 B (28,11 % de 1 MB) |
+| RAM | 116.800 B (44,56 % de 256 KB) |
 | Avisos | 7, todos `defined but not used` em `src/vue/vue.c` |
 | Erros | 0 |
 | Tempo | cerca de 1 min 45 s do zero |

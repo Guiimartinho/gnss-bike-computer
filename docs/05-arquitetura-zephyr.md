@@ -70,9 +70,9 @@ sequenceDiagram
     M->>A: ble_manager_init (bt_enable + settings_load), boucle_init, vue_init
     Note over M,A: falha do BLE também aborta
     M->>H: hal_gpio_register_btn_callback
-    M->>T: cria main_loop, display, sensor
+    M->>T: cria main_loop e display
     M-->>M: retorna (a thread main termina)
-    T->>D: main_loop: gps_mgmt_start, ble advertising, segment_load_all, boucle_set_mode(CRS)
+    T->>D: main_loop: ble advertising, depois sob model_lock: gps_mgmt_start, segment_load_all, boucle_set_mode(CRS)
 ```
 
 - Os drivers nativos do Zephyr (BME280, FXOS8700) iniciam antes do `main()`, no nível POST_KERNEL; o FXOS recebe o pulso de reset pelo `reset-gpios` do overlay.
@@ -83,13 +83,14 @@ sequenceDiagram
 
 | Thread | Função | Pilha | Prioridade | Período | Faz |
 |---|---|---|---|---|---|
-| `main_loop` | `main_thread` | 4096 B | 5 | 100 ms | botões (polling), `gps_mgmt_process()` (drena a UART, parseia NMEA, callback de fix), `boucle_process()` (sensores a 100 ms, Kalman, estado), LED a cada 1 s |
-| `display` | `display_thread` | 2048 B | 7 | 50 ms | `vue_update()` a cada 250 ms, `ls027_toggle_vcom()` a cada 1 s |
-| `sensor` | `sensor_thread` | 1024 B | 6 | 100 ms | a cada 1 s: `baro_trigger`, `fxos_trigger`, `stc3100_trigger`, `ble_manager_update_battery` |
+| `main_loop` | `main_thread` | 4096 B | 5 | 100 ms | sob `model_lock()`: botões (polling), `gps_mgmt_process()` (drena a UART, parseia NMEA, callback de fix), `boucle_process()` (barômetro, IMU e bateria a 100 ms, Kalman, estado); fora da trava: nível de bateria no BLE quando muda, LED a cada 1 s |
+| `display` | `display_thread` | 2048 B | 7 | 50 ms | `vue_update()` a cada 250 ms (compõe o quadro sob `model_lock()`, envia o LCD fora dela), `ls027_toggle_vcom()` a cada 1 s |
 | ISR da UARTE1 | `uart_isr_callback` | pilha de ISR (2048 B) | IRQ | por byte | **só copia bytes** para o `ring_buf` de 512 B |
 | sistema | log, BT RX/TX, MPSL, workqueue | do Zephyr | — | — | pilha BLE e log deferido |
 
-A `sensor` e a `main_loop` leem os mesmos sensores sem trava (tráfego I2C dobrado e `latest_data` compartilhado); consolidar numa só é parte da fase 1 do roteiro.
+A `main_loop` é a única thread que escreve o modelo e os caches dos drivers de sensor (`latest_data`). A `display` lê o modelo só enquanto segura a `model_lock()` (`src/model/model_lock.c`, um `k_mutex` com herança de prioridade), e solta a trava antes da transferência SPI, que só lê o framebuffer. Interrupções e callbacks do Bluetooth não pegam a trava: entregam dados à `main_loop` (hoje só a UART do GPS; os clientes BLE ainda não têm callback registrado e vão usar uma fila na fase 4).
+
+Até 2026-09-18 havia uma terceira thread, `sensor` (1024 B, prioridade 6), que repetia a cada 1 s as leituras I2C que o `boucle_process()` já faz, escrevendo os caches lidos pela `main_loop`, e a `display` lia o modelo sem trava.
 
 ## Fluxo de dados
 
@@ -107,9 +108,9 @@ flowchart LR
     SENS["BME280 · FXOS8700 · STC3100"] -->|"a cada 100 ms"| BP["boucle_process<br/>poll_sensors"]
     BP --> KALM["attitude_update_baro<br/>Kalman 3 estados"]
     BLEC["clientes BLE"] -.->|"só a interface lê"| VUEU
-    ATTG --> STATE[("estado do modelo<br/>sem trava")]
+    ATTG --> STATE[("estado do modelo<br/>escrito só pela main_loop")]
     KALM --> STATE
-    STATE --> VUEU["vue_update<br/>display"]
+    STATE -->|"model_lock()"| VUEU["vue_update<br/>display"]
 ```
 
 Até 2026-09-18 tudo o que está depois da ISR rodava dentro dela, uma vez por sentença NMEA.
@@ -123,7 +124,8 @@ Medidas com `CONFIG_STACK_USAGE=y` (arquivos `.su` do GCC) em 2026-09-18; a soma
 | Kalman, na `main_loop` | `main_thread` 8 + `boucle_process` 48 + `attitude_update_baro` 104 + `kalman_altitude_update` 16 + **`measurement_update` 1672** + `udmat_invert` 352 | **~2.200 B** + quadro de exceção com FPU |
 | GPS, na `main_loop` | `gps_mgmt_process` 8 + `hal_uart_process` 80 + `nmea_line_callback` 16 + `gps_fix_callback` 176 + `sd_logger_add_entry` 24 + `write_buffer_to_file` 400 + `snprintf` com float | ~1,2 KB |
 | Botão central longo | `process_button` 40 + `boucle_save_activity` 512 + `snprintf` e `fs_*` | ~1,2 KB |
-| Tela | `vue_update` 272 + `snprintf` com float | < 1 KB |
+| Bateria no BLE, na `main_loop` | `ble_manager_update_battery` 8 + `bt_bas_set_battery_level` 40 + `bt_gatt_notify_cb` 56 + `gatt_notify` 24 + ATT e L2CAP ~90 | < 0,5 KB |
+| Tela | `vue_update` 272 + `z_impl_k_mutex_lock` 32 + `snprintf` com float | < 1 KB |
 
 A pilha antiga de 2.048 B da `main_loop` estourava na primeira atualização do Kalman (a guarda da MPU transforma o estouro em falha fatal). Para refazer a medição:
 
@@ -176,12 +178,12 @@ Nós do DK desligados no overlay porque ocupam pinos da placa: `qspi` e `mx25r64
 | `sysbuild.conf` | `SB_CONFIG_PARTITION_MANAGER=n` |
 | `CMakeLists.txt` | fontes por camada, `-Wall -Wextra`, `BOARD` e overlay fixos |
 
-Flash: aplicação a partir de `0x0`, `storage_partition` de 32 KB em `0xF8000` (NVS: bonds e configurações). RAM: 118.080 de 262.144 B, com `seg_runtime` (22 KB), heap do sistema (16 KB) e framebuffer (12,5 KB) à frente.
+Flash: aplicação a partir de `0x0`, `storage_partition` de 32 KB em `0xF8000` (NVS: bonds e configurações). RAM: 116.800 de 262.144 B, com `seg_runtime` (22 KB), heap do sistema (16 KB) e framebuffer (12,5 KB) à frente.
 
 ## Regras de concorrência
 
 1. **ISR não processa**: só copia dados para um buffer (`ring_buf`, `k_msgq`) e acorda quem processa. Nada de `k_mutex_lock`, arquivo, `snprintf` com float ou trigonometria em ISR.
-2. **Um dono por estrutura**: o estado do modelo é escrito pela `main_loop`; quem lê de outra thread (a `display`) precisa de trava ou de uma cópia publicada. Hoje não há trava: é um defeito aberto.
+2. **Um dono por estrutura**: o estado do modelo é escrito só pela `main_loop`, dentro de `model_lock()`; a `display` lê com a trava, ao compor o quadro. Outra thread que precise mudar o modelo manda os dados para a `main_loop`.
 3. **Callbacks do BT** rodam na thread RX do host (cooperativa): copie o dado e saia; não segure mutex por muito tempo nem chame o modelo inteiro de lá.
 4. **Pilha**: toda thread nova ou mudança de cadeia pesada passa pela medição com `CONFIG_STACK_USAGE` e deixa pelo menos 1 KB de folga.
 
