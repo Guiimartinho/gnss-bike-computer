@@ -109,12 +109,15 @@ static void process_button(uint8_t btn_idx, hal_gpio_pin_t pin, btn_event_t shor
     btn_state_t *btn = &btn_states[btn_idx];
     uint32_t now = k_uptime_get_32();
 
+    /*
+     * gpio_pin_get_dt() already returns the logical level: the buttons are
+     * GPIO_ACTIVE_LOW in the devicetree, so true means pressed. Inverting it
+     * again made the idle buttons read as held and fired LONG events 1 s
+     * after boot (LONG_CENTER stops and saves the activity).
+     */
     if (hal_gpio_get(pin, &state) != APP_OK) {
         return;
     }
-
-    /* Button is active low, invert logic */
-    state = !state;
 
     if (state && !btn->last_state) {
         /* Button just pressed */

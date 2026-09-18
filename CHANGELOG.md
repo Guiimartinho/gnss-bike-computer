@@ -14,6 +14,7 @@ Revisão completa de 2026-09-18: análise do legacy e do port, migração para o
 - Linhas NMEA sem validação de checksum no caminho usado pelo `gps_mgmt`.
 - Parser NMEA: o caminho caractere a caractere nunca reconhecia uma sentença; milissegundos lidos errado (`.200` virava 2000 ms); coordenadas perdiam precisão ao virar `float` antes da divisão; a posição válida nunca voltava a falso (`src/drivers/gps/nmea_parser.c`).
 - `sd_logger_add_entry()` escrevia além do buffer quando o cartão não estava disponível, corrompendo a memória depois de ~90 m de atividade (`src/model/sd_logger.c`).
+- Botões lidos com inversão dupla: em repouso pareciam pressionados e, 1 s depois do boot, um `LONG_CENTER` parava e gravava a atividade (`src/hal/hal_gpio.c`).
 
 ### Adicionado
 
