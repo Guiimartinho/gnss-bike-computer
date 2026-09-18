@@ -2,7 +2,7 @@
 
 Proposta de hardware da placa própria do GNSS Bike Computer, com o nRF54LM20A e esquemático novo, no lugar da myStravaB V3 ([02](02-hardware.md)): requisitos, escolha de cada bloco com as alternativas, orçamentos de pinos e de energia, riscos e próximos passos. Vem de pesquisa de mercado e de datasheets feita em 2026-09-18. **Nenhum componente foi comprado nem testado**; consumo, autonomia e ganho do painel são estimativas até a medição na bancada, e preço e estoque mudam rápido.
 
-**Nesta página:** [Resumo](#resumo) · [Requisitos](#requisitos) · [Diagrama de blocos](#diagrama-de-blocos) · [MCU](#mcu-nrf54lm20a) · [Display](#display) · [GNSS](#gnss) · [Antena GNSS dentro da caixa](#antena-gnss-dentro-da-caixa) · [Energia](#energia) · [Sensores](#sensores) · [Periféricos](#periféricos) · [Orçamento de pinos](#orçamento-de-pinos) · [Orçamento de energia](#orçamento-de-energia) · [Riscos](#riscos) · [Próximos passos](#próximos-passos) · [Fontes](#fontes)
+**Nesta página:** [Resumo](#resumo) · [Requisitos](#requisitos) · [Diagrama de blocos](#diagrama-de-blocos) · [Como fica o aparelho](#como-fica-o-aparelho) · [MCU](#mcu-nrf54lm20a) · [Display](#display) · [GNSS](#gnss) · [Antena GNSS dentro da caixa](#antena-gnss-dentro-da-caixa) · [Energia](#energia) · [Sensores](#sensores) · [Periféricos](#periféricos) · [Orçamento de pinos](#orçamento-de-pinos) · [Orçamento de energia](#orçamento-de-energia) · [Riscos](#riscos) · [Próximos passos](#próximos-passos) · [Fontes](#fontes)
 
 ## Resumo
 
@@ -14,7 +14,7 @@ Proposta de hardware da placa própria do GNSS Bike Computer, com o nRF54LM20A e
 | Antena GNSS | chip Antenova SR4G008 na borda | antena linear L1/L5 na borda de cima, como nos ciclocomputadores do mercado | patch cerâmica, com a caixa de 25 a 35 mm mais longa |
 | Carregador e reguladores | MCP73831, TPS63051, REG710 | Nordic nPM1300 | TI BQ25798 (carregador único com duas entradas) |
 | Medidor de carga e liga/desliga | STC3100 com latch | MAX17262 na célula; ship mode do nPM1300 | medidor do próprio nPM1300, sem enxergar o painel |
-| Solar | não tem | e-peas AEM10900 com painel de silício monocristalino de 10 a 15 cm² | a entrada solar do BQ25798 |
+| Solar | não tem | e-peas AEM10900 com 6 módulos de silício monocristalino na frente inclinada e nos chanfros laterais (11 cm²) | a entrada solar do BQ25798 |
 | Bateria | Li-ion de 1 célula | LiPo de 1 célula, 2000 a 2500 mAh, com proteção e NTC | — |
 | Barômetro | Bosch BME280 | Bosch BMP585 | ST LPS28DFW; BMP581 com membrana |
 | Movimento | NXP FXOS8700CQ (fora de produção) | ST LSM6DSV16X e LIS2MDL | ST LIS2DW12 e Memsic MMC5603NJ |
@@ -85,6 +85,18 @@ flowchart LR
     MCU --> LED
     USBC ---|"USB HS"| MCU
 ```
+
+## Como fica o aparelho
+
+![Proposta do aparelho: frente, lateral direita, traseira e arranjo interno](img/placa-nova-caixa.svg)
+
+Conceito em escala a partir da caixa impressa da V3 ([foto](img/front1.png)), gerado por `tools/docs/case_drawing.py`; não há projeto mecânico nem layout ainda.
+
+- **Caixa:** 62 × 104 × 19 mm, mais 3 mm do engate de quarto de volta; a V3 tem cerca de 60 × 85 mm. A frente mantém a moldura elevada, os três botões e o furo de luz da V3.
+- **Tela:** JDI LPM027M128C com a interface em 8 cores; a janela é a mesma do LS027.
+- **Painéis:** 6 módulos de 3 células de 23 × 8 mm, 2 numa face inclinada abaixo da tela e 2 em cada chanfro de 45° das bordas longas ([painel solar](#painel-solar)).
+- **Antenas:** GNSS L1 e L5 na parede de cima, longe dos painéis; o módulo BM20C (BLE e ANT+) no canto de baixo à direita, com a antena fora da área dos painéis.
+- **Conectores:** USB-C com tampa na base, microSD com tampa na lateral esquerda, respiro do barômetro com membrana na traseira.
 
 ## MCU: nRF54LM20A
 
@@ -263,7 +275,7 @@ A V3 tem carregador linear MCP73831 de 500 mA, buck-boost TPS63051 de 3,3 V, bom
 flowchart LR
     USB["USB-C<br/>VBUS, CC1, CC2"] --> NPM["nPM1300 QFN32<br/>carregador 32 a 800 mA<br/>BUCK1, BUCK2, LDO/chave<br/>ship mode, watchdog"]
     BTN["botão liga"] -->|SHPHLD| NPM
-    PV["painel mono-Si<br/>10 a 15 cm², strings de 3 células"] --> AEM["AEM10900 QFN28<br/>boost com MPPT<br/>NTC, medidor de energia"]
+    PV["6 módulos mono-Si de 3 células<br/>frente inclinada e chanfros"] --> AEM["AEM10900 QFN28<br/>boost com MPPT<br/>NTC, medidor de energia"]
     NPM -->|VBAT| NODE(("lado SYS<br/>do medidor"))
     AEM -->|STO| NODE
     NODE --> FG["MAX17262<br/>sensor interno de 7 mΩ"]
@@ -295,7 +307,7 @@ O nPM1304 não serve: o binding do NCS limita a carga a 4 a 100 mA e a descarga 
 | Silício amorfo | PowerFilm ONP (flexível) | cerca de 3 mW/cm² | seis vezes menos por área |
 | Orgânico ou corante | Epishine, Exeger Powerfoyle | não publicado | feitos para luz interna |
 
-Numa caixa do tamanho de um Garmin Edge 840 (cerca de 58 × 85 mm), a face com o display de 2,7" deixa de 10 a 15 cm² para o painel. O AEM10900 aceita no máximo 2,73 V de MPPT (3,0 V em aberto): o painel usa **strings de 3 células em paralelo** (2,07 V em aberto a 25 °C, cerca de 2,3 V a −20 °C). Com 4 células em série a tensão em aberto chega a 2,97 V a −5 °C, no limite do chip; e com strings curtas uma sombra derruba só a string atingida.
+Na caixa do [desenho](#como-fica-o-aparelho) (62 × 104 mm) cabem 6 módulos de 3 células e 23 × 8 mm, da classe do ANYSOLAR KXOB25-05X3F (30,7 mW cada a 1 sol, 2,07 V em aberto): 2 na face inclinada abaixo da tela e 2 em cada chanfro de 45° das bordas longas, 11 cm² de módulos. Os chanfros recebem menos sol que a frente, e o conjunto equivale a cerca de 7 a 9 cm² virados para o céu (estimativa); 10 a 15 cm² de frente pediriam uma caixa maior. Cada módulo já é uma string de 3 células: o AEM10900 aceita no máximo 2,73 V de MPPT (3,0 V em aberto), e 3 células dão 2,07 V em aberto a 25 °C e cerca de 2,3 V a −20 °C, enquanto 4 em série chegariam a 2,97 V a −5 °C, no limite do chip. Em paralelo, uma sombra derruba só o módulo atingido, e os 6 somam cerca de 110 mA a 1 sol, abaixo dos 175,5 mA do AEM10900. O painel não precisa entregar a tensão da bateria nem a dos circuitos: o AEM10900 eleva a tensão dos módulos até a de carga da LiPo (4,2 V, ou 4,1 V para vida longa), e os 3,0 V e 1,8 V saem dos reguladores do nPM1300.
 
 O controle remoto da Samsung (Eco Remote) guarda a energia em capacitores híbridos VINATech de 3,8 V, não numa bateria; um capacitor desses de 250 F guarda cerca de 0,3 Wh, ou 6 h a 50 mW. Serve de inspiração para o painel e o harvester, não para o armazenamento, porque a LiPo de 2000 mAh guarda 7,4 Wh.
 
@@ -381,26 +393,26 @@ Autonomia sem sol, com 90 % da energia nominal (3,7 V) utilizável. Para compara
 
 Firmware que deixa a CPU acordada à toa ou o microSD ligado pode dobrar esses consumos: o número real sai do PPK2.
 
-Ganho do painel, líquido (janela, calor, MPPT e cerca de 85 % do harvester):
+Ganho do painel, líquido (janela, calor, MPPT e cerca de 85 % do harvester); a coluna do desenho usa os 7 a 9 cm² equivalentes:
 
-| Condição | por cm² | 10 cm² | 15 cm² |
-|---|---|---|---|
-| Sol a pino, painel de frente para o sol | cerca de 12 mW | 120 mW | 180 mW |
-| Média de um pedal de sol (COROS DURA medido: 3,9 mW/cm²) | 3 a 5 mW | 30 a 50 mW | 45 a 75 mW |
-| Sol entre nuvens | 1,5 a 3 mW | 15 a 30 mW | 22 a 45 mW |
-| Nublado (cerca de 10 klux) | 0,5 a 1 mW | 5 a 10 mW | 8 a 15 mW |
-| Chuva, mata fechada (COROS DURA medido: 0,4 mW/cm²) | 0,2 a 0,5 mW | 2 a 5 mW | 3 a 8 mW |
+| Condição | por cm² | desenho | 10 cm² | 15 cm² |
+|---|---|---|---|---|
+| Sol a pino, painel de frente para o sol | cerca de 12 mW | 88 a 106 mW | 120 mW | 180 mW |
+| Média de um pedal de sol (COROS DURA medido: 3,9 mW/cm²) | 3 a 5 mW | 22 a 44 mW | 30 a 50 mW | 45 a 75 mW |
+| Sol entre nuvens | 1,5 a 3 mW | 11 a 26 mW | 15 a 30 mW | 22 a 45 mW |
+| Nublado (cerca de 10 klux) | 0,5 a 1 mW | 4 a 9 mW | 5 a 10 mW | 8 a 15 mW |
+| Chuva, mata fechada (COROS DURA medido: 0,4 mW/cm²) | 0,2 a 0,5 mW | 1 a 4 mW | 2 a 5 mW | 3 a 8 mW |
 
 Minutos de autonomia devolvidos por hora de pedal, no consumo típico (cerca de 58 mW); a partir de 60 a bateria carrega enquanto se pedala:
 
-| Condição | 10 cm² | 15 cm² |
-|---|---|---|
-| Média de um pedal de sol | 31 a 52 min | 46 a 77 min |
-| Sol entre nuvens | 15 a 31 min | 23 a 46 min |
-| Nublado | 5 a 10 min | 8 a 15 min |
-| Chuva, mata fechada | 2 a 5 min | 3 a 8 min |
+| Condição | desenho | 10 cm² | 15 cm² |
+|---|---|---|---|
+| Média de um pedal de sol | 23 a 46 min | 31 a 52 min | 46 a 77 min |
+| Sol entre nuvens | 11 a 27 min | 15 a 31 min | 23 a 46 min |
+| Nublado | 4 a 9 min | 5 a 10 min | 8 a 15 min |
+| Chuva, mata fechada | 2 a 5 min | 2 a 5 min | 3 a 8 min |
 
-Com 15 cm², um dia de sol fica perto do empate, e um dia nublado estende a autonomia de 13 a 25 %. No modo econômico (cerca de 19 mW), o mesmo painel sustenta o aparelho sozinho no sol. É coerente com o COROS DURA: com 6,5 cm² de painel, o bikepacking.com mediu 6,2 % de carga ganha contra 9,7 % gasta num pedal de 9 h de sol.
+Com o arranjo do desenho, um pedal de sol devolve de 23 a 46 minutos por hora e um dia nublado estende a autonomia de 7 a 15 %; no modo econômico (cerca de 19 mW) o conjunto sustenta o aparelho sozinho no sol. Com 15 cm² de frente, um dia de sol ficaria perto do empate. É coerente com o COROS DURA: com 6,5 cm² de painel, o bikepacking.com mediu 6,2 % de carga ganha contra 9,7 % gasta num pedal de 9 h de sol.
 
 Referências do mercado: o Garmin Edge 1040 Solar declara de 35 para 45 h no uso exigente com 75 mil lux contínuos (+20 min por hora), e o DC Rainmaker mediu cerca de 11 min por hora num pedal de sol; o COROS DURA (painel de 6,5 cm², bateria de 960 mAh, MIP de 2,7" e 400 × 240) declara até 2 h a mais por hora de sol direto.
 

@@ -1,0 +1,335 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2100" height="1000" viewBox="0 0 2100 1000">
+<defs>
+  <linearGradient id="caseGrad" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#34363a"/><stop offset="0.45" stop-color="#232427"/><stop offset="1" stop-color="#141517"/>
+  </linearGradient>
+  <linearGradient id="bezelGrad" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#2b2d30"/><stop offset="1" stop-color="#18191b"/>
+  </linearGradient>
+  <linearGradient id="btnGrad" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#3a3c40"/><stop offset="1" stop-color="#121314"/>
+  </linearGradient>
+  <linearGradient id="cellGrad" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#1b2a4d"/><stop offset="0.5" stop-color="#0f1a33"/><stop offset="1" stop-color="#162647"/>
+  </linearGradient>
+  <linearGradient id="glare" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#ffffff" stop-opacity="0.22"/><stop offset="0.35" stop-color="#ffffff" stop-opacity="0.04"/>
+    <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+  </linearGradient>
+  <linearGradient id="sideGrad" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0" stop-color="#2e3033"/><stop offset="0.5" stop-color="#1f2023"/><stop offset="1" stop-color="#151618"/>
+  </linearGradient>
+  <linearGradient id="chamferTop" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#3b3d41"/><stop offset="1" stop-color="#232427"/>
+  </linearGradient>
+  <linearGradient id="chamferBot" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#1e1f22"/><stop offset="1" stop-color="#0f1011"/>
+  </linearGradient>
+  <linearGradient id="bevelL" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0" stop-color="#4a4d53"/><stop offset="1" stop-color="#26282c"/>
+  </linearGradient>
+  <linearGradient id="bevelR" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0" stop-color="#1f2124"/><stop offset="1" stop-color="#101113"/>
+  </linearGradient>
+  <linearGradient id="facetGrad" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#1c2233"/><stop offset="1" stop-color="#0a0c12"/>
+  </linearGradient>
+  <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+    <feGaussianBlur in="SourceAlpha" stdDeviation="9"/><feOffset dx="6" dy="10" result="o"/>
+    <feComponentTransfer><feFuncA type="linear" slope="0.35"/></feComponentTransfer>
+    <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+    <line x1="0" y1="0" x2="0" y2="8" stroke="#c62828" stroke-width="2" stroke-opacity="0.55"/>
+  </pattern>
+</defs>
+<rect width="2100" height="1000" fill="#f3f1ec"/>
+<text x="40" y="52" font-size="30" fill="#1d1d1f" text-anchor="start" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">GNSS Bike Computer · proposta da placa nova</text>
+<text x="40" y="82" font-size="16" fill="#555" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">Conceito em escala (6 px por mm), a partir da caixa impressa da V3 (docs/img/front1.png): JDI LPM027M128C colorido, painéis solares na frente inclinada e nos chanfros laterais. Medidas em mm.</text>
+<g filter="url(#shadow)">
+<rect x="70" y="150" width="372" height="624" rx="42" ry="42" fill="url(#caseGrad)"/>
+</g>
+<rect x="73" y="153" width="366" height="618" rx="39" ry="39" fill="none" stroke="#46484d" stroke-width="1.2"/>
+<rect x="121" y="189" width="270" height="396" rx="24" ry="24" fill="url(#bezelGrad)" stroke="#0c0d0e" stroke-width="1.5"/>
+<rect x="124" y="192" width="264" height="390" rx="21.6" ry="21.6" fill="none" stroke="#3c3e42" stroke-width="1"/>
+<rect x="147.16" y="207.6" width="217.68" height="358.8" rx="3.6" ry="3.6" fill="#0e0f10"/>
+<rect x="150.16" y="210.6" width="211.68" height="352.8" rx="0" ry="0" fill="#e6e8e2"/>
+<rect x="150.16" y="210.6" width="211.68" height="23.4" rx="0" ry="0" fill="#16181a"/>
+<text x="256" y="227.7" font-size="15" fill="#f4f5f0" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" >10:42</text>
+<circle cx="161.56" cy="222.3" r="5.4" fill="#2e9d4a"/>
+<rect x="155.56" y="221.1" width="12" height="2.4" rx="0" ry="0" fill="#16181a"/>
+<text x="169.96" y="227.4" font-size="9.6" fill="#2aa3b5" text-anchor="start" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" >BLE</text>
+<text x="195.76" y="227.4" font-size="9.6" fill="#2aa3b5" text-anchor="start" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" >ANT+</text>
+<rect x="321.04" y="217.2" width="27.6" height="10.8" rx="1.8" ry="1.8" fill="none" stroke="#f4f5f0" stroke-width="1.2"/>
+<rect x="322.84" y="219" width="19.8" height="7.2" rx="0" ry="0" fill="#2e9d4a"/>
+<rect x="348.64" y="220.2" width="2.4" height="4.8" rx="0" ry="0" fill="#f4f5f0"/>
+<circle cx="356.14" cy="222.3" r="3.3" fill="#d9a900"/>
+<text x="157.36" y="250.2" font-size="9.3" fill="#16181a" text-anchor="start" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" >VELOCIDADE</text>
+<text x="247" y="319.8" font-size="69" fill="#16181a" text-anchor="middle" font-weight="800" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" >32,4</text>
+<text x="355.84" y="319.8" font-size="12" fill="#16181a" text-anchor="end" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" >km/h</text>
+<line x1="154.96" y1="331.8" x2="357.04" y2="331.8" stroke="#16181a" stroke-width="1.2"/>
+<line x1="256" y1="331.8" x2="256" y2="390.6" stroke="#16181a" stroke-width="1.2"/>
+<path d="M 165.76 354 C 157.96 346.8 164.56 340.8 165.76 346.2 C 166.96 340.8 173.56 346.8 165.76 354 Z" fill="#c8323c"/>
+<text x="175.36" y="352.2" font-size="9.6" fill="#16181a" text-anchor="start" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" >FC</text>
+<text x="203.08" y="384.6" font-size="31.2" fill="#c8323c" text-anchor="middle" font-weight="800" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" >142</text>
+<polygon points="265.6,340.2 261.4,351 266.2,351 263.2,360.6 271.6,348 266.8,348 270.4,340.2" fill="#d9a900"/>
+<text x="275.2" y="352.2" font-size="9.6" fill="#16181a" text-anchor="start" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" >POT</text>
+<text x="308.92" y="384.6" font-size="31.2" fill="#2f5fb8" text-anchor="middle" font-weight="800" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" >215</text>
+<text x="356.44" y="384.6" font-size="10.8" fill="#2f5fb8" text-anchor="end" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" >W</text>
+<line x1="154.96" y1="390.6" x2="357.04" y2="390.6" stroke="#16181a" stroke-width="1.2"/>
+<text x="157.36" y="405" font-size="9" fill="#16181a" text-anchor="start" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" >DIST</text>
+<text x="157.36" y="428.4" font-size="19.2" fill="#16181a" text-anchor="start" font-weight="800" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" >48,7 km</text>
+<text x="354.64" y="405" font-size="9" fill="#16181a" text-anchor="end" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" >SUBIDA</text>
+<text x="354.64" y="428.4" font-size="19.2" fill="#2e9d4a" text-anchor="end" font-weight="800" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" >620 m</text>
+<rect x="154.96" y="438.6" width="202.08" height="56.4" rx="2.4" ry="2.4" fill="#f4f5f0" stroke="#a83a95" stroke-width="1.4"/>
+<text x="160.96" y="454.2" font-size="9.6" fill="#a83a95" text-anchor="start" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" >SEGMENTO · Serra do Mar</text>
+<rect x="160.96" y="462.6" width="190.08" height="10.8" rx="1.8" ry="1.8" fill="#c9ccc5"/>
+<rect x="160.96" y="462.6" width="117.85" height="10.8" rx="1.8" ry="1.8" fill="#2e9d4a"/>
+<rect x="269.31" y="459" width="3" height="18" rx="0" ry="0" fill="#c8323c"/>
+<text x="160.96" y="490.2" font-size="11.4" fill="#16181a" text-anchor="start" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" >62 %</text>
+<text x="351.04" y="490.2" font-size="11.4" fill="#2e9d4a" text-anchor="end" font-weight="800" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" >-0:12 do PR</text>
+<polygon points="154.96,557.4 154.96,545.4 180.16,539.4 204.16,543 228.16,527.4 252.16,516.6 276.16,523.8 300.16,510.6 324.16,502.2 342.16,513 357.04,521.4 357.04,557.4" fill="#2aa3b5" stroke="#16181a" stroke-width="1.2"/>
+<circle cx="252.16" cy="516.6" r="4.5" fill="#c8323c" stroke="#16181a" stroke-width="0.8"/>
+<text x="157.36" y="513" font-size="9" fill="#16181a" text-anchor="start" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" >ALTIMETRIA</text>
+<rect x="147.16" y="207.6" width="217.68" height="358.8" rx="3.6" ry="3.6" fill="url(#glare)"/>
+<rect x="73.6" y="255" width="37.2" height="330" rx="16.8" ry="16.8" fill="url(#bevelL)"/>
+<rect x="401.2" y="255" width="37.2" height="330" rx="16.8" ry="16.8" fill="url(#bevelR)"/>
+<rect x="75.7" y="279" width="33" height="138" rx="3" ry="3" fill="#0a0d14" stroke="#3a3f4a" stroke-width="0.8"/>
+<rect x="77.8" y="281.1" width="28.8" height="42.8" rx="1.2" ry="1.2" fill="url(#cellGrad)"/>
+<rect x="77.8" y="325.7" width="28.8" height="42.8" rx="1.2" ry="1.2" fill="url(#cellGrad)"/>
+<rect x="77.8" y="370.3" width="28.8" height="42.8" rx="1.2" ry="1.2" fill="url(#cellGrad)"/>
+<rect x="75.7" y="423" width="33" height="138" rx="3" ry="3" fill="#0a0d14" stroke="#3a3f4a" stroke-width="0.8"/>
+<rect x="77.8" y="425.1" width="28.8" height="42.8" rx="1.2" ry="1.2" fill="url(#cellGrad)"/>
+<rect x="77.8" y="469.7" width="28.8" height="42.8" rx="1.2" ry="1.2" fill="url(#cellGrad)"/>
+<rect x="77.8" y="514.3" width="28.8" height="42.8" rx="1.2" ry="1.2" fill="url(#cellGrad)"/>
+<rect x="403.3" y="279" width="33" height="138" rx="3" ry="3" fill="#0a0d14" stroke="#3a3f4a" stroke-width="0.8"/>
+<rect x="405.4" y="281.1" width="28.8" height="42.8" rx="1.2" ry="1.2" fill="url(#cellGrad)"/>
+<rect x="405.4" y="325.7" width="28.8" height="42.8" rx="1.2" ry="1.2" fill="url(#cellGrad)"/>
+<rect x="405.4" y="370.3" width="28.8" height="42.8" rx="1.2" ry="1.2" fill="url(#cellGrad)"/>
+<rect x="403.3" y="423" width="33" height="138" rx="3" ry="3" fill="#0a0d14" stroke="#3a3f4a" stroke-width="0.8"/>
+<rect x="405.4" y="425.1" width="28.8" height="42.8" rx="1.2" ry="1.2" fill="url(#cellGrad)"/>
+<rect x="405.4" y="469.7" width="28.8" height="42.8" rx="1.2" ry="1.2" fill="url(#cellGrad)"/>
+<rect x="405.4" y="514.3" width="28.8" height="42.8" rx="1.2" ry="1.2" fill="url(#cellGrad)"/>
+<rect x="115" y="597.6" width="282" height="85.2" rx="9.6" ry="9.6" fill="url(#facetGrad)" stroke="#34373d" stroke-width="1.2"/>
+<rect x="117.4" y="615.6" width="138" height="48" rx="3" ry="3" fill="#0a0d14" stroke="#3a3f4a" stroke-width="0.8"/>
+<rect x="119.5" y="617.7" width="42.8" height="43.8" rx="1.2" ry="1.2" fill="url(#cellGrad)"/>
+<rect x="164.1" y="617.7" width="42.8" height="43.8" rx="1.2" ry="1.2" fill="url(#cellGrad)"/>
+<rect x="208.7" y="617.7" width="42.8" height="43.8" rx="1.2" ry="1.2" fill="url(#cellGrad)"/>
+<rect x="256.6" y="615.6" width="138" height="48" rx="3" ry="3" fill="#0a0d14" stroke="#3a3f4a" stroke-width="0.8"/>
+<rect x="258.7" y="617.7" width="42.8" height="43.8" rx="1.2" ry="1.2" fill="url(#cellGrad)"/>
+<rect x="303.3" y="617.7" width="42.8" height="43.8" rx="1.2" ry="1.2" fill="url(#cellGrad)"/>
+<rect x="347.9" y="617.7" width="42.8" height="43.8" rx="1.2" ry="1.2" fill="url(#cellGrad)"/>
+<rect x="115" y="597.6" width="282" height="85.2" rx="9.6" ry="9.6" fill="url(#glare)"/>
+<circle cx="166" cy="720" r="30.6" fill="#0d0e0f"/>
+<circle cx="166" cy="720" r="26.4" fill="url(#btnGrad)" stroke="#4a4c51" stroke-width="1"/>
+<circle cx="256" cy="720" r="30.6" fill="#0d0e0f"/>
+<circle cx="256" cy="720" r="26.4" fill="url(#btnGrad)" stroke="#4a4c51" stroke-width="1"/>
+<circle cx="346" cy="720" r="30.6" fill="#0d0e0f"/>
+<circle cx="346" cy="720" r="26.4" fill="url(#btnGrad)" stroke="#4a4c51" stroke-width="1"/>
+<rect x="196.6" y="716.4" width="28.8" height="7.2" rx="3" ry="3" fill="#0d0e0f"/>
+<rect x="286.6" y="716.4" width="28.8" height="7.2" rx="3" ry="3" fill="#0d0e0f"/>
+<circle cx="401.2" cy="177.6" r="6" fill="#0d0e0f"/>
+<circle cx="401.2" cy="177.6" r="3.6" fill="#4ade80"/>
+<rect x="101.2" y="172.8" width="15.6" height="9.6" rx="2.4" ry="2.4" fill="#1d2f3a" stroke="#0b0c0d" stroke-width="0.8"/>
+<g stroke="#6b6b6b" stroke-width="1"><line x1="50.8" y1="150" x2="50.8" y2="774"/><line x1="45.8" y1="150" x2="55.8" y2="150"/><line x1="45.8" y1="774" x2="55.8" y2="774"/></g>
+<text x="42.8" y="462" font-size="14" fill="#555" text-anchor="middle" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" transform="rotate(-90 42.8 462)">104</text>
+<g stroke="#6b6b6b" stroke-width="1"><line x1="70" y1="792" x2="442" y2="792"/><line x1="70" y1="787" x2="70" y2="797"/><line x1="442" y1="787" x2="442" y2="797"/></g>
+<text x="256" y="810" font-size="14" fill="#555" text-anchor="middle" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">62</text>
+<text x="256" y="832" font-size="18" fill="#1d1d1f" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">Frente</text>
+<rect x="560" y="150" width="114" height="624" rx="19.2" ry="19.2" fill="url(#sideGrad)" stroke="#0e0f10" stroke-width="1.2"/>
+<line x1="602" y1="153.6" x2="602" y2="770.4" stroke="#0b0b0c" stroke-width="1.6"/>
+<rect x="552.8" y="189" width="8.4" height="396" rx="3" ry="3" fill="#26282b" stroke="#0e0f10" stroke-width="1"/>
+<rect x="554" y="693.6" width="7.2" height="52.8" rx="3" ry="3" fill="#2f3135" stroke="#0e0f10" stroke-width="1"/>
+<rect x="560" y="255" width="34.2" height="330" rx="9" ry="9" fill="#34373c" stroke="#0e0f10" stroke-width="1"/>
+<rect x="560.6" y="279" width="33" height="138" rx="3" ry="3" fill="#0a0d14" stroke="#3a3f4a" stroke-width="0.8"/>
+<rect x="562.7" y="281.1" width="28.8" height="42.8" rx="1.2" ry="1.2" fill="url(#cellGrad)"/>
+<rect x="562.7" y="325.7" width="28.8" height="42.8" rx="1.2" ry="1.2" fill="url(#cellGrad)"/>
+<rect x="562.7" y="370.3" width="28.8" height="42.8" rx="1.2" ry="1.2" fill="url(#cellGrad)"/>
+<rect x="560.6" y="423" width="33" height="138" rx="3" ry="3" fill="#0a0d14" stroke="#3a3f4a" stroke-width="0.8"/>
+<rect x="562.7" y="425.1" width="28.8" height="42.8" rx="1.2" ry="1.2" fill="url(#cellGrad)"/>
+<rect x="562.7" y="469.7" width="28.8" height="42.8" rx="1.2" ry="1.2" fill="url(#cellGrad)"/>
+<rect x="562.7" y="514.3" width="28.8" height="42.8" rx="1.2" ry="1.2" fill="url(#cellGrad)"/>
+<polygon points="560,597.6 575,682.8 560,682.8" fill="#0f1218" stroke="#3a3f4a" stroke-width="1"/>
+<rect x="674" y="330" width="18" height="180" rx="4.8" ry="4.8" fill="#1c1d20" stroke="#0e0f10" stroke-width="1"/>
+<g stroke="#6b6b6b" stroke-width="1"><line x1="560" y1="792" x2="674" y2="792"/><line x1="560" y1="787" x2="560" y2="797"/><line x1="674" y1="787" x2="674" y2="797"/></g>
+<text x="617" y="810" font-size="14" fill="#555" text-anchor="middle" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">19</text>
+<g stroke="#6b6b6b" stroke-width="1"><line x1="674" y1="306" x2="692" y2="306"/><line x1="674" y1="301" x2="674" y2="311"/><line x1="692" y1="301" x2="692" y2="311"/></g>
+<text x="683" y="324" font-size="14" fill="#555" text-anchor="middle" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif"></text>
+<text x="701" y="420" font-size="14" fill="#555" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">+3</text>
+<text x="617" y="832" font-size="18" fill="#1d1d1f" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">Lateral direita</text>
+<text x="551" y="138" font-size="13" fill="#777" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">frente</text>
+<text x="692" y="138" font-size="13" fill="#777" text-anchor="end" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">trás</text>
+<g filter="url(#shadow)">
+<rect x="760" y="150" width="372" height="624" rx="42" ry="42" fill="#1c1d20"/>
+</g>
+<defs><clipPath id="backClip"><rect x="760" y="150" width="372" height="624" rx="42" ry="42"/></clipPath></defs>
+<g clip-path="url(#backClip)">
+<rect x="760" y="150" width="372" height="54" rx="0" ry="0" fill="url(#chamferTop)"/>
+<rect x="760" y="720" width="372" height="54" rx="0" ry="0" fill="url(#chamferBot)"/>
+<line x1="760" y1="204" x2="1132" y2="204" stroke="#101113" stroke-width="1.2"/>
+<line x1="760" y1="720" x2="1132" y2="720" stroke="#3a3c41" stroke-width="1"/>
+</g>
+<rect x="763" y="153" width="366" height="618" rx="39" ry="39" fill="none" stroke="#3e4045" stroke-width="1.2"/>
+<circle cx="946" cy="420" r="93" fill="#16171a" stroke="#3a3c41" stroke-width="1.5"/>
+<circle cx="946" cy="420" r="76.8" fill="#202124" stroke="#0b0c0d" stroke-width="1.2"/>
+<polygon points="946,420 892,366 1000,366" fill="#2a2c30"/>
+<polygon points="946,420 892,474 1000,474" fill="#2a2c30"/>
+<rect x="871.6" y="415.2" width="27.6" height="9.6" rx="2.4" ry="2.4" fill="#0b0c0d"/>
+<rect x="992.8" y="415.2" width="27.6" height="9.6" rx="2.4" ry="2.4" fill="#0b0c0d"/>
+<circle cx="946" cy="420" r="7.8" fill="#0b0c0d"/>
+<circle cx="946" cy="633" r="13.2" fill="#111214" stroke="#4b4e53" stroke-width="1"/>
+<circle cx="941.8" cy="628.8" r="1.68" fill="#6a6e75"/>
+<circle cx="950.2" cy="628.8" r="1.68" fill="#6a6e75"/>
+<circle cx="941.8" cy="637.2" r="1.68" fill="#6a6e75"/>
+<circle cx="950.2" cy="637.2" r="1.68" fill="#6a6e75"/>
+<circle cx="946" cy="633" r="1.68" fill="#6a6e75"/>
+<circle cx="799" cy="225" r="9" fill="#2c2e32" stroke="#0b0c0d" stroke-width="1"/>
+<line x1="794.2" y1="225" x2="803.8" y2="225" stroke="#0b0c0d" stroke-width="1.2"/>
+<line x1="799" y1="220.2" x2="799" y2="229.8" stroke="#0b0c0d" stroke-width="1.2"/>
+<circle cx="1093" cy="225" r="9" fill="#2c2e32" stroke="#0b0c0d" stroke-width="1"/>
+<line x1="1088.2" y1="225" x2="1097.8" y2="225" stroke="#0b0c0d" stroke-width="1.2"/>
+<line x1="1093" y1="220.2" x2="1093" y2="229.8" stroke="#0b0c0d" stroke-width="1.2"/>
+<circle cx="799" cy="699" r="9" fill="#2c2e32" stroke="#0b0c0d" stroke-width="1"/>
+<line x1="794.2" y1="699" x2="803.8" y2="699" stroke="#0b0c0d" stroke-width="1.2"/>
+<line x1="799" y1="694.2" x2="799" y2="703.8" stroke="#0b0c0d" stroke-width="1.2"/>
+<circle cx="1093" cy="699" r="9" fill="#2c2e32" stroke="#0b0c0d" stroke-width="1"/>
+<line x1="1088.2" y1="699" x2="1097.8" y2="699" stroke="#0b0c0d" stroke-width="1.2"/>
+<line x1="1093" y1="694.2" x2="1093" y2="703.8" stroke="#0b0c0d" stroke-width="1.2"/>
+<rect x="1122.4" y="576" width="19.2" height="96" rx="7.2" ry="7.2" fill="#232428" stroke="#46494e" stroke-width="1"/>
+<rect x="910" y="763.2" width="72" height="21.6" rx="7.2" ry="7.2" fill="#232428" stroke="#46494e" stroke-width="1"/>
+<rect x="924.4" y="768.6" width="43.2" height="10.8" rx="4.8" ry="4.8" fill="#050505"/>
+<text x="946" y="570" font-size="12" fill="#3a3c41" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" letter-spacing="1">GNSS BIKE COMPUTER</text>
+<text x="946" y="832" font-size="18" fill="#1d1d1f" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">Traseira</text>
+<text x="1146" y="618" font-size="13" fill="#555" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">tampa do</text>
+<text x="1146" y="634" font-size="13" fill="#555" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">microSD</text>
+<text x="946" y="800" font-size="13" fill="#555" text-anchor="middle" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">USB-C com tampa, na base</text>
+<rect x="1230" y="150" width="372" height="624" rx="42" ry="42" fill="#e9edf1" stroke="#1d1d1f" stroke-width="1.6"/>
+<rect x="1251" y="171" width="330" height="582" rx="18" ry="18" fill="#cfe6d1" stroke="#2e7d32" stroke-width="1.4"/>
+<rect x="1308" y="306" width="216" height="360" rx="12" ry="12" fill="#ffe0b2" fill-opacity="0.55" stroke="#ef6c00" stroke-width="1.5" stroke-dasharray="8 5"/>
+<rect x="1295.76" y="201.6" width="240.48" height="370.8" rx="6" ry="6" fill="none" stroke="#546e7a" stroke-width="1.3" stroke-dasharray="4 4"/>
+<rect x="1277.4" y="615.6" width="138" height="48" rx="3" ry="3" fill="#c5cae9" fill-opacity="0.7" stroke="#1a237e" stroke-width="1.2"/>
+<rect x="1416.6" y="615.6" width="138" height="48" rx="3" ry="3" fill="#c5cae9" fill-opacity="0.7" stroke="#1a237e" stroke-width="1.2"/>
+<rect x="1235.7" y="279" width="33" height="138" rx="3" ry="3" fill="#c5cae9" fill-opacity="0.7" stroke="#1a237e" stroke-width="1.2"/>
+<rect x="1235.7" y="423" width="33" height="138" rx="3" ry="3" fill="#c5cae9" fill-opacity="0.7" stroke="#1a237e" stroke-width="1.2"/>
+<rect x="1563.3" y="279" width="33" height="138" rx="3" ry="3" fill="#c5cae9" fill-opacity="0.7" stroke="#1a237e" stroke-width="1.2"/>
+<rect x="1563.3" y="423" width="33" height="138" rx="3" ry="3" fill="#c5cae9" fill-opacity="0.7" stroke="#1a237e" stroke-width="1.2"/>
+<rect x="1375.2" y="184.8" width="81.6" height="80.4" rx="4.8" ry="4.8" fill="#cfd8dc" stroke="#607d8b" stroke-width="1.2"/>
+<rect x="1386" y="195.6" width="60.6" height="58.2" rx="3.6" ry="3.6" fill="#90a4ae" stroke="#37474f" stroke-width="1"/>
+<line x1="1266" y1="157.8" x2="1401" y2="157.8" stroke="#ff9800" stroke-width="5" stroke-linecap="round"/>
+<line x1="1431" y1="157.8" x2="1566" y2="157.8" stroke="#e65100" stroke-width="5" stroke-linecap="round"/>
+<circle cx="1392" cy="169.8" r="4.2" fill="#ff9800"/>
+<circle cx="1440" cy="169.8" r="4.2" fill="#e65100"/>
+<rect x="1521" y="609" width="60" height="88.8" rx="3.6" ry="3.6" fill="#ffcdd2" stroke="#c62828" stroke-width="1.2"/>
+<rect x="1521" y="679.8" width="60" height="38.4" rx="3" ry="3" fill="url(#hatch)" stroke="#c62828" stroke-width="1"/>
+<rect x="1273.2" y="348" width="20.4" height="60" rx="2.4" ry="2.4" fill="#b0bec5" stroke="#455a64" stroke-width="1"/>
+<rect x="1252.8" y="576" width="84" height="90" rx="4.8" ry="4.8" fill="#e1bee7" stroke="#6a1b9a" stroke-width="1.2"/>
+<rect x="1389" y="742.8" width="54" height="21.6" rx="7.2" ry="7.2" fill="#bbdefb" stroke="#0d47a1" stroke-width="1.2"/>
+<rect x="1447.8" y="678" width="27.6" height="27.6" rx="2.4" ry="2.4" fill="#90caf9" stroke="#0d47a1" stroke-width="1"/>
+<rect x="1358.4" y="681.6" width="15" height="15" rx="1.8" ry="1.8" fill="#90caf9" stroke="#0d47a1" stroke-width="1"/>
+<rect x="1350" y="578.4" width="24" height="24" rx="1.8" ry="1.8" fill="#c5cae9" stroke="#1a237e" stroke-width="1"/>
+<rect x="1383" y="580.8" width="60" height="15.6" rx="1.8" ry="1.8" fill="#9fa8da" stroke="#1a237e" stroke-width="1"/>
+<rect x="1284" y="222" width="18" height="15" rx="1.2" ry="1.2" fill="#fff59d" stroke="#827717" stroke-width="1"/>
+<rect x="1308" y="223.2" width="13.2" height="13.2" rx="1.2" ry="1.2" fill="#fff59d" stroke="#827717" stroke-width="1"/>
+<rect x="1406.4" y="624" width="19.5" height="19.5" rx="1.2" ry="1.2" fill="#fff59d" stroke="#827717" stroke-width="1"/>
+<rect x="1263.6" y="175.2" width="12" height="7.2" rx="1.2" ry="1.2" fill="#fff59d" stroke="#827717" stroke-width="1"/>
+<circle cx="1561.2" cy="177.6" r="5.4" fill="#a5d6a7" stroke="#1b5e20" stroke-width="1"/>
+<rect x="1314" y="450" width="66" height="54" rx="4.8" ry="4.8" fill="#d7ccc8" stroke="#4e342e" stroke-width="1"/>
+<rect x="1308" y="702" width="36" height="36" rx="3" ry="3" fill="#eeeeee" stroke="#424242" stroke-width="1"/>
+<circle cx="1326" cy="720" r="9.6" fill="#bdbdbd" stroke="#424242" stroke-width="0.8"/>
+<rect x="1398" y="702" width="36" height="36" rx="3" ry="3" fill="#eeeeee" stroke="#424242" stroke-width="1"/>
+<circle cx="1416" cy="720" r="9.6" fill="#bdbdbd" stroke="#424242" stroke-width="0.8"/>
+<rect x="1488" y="702" width="36" height="36" rx="3" ry="3" fill="#eeeeee" stroke="#424242" stroke-width="1"/>
+<circle cx="1506" cy="720" r="9.6" fill="#bdbdbd" stroke="#424242" stroke-width="0.8"/>
+<circle cx="1416" cy="283.2" r="11.4" fill="#1d1d1f"/>
+<text x="1416" y="287.7" font-size="12" fill="#ffffff" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" >1</text>
+<circle cx="1332" cy="175.2" r="11.4" fill="#1d1d1f"/>
+<text x="1332" y="179.7" font-size="12" fill="#ffffff" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" >2</text>
+<circle cx="1500" cy="175.2" r="11.4" fill="#1d1d1f"/>
+<text x="1500" y="179.7" font-size="12" fill="#ffffff" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" >2</text>
+<circle cx="1551" cy="585.6" r="11.4" fill="#1d1d1f"/>
+<text x="1551" y="590.1" font-size="12" fill="#ffffff" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" >3</text>
+<circle cx="1284" cy="426" r="11.4" fill="#1d1d1f"/>
+<text x="1284" y="430.5" font-size="12" fill="#ffffff" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" >4</text>
+<circle cx="1296" cy="682.8" r="11.4" fill="#1d1d1f"/>
+<text x="1296" y="687.3" font-size="12" fill="#ffffff" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" >5</text>
+<circle cx="1416" cy="414" r="11.4" fill="#1d1d1f"/>
+<text x="1416" y="418.5" font-size="12" fill="#ffffff" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" >6</text>
+<circle cx="1461.6" cy="721.2" r="11.4" fill="#1d1d1f"/>
+<text x="1461.6" y="725.7" font-size="12" fill="#ffffff" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" >7</text>
+<circle cx="1362" cy="564" r="11.4" fill="#1d1d1f"/>
+<text x="1362" y="568.5" font-size="12" fill="#ffffff" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" >8</text>
+<circle cx="1326" cy="256.8" r="11.4" fill="#1d1d1f"/>
+<text x="1326" y="261.3" font-size="12" fill="#ffffff" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" >9</text>
+<circle cx="1281.6" cy="199.2" r="11.4" fill="#1d1d1f"/>
+<text x="1281.6" y="203.7" font-size="12" fill="#ffffff" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" >10</text>
+<circle cx="1347" cy="522" r="11.4" fill="#1d1d1f"/>
+<text x="1347" y="526.5" font-size="12" fill="#ffffff" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" >11</text>
+<circle cx="1371" cy="747.6" r="11.4" fill="#1d1d1f"/>
+<text x="1371" y="752.1" font-size="12" fill="#ffffff" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" >12</text>
+<circle cx="1416" cy="659.4" r="11.4" fill="#1d1d1f"/>
+<text x="1416" y="663.9" font-size="12" fill="#ffffff" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" >13</text>
+<circle cx="1416" cy="603.6" r="11.4" fill="#1d1d1f"/>
+<text x="1416" y="608.1" font-size="12" fill="#ffffff" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" >14</text>
+<circle cx="1579.8" cy="261.6" r="11.4" fill="#1d1d1f"/>
+<text x="1579.8" y="266.1" font-size="12" fill="#ffffff" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" >14</text>
+<text x="1416" y="832" font-size="18" fill="#1d1d1f" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">Por dentro (raio X)</text>
+<text x="1660" y="150" font-size="19" fill="#1d1d1f" text-anchor="start" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">Por dentro</text>
+<circle cx="1670" cy="179" r="10" fill="#1d1d1f"/>
+<text x="1670" y="184" font-size="12" fill="#fff" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">1</text>
+<text x="1688" y="184" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">GNSS u-blox MAX-F10S (L1 + L5) sob blindagem</text>
+<circle cx="1670" cy="203" r="10" fill="#1d1d1f"/>
+<text x="1670" y="208" font-size="12" fill="#fff" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">2</text>
+<text x="1688" y="208" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">antenas GNSS L1 e L5 na parede de cima,</text>
+<text x="1688" y="232" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">longe dos painéis, com contatos de mola</text>
+<circle cx="1670" cy="251" r="10" fill="#1d1d1f"/>
+<text x="1670" y="256" font-size="12" fill="#fff" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">3</text>
+<text x="1688" y="256" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">BM20C (nRF54LM20A, BLE + ANT+): antena</text>
+<text x="1688" y="280" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">de 2,4 GHz no canto oposto ao GNSS</text>
+<circle cx="1670" cy="299" r="10" fill="#1d1d1f"/>
+<text x="1670" y="304" font-size="12" fill="#fff" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">4</text>
+<text x="1688" y="304" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">FPC do display sai pela esquerda</text>
+<circle cx="1670" cy="323" r="10" fill="#1d1d1f"/>
+<text x="1670" y="328" font-size="12" fill="#fff" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">5</text>
+<text x="1688" y="328" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">microSD, tampa na lateral esquerda</text>
+<circle cx="1670" cy="347" r="10" fill="#1d1d1f"/>
+<text x="1670" y="352" font-size="12" fill="#fff" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">6</text>
+<text x="1688" y="352" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">LiPo 2000 mAh 36 × 60 × 7 mm, atrás da placa</text>
+<circle cx="1670" cy="371" r="10" fill="#1d1d1f"/>
+<text x="1670" y="376" font-size="12" fill="#fff" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">7</text>
+<text x="1688" y="376" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">USB-C na base, nPM1300 e MAX17262</text>
+<circle cx="1670" cy="395" r="10" fill="#1d1d1f"/>
+<text x="1670" y="400" font-size="12" fill="#fff" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">8</text>
+<text x="1688" y="400" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">AEM10900 e conectores dos painéis</text>
+<circle cx="1670" cy="419" r="10" fill="#1d1d1f"/>
+<text x="1670" y="424" font-size="12" fill="#fff" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">9</text>
+<text x="1688" y="424" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">LSM6DSV16X e LIS2MDL</text>
+<circle cx="1670" cy="443" r="10" fill="#1d1d1f"/>
+<text x="1670" y="448" font-size="12" fill="#fff" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">10</text>
+<text x="1688" y="448" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">OPT3001 e LED RGB em cima (como na V3)</text>
+<circle cx="1670" cy="467" r="10" fill="#1d1d1f"/>
+<text x="1670" y="472" font-size="12" fill="#fff" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">11</text>
+<text x="1688" y="472" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">buzzer piezo</text>
+<circle cx="1670" cy="491" r="10" fill="#1d1d1f"/>
+<text x="1670" y="496" font-size="12" fill="#fff" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">12</text>
+<text x="1688" y="496" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">três botões, como na V3</text>
+<circle cx="1670" cy="515" r="10" fill="#1d1d1f"/>
+<text x="1670" y="520" font-size="12" fill="#fff" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">13</text>
+<text x="1688" y="520" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">BMP585 junto do respiro com membrana</text>
+<circle cx="1670" cy="539" r="10" fill="#1d1d1f"/>
+<text x="1670" y="544" font-size="12" fill="#fff" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">14</text>
+<text x="1688" y="544" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">painéis: 2 na frente inclinada e 2 em</text>
+<text x="1688" y="568" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">cada chanfro lateral de 45°</text>
+<text x="1660" y="608" font-size="19" fill="#1d1d1f" text-anchor="start" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">Medidas e escolhas</text>
+<text x="1660" y="638" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">62 × 104 × 19 mm, mais 3 mm do encaixe;</text>
+<text x="1660" y="660" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">a V3 tem cerca de 60 × 85 mm</text>
+<text x="1660" y="682" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">tela JDI 2,7" 400 × 240, 8 cores, 3,0 V</text>
+<text x="1660" y="704" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">6 módulos solares de 3 células, 23 × 8 mm</text>
+<text x="1660" y="726" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">(11 cm² de células), todos em paralelo;</text>
+<text x="1660" y="748" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">cada um dá cerca de 2 V e o AEM10900</text>
+<text x="1660" y="770" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">carrega a LiPo até 4,2 V; os 3,0 V e 1,8 V</text>
+<text x="1660" y="792" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">saem do nPM1300</text>
+<text x="1660" y="814" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">USB-C e microSD com tampa, respiro com</text>
+<text x="1660" y="836" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">membrana</text>
+<text x="1660" y="872" font-size="14" fill="#b71c1c" text-anchor="start" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">Conceito para discutir: não há</text>
+<text x="1660" y="892" font-size="14" fill="#b71c1c" text-anchor="start" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">projeto mecânico nem layout ainda.</text>
+</svg>
