@@ -30,12 +30,15 @@ Revisão completa de 2026-09-18: análise do legacy e do port, migração para o
 - `tools/docs/`: `mermaid_check.py` (extrai e renderiza os diagramas com o mermaid-cli local e aponta diagramas em texto puro) e `links_check.py`.
 - `zephyr_app/sysbuild.conf` com `SB_CONFIG_PARTITION_MANAGER=n`: build com sysbuild, sem o Partition Manager depreciado.
 - `CONFIG_RING_BUFFER=y` e a função `hal_uart_process()`.
+- Documentação numerada em `docs/` (01 a 12, com índice), `README.md` e `legacy/README.md` (origem, licença CC BY-NC 4.0 e diferenças em relação ao upstream).
 - `.gitattributes` (LF no repositório, CRLF nos `.bat`, `hardware/` e os dados de teste de `tools/TDD/` byte a byte) e `.editorconfig`.
 
 ### Alterado
 
 - `build.bat`, `build_ncs.bat`, `flash.bat`, `recover.bat` e `serial.bat` reescritos para o NCS v3.3.0: ambiente em `tools/fw/ncs_env.bat`, `west` rodando no drive do projeto, sysbuild, `-p auto`, gravação filtrada por J-Link (`--traits jlink` ou `NRF_SERIAL`), opção de preservar a partição de settings, porta serial por parâmetro.
 - `.gitignore`: builds, caches do clangd, `__pycache__`, `node_modules` e `.claude/settings.local.json`.
+- Imagens de `docs/` movidas para `docs/img/`; os quatro documentos de novembro de 2025 arquivados sem alteração em `docs/historico/2025-11/`.
+- Tamanho: FLASH 294.796 B (−4,3 KB sem o driver QSPI do DK), RAM 118.080 B (+2,9 KB pelas pilhas maiores).
 
 ### Removido
 
@@ -48,7 +51,7 @@ Port inicial para Zephyr, criado entre 2025-11-26 e 2025-11-28 e compilado pela 
 ### Adicionado
 
 - `zephyr_app/` com HAL (GPIO, I2C, SPI, UART), drivers (LS027, BME280 e FXOS8700 sobre os drivers nativos, STC3100, GPS, parser NMEA, EPO, NeoPixel em stub), modelo (boucle, attitude, Kalman de 3 estados, locator, segmentos, listas de pontos, vetores, zonas de potência, suffer score, zonas RR, configurações em NVS, recuperação de falha, percurso, log no SD, Zwift), BLE (NUS, LNS, BAS, DIS e clientes HRS, CSC, FTMS e Komoot) e interface (9 páginas, menu, telas de rolo).
-- Documentos de arquitetura, revisão MISRA, ambiente e gap analysis (25 e 26 de novembro de 2025), em `docs/`.
+- Documentos de arquitetura, revisão MISRA, ambiente e gap analysis (25 e 26 de novembro de 2025), hoje em `docs/historico/`.
 - Scripts `.bat` para o NCS v3.1.0.
 
 ## Legacy
