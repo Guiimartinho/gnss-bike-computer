@@ -6,7 +6,7 @@ Onde o port Zephyr (`zephyr_app/`) está em relação ao firmware original (`leg
 
 ## Resumo
 
-- **Compila** no NCS v3.3.0 (FLASH 296.208 B, RAM 116.928 B, 7 avisos conhecidos) e **passa em 7 conjuntos de testes de host** (50 casos). **Nada foi testado na placa** nem no nRF52840-DK.
+- **Compila** no NCS v3.3.0 (FLASH 296.320 B, RAM 116.928 B, 7 avisos conhecidos) e **passa em 7 conjuntos de testes de host** (50 casos). **Nada foi testado na placa** nem no nRF52840-DK.
 - A maior parte dos módulos do legacy **existe** no port, mas muitos **não estão ligados** ao fluxo principal (menu, FEC, notificações, zonas RR, fontes de posição, allocator de segmentos, parcours, EPO, USB) e alguns **não funcionariam** mesmo ligados (BLE central, segmentos, formatos de arquivo).
 - A interface do port é **nova**, em paisagem; o aparelho é retrato.
 - ANT+ **não existe** no port; os sensores foram trocados por clientes BLE que ainda não funcionam de ponta a ponta.

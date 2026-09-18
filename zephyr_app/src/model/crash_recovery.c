@@ -12,10 +12,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/sys/reboot.h>
-
-#if defined(CONFIG_SOC_SERIES_NRF52)
-#include <hal/nrf_power.h>
-#endif
+#include <zephyr/drivers/hwinfo.h>
 
 #include "model/crash_recovery.h"
 
@@ -39,6 +36,12 @@ static __noinit crash_descriptor_t g_crash_desc;
 #define CFSR_MMARVALID      (1U << 7U)
 #define CFSR_BFARVALID      (1U << 15U)
 
+/*
+ * Configurable Fault Status Register causes. The register exists on the
+ * ARMv7-M and ARMv8-M mainline cores: Cortex-M4 (nRF52840) and Cortex-M33
+ * (nRF54L).
+ */
+#if defined(CONFIG_ARMV7_M_ARMV8_M_MAINLINE)
 /** Error cause messages for CFSR bits */
 static const char *cfsr_messages[] = {
     [0]  = "Undefined instruction",
@@ -68,6 +71,7 @@ static const char *cfsr_messages[] = {
     [24] = "Unaligned memory access",
     [25] = "Division by zero",
 };
+#endif
 
 /* ==========================================================================
  * Private Functions
@@ -141,32 +145,34 @@ static bool verify_hardfault_crc(const hardfault_desc_t *desc)
  */
 static reset_reason_t read_hw_reset_reason(void)
 {
-#if defined(CONFIG_SOC_SERIES_NRF52)
-    uint32_t reason = nrf_power_resetreas_get(NRF_POWER);
+    /*
+     * Zephyr hwinfo reads RESETREAS from POWER on the nRF52 and from RESET
+     * on the nRF54L; the same order of checks as before.
+     */
+    uint32_t cause = 0U;
 
-    /* Clear the reset reason register */
-    nrf_power_resetreas_clear(NRF_POWER, reason);
+    if (hwinfo_get_reset_cause(&cause) != 0) {
+        return RESET_REASON_UNKNOWN;
+    }
+    (void)hwinfo_clear_reset_cause();
 
-    if (reason & NRF_POWER_RESETREAS_RESETPIN_MASK) {
+    if ((cause & RESET_PIN) != 0U) {
         return RESET_REASON_PIN;
     }
-    if (reason & NRF_POWER_RESETREAS_DOG_MASK) {
+    if ((cause & RESET_WATCHDOG) != 0U) {
         return RESET_REASON_WATCHDOG;
     }
-    if (reason & NRF_POWER_RESETREAS_SREQ_MASK) {
+    if ((cause & RESET_SOFTWARE) != 0U) {
         return RESET_REASON_SOFTWARE;
     }
-    if (reason & NRF_POWER_RESETREAS_LOCKUP_MASK) {
+    if ((cause & RESET_CPU_LOCKUP) != 0U) {
         return RESET_REASON_LOCKUP;
     }
-    if (reason == 0U) {
+    if (cause == 0U) {
         return RESET_REASON_POWER_ON;
     }
 
     return RESET_REASON_UNKNOWN;
-#else
-    return RESET_REASON_UNKNOWN;
-#endif
 }
 
 /* ==========================================================================
@@ -344,7 +350,7 @@ void crash_recovery_hardfault_handler(const hardfault_stack_t *stack)
     update_hardfault_crc(&g_crash_desc.hardfault);
 
     /* Log fault info to buffer for later retrieval */
-#if (__CORTEX_M == 4)
+#if defined(CONFIG_ARMV7_M_ARMV8_M_MAINLINE)
     uint32_t cfsr = SCB->CFSR;
 
     /* Find cause */

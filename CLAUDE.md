@@ -85,7 +85,7 @@ flowchart TB
 
 Equivalentes no `cmd`: `build.bat [pristine]`, `flash.bat [keep]`, `recover.bat`, `serial.bat COMx`. Variáveis: `BUILD_DIR`, `NRF_SERIAL`, `NCS_VERSION`, `NCS_TOOLCHAIN`, `NOPAUSE`.
 
-Referência de 2026-09-18: FLASH 296.208 B (28,2 %), RAM 116.928 B (44,6 %), 7 avisos (`vue.c`).
+Referência de 2026-09-18: FLASH 296.320 B (28,3 %), RAM 116.928 B (44,6 %), 7 avisos (`vue.c`).
 
 ## 5. Estado e próximos passos
 
