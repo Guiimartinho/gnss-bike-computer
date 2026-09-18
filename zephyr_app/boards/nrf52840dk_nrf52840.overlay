@@ -1,0 +1,27 @@
+/*
+ * Device Tree Overlay for nRF52840-DK (PCA10056)
+ * Testing configuration for stravaV10
+ *
+ * Uses built-in buttons/LEDs from DK for testing
+ * Adds USB CDC ACM for console/debug
+ */
+
+/ {
+    chosen {
+        zephyr,console = &cdc_acm_uart0;
+        zephyr,shell-uart = &cdc_acm_uart0;
+    };
+};
+
+/* USB CDC ACM */
+&zephyr_udc0 {
+    cdc_acm_uart0: cdc_acm_uart0 {
+        compatible = "zephyr,cdc-acm-uart";
+    };
+};
+
+/* Use built-in UART0 for GPS simulation */
+&uart0 {
+    status = "okay";
+    current-speed = <9600>;
+};

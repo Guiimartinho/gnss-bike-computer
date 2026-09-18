@@ -18,6 +18,16 @@ Revisão completa de 2026-09-18: análise do legacy e do port, migração para o
 
 - Template vazio de app da raiz (`CMakeLists.txt`, `prj.conf`, `src/main.c`), que vinha do commit inicial e não era o firmware.
 
+## [2.0.0] - 2025-12-01
+
+Port inicial para Zephyr, criado entre 2025-11-26 e 2025-11-28 e compilado pela última vez em 2025-12-01 com o NCS v3.1.0 (versão definida em `app_types.h`, sem tag).
+
+### Adicionado
+
+- `zephyr_app/` com HAL (GPIO, I2C, SPI, UART), drivers (LS027, BME280 e FXOS8700 sobre os drivers nativos, STC3100, GPS, parser NMEA, EPO, NeoPixel em stub), modelo (boucle, attitude, Kalman de 3 estados, locator, segmentos, listas de pontos, vetores, zonas de potência, suffer score, zonas RR, configurações em NVS, recuperação de falha, percurso, log no SD, Zwift), BLE (NUS, LNS, BAS, DIS e clientes HRS, CSC, FTMS e Komoot) e interface (9 páginas, menu, telas de rolo).
+- Documentos de arquitetura, revisão MISRA, ambiente e gap analysis (25 e 26 de novembro de 2025), em `docs/`.
+- Scripts `.bat` para o NCS v3.1.0.
+
 ## Legacy
 
 O stravaV10 original (Vincent Gollé, 2015 a 2020, CC BY-NC 4.0) foi copiado para `legacy/`, `libraries/` e `tools/` em 2025-11-25 e o projeto da placa para `hardware/` em 2025-11-30. Essas pastas não são versionadas aqui como produto: são referência.
