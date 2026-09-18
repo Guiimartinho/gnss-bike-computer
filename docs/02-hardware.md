@@ -126,7 +126,7 @@ Decidido em 2026-09-18: o produto terá uma **board própria com MCU da Nordic**
 
 O nRF54LM20A e o nRF54LM20B são a mesma peça, a não ser pela NPU Axon do B, que o ciclocomputador não usa. O nRF54LM20 DK vem com o B, e o NCS v3.3.0 compila para os dois com o mesmo devicetree (`nrf54lm20dk/nrf54lm20a/cpuapp` desenvolve o A no DK do B).
 
-A proposta de componentes da placa nova (display, GNSS e antena, energia com painel solar, sensores e periféricos) está em [13-placa-nova.md](13-placa-nova.md).
+A proposta de componentes da placa nova (display, GNSS e antena, energia com painel solar, sensores e periféricos) está em [13-placa-nova.md](13-placa-nova.md), e a especificação técnica que sai dela, em [14-hardware-placa-nova.md](14-hardware-placa-nova.md).
 
 "nRF53840", citado na conversa, foi entendido como nRF5340. Qualquer que seja a escolha, a board entra em `zephyr_app/boards/` no modelo de hardware v2 do Zephyr, e a lógica do port não depende do MCU: só o devicetree, o Kconfig da board e o rádio mudam.
 

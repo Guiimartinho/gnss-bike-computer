@@ -259,10 +259,10 @@ for bx in (16.0, 31.0, 46.0):
     fv.circle(bx, 95.0, 4.4, fill="url(#btnGrad)", stroke="#4a4c51", stroke_width=1)
 for gx in (21.1, 36.1):
     fv.rect(gx, 94.4, 4.8, 1.2, 0.5, fill="#0d0e0f")
-# LED light pipe (top right, where the V3 has its hole) and ambient light window
+# LED light pipe (top right, where the V3 has its hole); ambient light window at the bottom left
 fv.circle(55.2, 4.6, 1.0, fill="#0d0e0f")
 fv.circle(55.2, 4.6, 0.6, fill="#4ade80")
-fv.rect(5.2, 3.8, 2.6, 1.6, 0.4, fill="#1d2f3a", stroke="#0b0c0d", stroke_width=0.8)
+fv.rect(3.4, 91.6, 2.6, 1.6, 0.4, fill="#1d2f3a", stroke="#0b0c0d", stroke_width=0.8)
 dim_v(fv, -3.2, 0, H, "104")
 dim_h(fv, H + 3.0, 0, W, "62")
 label(fv.X(W / 2), fv.Y(H) + 58, "Frente", 18, "#1d1d1f", "middle", 700)
@@ -312,9 +312,9 @@ bv.rect(18.6, 44.2, 4.6, 1.6, 0.4, fill="#0b0c0d")
 bv.rect(38.8, 44.2, 4.6, 1.6, 0.4, fill="#0b0c0d")
 bv.circle(31, 45, 1.3, fill="#0b0c0d")
 # barometer vent with membrane
-bv.circle(31, 80.5, 2.2, fill="#111214", stroke="#4b4e53", stroke_width=1)
+bv.circle(W - 9.6, 88.0, 2.2, fill="#111214", stroke="#4b4e53", stroke_width=1)
 for dx, dy in ((-0.7, -0.7), (0.7, -0.7), (-0.7, 0.7), (0.7, 0.7), (0, 0)):
-    bv.circle(31 + dx, 80.5 + dy, 0.28, fill="#6a6e75")
+    bv.circle(W - 9.6 + dx, 88.0 + dy, 0.28, fill="#6a6e75")
 # screws
 for sx, sy in ((6.5, 12.5), (55.5, 12.5), (6.5, 91.5), (55.5, 91.5)):
     bv.circle(sx, sy, 1.5, fill="#2c2e32", stroke="#0b0c0d", stroke_width=1)
@@ -368,10 +368,10 @@ xv.rect(21.4, 88.6, 2.5, 2.5, 0.3, fill="#90caf9", stroke="#0d47a1", stroke_widt
 xv.rect(20.0, 71.4, 4.0, 4.0, 0.3, fill="#c5cae9", stroke="#1a237e", stroke_width=1)
 xv.rect(25.5, 71.8, 10.0, 2.6, 0.3, fill="#9fa8da", stroke="#1a237e", stroke_width=1)
 # sensors: IMU and magnetometer, baro by the vent, light sensor at the top window, LED at the light pipe
-xv.rect(9.0, 12.0, 3.0, 2.5, 0.2, fill="#fff59d", stroke="#827717", stroke_width=1)
-xv.rect(13.0, 12.2, 2.2, 2.2, 0.2, fill="#fff59d", stroke="#827717", stroke_width=1)
-xv.rect(29.4, 79.0, 3.25, 3.25, 0.2, fill="#fff59d", stroke="#827717", stroke_width=1)
-xv.rect(5.6, 4.2, 2.0, 1.2, 0.2, fill="#fff59d", stroke="#827717", stroke_width=1)
+xv.rect(12.0, 24.0, 3.0, 2.5, 0.2, fill="#fff59d", stroke="#827717", stroke_width=1)
+xv.rect(16.0, 24.2, 2.2, 2.2, 0.2, fill="#fff59d", stroke="#827717", stroke_width=1)
+xv.rect(8.0, 86.6, 3.25, 3.25, 0.2, fill="#fff59d", stroke="#827717", stroke_width=1)
+xv.rect(3.9, 91.8, 2.0, 1.2, 0.2, fill="#fff59d", stroke="#827717", stroke_width=1)
 xv.circle(55.2, 4.6, 0.9, fill="#a5d6a7", stroke="#1b5e20", stroke_width=1)
 # buzzer and buttons
 xv.rect(14.0, 50.0, 11.0, 9.0, 0.8, fill="#d7ccc8", stroke="#4e342e", stroke_width=1)
@@ -381,8 +381,8 @@ for bx in (16.0, 31.0, 46.0):
 
 numbers = [
     (31.0, 22.2, "1"), (17.0, 4.2, "2"), (45.0, 4.2, "2"), (53.5, 72.6, "3"), (9.0, 46.0, "4"),
-    (11.0, 88.8, "5"), (31.0, 44.0, "6"), (38.6, 95.2, "7"), (22.0, 69.0, "8"), (16.0, 17.8, "9"),
-    (8.6, 8.2, "10"), (19.5, 62.0, "11"), (23.5, 99.6, "12"), (31.0, 84.9, "13"),
+    (5.8, 68.6, "5"), (31.0, 44.0, "6"), (38.6, 95.2, "7"), (22.0, 69.0, "8"), (15.0, 29.6, "9"),
+    (8.4, 95.6, "10"), (19.5, 62.0, "11"), (23.5, 99.6, "12"), (14.4, 87.6, "13"),
     (31.0, 75.6, "14"), (58.3, 18.6, "14"),
 ]
 for nx, ny, s in numbers:
@@ -405,10 +405,12 @@ items = [
     ("7", "USB-C na base, nPM1300 e MAX17262"),
     ("8", "AEM10900 e conectores dos painéis"),
     ("9", "LSM6DSV16X e LIS2MDL"),
-    ("10", "OPT3001 e LED RGB em cima (como na V3)"),
+    ("10", "LED RGB em cima (como na V3), OPT3001"),
+    ("", "embaixo à esquerda, longe das antenas"),
     ("11", "buzzer piezo"),
     ("12", "três botões, como na V3"),
-    ("13", "BMP585 junto do respiro com membrana"),
+    ("13", "BMP585 junto do respiro com membrana,"),
+    ("", "fora da sombra da bateria"),
     ("14", "painéis: 2 na frente inclinada e 2 em"),
     ("", "cada chanfro lateral de 45°"),
 ]
@@ -444,5 +446,5 @@ label(lx, y, "projeto mecânico nem layout ainda.", 14, "#b71c1c", weight=700)
 
 add("</svg>")
 OUT.parent.mkdir(parents=True, exist_ok=True)
-OUT.write_text("\n".join(out), encoding="utf-8")
+OUT.write_text("\n".join(out) + "\n", encoding="utf-8", newline="\n")
 print(OUT, sum(len(s) for s in out))

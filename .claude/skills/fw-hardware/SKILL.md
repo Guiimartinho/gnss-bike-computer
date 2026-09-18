@@ -42,7 +42,7 @@ Referência completa: `docs/02-hardware.md`. Fonte de verdade da pinagem: `hardw
 
 ## Board própria
 
-**Decidido em 2026-09-18: o produto terá board própria com o nRF54LM20A** e esquemático próprio (GNSS, bateria e display melhores, display colorido de 2,7", painel solar pequeno na caixa). A V3 existe só como esquema: não há placa física para testar. Comparação dos MCUs em `docs/02-hardware.md#próxima-placa`; a proposta de componentes (display, GNSS e antena, energia e painel solar, sensores, pinos) está em `docs/13-placa-nova.md`.
+**Decidido em 2026-09-18: o produto terá board própria com o nRF54LM20A** e esquemático próprio (GNSS, bateria e display melhores, display colorido de 2,7", painel solar pequeno na caixa). A V3 existe só como esquema: não há placa física para testar. Comparação dos MCUs em `docs/02-hardware.md#próxima-placa`; a proposta de componentes (display, GNSS e antena, energia e painel solar, sensores, pinos) está em `docs/13-placa-nova.md`, e a especificação (trilhos, lista de materiais, endereços I2C, pinos, PCB de 55 × 97 mm e empilhamento) em `docs/14-hardware-placa-nova.md`.
 
 - Enquanto a placa própria não existe, há dois alvos: o nRF52840-DK com o overlay da V3 e o nRF54LM20 DK (`nrf54lm20dk/nrf54lm20a/cpuapp`, com `boards/nrf54lm20dk_nrf54lm20a_cpuapp.overlay` e `.conf`; o DK vem com o nRF54LM20B, igual ao A mais a NPU). Mudança no devicetree ou no Kconfig compila nos dois.
 - Ao portar para o nRF54L: UARTE, SPIM e TWIM têm outras instâncias (`uart20`, `uart21`, `spi00`, `i2c22`...), o tempo vem do GRTC, a NVM é RRAM (settings no ZMS, não no NVS), o WDT é `wdt30`/`wdt31`, a causa do reset fica no periférico RESET e não há QSPI.

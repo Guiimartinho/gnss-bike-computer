@@ -112,6 +112,7 @@ flowchart TB
 | [11 · Qualidade e MISRA](docs/11-qualidade-misra.md) | regras e análise estática |
 | [12 · Ferramentas e testes](docs/12-ferramentas-testes.md) | testes de host, simulador do legacy, licenças |
 | [13 · Placa nova](docs/13-placa-nova.md) | proposta de hardware da placa própria |
+| [14 · Hardware da placa nova](docs/14-hardware-placa-nova.md) | especificação técnica: alimentação, lista de materiais, pinos, PCB |
 | [CHANGELOG](CHANGELOG.md) | histórico de mudanças |
 
 ## Estado e próximos passos
