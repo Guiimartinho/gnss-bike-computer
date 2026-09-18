@@ -323,6 +323,26 @@ app_err_t stc3100_wake(void)
     return write_reg(REG_MODE, MODE_RUN);
 }
 
+app_err_t stc3100_shutdown(void)
+{
+    if (!is_initialized) {
+        return APP_ERR_NOT_INIT;
+    }
+
+    /* Gauge off, as legacy STC3100::shutdown() */
+    app_err_t err = write_reg(REG_MODE, 0x00U);
+    if (err != APP_OK) {
+        return err;
+    }
+
+    /*
+     * IO0 high (open drain released): the power latch of the myStravaB board
+     * opens and the regulators turn off. Kept on USB power, the board goes on
+     * running with the gauge stopped.
+     */
+    return write_reg(REG_CONTROL, CTRL_IO_OD);
+}
+
 app_err_t stc3100_reset(void)
 {
     if (!is_initialized) {

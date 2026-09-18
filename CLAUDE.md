@@ -78,13 +78,13 @@ flowchart TB
 | Desbloquear chip | `bash tools/fw/fw.sh recover` |
 | Placas conectadas | `bash tools/fw/fw.sh devices` |
 | Memória e maiores símbolos | `bash tools/fw/fw.sh size` |
-| Testes de host | `bash tools/fw/host_tests.sh` (6 conjuntos, 42 casos) |
+| Testes de host | `bash tools/fw/host_tests.sh` (7 conjuntos, 50 casos) |
 | Diagramas e links da documentação | `python tools/docs/mermaid_check.py` e `python tools/docs/links_check.py` |
 | Ambiente do NCS no shell | `source tools/fw/ncs_env.sh` |
 
 Equivalentes no `cmd`: `build.bat [pristine]`, `flash.bat [keep]`, `recover.bat`, `serial.bat COMx`. Variáveis: `BUILD_DIR`, `NRF_SERIAL`, `NCS_VERSION`, `NCS_TOOLCHAIN`, `NOPAUSE`.
 
-Referência de 2026-09-18: FLASH 295.856 B (28,2 %), RAM 116.928 B (44,6 %), 7 avisos (`vue.c`).
+Referência de 2026-09-18: FLASH 296.208 B (28,2 %), RAM 116.928 B (44,6 %), 7 avisos (`vue.c`).
 
 ## 5. Estado e próximos passos
 

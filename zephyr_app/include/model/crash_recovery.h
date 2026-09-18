@@ -181,6 +181,14 @@ void crash_recovery_log_error(uint32_t error_id, uint32_t pc,
 void crash_recovery_clear(void);
 
 /**
+ * @brief Forget the saved activity state
+ *
+ * Called before a deliberate power-off, so that the next boot does not
+ * restore the activity (legacy power_scheduler__shutdown()).
+ */
+void crash_recovery_clear_saved_state(void);
+
+/**
  * @brief Hard fault handler hook
  * @param stack Pointer to stack at time of fault
  *

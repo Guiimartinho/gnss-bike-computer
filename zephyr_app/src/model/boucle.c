@@ -20,6 +20,7 @@
 #include "model/power_zone.h"
 #include "model/suffer_score.h"
 #include "model/parcours.h"
+#include "model/power_scheduler.h"
 #include "drivers/gps_mgmt.h"
 #include "drivers/baro.h"
 #include "drivers/fxos.h"
@@ -151,6 +152,14 @@ static void gps_fix_callback(const gps_data_t *data)
 {
     if (data == NULL) {
         return;
+    }
+
+    /*
+     * Each location keeps the device on in CRS and PRC modes, recorded or
+     * not (legacy BoucleCRS::run_internal() pings after every location)
+     */
+    if ((current_mode == APP_MODE_CRS) || (current_mode == APP_MODE_PRC)) {
+        power_scheduler_ping(POWER_PING_CRS);
     }
 
     if (current_state == BOUCLE_STATE_RUNNING) {

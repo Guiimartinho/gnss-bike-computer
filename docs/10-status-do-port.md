@@ -6,7 +6,7 @@ Onde o port Zephyr (`zephyr_app/`) está em relação ao firmware original (`leg
 
 ## Resumo
 
-- **Compila** no NCS v3.3.0 (FLASH 295.856 B, RAM 116.928 B, 7 avisos conhecidos) e **passa em 6 conjuntos de testes de host** (42 casos). **Nada foi testado na placa** nem no nRF52840-DK.
+- **Compila** no NCS v3.3.0 (FLASH 296.208 B, RAM 116.928 B, 7 avisos conhecidos) e **passa em 7 conjuntos de testes de host** (50 casos). **Nada foi testado na placa** nem no nRF52840-DK.
 - A maior parte dos módulos do legacy **existe** no port, mas muitos **não estão ligados** ao fluxo principal (menu, FEC, notificações, zonas RR, fontes de posição, allocator de segmentos, parcours, EPO, USB) e alguns **não funcionariam** mesmo ligados (BLE central, segmentos, formatos de arquivo).
 - A interface do port é **nova**, em paisagem; o aparelho é retrato.
 - ANT+ **não existe** no port; os sensores foram trocados por clientes BLE que ainda não funcionam de ponta a ponta.
@@ -28,7 +28,7 @@ Estados: **fiel** (mesmo comportamento), **diferente** (existe com regras ou con
 |---|---|---|---|---|
 | Execução | task manager cooperativo, eventos, tick de 5 ms | 2 threads preemptivas por polling (`main_loop` 100 ms, `display` 250 ms); a `main_loop` é a única escritora do modelo e a `display` lê sob `model_lock()` | diferente | GPS saiu da ISR e a thread `sensor` duplicada saiu em 2026-09-18 ([05](05-arquitetura-zephyr.md#threads)) |
 | Watchdog | 4 s, alimentado por boucle e LCD | `task_wdt`: um canal de 4 s para a `main_loop` e outro para a `display`, sobre o WDT do nRF | diferente | mais estrito que o legacy (cada thread responde pelo seu canal); não testado na placa ([05](05-arquitetura-zephyr.md#watchdog)) |
-| Energia | latch pelo IO0 do STC3100, auto-off 15 min | nenhum | ausente | sem desligamento; o latch depende do `stc3100_init()` |
+| Energia | latch pelo IO0 do STC3100, auto-off 15 min | `power_scheduler`: auto-off depois de 15 min sem posição em CRS/PRC, item "Power Off" no menu, `stc3100_shutdown()` | parcial | sem ping do rolo (não há modo FEC) e menu ainda não aberto pelos botões; não testado na placa ([02](02-hardware.md#alimentação)) |
 | Modos | CRS, PRC, FEC, Zwift, MSC com `init`/`invalidate` | `boucle_set_mode()` só guarda o valor; start/pause/stop | stub | não há BoucleFEC nem MSC |
 | GPS e NMEA | TinyGPS++ com checksum, PMTK010→PMTK251, WDT de baud | parser próprio, 9600 fixo | parcial | checksum, época e precisão corrigidos nesta revisão; sem handshake nem troca de baud |
 | Altitude (Kalman 3 estados) | `Attitude::computeFusion` | `kalman_altitude.c` + `udmatrix.c` | diferente | P0 diagonal, `bound` com sinal zera covariâncias (α0 nunca estimado), roda até 10 Hz ([06](06-algoritmos.md)) |
@@ -79,7 +79,6 @@ Ordenados por gravidade. Linhas conferidas em 2026-09-18.
 | crítico | `src/model/liste_points.c:47-48, 124-126` | índice 0 é o ponto mais antigo (o legacy usa o mais recente), capacidade de 20 pontos e segmentos invertidos |
 | crítico | `src/model/segment.c:852-879` | `dist_to_seg_header` retorna 9999; allocator sem chamador: nenhum segmento carrega |
 | crítico | `src/drivers/lcd/ls027.c:179-189` | transformações de retrato erradas; a interface é paisagem num aparelho retrato |
-| crítico | energia | sem desligamento pelo STC3100 (nem auto-off nem item de menu) |
 | alto | `src/model/udmatrix.c:64-67, 264-281` | `udmat_ones` gera identidade; `bound` com sinal zera covariâncias negativas: α0 nunca é estimado |
 | alto | `src/model/crash_recovery.c:104-118` | CRC inclui o próprio campo `crc`; a restauração falha em 255 de 256 casos |
 | alto | `src/rf/ble_fec_client.c:46-48, 166-168` | flags do FTMS erradas (cadência, tempo, energia): a potência sai do offset errado |
@@ -120,7 +119,7 @@ Tamanhos estimados pelos relatórios de análise: fase 1 M, fase 2 M, fase 3 G, 
 | Trava do modelo | feito em 2026-09-18: `model_lock()` entre a `main_loop` e a composição do quadro na `display` | `src/model/model_lock.c`, `src/vue/vue.c` |
 | Mensagens dos clientes BLE para a `main_loop` | fica para a fase 4, quando os callbacks de dados forem registrados | — |
 | Watchdog | feito em 2026-09-18: `task_wdt` com canais de 4 s da `main_loop` e da `display` sobre o WDT do nRF; não testado na placa | `src/main.c`, `prj.conf` |
-| Latch e auto-off pelo STC3100 | pendente | — |
+| Latch e auto-off pelo STC3100 | feito em 2026-09-18: 15 min sem posição em CRS/PRC desligam pelo STC3100; item "Power Off" no menu; o ping do rolo fica para quando houver modo FEC; não testado na placa | `src/model/power_scheduler.c`, `src/drivers/sensors/stc3100.c`, `test_power_scheduler` |
 | Board própria | aguarda a escolha do MCU | — |
 
 ## Decisões do dono

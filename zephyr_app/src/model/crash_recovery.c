@@ -322,6 +322,11 @@ void crash_recovery_clear(void)
     LOG_INF("Crash recovery data cleared");
 }
 
+void crash_recovery_clear_saved_state(void)
+{
+    (void)memset(&g_crash_desc.saved, 0, sizeof(g_crash_desc.saved));
+}
+
 void crash_recovery_hardfault_handler(const hardfault_stack_t *stack)
 {
     if (stack == NULL) {

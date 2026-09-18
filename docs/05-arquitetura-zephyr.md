@@ -160,7 +160,7 @@ find build_su/CMakeFiles/app.dir -name "*.su" -exec cat {} + | sort -t$'\t' -k2 
 | `src/drivers/lcd/` | `ls027.c` | sim |
 | `src/drivers/sensors/` | `baro.c` e `fxos.c` (sobre os drivers nativos), `stc3100.c` (I2C direto) | sim |
 | `src/drivers/` | `neopixel.c` | não (stub: falta o nó `led-strip`) |
-| `src/model/` | `boucle`, `attitude`, `kalman_altitude`, `udmatrix`, `kalman`, `locator`, `segment`, `liste_points`, `vecteur`, `power_zone`, `suffer_score`, `sd_logger`, `crash_recovery`, `user_settings` | sim |
+| `src/model/` | `boucle`, `model_lock`, `power_scheduler`, `attitude`, `kalman_altitude`, `udmatrix`, `kalman`, `locator`, `segment`, `liste_points`, `vecteur`, `power_zone`, `suffer_score`, `sd_logger`, `crash_recovery`, `user_settings` | sim |
 | `src/model/` | `parcours` | parcial (`load`/`start` sem chamador) |
 | `src/model/` | `loc_source`, `baro_drift`, `rr_zone`, `zwift` | não (descartados pelo linker) |
 | `src/rf/` | `ble/ble_manager.c`, `ble_nus.c`, `ble_lns.c`, `ble_*_client.c` | parcial (scan nunca iniciado) |

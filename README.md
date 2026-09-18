@@ -8,7 +8,7 @@
 ![SDK](https://img.shields.io/badge/nRF%20Connect%20SDK-v3.3.0-00A9CE)
 ![RTOS](https://img.shields.io/badge/Zephyr-4.3.99-7929D2)
 ![Linguagem](https://img.shields.io/badge/C-C11-A8B9CC?logo=c&logoColor=white)
-![Testes](https://img.shields.io/badge/testes%20de%20host-42%20casos-2E7D32)
+![Testes](https://img.shields.io/badge/testes%20de%20host-50%20casos-2E7D32)
 ![CI](https://img.shields.io/badge/CI-desligado-lightgrey)
 ![Estado](https://img.shields.io/badge/estado-port%20em%20andamento-EF6C00)
 ![Licença](https://img.shields.io/badge/licen%C3%A7a-a%20definir-lightgrey)
@@ -70,7 +70,7 @@ flowchart LR
 # Git Bash, na raiz do repositório
 bash tools/fw/fw.sh build          # compila o zephyr_app (sysbuild)
 bash tools/fw/fw.sh flash          # grava no nRF52840-DK pelo J-Link
-bash tools/fw/host_tests.sh        # 6 conjuntos de testes de host
+bash tools/fw/host_tests.sh        # 7 conjuntos de testes de host
 python tools/docs/mermaid_check.py # valida os diagramas da documentação
 ```
 

@@ -13,6 +13,7 @@
 #include "vue/vue.h"
 #include "model/user_settings.h"
 #include "model/boucle.h"
+#include "model/power_scheduler.h"
 
 LOG_MODULE_REGISTER(menu, CONFIG_LOG_DEFAULT_LEVEL);
 
@@ -60,6 +61,14 @@ static void action_reset_trip(void)
     LOG_INF("Trip reset from menu");
 }
 
+static void action_power_off(void)
+{
+    /* Legacy Menuable.cpp: the first menu page has a shutdown entry */
+    LOG_INF("Power off from menu");
+    power_scheduler_shutdown();
+    menu_close();
+}
+
 /* ==========================================================================
  * Menu Definitions
  * ========================================================================== */
@@ -87,8 +96,11 @@ static const menu_item_t ride_menu[] = {
 static const menu_item_t main_menu[] = {
     { "Ride Control",   MENU_TYPE_SUBMENU, NULL, NULL, 0U, 0U, 0U, ride_menu, 5U },
     { "Settings",       MENU_TYPE_SUBMENU, NULL, NULL, 0U, 0U, 0U, settings_menu, 4U },
+    { "Power Off",      MENU_TYPE_ACTION,  action_power_off, NULL, 0U, 0U, 0U, NULL, 0U },
     { "Close Menu",     MENU_TYPE_ACTION,  menu_close, NULL, 0U, 0U, 0U, NULL, 0U }
 };
+
+#define MAIN_MENU_COUNT     ((uint8_t)ARRAY_SIZE(main_menu))
 
 /* ==========================================================================
  * Private Variables
@@ -119,7 +131,7 @@ app_err_t menu_init(void)
     (void)memset(&state, 0, sizeof(state));
 
     state.current_menu = main_menu;
-    state.menu_count = 3U;
+    state.menu_count = MAIN_MENU_COUNT;
     state.selected_index = 0U;
     state.scroll_offset = 0U;
     state.editing_value = false;
@@ -146,7 +158,7 @@ void menu_open(void)
     }
 
     state.current_menu = main_menu;
-    state.menu_count = 3U;
+    state.menu_count = MAIN_MENU_COUNT;
     state.selected_index = 0U;
     state.scroll_offset = 0U;
     state.editing_value = false;

@@ -24,6 +24,7 @@ Revisão completa de 2026-09-18: análise do legacy e do port, migração para o
 - Scripts `.bat` apontavam para o NCS v3.1.0 e o toolchain `b8b84efebd`, que não existem mais, para caminhos de uma pasta antiga, e definiam `TOOLCHAIN_ROOT`, que quebra o CMake do Zephyr; o `build.bat` rodava o `west` no drive `C:` com o projeto em `F:`.
 - Corrida entre threads no modelo: a thread `sensor` repetia a cada 1 s as leituras I2C que o `boucle_process()` já faz e escrevia os caches dos drivers lidos pela `main_loop`, e a `display` lia o modelo sem trava. A `sensor` saiu, a `main_loop` é a única escritora do modelo e a `display` compõe o quadro sob `model_lock()`; o nível de bateria vai ao BLE só quando muda (`src/main.c`, `src/model/model_lock.c`, `src/vue/vue.c`). RAM −1.280 B.
 - Nenhum watchdog (o legacy tinha um de 4 s): `task_wdt` com um canal de 4 s para a `main_loop` e outro para a `display`, sobre o WDT do nRF; ao expirar, loga a thread travada e reinicia. O boot alimenta o WDT quando ele sobrevive a um reset por software (`src/main.c`, `prj.conf`). FLASH +1.116 B.
+- O aparelho nunca desligava (o legacy desliga pelo STC3100 depois de 15 min sem atividade e pelo menu): `power_scheduler` portado do legacy, com ping a cada posição processada em CRS/PRC, `stc3100_shutdown()` (`REG_MODE = 0`, `REG_CONTROL = 0x01`), a atividade salva zerada antes e o item "Power Off" no menu; na USB, nova tentativa 15 min depois (`src/model/power_scheduler.c`, `src/drivers/sensors/stc3100.c`, teste `test_power_scheduler` com 8 casos).
 
 ### Adicionado
 

@@ -36,7 +36,8 @@ Referência completa: `docs/02-hardware.md`. Fonte de verdade da pinagem: `hardw
 
 - O botão central liga os reguladores (SWON → M2 → POW_EN). O firmware precisa escrever `REG_CONTROL = 0x02` no STC3100 (IO0 em 0) para manter a placa ligada; isso está em `stc3100_init()`.
 - Para desligar: `REG_MODE = 0` e `REG_CONTROL = 0x01`. **Qualquer escrita em `REG_CONTROL` com o bit 0 em 1 desliga a placa na hora.**
-- O port ainda não desliga nem tem o auto-off de 15 min do legacy (`legacy/source/scheduling/power_scheduler.cpp`).
+- No port: `stc3100_shutdown()` faz isso; o `power_scheduler` (porta de `legacy/source/scheduling/power_scheduler.cpp`) chama depois de 15 min sem posição processada em CRS/PRC, e o menu tem "Power Off". Na USB a placa não apaga; o agendador tenta de novo 15 min depois.
+- Não escreva em `REG_CONTROL` fora do `stc3100.c`: um bit 0 em 1 por engano desliga a placa em campo.
 
 ## Board própria
 

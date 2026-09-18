@@ -30,6 +30,7 @@
 #include "drivers/gps_mgmt.h"
 #include "model/boucle.h"
 #include "model/model_lock.h"
+#include "model/power_scheduler.h"
 #include "model/segment.h"
 #include "rf/ble_manager.h"
 #include "vue/vue.h"
@@ -226,6 +227,9 @@ static app_err_t init_application(void)
         return err;
     }
 
+    /* Auto-off: 15 min without a location or trainer update */
+    power_scheduler_init();
+
     LOG_INF("Application initialized");
     return APP_OK;
 }
@@ -395,6 +399,9 @@ static void main_thread(void *p1, void *p2, void *p3)
 
         /* Process main loop */
         boucle_process();
+
+        /* Power off after 15 min without activity (legacy power_scheduler) */
+        power_scheduler_run();
 
         model_unlock();
 

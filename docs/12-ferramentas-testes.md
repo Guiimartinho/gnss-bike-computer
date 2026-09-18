@@ -32,21 +32,22 @@ bash tools/fw/host_tests.sh -R nmea     # um conjunto
 | `test_nmea_parser` | `drivers/gps/nmea_parser.c` | 12 | GGA, RMC, GSA, GSV, hemisférios, fração de segundo, checksum, linha longa, caminho caractere a caractere, posição que volta a falso com RMC `V` |
 | `test_sd_logger` | `model/sd_logger.c` | 4 | intervalo de 15 m, lote de 5 com cabeçalho CSV, **nenhuma escrita fora do buffer sem cartão** |
 | `test_gps_mgmt` | `drivers/gps/gps_mgmt.c` + parser | 6 | um callback por época, checksum, fim do fix no RMC `V`, níveis lógicos de reset e standby |
+| `test_power_scheduler` | `model/power_scheduler.c` | 8 | 15 min exatos mantêm ligado, depois zera a atividade salva antes de soltar o latch, pings de posição e do rolo, nova tentativa 15 min depois, volta do contador de 32 bits |
 
 ```mermaid
 flowchart LR
     SRC["zephyr_app/src/*.c"] --> EXE["test_x.exe"]
     SHIM["tests/host/shim/zephyr/<br/>kernel.h · logging/log.h · fs/fs.h"] --> EXE
-    SUP["tests/host/support/<br/>host_kernel · host_fs · fake_gps_hal · legacy_ref.h"] --> EXE
+    SUP["tests/host/support/<br/>host_kernel · host_fs · fake_gps_hal · fake_shutdown · legacy_ref.h"] --> EXE
     T["tests/host/test_x.c"] --> EXE
     UNITY["Unity 2.6.1<br/>FetchContent com SHA-256"] --> EXE
     EXE --> CT["ctest"]
 ```
 
 - **Shims**: log vira nada, `k_mutex` nunca bloqueia, relógio controlável (`host_uptime_set/advance`), `k_msleep` avança o relógio.
-- **Falsos**: `host_fs` (sistema de arquivos em memória que pode "sumir"), `fake_gps_hal` (linhas de UART, GPIO e EPO para o `gps_mgmt`).
+- **Falsos**: `host_fs` (sistema de arquivos em memória que pode "sumir"), `fake_gps_hal` (linhas de UART, GPIO e EPO para o `gps_mgmt`), `fake_shutdown` (`stc3100_shutdown()` e `crash_recovery_clear_saved_state()` contados, para o `power_scheduler`).
 - **Oráculo**: `support/legacy_ref.h` transcreve fórmulas do legacy com a origem.
-- **Mutação**: as correções de 2026-09-18 do log e do GPS foram revertidas uma a uma e os testes falharam, como deviam.
+- **Mutação**: as correções de 2026-09-18 do parser NMEA, do log e do GPS e as regras do `power_scheduler` foram revertidas uma a uma e os testes falharam, como deviam (a exceção é a conta em `double` do parser, cujo ganho fica dentro da resolução do `float`).
 - Compilador: MinGW-w64 GCC 15.2 no Windows; o mesmo CMake funciona com o GCC do Linux.
 - Os testes de ztest do Zephyr (`native_sim`, `unit_testing`) só rodam em Linux e não são usados.
 

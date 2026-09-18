@@ -90,7 +90,7 @@ Build com sysbuild do `master` em 2026-09-18 (atualizado a cada commit que muda 
 
 | Item | Valor |
 |---|---|
-| FLASH | 295.856 B (28,22 % de 1 MB) |
+| FLASH | 296.208 B (28,25 % de 1 MB) |
 | RAM | 116.928 B (44,60 % de 256 KB) |
 | Avisos | 7, todos `defined but not used` em `src/vue/vue.c` |
 | Erros | 0 |

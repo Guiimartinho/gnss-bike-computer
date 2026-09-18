@@ -25,7 +25,7 @@ Regras de código do port, o que a análise estática encontra hoje e o que foi 
 |---|---|
 | Flags do compilador | `-Wall -Wextra -Werror=implicit-function-declaration -Werror=return-type -Wno-unused-parameter` (`zephyr_app/CMakeLists.txt`); sem `-Werror` geral |
 | Avisos no build | 7, todos `defined but not used` em `src/vue/vue.c` (funções portadas e não ligadas) |
-| Testes de host | 6 conjuntos, 42 casos, com `-Werror` ([12](12-ferramentas-testes.md)) |
+| Testes de host | 7 conjuntos, 50 casos, com `-Werror` ([12](12-ferramentas-testes.md)) |
 | cppcheck 2.20 | achados reais abaixo; os `syntaxError` são falsos positivos das macros do Zephyr |
 | MISRA formal | não verificado: não há ferramenta MISRA configurada |
 | Formatação | `.editorconfig` na raiz (4 espaços, LF, 100 colunas no C); sem `.clang-format` ainda |
@@ -60,7 +60,7 @@ A revisão de novembro de 2025 contou no legacy 12 violações críticas, 28 alt
 | variáveis `static` de função guardando estado (`Attitude.cpp`) | parcialmente: o port concentra estado em `static` de arquivo, escrito só pela `main_loop` e lido pela `display` sob `model_lock()` |
 | conversões com perda sem saturação | continuam: `attitude.c:179`, `attitude.c:286`, `boucle.c:118` |
 | funções longas (`computeFusion`, `run_internal`, `majPerformance`) | continuam longas no port (`vue.c` tem 1747 linhas) |
-| sem testes | 42 casos de host cobrindo vetores, zonas, suffer score, NMEA, log e gestão do GPS |
+| sem testes | 50 casos de host cobrindo vetores, zonas, suffer score, NMEA, log, gestão do GPS e desligamento automático |
 
 ## Próximos passos
 

@@ -85,7 +85,7 @@ Sequência de liga e desliga:
 1. **Desligado:** IO0 do STC3100 solto, SWON em VBAT pelo R3, M2 cortado, POW_EN em 0; só o STC3100 e o backup do GPS consomem.
 2. **Botão central:** SWON vai a zero pelo D1, M2 conduz, os reguladores ligam e o nRF inicia.
 3. **Latch:** o firmware escreve `REG_CONTROL = 0x02` no STC3100 (IO0 em 0), mantendo SWON baixo; o botão pode ser solto. No port, isso acontece em `stc3100_init()`.
-4. **Desligar:** `REG_MODE = 0` e `REG_CONTROL = 0x01` soltam o IO0 e a placa apaga. **O port ainda não faz isso**, nem o desligamento automático de 15 minutos do legacy.
+4. **Desligar:** `REG_MODE = 0` e `REG_CONTROL = 0x01` soltam o IO0 e a placa apaga. No port, `stc3100_shutdown()`, chamado pelo `power_scheduler` depois de 15 minutos sem posição processada (modos CRS e PRC) ou pelo item "Power Off" do menu. Na USB a placa continua ligada, com o medidor parado, e o desligamento é tentado de novo 15 minutos depois. Não testado na placa.
 
 Não há enable separado para o GPS ou o LCD, nem medição de bateria pelo ADC: só pelo STC3100.
 

@@ -81,6 +81,7 @@ target_sources(app PRIVATE
 target_sources(app PRIVATE
     src/model/boucle.c
     src/model/model_lock.c
+    src/model/power_scheduler.c
     src/model/attitude.c
     src/model/locator.c
     src/model/segment.c

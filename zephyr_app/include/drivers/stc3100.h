@@ -118,6 +118,17 @@ app_err_t stc3100_sleep(void);
 app_err_t stc3100_wake(void);
 
 /**
+ * @brief Turn the board off through the power latch
+ *
+ * Stops the gauge and releases IO0, which holds the latch of the board
+ * (REG_MODE = 0, then REG_CONTROL = 0x01). On battery the board powers off
+ * before this returns; on USB power it keeps running with the gauge off.
+ *
+ * @return APP_OK on success, error code otherwise
+ */
+app_err_t stc3100_shutdown(void);
+
+/**
  * @brief Reset the fuel gauge
  * @return APP_OK on success, error code otherwise
  */
