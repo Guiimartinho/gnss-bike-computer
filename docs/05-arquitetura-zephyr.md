@@ -2,7 +2,7 @@
 
 Como o `zephyr_app/` está organizado: camadas, boot, threads, fluxo de dados, pilhas medidas, devicetree e configuração. O estado de cada módulo em relação ao legacy está em [10-status-do-port.md](10-status-do-port.md).
 
-**Nesta página:** [Camadas](#camadas) · [Boot](#boot) · [Threads](#threads) · [Fluxo de dados](#fluxo-de-dados) · [Pilhas](#pilhas) · [Módulos](#módulos) · [Devicetree e alvo](#devicetree-e-alvo) · [Configuração](#configuração) · [Regras de concorrência](#regras-de-concorrência)
+**Nesta página:** [Camadas](#camadas) · [Boot](#boot) · [Threads](#threads) · [Watchdog](#watchdog) · [Fluxo de dados](#fluxo-de-dados) · [Pilhas](#pilhas) · [Módulos](#módulos) · [Devicetree e alvo](#devicetree-e-alvo) · [Configuração](#configuração) · [Regras de concorrência](#regras-de-concorrência)
 
 ## Camadas
 
@@ -92,6 +92,21 @@ A `main_loop` é a única thread que escreve o modelo e os caches dos drivers de
 
 Até 2026-09-18 havia uma terceira thread, `sensor` (1024 B, prioridade 6), que repetia a cada 1 s as leituras I2C que o `boucle_process()` já faz, escrevendo os caches lidos pela `main_loop`, e a `display` lia o modelo sem trava.
 
+## Watchdog
+
+O `task_wdt` do Zephyr dá a cada thread o seu canal de 4 s, o mesmo tempo do WDT do legacy (que tinha um canal só, alimentado pelo `boucle` e pelo LCD). O WDT do nRF fica por trás, com o mesmo timeout mais 20 ms, e pega um travamento em que nem o timer do kernel roda.
+
+| Canal | Criado | Alimentado | Se expirar |
+|---|---|---|---|
+| `main_loop` | depois da partida (GPS, segmentos do SD, modo) | no fim de cada ciclo de 100 ms | `wdt_expired()` loga o nome da thread, descarrega o log (`LOG_PANIC`) e reinicia |
+| `display` | no início da thread | a cada volta de 50 ms | idem |
+
+- `CONFIG_TASK_WDT_MIN_TIMEOUT=4000`, igual aos canais: o timer do kernel não acorda a CPU a cada 100 ms só para alimentar o WDT.
+- O WDT roda durante o sono e pausa com a CPU parada pelo depurador (`WDT_OPT_PAUSE_HALTED_BY_DBG`). O timer do kernel não pausa: depois de um breakpoint longo o `task_wdt` reinicia a placa. Para depurar passo a passo, compile com `-DCONFIG_TASK_WDT=n`.
+- O WDT do nRF52 só para com reset por pino, por energia, por brownout ou do próprio WDT. Depois de um `sys_reboot()` (erro fatal, `task_wdt`) ele continua contando: o `main()` o alimenta (`wdt_feed_if_running()`) entre as etapas da inicialização, até as threads criarem os canais.
+- A carga dos segmentos na partida da `main_loop` não está coberta pelo canal dela, porque pode passar de 4 s com muitos arquivos no SD.
+- Não testado na placa.
+
 ## Fluxo de dados
 
 ```mermaid
@@ -174,11 +189,11 @@ Nós do DK desligados no overlay porque ocupam pinos da placa: `qspi` e `mx25r64
 
 | Arquivo | O que define |
 |---|---|
-| `prj.conf` | log por UART (RTT desligado), BLE central + periférico (4 conexões), settings/NVS, SPI, I2C, UART por interrupção, `CONFIG_RING_BUFFER`, `CONFIG_RESET_ON_FATAL_ERROR`, `CONFIG_SENSOR` (liga BME280 e FXOS8700 nativos), otimização de tamanho |
+| `prj.conf` | log por UART (RTT desligado), BLE central + periférico (4 conexões), settings/NVS, SPI, I2C, UART por interrupção, `CONFIG_RING_BUFFER`, `CONFIG_RESET_ON_FATAL_ERROR`, `CONFIG_TASK_WDT`, `CONFIG_SENSOR` (liga BME280 e FXOS8700 nativos), otimização de tamanho |
 | `sysbuild.conf` | `SB_CONFIG_PARTITION_MANAGER=n` |
 | `CMakeLists.txt` | fontes por camada, `-Wall -Wextra`, `BOARD` e overlay fixos |
 
-Flash: aplicação a partir de `0x0`, `storage_partition` de 32 KB em `0xF8000` (NVS: bonds e configurações). RAM: 116.800 de 262.144 B, com `seg_runtime` (22 KB), heap do sistema (16 KB) e framebuffer (12,5 KB) à frente.
+Flash: aplicação a partir de `0x0`, `storage_partition` de 32 KB em `0xF8000` (NVS: bonds e configurações). RAM: 116.928 de 262.144 B, com `seg_runtime` (22 KB), heap do sistema (16 KB) e framebuffer (12,5 KB) à frente.
 
 ## Regras de concorrência
 

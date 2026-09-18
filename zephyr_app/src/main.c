@@ -10,7 +10,13 @@
 #include <zephyr/device.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/logging/log_ctrl.h>
 #include <zephyr/sys/reboot.h>
+#include <zephyr/task_wdt/task_wdt.h>
+
+#if defined(CONFIG_SOC_SERIES_NRF52)
+#include <hal/nrf_wdt.h>
+#endif
 
 #include "app_types.h"
 #include "hal/hal_gpio.h"
@@ -46,8 +52,11 @@ LOG_MODULE_REGISTER(main, CONFIG_LOG_DEFAULT_LEVEL);
 /** Button polling interval in milliseconds */
 #define BUTTON_POLL_INTERVAL_MS     20U
 
-/** Watchdog timeout in milliseconds */
-#define WDT_TIMEOUT_MS              10000U
+/**
+ * Task watchdog timeout of each thread, in milliseconds: the legacy WDT
+ * (NRFX_WDT_CONFIG_RELOAD_VALUE). Matches CONFIG_TASK_WDT_MIN_TIMEOUT.
+ */
+#define WDT_TIMEOUT_MS              4000U
 
 /* ==========================================================================
  * Thread Definitions
@@ -222,6 +231,56 @@ static app_err_t init_application(void)
 }
 
 /**
+ * @brief Feed the nRF WDT if it survived a soft reset
+ *
+ * Only pin, power-on, brownout and watchdog resets stop the nRF52 WDT: after
+ * sys_reboot() (fatal error handler, task watchdog) it keeps counting with
+ * the previous timeout, and the boot has to feed it until the threads add
+ * their task watchdog channels.
+ */
+static void wdt_feed_if_running(void)
+{
+#if defined(CONFIG_SOC_SERIES_NRF52)
+    if (nrf_wdt_started_check(NRF_WDT)) {
+        for (uint32_t rr = 0U; rr < NRF_WDT_CHANNEL_NUMBER; rr++) {
+            if (nrf_wdt_reload_request_enable_check(NRF_WDT, (nrf_wdt_rr_register_t)rr)) {
+                nrf_wdt_reload_request_set(NRF_WDT, (nrf_wdt_rr_register_t)rr);
+            }
+        }
+    }
+#endif
+}
+
+/**
+ * @brief Task watchdog expiry: a thread stopped feeding its channel
+ *
+ * Runs in the system timer interrupt. Flush the log so the name of the
+ * stalled thread reaches the console, then reboot.
+ */
+static void wdt_expired(int channel_id, void *user_data)
+{
+    LOG_ERR("Task watchdog: %s stalled (channel %d), rebooting",
+            (const char *)user_data, channel_id);
+    LOG_PANIC();
+    sys_reboot(SYS_REBOOT_COLD);
+}
+
+/**
+ * @brief Give the calling thread its task watchdog channel
+ *
+ * @return Channel id for task_wdt_feed(), or a negative error code
+ */
+static int wdt_channel_add(const char *thread_name)
+{
+    int channel = task_wdt_add(WDT_TIMEOUT_MS, wdt_expired, (void *)thread_name);
+
+    if (channel < 0) {
+        LOG_ERR("Task watchdog channel for %s failed: %d", thread_name, channel);
+    }
+    return channel;
+}
+
+/**
  * @brief Button callback handler
  */
 static void button_callback(btn_event_t event)
@@ -246,6 +305,8 @@ static void display_thread(void *p1, void *p2, void *p3)
 
     LOG_INF("Display thread started");
 
+    int wdt_channel = wdt_channel_add("display");
+
     while (true) {
         uint32_t now = k_uptime_get_32();
 
@@ -260,6 +321,8 @@ static void display_thread(void *p1, void *p2, void *p3)
             ls027_toggle_vcom();
             last_vcom_toggle = now;
         }
+
+        (void)task_wdt_feed(wdt_channel);
 
         k_msleep(50);
     }
@@ -316,6 +379,9 @@ static void main_thread(void *p1, void *p2, void *p3)
 
     model_unlock();
 
+    /* After the start-up above: loading segments from SD may take longer */
+    int wdt_channel = wdt_channel_add("main_loop");
+
     /* Main processing loop */
     while (true) {
         /* One model step: buttons, GPS and sensors all write the model */
@@ -341,6 +407,9 @@ static void main_thread(void *p1, void *p2, void *p3)
             led_toggle_time = k_uptime_get_32();
         }
 
+        /* A whole cycle ran: buttons, GPS, sensors, model and battery */
+        (void)task_wdt_feed(wdt_channel);
+
         k_msleep(MAIN_LOOP_INTERVAL_MS);
     }
 }
@@ -357,6 +426,8 @@ int main(void)
             APP_VERSION_MAJOR, APP_VERSION_MINOR, APP_VERSION_PATCH);
     LOG_INF("=====================================");
 
+    wdt_feed_if_running();
+
     /* Initialize hardware */
     app_err_t err = init_hardware();
     if (err != APP_OK) {
@@ -371,6 +442,8 @@ int main(void)
         return -1;
     }
 
+    wdt_feed_if_running();
+
     /* Initialize application */
     err = init_application();
     if (err != APP_OK) {
@@ -378,10 +451,30 @@ int main(void)
         return -1;
     }
 
+    wdt_feed_if_running();
+
     /* Register button callback */
     err = hal_gpio_register_btn_callback(button_callback);
     if (err != APP_OK) {
         LOG_WRN("Button callback registration failed");
+    }
+
+    /*
+     * Task watchdog backed by the nRF WDT: the hardware timer starts with the
+     * first channel, when a thread adds it (or keeps running from before a
+     * soft reset). Without the device it still catches a stalled thread, but
+     * not a system that stops the kernel timer.
+     */
+    const struct device *hw_wdt = DEVICE_DT_GET_OR_NULL(DT_ALIAS(watchdog0));
+
+    if ((hw_wdt != NULL) && !device_is_ready(hw_wdt)) {
+        hw_wdt = NULL;
+    }
+    if (task_wdt_init(hw_wdt) != 0) {
+        LOG_ERR("Task watchdog init failed");
+    }
+    if (hw_wdt == NULL) {
+        LOG_WRN("No hardware watchdog behind the task watchdog");
     }
 
     /* Mark system as initialized */

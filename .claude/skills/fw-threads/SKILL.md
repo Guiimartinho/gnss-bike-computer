@@ -46,7 +46,8 @@ O legacy era cooperativo (nada preemptava uma task no meio de uma estrutura); aq
 
 - `CONFIG_MPU_STACK_GUARD=y`: estouro de pilha vira falha fatal na hora.
 - `CONFIG_RESET_ON_FATAL_ERROR=y` (lib `fatal_error` do NCS): a falha é logada e o aparelho reinicia, em vez de travar.
-- Sem watchdog ainda: quando entrar, alimente só na `main_loop` depois de um ciclo completo, com timeout acima do pior caso (Kalman + GPS + flush do log).
+- **Watchdog** (`task_wdt`, [docs/05](../../../docs/05-arquitetura-zephyr.md#watchdog)): cada thread tem um canal de 4 s (`wdt_channel_add()` em `src/main.c`) e o alimenta uma vez por volta completa, nunca num ponto intermediário. Thread nova ganha o seu canal. Operação que pode passar de 4 s (carga de segmentos, formatação do SD) fica fora do laço vigiado ou é quebrada em partes.
+- O `task_wdt` reinicia a placa depois de um breakpoint longo (o timer do kernel não pausa com a CPU parada). Para depurar passo a passo: `-DCONFIG_TASK_WDT=n`.
 
 ## Antes de terminar
 
