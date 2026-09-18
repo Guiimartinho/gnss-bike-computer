@@ -37,6 +37,7 @@ O dono do projeto é um desenvolvedor brasileiro de eletrônica embarcada que qu
 ### Commits
 
 - **Commit só com pedido do dono.** Em 2026-09-18 ele pediu commits separados por assunto para a revisão e para a fase 1 do roteiro: nesse trabalho, cada item pronto e verificado vira um commit. Push só com remoto configurado e pedido do dono. Mensagens em **inglês**, Conventional Commits com escopo (`fix(hal): ...`, `feat(model): ...`, `docs(docs): ...`).
+- **Branches:** o trabalho vai na `develop`; a `main` guarda as versões estáveis e só recebe merge da `develop` quando o dono pedir. Não existe `master`.
 - **Nunca atribua commit a IA:** sem `Co-Authored-By` de assistente, sem "Generated with", sem menção a Claude. O autor é a identidade git configurada (Luiz Guilherme Ito). Procedimento na skill `commit-gnss`.
 - Nunca faça commit de credenciais nem de arquivos gerados (`build*/`, `Lib/`, `Scripts/`).
 

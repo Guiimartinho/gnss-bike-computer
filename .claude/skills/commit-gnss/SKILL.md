@@ -13,6 +13,7 @@ description: Preparar, verificar e commitar mudanças no repositório do GNSS Bi
 - **Um item por commit**, pronto e verificado. Código, documentação e `CHANGELOG.md` do mesmo item vão juntos.
 - Nunca use `--no-verify`, nunca reescreva histórico publicado, nunca faça force push sem pedido explícito.
 - O repositório ainda não tem remoto: não há push até o dono configurar um.
+- **Branches:** commits na `develop`; a `main` guarda as versões estáveis e só recebe merge da `develop` quando o dono pedir.
 
 ## Tipos e escopos
 
@@ -63,7 +64,8 @@ filter falls back to the barometer only.
 
 ```mermaid
 flowchart TD
-    READY["item pronto"] --> VERIFY["verificação da área<br/>fw-build, fw-testes, docs-gnss"]
+    READY["item pronto"] --> BRANCH["branch develop"]
+    BRANCH --> VERIFY["verificação da área<br/>fw-build, fw-testes, docs-gnss"]
     VERIFY --> OK{"tudo passou?"}
     OK -- não --> FIX["corrija; não commite vermelho"]
     FIX --> VERIFY
@@ -74,10 +76,11 @@ flowchart TD
     COMMIT --> REPORT["relate hash, o que foi verificado e o que ficou pendente"]
 ```
 
-1. Rode a verificação da área e anote os números: avisos e memória do build (`fw-build`), testes de host e cppcheck (`fw-testes`), diagramas e links (`docs-gnss`).
-2. `git status --short`: confira que não entram arquivos de outro assunto nem gerados (`build*/`, `Lib/`, `Scripts/`, `.cache/`). Arquivos não rastreados que você não criou ficam fora; pergunte ao dono.
-3. `git add` com caminhos explícitos, nunca `git add -A` às cegas.
-4. Commit com a mensagem por heredoc:
+1. `git branch --show-current` precisa dizer `develop`. Merge na `main` só quando o dono pedir uma versão estável.
+2. Rode a verificação da área e anote os números: avisos e memória do build (`fw-build`), testes de host e cppcheck (`fw-testes`), diagramas e links (`docs-gnss`).
+3. `git status --short`: confira que não entram arquivos de outro assunto nem gerados (`build*/`, `Lib/`, `Scripts/`, `.cache/`). Arquivos não rastreados que você não criou ficam fora; pergunte ao dono.
+4. `git add` com caminhos explícitos, nunca `git add -A` às cegas.
+5. Commit com a mensagem por heredoc:
 
    ```sh
    git commit -q -F - <<'EOF'
@@ -87,7 +90,7 @@ flowchart TD
    EOF
    ```
 
-5. Relate ao dono em português: hash, o que mudou, o que foi verificado e o que não foi (por exemplo, "não testado na placa").
+6. Relate ao dono em português: hash, o que mudou, o que foi verificado e o que não foi (por exemplo, "não testado na placa").
 
 ## Fim de linha
 

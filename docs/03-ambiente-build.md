@@ -86,7 +86,7 @@ python -m west build -p auto -b nrf52840dk/nrf52840 -d build --sysbuild .
 
 ### Resultado de referência
 
-Build com sysbuild do `master` em 2026-09-18 (atualizado a cada commit que muda o tamanho):
+Build com sysbuild da `develop` em 2026-09-18 (atualizado a cada commit que muda o tamanho):
 
 | Item | Valor |
 |---|---|

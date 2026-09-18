@@ -45,6 +45,7 @@ Revisão completa de 2026-09-18: análise do legacy e do port, migração para o
 - `.gitignore`: builds, caches do clangd, `__pycache__`, `node_modules` e `.claude/settings.local.json`.
 - Imagens de `docs/` movidas para `docs/img/`; os quatro documentos de novembro de 2025 arquivados sem alteração em `docs/historico/2025-11/`.
 - Tamanho: FLASH 294.796 B (−4,3 KB sem o driver QSPI do DK), RAM 118.080 B (+2,9 KB pelas pilhas maiores).
+- Branches `main` (versões estáveis) e `develop` (trabalho) no lugar da `master`; regra registrada no `CLAUDE.md`, no `AGENTS.md` e na skill `commit-gnss`.
 - Armadilhas de build registradas no `CLAUDE.md` e na skill `fw-build` (o build incremental guarda símbolos Kconfig antigos; caminhos de build longos demais) e menções aos builds antigos, já apagados, retiradas.
 
 ### Removido

@@ -6,7 +6,7 @@
 # por exemplo:
 #
 #   push:
-#     branches: [master]
+#     branches: [main, develop]
 #   pull_request:
 #
 # Não ligue sem o dono pedir (CLAUDE.md, seção 2). Os jobs espelham a
