@@ -13,3 +13,7 @@ Revisão completa de 2026-09-18: análise do legacy e do port, migração para o
 ### Alterado
 
 - `.gitignore`: builds, caches do clangd, `__pycache__`, `node_modules` e `.claude/settings.local.json`.
+
+### Removido
+
+- Template vazio de app da raiz (`CMakeLists.txt`, `prj.conf`, `src/main.c`), que vinha do commit inicial e não era o firmware.
