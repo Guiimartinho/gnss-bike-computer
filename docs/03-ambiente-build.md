@@ -19,7 +19,7 @@ Como montar o ambiente do nRF Connect SDK no Windows, compilar o port Zephyr, gr
 | Node.js | 22.18.0 | `C:\Program Files\nodejs` | mermaid-cli (cache do npx) e `tools/zpm` |
 | Python | 3.11.9 | usuário | scripts de documentação |
 
-O NCS v3.1.0 e o toolchain `b8b84efebd`, usados até dezembro de 2025, **não existem mais** nesta máquina. Os builds antigos em `zephyr_app/build`, `zephyr_app/build_dk` e `build/` foram gerados com eles, a partir de outras pastas (`C:\Users\...\Documents\88.Personal\1.Projects\gnss-bike-computer` e `...\stravaV10`).
+O NCS v3.1.0 e o toolchain `b8b84efebd`, usados até dezembro de 2025, **não existem mais** nesta máquina. Os builds gerados com eles, em outras pastas (`C:\Users\...\Documents\88.Personal\1.Projects\gnss-bike-computer` e `...\stravaV10`), foram apagados em 2026-09-18.
 
 ## Scripts
 

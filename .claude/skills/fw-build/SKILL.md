@@ -78,7 +78,9 @@ Números de referência (build de 2026-09-18, NCS v3.3.0):
 |---|---|
 | `ValueError: path is on mount 'F:', start on mount 'C:'` | o west rodou com o diretório atual em `C:` e o projeto em `F:`; rode de dentro do `zephyr_app` (os scripts já fazem isso) |
 | `include could not find requested file: .../936afb6332/cmake/toolchain/zephyr/generic.cmake` | a variável de ambiente `TOOLCHAIN_ROOT` está definida; o Zephyr a usa como raiz das definições de toolchain. Não a defina (os scripts usam `NCS_TOOLCHAIN_DIR`) |
-| `Build directory ... is for application ...` ou cache de outro caminho | builds antigos (`zephyr_app/build`, `zephyr_app/build_dk`, `build/`) foram gerados em outra pasta com o NCS v3.1.0; `-p auto` refaz do zero, ou use `build pristine` |
+| `Build directory ... is for application ...` ou cache de outro caminho | a pasta de build veio de outro caminho ou de outro SDK; `-p auto` refaz do zero, ou use `build pristine` |
+| `.config` ou tamanho que não batem com a mudança (ex.: `NRFX_QSPI=y` depois de desligar o QSPI) | o build incremental guarda símbolos Kconfig antigos; antes de afirmar algo sobre `.config`, devicetree ou memória, compile com `build pristine` |
+| `fatal error: opening dependency file ... No such file or directory` com aviso de `CMAKE_OBJECT_PATH_MAX` | caminho longo demais (passa de 250 caracteres nos objetos, por exemplo numa pasta temporária do usuário); compile dentro do repositório (`zephyr_app/build` ou `build/`) |
 | aviso `SB_CONFIG_PARTITION_MANAGER is enabled` | faltou o `zephyr_app/sysbuild.conf` |
 | `nrfutil` grava no dispositivo errado ou reclama de vários | há um ST-LINK e outras seriais nesta máquina; os scripts filtram `--traits jlink`, ou defina `NRF_SERIAL` |
 | gravação falha por proteção | `recover` apaga tudo e libera o APPROTECT; depois grave de novo |
