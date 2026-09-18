@@ -91,3 +91,4 @@ timeline
 | entender o código original | [04-arquitetura-legacy.md](04-arquitetura-legacy.md) |
 | entender o port | [05-arquitetura-zephyr.md](05-arquitetura-zephyr.md) |
 | saber o que falta | [10-status-do-port.md](10-status-do-port.md) |
+| trabalhar com um assistente de IA | [`CLAUDE.md`](../CLAUDE.md) e [`.claude/skills/`](../.claude/skills/) |

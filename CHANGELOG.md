@@ -30,6 +30,7 @@ Revisão completa de 2026-09-18: análise do legacy e do port, migração para o
 - `tools/docs/`: `mermaid_check.py` (extrai e renderiza os diagramas com o mermaid-cli local e aponta diagramas em texto puro) e `links_check.py`.
 - `zephyr_app/sysbuild.conf` com `SB_CONFIG_PARTITION_MANAGER=n`: build com sysbuild, sem o Partition Manager depreciado.
 - `CONFIG_RING_BUFFER=y` e a função `hal_uart_process()`.
+- Contexto para assistentes de IA: `CLAUDE.md`, `AGENTS.md` e dez skills em `.claude/skills/` (`fw-build`, `fw-testes`, `fw-threads`, `fw-port-legacy`, `fw-hardware`, `fw-gps-sensores`, `fw-radio`, `fw-vue`, `docs-gnss`, `commit-gnss`).
 - Documentação numerada em `docs/` (01 a 12, com índice), `README.md` e `legacy/README.md` (origem, licença CC BY-NC 4.0 e diferenças em relação ao upstream).
 - `.gitattributes` (LF no repositório, CRLF nos `.bat`, `hardware/` e os dados de teste de `tools/TDD/` byte a byte) e `.editorconfig`.
 
