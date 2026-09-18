@@ -51,6 +51,9 @@ static inline int k_mutex_unlock(struct k_mutex *mutex)
 uint32_t k_uptime_get_32(void);
 int64_t k_uptime_get(void);
 
+/** Advances the fake uptime instead of sleeping (support/host_kernel.c). */
+int32_t k_msleep(int32_t ms);
+
 #ifndef ARG_UNUSED
 #define ARG_UNUSED(x) ((void)(x))
 #endif

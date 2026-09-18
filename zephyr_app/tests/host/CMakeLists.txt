@@ -68,3 +68,6 @@ gnss_add_test(test_vecteur SOURCES model/vecteur.c)
 gnss_add_test(test_power_zone SOURCES model/power_zone.c)
 gnss_add_test(test_suffer_score SOURCES model/suffer_score.c)
 gnss_add_test(test_nmea_parser SOURCES drivers/gps/nmea_parser.c)
+gnss_add_test(test_gps_mgmt
+    SOURCES drivers/gps/gps_mgmt.c drivers/gps/nmea_parser.c
+    SUPPORT host_kernel.c fake_gps_hal.c)

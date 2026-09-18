@@ -28,3 +28,9 @@ uint32_t k_uptime_get_32(void)
 {
     return (uint32_t)s_uptime_ms;
 }
+
+int32_t k_msleep(int32_t ms)
+{
+    s_uptime_ms += ms;
+    return 0;
+}

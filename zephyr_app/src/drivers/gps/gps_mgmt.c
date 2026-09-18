@@ -103,7 +103,14 @@ static void nmea_line_callback(const char *line)
             break;
 
         case NMEA_RMC:
-            if (nmea_data.fix_valid) {
+            if (!nmea_data.fix_valid) {
+                /* RMC closes the epoch: status V means the fix is gone now,
+                 * not 60 s later (GPS_FIX_TIMEOUT_MS stays as a backstop) */
+                gps_data.fix_valid = false;
+                if ((gps_state == GPS_STATE_FIX_2D) || (gps_state == GPS_STATE_FIX_3D)) {
+                    gps_state = GPS_STATE_ACQUIRING;
+                }
+            } else {
                 gps_data.location.lat = nmea_data.latitude;
                 gps_data.location.lon = nmea_data.longitude;
                 gps_data.location.speed = nmea_data.speed_kmh;
@@ -145,8 +152,14 @@ static void nmea_line_callback(const char *line)
         /* Update timestamp */
         gps_data.location.timestamp = k_uptime_get_32();
 
-        /* Notify callback if fix is valid */
-        if (gps_data.fix_valid && (fix_callback != NULL)) {
+        /*
+         * One callback per fix epoch, on a valid RMC: on MediaTek modules it
+         * follows the GGA of the same epoch and carries speed, course and
+         * date. Firing on every sentence (GGA, GSA, GSV..., VTG) ran the
+         * model 5 to 7 times per second on the same point, which skewed the
+         * point counters and the time constants taken from the legacy.
+         */
+        if ((nmea_data.type == NMEA_RMC) && nmea_data.fix_valid && (fix_callback != NULL)) {
             fix_callback(&gps_data);
         }
     }
