@@ -30,7 +30,8 @@ Referência completa: `docs/02-hardware.md`. Fonte de verdade da pinagem: `hardw
 3. **Pinctrl herdado do DK**: um grupo do DK pode deixar propriedades (`bias-pull-up`) no seu grupo; use `/delete-property/`. O `uart0` do console ficou só com TX/RX.
 4. **Sensores com driver nativo** (BME280, FXOS8700): configure pelo devicetree e pelo Kconfig do driver, não por registradores no app. O `reset-gpios` do FXOS garante o reset antes do `main()`.
 5. **Sem binding** (`st,stc3100`): o nó é aceito e ignorado; o driver próprio acessa pelo `hal_i2c`.
-6. Depois de mexer: build, `grep` no `zephyr.dts` gerado para cada pino alterado e registro em `docs/02-hardware.md`.
+6. **O código não cita instâncias do SoC** (`uart1`, `i2c0`, `spi1`): usa os aliases `gps-uart`, `sensor-i2c`, `lcd-spi`, `sdc-spi`, `sw0`–`sw2`, `led0` e os rótulos da aplicação (`gps_reset`, `gps_stdby`, `gps_fix`, `imu_int1`, `imu_reset`, `neo_data`, `baro`, `fxos`). Cada placa define esses nomes no overlay dela.
+7. Depois de mexer: build, `grep` no `zephyr.dts` gerado para cada pino alterado e registro em `docs/02-hardware.md`.
 
 ## Alimentação e latch
 

@@ -18,12 +18,12 @@ LOG_MODULE_REGISTER(hal_spi, CONFIG_LOG_DEFAULT_LEVEL);
  * ========================================================================== */
 
 /* SPI1 - LCD */
-static const struct device *spi_lcd_dev = DEVICE_DT_GET(DT_NODELABEL(spi1));
-static const struct gpio_dt_spec lcd_cs = GPIO_DT_SPEC_GET(DT_NODELABEL(spi1), cs_gpios);
+static const struct device *spi_lcd_dev = DEVICE_DT_GET(DT_ALIAS(lcd_spi));
+static const struct gpio_dt_spec lcd_cs = GPIO_DT_SPEC_GET(DT_ALIAS(lcd_spi), cs_gpios);
 
 /* SPI2 - SD Card */
-static const struct device *spi_sdc_dev = DEVICE_DT_GET(DT_NODELABEL(spi2));
-static const struct gpio_dt_spec sdc_cs = GPIO_DT_SPEC_GET(DT_NODELABEL(spi2), cs_gpios);
+static const struct device *spi_sdc_dev = DEVICE_DT_GET(DT_ALIAS(sdc_spi));
+static const struct gpio_dt_spec sdc_cs = GPIO_DT_SPEC_GET(DT_ALIAS(sdc_spi), cs_gpios);
 
 /* ==========================================================================
  * Private Variables

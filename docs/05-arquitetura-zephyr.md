@@ -174,14 +174,16 @@ find build_su/CMakeFiles/app.dir -name "*.su" -exec cat {} + | sort -t$'\t' -k2 
 
 O build usa a placa `nrf52840dk/nrf52840` com o overlay `boards/nrf52840_strava.overlay`, que aplica os pinos da placa myStravaB V3. O `CMakeLists.txt` fixa `BOARD` e `DTC_OVERLAY_FILE`; por isso o `boards/nrf52840dk_nrf52840.overlay` (console USB CDC) **não é usado**.
 
-| Periférico | Instância | Pinos | Observação |
-|---|---|---|---|
-| I2C dos sensores | `i2c0` (TWI) 400 kHz | SDA P1.00, SCL P1.01 | BME280 0x76, FXOS8700 0x1E, STC3100 0x70 |
-| GPS | `uart1` 9600 | TX P0.05, RX P0.07 | reset P0.03 e standby P1.15 ativos baixos; FIX P1.14 |
-| LCD | `spi1` 2 MHz | SCK P0.15, MOSI P0.16, CS P0.17 (ativo alto) | driver próprio `ls027.c` |
-| SD | `spi2` 8 MHz | MOSI P0.25, CS P0.26, SCK P0.27, MISO P0.28 | nó `sdhc-spi-slot` presente, FS desligado |
-| Console | `uart0` 115200 | TX P0.06, RX P0.08 | pinos sem conexão na placa real: log só no DK |
-| Botões | GPIO | P0.14, P0.13, P0.11 | ativos baixos com pull-up |
+| Periférico | Alias no código | Instância | Pinos | Observação |
+|---|---|---|---|---|
+| I2C dos sensores | `sensor-i2c` | `i2c0` (TWI) 400 kHz | SDA P1.00, SCL P1.01 | BME280 0x76, FXOS8700 0x1E, STC3100 0x70 |
+| GPS | `gps-uart` | `uart1` 9600 | TX P0.05, RX P0.07 | reset P0.03 e standby P1.15 ativos baixos; FIX P1.14 |
+| LCD | `lcd-spi` | `spi1` 2 MHz | SCK P0.15, MOSI P0.16, CS P0.17 (ativo alto) | driver próprio `ls027.c` |
+| SD | `sdc-spi` | `spi2` 8 MHz | MOSI P0.25, CS P0.26, SCK P0.27, MISO P0.28 | nó `sdhc-spi-slot` presente, FS desligado |
+| Console | `zephyr,console` | `uart0` 115200 | TX P0.06, RX P0.08 | pinos sem conexão na placa real: log só no DK |
+| Botões | `sw0`, `sw1`, `sw2` | GPIO | P0.14, P0.13, P0.11 | ativos baixos com pull-up |
+
+O código chega aos barramentos só pelos aliases da tabela e aos pinos pelos rótulos da aplicação (`gps_reset`, `gps_stdby`, `gps_fix`, `imu_int1`, `imu_reset`, `neo_data`, `baro`, `fxos`, `led0`): uma placa nova só precisa definir esses nomes no overlay dela, sem mexer no C.
 
 Nós do DK desligados no overlay porque ocupam pinos da placa: `qspi` e `mx25r64`, `spi3`, `pwm0`; o `uart0` perdeu RTS/CTS. Detalhes e divergências em [02-hardware.md](02-hardware.md).
 
