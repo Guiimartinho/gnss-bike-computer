@@ -26,6 +26,7 @@ description: Preparar, verificar e commitar mudanças no repositório do GNSS Bi
 | `perf` | desempenho, consumo, memória |
 | `build` | CMake, Kconfig de build, sysbuild, toolchain, scripts de build |
 | `chore` | manutenção do repositório (contexto de IA, `.gitignore`, ferramentas) |
+| `ci` | `.github/workflows/` (o CI fica desligado: só `workflow_dispatch`) |
 
 | Escopo | Área |
 |---|---|

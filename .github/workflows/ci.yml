@@ -1,0 +1,96 @@
+# CI do GNSS Bike Computer.
+#
+# DESLIGADO por decisão do dono (2026-09-18): não há gatilho automático, para
+# não gastar minutos do GitHub Actions. Só roda à mão, na aba Actions
+# ("Run workflow"). Para ligar, acrescente em "on:" os gatilhos desejados,
+# por exemplo:
+#
+#   push:
+#     branches: [master]
+#   pull_request:
+#
+# Não ligue sem o dono pedir (CLAUDE.md, seção 2). Os jobs espelham a
+# verificação local: tools/fw/fw.sh build, tools/fw/host_tests.sh e
+# tools/docs/*.py. Nenhum deles rodou no GitHub ainda.
+
+name: CI
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  host-tests:
+    name: Testes de host
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar Ninja
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+
+      - name: Configurar, compilar e rodar
+        working-directory: zephyr_app/tests/host
+        run: |
+          cmake --preset host-tests
+          cmake --build --preset host-tests
+          ctest --preset host-tests
+
+  docs:
+    name: Documentação
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Links relativos e âncoras
+        run: python3 tools/docs/links_check.py
+
+      - name: Diagramas Mermaid
+        env:
+          PUPPETEER_CONFIG: ${{ github.workspace }}/.github/puppeteer-ci.json
+        run: |
+          npm install --global @mermaid-js/mermaid-cli@11
+          python3 tools/docs/mermaid_check.py
+
+  firmware:
+    name: Firmware (NCS v3.3.0)
+    runs-on: ubuntu-24.04
+    container:
+      # Imagem oficial do toolchain do nRF Connect SDK (nrf/scripts/docker).
+      image: ghcr.io/nrfconnect/sdk-nrf-toolchain:v3.3.0
+    defaults:
+      run:
+        # Obrigatório: o ambiente do toolchain só existe em sessões bash.
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: app
+
+      - name: Workspace do NCS v3.3.0
+        # Com ANT+ o workspace passa a ser o do add-on sdk-ant (sdk-nrf v3.2.4):
+        # west init -m https://github.com/ant-nrfconnect/sdk-ant --mr <versão>
+        run: |
+          west init -m https://github.com/nrfconnect/sdk-nrf --mr v3.3.0 ncs
+          cd ncs
+          west update --narrow -o=--depth=1
+
+      - name: Build com sysbuild
+        run: |
+          cd ncs
+          west build -p always -b nrf52840dk/nrf52840 -d build --sysbuild ../app/zephyr_app
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zephyr-hex
+          path: ncs/build/zephyr_app/zephyr/zephyr.hex

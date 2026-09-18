@@ -10,7 +10,8 @@ mermaid-cli (mmdc) to prove that it parses.
 mermaid-cli is looked up in this order: the MMDC environment variable (path to
 cli.js or to an mmdc executable), `mmdc` on PATH, then the npx cache
 (%LOCALAPPDATA%/npm-cache/_npx/*/node_modules/@mermaid-js/mermaid-cli).
-Nothing is installed by this script.
+Nothing is installed by this script. PUPPETEER_CONFIG, when set, is passed to
+mmdc as its puppeteer configuration file (-p).
 
 Usage: python tools/docs/mermaid_check.py [--no-render] [ROOT] [OUT]
        (defaults: the repository root and build/docs/mermaid)
@@ -98,7 +99,12 @@ def extract(root: pathlib.Path, out: pathlib.Path):
 
 def render(mmdc, source: pathlib.Path):
     target = source.with_suffix(".svg")
-    result = subprocess.run(mmdc + ["-q", "-i", str(source), "-o", str(target)],
+    extra = []
+    # CI runners need Chrome flags such as --no-sandbox: PUPPETEER_CONFIG
+    # points to a puppeteer JSON config handed to mmdc with -p.
+    if os.environ.get("PUPPETEER_CONFIG"):
+        extra = ["-p", os.environ["PUPPETEER_CONFIG"]]
+    result = subprocess.run(mmdc + extra + ["-q", "-i", str(source), "-o", str(target)],
                             capture_output=True, text=True, encoding="utf-8", errors="replace")
     ok = result.returncode == 0 and target.exists() and "Error" not in result.stderr
     detail = [l for l in (result.stderr + result.stdout).splitlines() if l.strip() and not l.lstrip().startswith("at ")]

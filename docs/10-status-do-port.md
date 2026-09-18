@@ -121,6 +121,7 @@ Tomadas em 2026-09-18:
 |---|---|---|
 | Rádio | **ANT+ e BLE juntos**: os sensores e equipamentos externos falam ANT+ | ANT+ pelo add-on **ANT for nRF Connect SDK** (`sdk-ant`); a versão atual, v2.1.1, é acoplada ao **sdk-nrf v3.2.4**, não ao v3.3.0 instalado; exige aceitar o ANT+ Adopter Agreement e usar a chave de avaliação (`CONFIG_ANT_EVALUATION_KEY`) até haver licença comercial (ver [07](07-radio-ant-ble.md#decisão-ant-e-ble)) |
 | Placa | **board própria com MCU da Nordic**, no lugar do DK com overlay | MCU a escolher entre nRF52840 (placa V3 atual), nRF54LM20, nRF54L15 e nRF5340, todos suportados pelo `sdk-ant` (ver [02](02-hardware.md#próxima-placa)) |
+| CI | **desligado**: `.github/workflows/ci.yml` só roda à mão | não gasta minutos do GitHub Actions; ligar só com pedido do dono |
 | Commits | Conventional Commits em inglês, nunca atribuídos a IA | regra da skill `commit-gnss` |
 
 Ainda em aberto:

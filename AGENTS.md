@@ -10,6 +10,7 @@ Regras mínimas, caso só este arquivo seja lido:
 - `legacy/` (stravaV10 original) é a especificação de comportamento e **não é alterado**; o firmware ativo é o `zephyr_app/` (Zephyr, nRF Connect SDK v3.3.0).
 - Nada pesado em ISR, sem alocação dinâmica depois do boot, pilhas medidas.
 - Verifique antes de afirmar: `bash tools/fw/fw.sh build`, `bash tools/fw/host_tests.sh`, e diga o que não foi testado na placa.
-- Commits só quando o dono pedir, em Conventional Commits, nunca atribuídos a IA.
+- Commits em Conventional Commits, nunca atribuídos a IA.
 - Documentação em português com diagramas Mermaid, nunca diagramas em texto puro.
-- Nunca use WSL; ferramentas do projeto ficam em `tools/fw/` e `tools/docs/` (não crie `scripts/`: colide com a pasta `Scripts/` no Windows).
+- Nunca use WSL; ferramentas do projeto ficam em `tools/fw/` e `tools/docs/`.
+- O CI (`.github/workflows/ci.yml`) está desligado, só roda à mão: não ligue gatilhos sem o dono pedir.

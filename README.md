@@ -9,6 +9,7 @@
 ![RTOS](https://img.shields.io/badge/Zephyr-4.3.99-7929D2)
 ![Linguagem](https://img.shields.io/badge/C-C11-A8B9CC?logo=c&logoColor=white)
 ![Testes](https://img.shields.io/badge/testes%20de%20host-42%20casos-2E7D32)
+![CI](https://img.shields.io/badge/CI-desligado-lightgrey)
 ![Estado](https://img.shields.io/badge/estado-port%20em%20andamento-EF6C00)
 ![Licença](https://img.shields.io/badge/licen%C3%A7a-a%20definir-lightgrey)
 
@@ -74,6 +75,8 @@ python tools/docs/mermaid_check.py # valida os diagramas da documentação
 ```
 
 No `cmd` ou com duplo clique: `build.bat`, `flash.bat`, `recover.bat`, `serial.bat COMx`.
+
+O CI (`.github/workflows/ci.yml`) está **desligado**: só roda à mão, pela aba Actions do GitHub ([detalhes](docs/03-ambiente-build.md#ci)).
 
 ## Estrutura
 

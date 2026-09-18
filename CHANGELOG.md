@@ -33,6 +33,7 @@ Revisão completa de 2026-09-18: análise do legacy e do port, migração para o
 - Contexto para assistentes de IA: `CLAUDE.md`, `AGENTS.md` e dez skills em `.claude/skills/` (`fw-build`, `fw-testes`, `fw-threads`, `fw-port-legacy`, `fw-hardware`, `fw-gps-sensores`, `fw-radio`, `fw-vue`, `docs-gnss`, `commit-gnss`).
 - Documentação numerada em `docs/` (01 a 12, com índice), `README.md` e `legacy/README.md` (origem, licença CC BY-NC 4.0 e diferenças em relação ao upstream).
 - `.gitattributes` (LF no repositório, CRLF nos `.bat`, `hardware/` e os dados de teste de `tools/TDD/` byte a byte) e `.editorconfig`.
+- CI em `.github/workflows/ci.yml`, **desligado** (só `workflow_dispatch`): testes de host, documentação e build do firmware no container `sdk-nrf-toolchain:v3.3.0`. O `mermaid_check.py` aceita `PUPPETEER_CONFIG` para o Chrome do runner.
 - Decisões do dono registradas em `docs/10`, `docs/07`, `docs/02` e nas skills: ANT+ e BLE juntos, pelo add-on `sdk-ant`, e board própria com MCU da Nordic.
 
 ### Alterado

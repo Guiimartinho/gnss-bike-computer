@@ -49,7 +49,7 @@ O dono do projeto é um desenvolvedor brasileiro de eletrônica embarcada que qu
 
 - **Nunca use WSL**, máquinas virtuais nem Docker local.
 - Não instale pacotes na máquina do dono sem perguntar (downloads de dependência de build, como o Unity via FetchContent, são aceitos).
-- Não há CI: a verificação é local.
+- **CI desligado:** `.github/workflows/ci.yml` só roda à mão (`workflow_dispatch`), para não gastar minutos do GitHub Actions. Não acrescente gatilhos (push, pull request, agendamento) nem outros workflows sem o dono pedir. A verificação é local.
 
 ## 3. Mapa do repositório
 
@@ -102,7 +102,7 @@ flowchart LR
     F --> G["7 · extras<br/>Komoot, LNS, EPO, WS2812"]
 ```
 
-- **Decidido em 2026-09-18:** ANT+ **e** BLE (os equipamentos externos são ANT+), pelo add-on `sdk-ant`; **board própria** com MCU da Nordic. Detalhes em [`docs/10-status-do-port.md`](docs/10-status-do-port.md#decisões-do-dono).
+- **Decidido em 2026-09-18:** ANT+ **e** BLE (os equipamentos externos são ANT+), pelo add-on `sdk-ant`; **board própria** com MCU da Nordic; CI desligado. Detalhes em [`docs/10-status-do-port.md`](docs/10-status-do-port.md#decisões-do-dono).
 - **Em aberto:** MCU da placa nova (nRF52840, nRF54LM20, nRF54L15 ou nRF5340), instalação do workspace do `sdk-ant` (exige o dono aceitar o ANT+ Adopter Agreement; usa o sdk-nrf v3.2.4), formatos no SD, orientação da tela, licença do port (o legacy é CC BY-NC 4.0).
 
 ## 6. Armadilhas conhecidas

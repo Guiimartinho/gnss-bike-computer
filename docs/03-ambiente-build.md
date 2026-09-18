@@ -2,7 +2,7 @@
 
 Como montar o ambiente do nRF Connect SDK no Windows, compilar o port Zephyr, gravar o nRF52840-DK, ver o log, rodar os testes de host e validar a documentação. Tudo aqui foi executado nesta máquina em 2026-09-18, salvo onde está dito o contrário.
 
-**Nesta página:** [Ferramentas](#ferramentas) · [Scripts](#scripts) · [Build do firmware](#build-do-firmware) · [Gravar e ver o log](#gravar-e-ver-o-log) · [Testes e análise estática](#testes-e-análise-estática) · [Documentação](#documentação) · [Legacy](#legacy) · [Problemas conhecidos](#problemas-conhecidos)
+**Nesta página:** [Ferramentas](#ferramentas) · [Scripts](#scripts) · [Build do firmware](#build-do-firmware) · [Gravar e ver o log](#gravar-e-ver-o-log) · [Testes e análise estática](#testes-e-análise-estática) · [Documentação](#documentação) · [CI](#ci) · [Legacy](#legacy) · [Problemas conhecidos](#problemas-conhecidos)
 
 ## Ferramentas
 
@@ -136,6 +136,18 @@ python tools/docs/links_check.py     # links relativos e âncoras
 ```
 
 O `mermaid_check.py` usa o mermaid-cli que já está no cache do npx e o Chrome headless do puppeteer; não instala nada. Padrão de escrita na skill `docs-gnss`.
+
+## CI
+
+O `.github/workflows/ci.yml` existe, mas está **desligado** por decisão do dono (2026-09-18): o único gatilho é `workflow_dispatch`, então nada roda sozinho no GitHub Actions. Para rodar, use "Run workflow" na aba Actions.
+
+| Job | O que faz |
+|---|---|
+| `host-tests` | os testes de host no Ubuntu com o GCC do sistema |
+| `docs` | `links_check.py` e `mermaid_check.py` com o mermaid-cli do npm (`.github/puppeteer-ci.json` passa `--no-sandbox` ao Chrome) |
+| `firmware` | build com sysbuild no container `ghcr.io/nrfconnect/sdk-nrf-toolchain:v3.3.0`, com `west init` do sdk-nrf v3.3.0 |
+
+Nenhum job rodou no GitHub até agora; o Linux pode acusar avisos que o MinGW não acusa. Ligar gatilhos automáticos (`push`, `pull_request`) só com pedido do dono.
 
 ## Legacy
 

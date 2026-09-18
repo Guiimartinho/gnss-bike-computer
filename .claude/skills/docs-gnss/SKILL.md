@@ -38,7 +38,7 @@ description: Escrever, atualizar e validar a documentação do GNSS Bike Compute
 9. Estado e próximos passos.
 10. Créditos e licenças (o legacy é CC BY-NC 4.0; ver `legacy/README.md`).
 
-Badges estáticos do shields.io: `https://img.shields.io/badge/<rótulo>-<mensagem>-<cor>?logo=<slug>&logoColor=white`. Codifique espaço como `%20`, `-` como `--`, `+` como `%2B`, `:` como `%3A` e acentos em UTF-8 (`ç` = `%C3%A7`, `ã` = `%C3%A3`, `é` = `%C3%A9`). Não use badges de workflow: não há CI.
+Badges estáticos do shields.io: `https://img.shields.io/badge/<rótulo>-<mensagem>-<cor>?logo=<slug>&logoColor=white`. Codifique espaço como `%20`, `-` como `--`, `+` como `%2B`, `:` como `%3A` e acentos em UTF-8 (`ç` = `%C3%A7`, `ã` = `%C3%A3`, `é` = `%C3%A9`). Não use badges de workflow: o CI está desligado (só roda à mão).
 
 ## Mermaid
 
