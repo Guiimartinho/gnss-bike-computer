@@ -1,0 +1,24 @@
+{
+    "Header": {
+        "Comment": "All values are metric (mm)",
+        "CreationDate": "2018-12-12T17:27:10Z",
+        "GenerationSoftware": {
+            "Application": "EAGLE",
+            "Vendor": "Autodesk",
+            "Version": "9.2.2"
+        },
+        "Part": "Single"
+    },
+    "Overall": {
+        "BoardThickness": 0.77,
+        "LayerNumber": 2,
+        "Name": {
+            "ProjectId": "myStravaB_V2"
+        },
+        "Owner": "Vincent Golle <vincent.golle@gmail.com>",
+        "Size": {
+            "X": 52.3494,
+            "Y": 77.47
+        }
+    }
+}
