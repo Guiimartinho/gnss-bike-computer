@@ -141,6 +141,7 @@ flowchart TB
 | [13 · Placa nova](docs/13-placa-nova.md) | proposta de hardware da placa própria |
 | [14 · Hardware da placa nova](docs/14-hardware-placa-nova.md) | especificação técnica: alimentação, lista de materiais, pinos, PCB |
 | [15 · Avaliação dos componentes](docs/15-avaliacao-componentes.md) | escolha de cada componente da placa nova, com números de datasheet |
+| [16 · Arquitetura do firmware](docs/16-arquitetura-firmware.md) | arquitetura-alvo e máquinas de estado para a placa nova |
 | [CHANGELOG](CHANGELOG.md) | histórico de mudanças |
 
 ## Estado e próximos passos

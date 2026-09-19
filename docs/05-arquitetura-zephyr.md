@@ -1,6 +1,6 @@
 # Arquitetura do port Zephyr
 
-Como o `zephyr_app/` está organizado: camadas, boot, threads, fluxo de dados, pilhas medidas, devicetree e configuração. O estado de cada módulo em relação ao legacy está em [10-status-do-port.md](10-status-do-port.md).
+Como o `zephyr_app/` está organizado: camadas, boot, threads, fluxo de dados, pilhas medidas, devicetree e configuração. O estado de cada módulo em relação ao legacy está em [10-status-do-port.md](10-status-do-port.md); a arquitetura-alvo para a placa nova, com as máquinas de estado, em [16-arquitetura-firmware.md](16-arquitetura-firmware.md).
 
 **Nesta página:** [Camadas](#camadas) · [Boot](#boot) · [Threads](#threads) · [Watchdog](#watchdog) · [Fluxo de dados](#fluxo-de-dados) · [Pilhas](#pilhas) · [Módulos](#módulos) · [Devicetree e alvo](#devicetree-e-alvo) · [Configuração](#configuração) · [Regras de concorrência](#regras-de-concorrência)
 

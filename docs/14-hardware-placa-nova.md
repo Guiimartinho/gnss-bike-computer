@@ -193,7 +193,7 @@ Provisória. Os blocos seriais seguem os domínios de pinos do nRF54LM20A (`spi0
 |---|---|---|---|---|
 | Armazenamento | SCK, MOSI, MISO, CS do microSD, CS do SD NAND, detecção de cartão | `spi00` e GPIO | P2 | SCK P2.01, MOSI P2.02, MISO P2.04, CS P2.03 |
 | Display | SCK, MOSI, CS, DISP | `spi22` e GPIO | P3 | SCK P3.03, MOSI P3.00, CS P3.02 |
-| Display | EXTCOMIN (cerca de 60 Hz com a luz acesa) e luz | `pwm20` | P1 | — |
+| Display | EXTCOMIN (1 Hz sem luz; cerca de 120 Hz com a luz acesa, para o COM perto dos 60 Hz que a ficha pede) e luz | `pwm20` | P1 | — |
 | GNSS | TXD, RXD, RESET_N, EXTINT, TIMEPULSE (o OE do tradutor fica fixo no VCCA) | `uart21` e GPIO | P1 | TX P1.04, RX P1.05, RESET P1.06, EXTINT P1.07, TIMEPULSE P1.13 |
 | Sensores | SDA, SCL, INT1 e INT2 do IMU, INT do barômetro | `i2c23` e GPIO | P1 e P3 | SDA P1.02, SCL P1.03, INT1 P3.04 |
 | Energia | SDA, SCL, interrupção do nPM1300 (GPIO3), ALRT do MAX17262 e IRQ do AEM10900 (o bloqueio da carga solar vem do VBUSOUT, sem pino do MCU) | `i2c30` e GPIO | P0 | — |

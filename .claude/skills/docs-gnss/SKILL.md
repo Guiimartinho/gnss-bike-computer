@@ -97,6 +97,7 @@ python tools/docs/links_check.py        # links relativos e âncoras
 | proposta da placa nova | `docs/13-placa-nova.md` |
 | especificação de hardware da placa nova | `docs/14-hardware-placa-nova.md` |
 | avaliação dos componentes da placa nova | `docs/15-avaliacao-componentes.md` |
+| arquitetura do firmware e máquinas de estado da placa nova | `docs/16-arquitetura-firmware.md` |
 | código herdado | `legacy/README.md` |
 
 Quando o comportamento muda, o documento muda **junto** com o código, e o `CHANGELOG.md` ganha uma linha em `[Não lançado]`. Quando um item do port muda de estado, atualize a matriz de `docs/10-status-do-port.md` e a seção "Estado" do `CLAUDE.md`.
