@@ -302,7 +302,7 @@ stateDiagram-v2
 ```
 
 - A máquina só mostra o que os carregadores fazem sozinhos ([15](15-avaliacao-componentes.md#convivência-das-duas-cargas)): com VBUS, o hardware bloqueia o solar e só o nPM1300 carrega.
-- No código desde 2026-09-19 (`src/svc/power/charge.c`, [05](05-arquitetura-zephyr.md#carregador)): o estado sai dos registradores a cada evento do nPM1300 e a cada 10 s, e pausa térmica e falha viram notificação; o estado Solar espera o driver do AEM10900. Não testado na placa.
+- No código desde 2026-09-19 (`src/svc/power/charge.c`, [05](05-arquitetura-zephyr.md#carregador)): o estado sai dos registradores do nPM1300 e do AEM10900 a cada evento e a cada 10 s, e pausa térmica e falha viram notificação. Não testado na placa.
 - Fontes: estado do carregador e erros do nPM1300, interrupção e APM do AEM10900, estado de carga e corrente do MAX17262.
 
 ### Interface

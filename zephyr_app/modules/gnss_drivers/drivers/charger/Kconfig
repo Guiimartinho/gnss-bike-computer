@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: Apache-2.0
+
+config GNSS_CHARGER_AEM10900
+	bool "AEM10900 solar charger (e-peas,aem10900)"
+	default y
+	depends on DT_HAS_E_PEAS_AEM10900_ENABLED
+	depends on CHARGER
+	select I2C
+	help
+	  e-peas AEM10900 solar charger by the Zephyr charger API: the I2C
+	  thresholds with the board on, the pins back before the ship
+	  mode, and the average power monitor.
+
+if GNSS_CHARGER_AEM10900
+
+module = GNSS_CHARGER_AEM10900
+module-str = aem10900
+source "subsys/logging/Kconfig.template.log_config"
+
+endif

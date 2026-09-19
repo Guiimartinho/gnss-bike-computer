@@ -18,13 +18,13 @@
  *                         EXTCOMIN P3.06
  *   Energy I2C (i2c24)    SDA P1.11, SCL P1.12 (the pins of the Nordic samples
  *                         for the nPM1300 EK); nPM1300 0x6B with its GPIO3
- *                         interrupt on P0.04, MAX17262 0x36
+ *                         interrupt on P0.04, MAX17262 0x36, AEM10900 0x41
  *   Keys                  buttons 0, 1 and 2 of the DK (left, centre, right)
  *   Light                 LED 1 of the DK (pwm20) stands for the display light
  *
  * The services find the devices by these aliases: gnss, baro0, imu0, mag0,
- * light0, backlight, backlight-supply, fuel-gauge0, pmic, pmic-charger and
- * pmic-regulators (docs/16, Serviços), the display by the chosen node
+ * light0, backlight, backlight-supply, fuel-gauge0, pmic, pmic-charger,
+ * pmic-regulators and solar-charger (docs/16, Serviços), the display by the chosen node
  * zephyr,display and the keys by the node label longpress. A device that
  * does not answer is left out.
  */
@@ -50,6 +50,7 @@
         pmic = &npm1300_pmic;
         pmic-charger = &npm1300_charger;
         pmic-regulators = &npm1300_regulators;
+        solar-charger = &aem10900;
     };
 
     /*
@@ -161,6 +162,18 @@
         design-capacity-mah = <2000>;
         charge-term-current-ma = <60>;
         charge-voltage-mv = <4200>;
+    };
+
+    /*
+     * AEM10900 solar charger, I2C_ADDR tied to I2C_VDD (docs/14): its pins
+     * charge to 3.90 V; with the board on, the I2C configuration charges to
+     * 4.05 V. apm-scale-pj stays 0 until e-peas gives theta x L: no solar
+     * power in mW until then, only whether the panel charges.
+     */
+    aem10900: charger@41 {
+        compatible = "e-peas,aem10900";
+        reg = <0x41>;
+        charge-voltage-mv = <4050>;
     };
 
     /*

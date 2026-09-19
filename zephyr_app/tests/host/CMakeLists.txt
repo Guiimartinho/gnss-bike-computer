@@ -94,6 +94,7 @@ gnss_add_test(test_backlight SOURCES svc/ui/backlight.c)
 # The display driver lives in a Zephyr module next to src/
 gnss_add_test(test_memlcd SOURCES ../modules/gnss_drivers/drivers/display/memlcd_frame.c)
 gnss_add_test(test_max17262)
+gnss_add_test(test_aem10900)
 gnss_add_test(test_battery SOURCES svc/power/battery.c)
 gnss_add_test(test_charge SOURCES svc/power/charge.c)
 gnss_add_test(test_power_scheduler

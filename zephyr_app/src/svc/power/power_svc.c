@@ -21,11 +21,16 @@
  * the charger registers into the charge state of the screens. The PMIC
  * events (VBUS in and out, charge done, charger error) arrive from its
  * work item as inbox messages and trigger a new reading.
+ *
+ * With the AEM10900 (alias solar-charger, Zephyr charger API) it reads
+ * whether the panel charges, its power and the charge threshold in force;
+ * before the power goes it hands the AEM back to its pins (3.90 V).
  */
 
 #include <string.h>
 
 #include <zephyr/device.h>
+#include <zephyr/drivers/charger.h>
 #include <zephyr/drivers/fuel_gauge.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/mfd/npm13xx.h>
@@ -40,6 +45,7 @@
 
 #include "app/app_channels.h"
 #include "app/app_svc.h"
+#include "drivers/charger/aem10900.h"
 #include "svc/battery.h"
 #include "svc/charge.h"
 #include "svc/sys_fsm.h"
@@ -83,6 +89,15 @@ static const struct device *const pmic = DEVICE_DT_GET(PMIC_NODE);
 static const struct device *const charger = DEVICE_DT_GET(CHARGER_NODE);
 #else
 #define POWER_HAS_PMIC          0
+#endif
+
+#define SOLAR_NODE              DT_ALIAS(solar_charger)
+
+#if DT_NODE_HAS_STATUS_OKAY(SOLAR_NODE) && defined(CONFIG_CHARGER)
+#define POWER_HAS_SOLAR         1
+static const struct device *const solar = DEVICE_DT_GET(SOLAR_NODE);
+#else
+#define POWER_HAS_SOLAR         0
 #endif
 
 /* nPM1300 datasheet 6.2.14: charger block, NTC comparator status */
@@ -172,6 +187,8 @@ static void publish_state(enum app_sys_state state, void *user)
     (void)app_publish(&chan_system_state, &s);
 }
 
+static void solar_to_pins(void);
+
 /**
  * Cut the power. Ship mode takes everything down but the backup rails
  * (docs/14, Estados de energia); the nPM1300 refuses it with VBUS, and then
@@ -180,6 +197,8 @@ static void publish_state(enum app_sys_state state, void *user)
 static void power_off(bool vbus, void *user)
 {
     ARG_UNUSED(user);
+
+    solar_to_pins();
 
 #if DT_NODE_HAS_STATUS(PMIC_REGULATORS, okay)
     if (!vbus) {
@@ -245,9 +264,9 @@ static void on_battery_event(battery_event_t ev)
     }
 }
 
-#if POWER_HAS_PMIC
 static charge_state_t charge = CHARGE_BATTERY;
-static struct gpio_callback pmic_cb;
+/** The last readings of both chargers */
+static charge_inputs_t charge_in;
 
 static void on_charge_change(charge_state_t now)
 {
@@ -261,6 +280,21 @@ static void on_charge_change(charge_state_t now)
         LOG_INF("charge state %u", (unsigned int)now);
     }
 }
+
+/** The charge state from the last readings of the two chargers */
+static void update_charge(void)
+{
+    charge_state_t now = charge_state(&charge_in);
+
+    if (now != charge) {
+        charge = now;
+        on_charge_change(now);
+    }
+    status.charge = charge_app(now);
+}
+
+#if POWER_HAS_PMIC
+static struct gpio_callback pmic_cb;
 
 /** PMIC event, from the work item of the MFD driver: only a message here */
 static void pmic_event(const struct device *dev, struct gpio_callback *cb, uint32_t events)
@@ -312,14 +346,9 @@ static void read_charger(void)
             vbus_limit();
         }
     }
-
-    charge_state_t now = charge_state(&in);
-
-    if (now != charge) {
-        charge = now;
-        on_charge_change(now);
-    }
-    status.charge = charge_app(now);
+    in.solar = charge_in.solar;
+    charge_in = in;
+    update_charge();
 }
 
 static void pmic_init(void)
@@ -338,6 +367,7 @@ static void pmic_init(void)
 #else
 static void read_charger(void)
 {
+    update_charge();
 }
 
 static void pmic_init(void)
@@ -345,6 +375,43 @@ static void pmic_init(void)
     LOG_INF("no nPM1300 (aliases pmic, pmic-charger): no charger readings");
 }
 #endif
+
+/** Whether the panel charges, its power and the threshold in force */
+static void read_solar(void)
+{
+#if POWER_HAS_SOLAR
+    union charger_propval val;
+
+    if (!device_is_ready(solar) || (charger_get_prop(solar, CHARGER_PROP_STATUS, &val) != 0)) {
+        charge_in.solar = false;
+        status.solar_mw = 0U;
+        update_charge();
+        return;
+    }
+    charge_in.solar = (val.status == CHARGER_STATUS_CHARGING);
+    if (charger_get_prop(solar, (charger_prop_t)AEM10900_PROP_POWER_UW, &val) == 0) {
+        status.solar_mw = (uint16_t)MIN(val.custom_uint / 1000U, (uint32_t)UINT16_MAX);
+    }
+    if (charger_get_prop(solar, CHARGER_PROP_CONSTANT_CHARGE_VOLTAGE_UV, &val) == 0) {
+        status.solar_limit_mv = (uint16_t)(val.const_charge_voltage_uv / 1000U);
+    }
+    update_charge();
+#endif
+}
+
+/** Hand the solar charger back to its pins (3.90 V, long life) before the power goes */
+static void solar_to_pins(void)
+{
+#if POWER_HAS_SOLAR
+    if (device_is_ready(solar)) {
+        union charger_propval pins = {.custom_bool = true};
+
+        if (charger_set_prop(solar, (charger_prop_t)AEM10900_PROP_PIN_CONFIG, &pins) != 0) {
+            LOG_WRN("solar charger kept its I2C configuration");
+        }
+    }
+#endif
+}
 
 /**
  * Read the fuel gauge into the status. A gauge that stops answering keeps the
@@ -413,6 +480,7 @@ static void power_thread(void *p1, void *p2, void *p3)
     }
     pmic_init();
     read_charger();
+    read_solar();
     read_gauge();
     publish_status();
 
@@ -450,6 +518,7 @@ static void power_thread(void *p1, void *p2, void *p3)
         }
         if ((k_uptime_get_32() - last_gauge_ms) >= POWER_GAUGE_PERIOD_MS) {
             read_charger();
+            read_solar();
             read_gauge();
             last_gauge_ms = k_uptime_get_32();
         }

@@ -134,7 +134,7 @@ As mensagens estão em `zephyr_app/include/app/app_events.h`, em C sem tipos do 
 |---|---|---|---|
 | Sistema e energia | `src/svc/power/sys_fsm.c` | Partida, Ligado e MSC sob um pai comum que aceita o desligamento; Desligando espera a resposta de cada serviço por até 5 s; Desligado corta a energia (ship mode do nPM1300 sem VBUS, System OFF com VBUS ou sem PMIC) | `test_sys_fsm` (16 casos), com o `lib/smf/smf.c` do Zephyr |
 | Modo | `src/svc/model/model_svc.c` | CRS, PRC, FEC, Zwift, DBG, com as entradas e saídas de `boucle__change_mode()` (`legacy/source/model/Boucle.cpp:101-143`): PRC inicia o percurso carregado e o para ao sair, FEC zera as zonas e o score | pelo build; sem teste de host |
-| Carga | `src/svc/power/charge.c` | Bateria, Solar, USB, USB cheia, Pausa térmica, Falha, lidos dos registradores do nPM1300 a cada evento e a cada 10 s: com VBUS, o hardware bloqueia o solar | `test_charge` (11 casos) |
+| Carga | `src/svc/power/charge.c` | Bateria, Solar, USB, USB cheia, Pausa térmica, Falha, lidos do nPM1300 e do AEM10900 a cada evento e a cada 10 s: com VBUS, o hardware bloqueia o solar | `test_charge` (11 casos) |
 | Luz da tela | `src/svc/ui/backlight.c` | Apagada, Temporária (10 s depois de uma tecla) e Automática (pouca luz ambiente, com histerese entre 20 e 50 lux); desligada pelo menu, nada a acende; limites a acertar na bancada | `test_backlight` (11 casos) |
 
 O desligamento automático é o do legacy (`legacy/source/scheduling/power_scheduler.cpp`): cada posição com fix em CRS, PRC e DBG, e cada dado do rolo em FEC, reinicia a contagem de 15 min (`src/model/power_scheduler.c`, `test_power_scheduler`). Diagramas das máquinas em [16](16-arquitetura-firmware.md#máquinas-de-estado).
@@ -258,10 +258,12 @@ O nPM1300 usa os drivers do Zephyr (MFD, reguladores e o carregador pela API de 
 | Carga | 600 mA, fim em 4,20 V e em 10 % da corrente (60 mA, o `IChgTerm` do medidor), NTC de 10 kΩ B3380 com os limites JEITA de fábrica | [14](14-hardware-placa-nova.md#carga) |
 | VBUS | 500 mA na partida; quando o VBUS chega, o serviço lê o que a fonte USB-C oferece pelo CC (500 mA ou 1,5 A) e sobe o limite, que o nPM1300 volta ao padrão quando o cabo sai; o VBUS vai para a máquina de sistema, que escolhe ship mode ou System OFF | ficha do nPM1300; amostras `npm13xx_*` do NCS |
 | Eventos | VBUS entrou e saiu, carga completa e erro do carregador: o driver do MFD os recebe pelo GPIO3 e chama o callback no workqueue do sistema, que só põe uma mensagem na caixa da thread `power` | `mfd_npm13xx_add_callback()` |
-| Estado | `charge.c` lê `BCHGCHARGESTATUS`, `BCHGERRREASON`, o `VBUSINSTATUS` e o `NTCSTATUS` e dá o estado da [máquina de carga](16-arquitetura-firmware.md#carga); pausa térmica e falha viram notificação | `test_charge` (11 casos) |
+| Estado | `charge.c` junta o `BCHGCHARGESTATUS`, o `BCHGERRREASON`, o `VBUSINSTATUS` e o `NTCSTATUS` do nPM1300 com o estado do AEM10900 e dá o estado da [máquina de carga](16-arquitetura-firmware.md#carga); pausa térmica e falha viram notificação | `test_charge` (11 casos) |
+| Solar | driver próprio do AEM10900 (`modules/gnss_drivers/drivers/charger/aem10900.c`, compatível `e-peas,aem10900`, API de carregadores do Zephyr): na partida confere o número da peça, passa à configuração por I2C para carregar até 4,05 V (os pinos carregam até 3,90 V; os demais registradores ficam no valor de fábrica, que é o dos pinos) e liga o monitor de potência (APM); a thread `power` lê a cada 10 s se o painel carrega, a potência e o limiar em vigor, e devolve o AEM aos pinos antes de cortar a energia; se o AEM reinicia e volta aos pinos, o driver grava a configuração de novo | ficha do AEM1090x, seções 6 e 9; `aem10900_regs.h`, `test_aem10900` (7 casos) |
 
 - O LED de carga do nPM1300 (LED1) acende sozinho, sem firmware ([14](14-hardware-placa-nova.md#componentes-principais)); o devicetree não mexe nos LEDs.
-- Não testado com o nPM1300: o EK liga no `i2c24` do DK com a interrupção em P0.04.
+- A potência do painel em mW depende do produto θ·L da seção 9.13 da ficha do AEM1090x, que a e-peas informa para cada aplicação: até lá, `apm-scale-pj` fica em 0, a tela mostra 0 mW e só o estado Solar diz que o painel carrega.
+- Não testado com o nPM1300 nem com o AEM10900: as placas de avaliação ligam no `i2c24` do DK, com a interrupção do nPM1300 em P0.04.
 
 ## Módulos
 
@@ -278,7 +280,7 @@ O nPM1300 usa os drivers do Zephyr (MFD, reguladores e o carregador pela API de 
 | `src/model/` | `attitude`, `kalman_altitude`, `udmatrix`, `kalman`, `locator`, `loc_source`, `segment`, `liste_points`, `vecteur`, `parcours`, `power_zone`, `suffer_score`, `rr_zone`, `sd_logger`, `crash_recovery`, `user_settings`, `power_scheduler` | os algoritmos do legacy |
 | `src/rf/` | `ble/ble_manager.c`, `ble_nus.c`, `ble_lns.c`, `ble_*_client.c`, `ant/ant.c` | BLE (scan ainda não iniciado) e ANT (só com `ANT=1`) |
 | `src/ui/`, `include/ui/` | interface LVGL da placa nova ([18](18-interface-telas.md)) | a mesma no firmware e no renderizador de host (`tests/ui`) |
-| `modules/gnss_drivers/` | `drivers/display/memlcd.c`, `memlcd_frame.c`, `include/drivers/display/memlcd*.h`, `drivers/fuel_gauge/max17262.c`, `include/drivers/fuel_gauge/max17262_regs.h`, `dts/bindings/` | drivers próprios num módulo do Zephyr dentro da aplicação: a tela ([Tela](#tela)) e o medidor MAX17262 ([Medidor de bateria](#medidor-de-bateria)) |
+| `modules/gnss_drivers/` | `drivers/display/memlcd.c`, `memlcd_frame.c`, `include/drivers/display/memlcd*.h`, `drivers/fuel_gauge/max17262.c`, `include/drivers/fuel_gauge/max17262_regs.h`, `drivers/charger/aem10900.c`, `include/drivers/charger/aem10900*.h`, `dts/bindings/` (com o prefixo `e-peas` em `vendor-prefixes.txt`) | drivers próprios num módulo do Zephyr dentro da aplicação: a tela ([Tela](#tela)), o medidor MAX17262 ([Medidor de bateria](#medidor-de-bateria)) e o carregador solar AEM10900 ([Carregador](#carregador)) |
 
 Saíram em 2026-09-19, substituídos pelas APIs do Zephyr ou pelos serviços: o HAL próprio (`src/hal`), os drivers da V3 (`ls027`, `baro`, `fxos`, `stc3100`, `gps_mgmt`, `nmea_parser`, `gps_epo`, `neopixel`), a interface em paisagem (`src/vue`), a USB da pilha antiga (`src/usb`), os stubs do sistema de arquivos (`src/utils`), o `boucle`, o `model_lock`, o `zwift` (protocolo próprio, não o do legacy) e o `baro_drift` (duplicado).
 
@@ -302,6 +304,7 @@ A placa vem do `-b` (variável `BOARD` dos scripts); o Zephyr aplica `boards/<pl
 | `fuel-gauge0` | energia | MAX17262 (`adi,max17262`) em 0x36 no `i2c24` (SDA P1.11, SCL P1.12, os pinos das amostras da Nordic para o nPM1300 EK) | — (o STC3100 não tem driver no Zephyr) |
 | `pmic`, `pmic-charger`, `pmic-regulators` | energia | nPM1300 em 0x6B no `i2c24`, interrupção do GPIO3 em P0.04 | — |
 | `backlight-supply` | interface | LDO2 do nPM1300 em 3,3 V (3V3BL) | — |
+| `solar-charger` | energia | AEM10900 (`e-peas,aem10900`) em 0x41 no `i2c24` | — |
 
 - O nRF52840 DK não tem leitura de bateria: o STC3100 da V3 não tem driver no Zephyr. A V3 existe só como esquema.
 - Os três botões são `gpio-keys` com códigos de tecla; o nó `longpress` (`zephyr,input-longpress`, 1 s) gera o toque curto (esquerda, `ENTER`, direita) ao soltar e o longo (`HOME`, `MENU`, `END`) depois de 1 s apertado. Os nós falsos de `gpio-keys` que davam nomes a pinos do GPS, do IMU e do NeoPixel saíram, porque o subsistema de entrada os trataria como teclas.
@@ -316,7 +319,7 @@ A placa vem do `-b` (variável `BOARD` dos scripts); o Zephyr aplica `boards/<pl
 | Arquivo | O que define |
 |---|---|
 | `prj.conf` | zbus e SMF, `task_wdt` com 8 canais, `CONFIG_POWEROFF`, a API de fuel gauge, GNSS com satélites e o workqueue próprio do modem, sensores, tela e LVGL (RGB565, pool de 32 KB, buffer de desenho de 10 % a 16 bits, só os formatos RGB565 e A8 no renderizador, sem log, sem temas e só rótulos, como `tests/ui/lv_conf.h`), entrada com a thread de 2048 B, workqueue do sistema de 2048 B, FatFs com nomes longos em buffer estático, BLE central e periférico (4 conexões, RX do BT com 3072 B), settings em NVS, log por UART, `CONFIG_RESET_ON_FATAL_ERROR`, otimização de tamanho |
-| `boards/*.conf` | o ZMS, o PWM da luz e os reguladores (`CONFIG_REGULATOR`) no nRF54LM20 |
+| `boards/*.conf` | o ZMS, o PWM da luz, os reguladores (`CONFIG_REGULATOR`) e a API de carregadores (`CONFIG_CHARGER`) no nRF54LM20 |
 | `sysbuild.conf` | `SB_CONFIG_PARTITION_MANAGER=n` |
 | `CMakeLists.txt` | fontes por camada, o módulo `modules/gnss_drivers` por `EXTRA_ZEPHYR_MODULES`, `-Wall -Wextra` |
 

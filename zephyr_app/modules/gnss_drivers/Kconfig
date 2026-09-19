@@ -4,5 +4,6 @@ menu "GNSS bike computer drivers"
 
 rsource "drivers/display/Kconfig"
 rsource "drivers/fuel_gauge/Kconfig"
+rsource "drivers/charger/Kconfig"
 
 endmenu
