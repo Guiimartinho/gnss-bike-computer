@@ -184,7 +184,7 @@ stateDiagram-v2
 
 - **Pedido de desligar:** menu, botão de ligar mantido apertado, 15 min sem ping ou bateria crítica.
 - **Desligamento automático:** 15 min sem ping desligam, como no legacy. O ping vem de cada localização processada em CRS e PRC (`legacy/source/model/BoucleCRS.cpp:197`) e de cada dado do rolo em FEC (`legacy/source/model/BoucleFEC.cpp:83`). Parado com fix, o legacy nunca desliga; pingar só em movimento é uma **proposta**, a decidir.
-- **Bateria crítica:** nova. Quando o MAX17262 marca a bateria no fim, o aparelho grava e desliga antes do PCM cortar a célula.
+- **Bateria crítica:** nova. Quando o MAX17262 marca a bateria no fim (0 %, que ele declara na tensão de vazio, 3,3 V), o aparelho grava e desliga antes do PCM cortar a célula. Antes, a 10 %, uma notificação de bateria fraca. No código desde 2026-09-19 (`src/svc/power/battery.c`, [06](06-algoritmos.md#bateria)); não testado na placa.
 - **Botão de ligar:** o nPM1300 liga pelo SHPHLD e avisa o MCU pelo GPIO3, como a amostra `npm13xx_one_button`; o desligamento pelo botão longo sai da mesma amostra.
 
 ### Modo

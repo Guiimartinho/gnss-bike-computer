@@ -5,7 +5,7 @@ Como o `zephyr_app/` está organizado desde 2026-09-19: um serviço por assunto,
 > [!IMPORTANT]
 > Build verificado nos dois alvos (nRF52840 DK e nRF54LM20 DK, com e sem ANT) e testes de host; **nada rodou em placa**.
 
-**Nesta página:** [Camadas](#camadas) · [Boot](#boot) · [Threads](#threads) · [Eventos](#eventos) · [Máquinas de estado](#máquinas-de-estado) · [Watchdog](#watchdog) · [Fluxo de dados](#fluxo-de-dados) · [Pilhas](#pilhas) · [Tela](#tela) · [Módulos](#módulos) · [Devicetree e alvos](#devicetree-e-alvos) · [Configuração](#configuração) · [Regras de concorrência](#regras-de-concorrência)
+**Nesta página:** [Camadas](#camadas) · [Boot](#boot) · [Threads](#threads) · [Eventos](#eventos) · [Máquinas de estado](#máquinas-de-estado) · [Watchdog](#watchdog) · [Fluxo de dados](#fluxo-de-dados) · [Pilhas](#pilhas) · [Tela](#tela) · [Medidor de bateria](#medidor-de-bateria) · [Módulos](#módulos) · [Devicetree e alvos](#devicetree-e-alvos) · [Configuração](#configuração) · [Regras de concorrência](#regras-de-concorrência)
 
 ## Camadas
 
@@ -91,7 +91,7 @@ Prioridade no Zephyr: número menor ganha. Pilhas medidas (ver [Pilhas](#pilhas)
 | `radio` | `src/svc/radio/radio_svc.c` | 6 | 3072 B | caixa de entrada | sobe o ANT (com `ANT=1`) e o BLE, liga os clientes aos canais, atualiza o nível da bateria no BLE |
 | `ui` | `src/svc/ui/ui_svc.c` | 7 | 6144 B | caixa de entrada, o próximo timer do LVGL; ao menos 1 vez por segundo | a única que chama o LVGL: telas do retrato, teclas, notificações, telas de USB e de desligamento, luz e COM; o driver manda ao painel só as linhas que mudaram |
 | `storage` | `src/svc/storage/storage_svc.c` | 8 | 3584 B | caixa de entrada | monta o cartão, carrega segmentos, lista percursos, grava o log de atividade |
-| `power` | `src/svc/power/power_svc.c` | 9 | 2048 B | caixa de entrada; tique de 1 s | máquina de sistema, desligamento automático, ship mode ou System OFF, `power_status` |
+| `power` | `src/svc/power/power_svc.c` | 9 | 3072 B | caixa de entrada; tique de 1 s; o medidor a cada 10 s | máquina de sistema, desligamento automático, ship mode ou System OFF; lê o medidor e publica `power_status`; bateria fraca e crítica (`battery.c`) |
 | workqueue do modem | Zephyr (`CONFIG_MODEM_DEDICATED_WORKQUEUE`) | do sistema | 2048 B | bytes do receptor | o driver GNSS interpreta e chama os callbacks do serviço, que publicam `gnss_fix` e `gnss_sky` |
 | RX do BT | Zephyr | cooperativa | 3072 B | pacotes do rádio | os clientes BLE chamam os callbacks do serviço de rádio, que publicam `ext_sensor` e `link_status` |
 | entrada | Zephyr (`CONFIG_INPUT_THREAD_STACK_SIZE`) | 0 | 2048 B | eventos das teclas | o `zephyr,input-longpress` separa toque curto e longo; o callback de `src/svc/ui/ui_input.c` publica `input` |
@@ -183,7 +183,7 @@ Medidas com `CONFIG_STACK_USAGE=y` (arquivos `.su` do GCC) em 2026-09-19, no bui
 | `storage` | `storage_thread` 416 + `segment_load_all` 656 + FatFs (`f_open` 96, `follow_path` 56, `dir_find` 64) + SD por SPI (`sdhc_spi_request` 136, `sdhc_spi_send_cmd` 56, `spi_nrfx_transceive` 128) | ~2,2 KB | 3584 B | ~1,4 KB |
 | `radio` | `bt_enable` 24 + `bt_init` 168 + `bt_hci_cmd_send_sync` 96 + `settings_zms_load` 144 e o ZMS | ~1,5 KB | 3072 B | ~1,5 KB |
 | `sensors` | `sensors_thread` 168 + leitura I2C (`i2c_nrfx_twim_msg_transfer` 56) + publicação no zbus (`zbus_chan_pub` 56, `_zbus_vded_exec` 104, listener até 80, `k_msgq_put`) | ~0,9 KB | 2048 B | ~1,1 KB |
-| `power` | estado novo pelo SMF (`smf_set_state` 64) + publicação no zbus (~0,4 KB) + log; ou o `LOG_PANIC` do desligamento (`z_cbvprintf_impl` 160) | ~0,85 KB | 2048 B | ~1,2 KB |
+| `power` | `power_thread` 40 + `read_gauge` 64 + bateria crítica pela máquina de sistema (`smf_set_state` 64, `shutdown_entry` 16) + publicação no zbus (`app_publish` 56, `zbus_chan_pub` 56, `_zbus_vded_exec` 104, listener até 80, `app_inbox_put` 56) + log (~0,3 KB); a leitura I2C do medidor fica em ~0,3 KB | ~1,1 KB | 3072 B | ~1,9 KB |
 | `gnss` | publicação no zbus e log | ~0,7 KB | 2048 B | ~1,3 KB |
 | `ui` | `ui_thread` 136 + `lv_timer_handler` 40 + `lv_display_refr_timer` 144 + `refr_area` 88 + 4 níveis da árvore de objetos × (`lv_obj_refr` 272 + `lv_obj_redraw` 352) + evento de desenho ~0,3 KB + arco (`ui_draw_disc` 200, `lv_draw_arc` 128, `lv_draw_sw_arc` 600, máscara e mistura ~0,4 KB) | ~4,7 KB | 6144 B | ~1,4 KB |
 | entrada | `input_thread` 40 + `ui_keys_cb` 16 + publicação no zbus (`zbus_chan_pub` 56, `ui_listener` 80, `app_inbox_put` 56) + log | ~0,9 KB | 2048 B | ~1,1 KB |
@@ -234,12 +234,25 @@ flowchart LR
 - Teste de host: `test_memlcd` (19 casos) confere a quantização, a rotação, o empacotamento de cada painel, o formato do quadro (12.482 B da Sharp, os 10 bits de endereço do JDI), as linhas marcadas e os trechos ([12](12-ferramentas-testes.md#testes-de-host-do-port)).
 - Não testado em painel: SPI, COM, tempos e cores ficam para a bancada.
 
+## Medidor de bateria
+
+O MAX17262 da placa nova é lido pela API de fuel gauge do Zephyr, com um driver próprio (`modules/gnss_drivers/drivers/fuel_gauge/max17262.c`, compatível `adi,max17262`). O driver da árvore do Zephyr (`maxim,max17262`, API de sensores) grava a capacidade em mAh onde o registrador conta 0,5 mAh, põe a corrente de carga no `IChgTerm`, que pede a corrente de fim de carga, em passos crus, devolve capacidades sem o fator de 0,5 mAh e lê o tempo até vazio com sinal, de modo que 0xFFFF (desconhecido) nunca é reconhecido.
+
+| Item | Como funciona | Fonte |
+|---|---|---|
+| Configuração | depois de cada reset do medidor (`Status.POR`): espera `FStat.DNR`, sai da hibernação, grava `DesignCap`, `IChgTerm`, `VEmpty` e `ModelCfg`, espera o `Refresh`, volta a hibernação, zera o `ETHRM` quando não há termistor e limpa o `POR` | ficha do MAX17262 e o guia do ModelGauge m5 EZ |
+| Célula | 2000 mAh, fim de carga em 60 mA (10 % dos 600 mA do nPM1300), 4,2 V, vazio em 3,3 V e religamento em 3,88 V (os valores de fábrica) | [14](14-hardware-placa-nova.md#carga) |
+| Leituras | tensão, corrente média, carga (`RepSOC`), temperatura do chip, tempo até vazio e até cheio, capacidades, ciclos, nas unidades da API | `max17262_regs.h`, `test_max17262` (10 casos) |
+| Serviço | a thread `power` lê a cada 10 s, publica `power_status` quando algo da tela muda ou a cada 60 s, avisa bateria fraca e pede o desligamento com a bateria no fim ([06](06-algoritmos.md#bateria)) | `battery.c`, `test_battery` (10 casos) |
+
+- Não testado com o medidor: a configuração, os tempos de espera e as leituras ficam para a bancada, com a placa de avaliação do MAX17262 no `i2c24` do DK.
+
 ## Módulos
 
 | Pasta | Arquivos | Papel |
 |---|---|---|
 | `src/app/` | `main.c`, `app_channels.c`, `app_svc.c` | boot, canais, watchdog e caixas de entrada |
-| `src/svc/power/` | `power_svc.c`, `sys_fsm.c` | serviço de energia e máquina de sistema |
+| `src/svc/power/` | `power_svc.c`, `sys_fsm.c`, `battery.c` | serviço de energia, máquina de sistema, bateria fraca e crítica |
 | `src/svc/gnss/` | `gnss_svc.c` | receptor pela API GNSS do Zephyr |
 | `src/svc/sensors/` | `sensors_svc.c`, `tilt.c` | sensores pela API de sensores; inclinação, rumo e rugosidade |
 | `src/svc/radio/` | `radio_svc.c` | ANT e BLE, clientes para eventos |
@@ -249,7 +262,7 @@ flowchart LR
 | `src/model/` | `attitude`, `kalman_altitude`, `udmatrix`, `kalman`, `locator`, `loc_source`, `segment`, `liste_points`, `vecteur`, `parcours`, `power_zone`, `suffer_score`, `rr_zone`, `sd_logger`, `crash_recovery`, `user_settings`, `power_scheduler` | os algoritmos do legacy |
 | `src/rf/` | `ble/ble_manager.c`, `ble_nus.c`, `ble_lns.c`, `ble_*_client.c`, `ant/ant.c` | BLE (scan ainda não iniciado) e ANT (só com `ANT=1`) |
 | `src/ui/`, `include/ui/` | interface LVGL da placa nova ([18](18-interface-telas.md)) | a mesma no firmware e no renderizador de host (`tests/ui`) |
-| `modules/gnss_drivers/` | `drivers/display/memlcd.c`, `memlcd_frame.c`, `include/drivers/display/memlcd*.h`, `dts/bindings/display/` | driver da tela, um módulo do Zephyr dentro da aplicação ([Tela](#tela)) |
+| `modules/gnss_drivers/` | `drivers/display/memlcd.c`, `memlcd_frame.c`, `include/drivers/display/memlcd*.h`, `drivers/fuel_gauge/max17262.c`, `include/drivers/fuel_gauge/max17262_regs.h`, `dts/bindings/` | drivers próprios num módulo do Zephyr dentro da aplicação: a tela ([Tela](#tela)) e o medidor MAX17262 ([Medidor de bateria](#medidor-de-bateria)) |
 
 Saíram em 2026-09-19, substituídos pelas APIs do Zephyr ou pelos serviços: o HAL próprio (`src/hal`), os drivers da V3 (`ls027`, `baro`, `fxos`, `stc3100`, `gps_mgmt`, `nmea_parser`, `gps_epo`, `neopixel`), a interface em paisagem (`src/vue`), a USB da pilha antiga (`src/usb`), os stubs do sistema de arquivos (`src/utils`), o `boucle`, o `model_lock`, o `zwift` (protocolo próprio, não o do legacy) e o `baro_drift` (duplicado).
 
@@ -270,6 +283,7 @@ A placa vem do `-b` (variável `BOARD` dos scripts); o Zephyr aplica `boards/<pl
 | `zephyr,display` | interface | JDI LPM027M128B (`jdi,lpm027m128b`) no `spi22` (SCK P3.03, MOSI P3.00, CS P3.02 ativo alto), DISP P3.05, EXTCOMIN P3.06 | Sharp LS027B7DH01 (`sharp,ls027b7dh01`) no `spi1` (SCK P0.15, MOSI P0.16, CS P0.17 ativo alto), VCOM serial |
 | rótulo `longpress` | interface | botões 0, 1 e 2 do DK (`INPUT_KEY_0` a `INPUT_KEY_2`) | B1 P0.14, B2 P0.13, B3 P0.11 (`INPUT_KEY_LEFT`, `ENTER`, `RIGHT`) |
 | `backlight` | interface | LED 1 do DK no `pwm20`, no lugar da luz da tela | — (a V3 não tem luz) |
+| `fuel-gauge0` | energia | MAX17262 (`adi,max17262`) em 0x36 no `i2c24` (SDA P1.11, SCL P1.12, os pinos das amostras da Nordic para o nPM1300 EK) | — (o STC3100 não tem driver no Zephyr) |
 
 - O nRF52840 DK não tem leitura de bateria: o STC3100 da V3 não tem driver no Zephyr. A V3 existe só como esquema.
 - Os três botões são `gpio-keys` com códigos de tecla; o nó `longpress` (`zephyr,input-longpress`, 1 s) gera o toque curto (esquerda, `ENTER`, direita) ao soltar e o longo (`HOME`, `MENU`, `END`) depois de 1 s apertado. Os nós falsos de `gpio-keys` que davam nomes a pinos do GPS, do IMU e do NeoPixel saíram, porque o subsistema de entrada os trataria como teclas.
@@ -283,7 +297,7 @@ A placa vem do `-b` (variável `BOARD` dos scripts); o Zephyr aplica `boards/<pl
 
 | Arquivo | O que define |
 |---|---|
-| `prj.conf` | zbus e SMF, `task_wdt` com 8 canais, `CONFIG_POWEROFF`, GNSS com satélites e o workqueue próprio do modem, sensores, tela e LVGL (RGB565, pool de 32 KB, buffer de desenho de 10 % a 16 bits, só os formatos RGB565 e A8 no renderizador, sem log, sem temas e só rótulos, como `tests/ui/lv_conf.h`), entrada com a thread de 2048 B, workqueue do sistema de 2048 B, FatFs com nomes longos em buffer estático, BLE central e periférico (4 conexões, RX do BT com 3072 B), settings em NVS, log por UART, `CONFIG_RESET_ON_FATAL_ERROR`, otimização de tamanho |
+| `prj.conf` | zbus e SMF, `task_wdt` com 8 canais, `CONFIG_POWEROFF`, a API de fuel gauge, GNSS com satélites e o workqueue próprio do modem, sensores, tela e LVGL (RGB565, pool de 32 KB, buffer de desenho de 10 % a 16 bits, só os formatos RGB565 e A8 no renderizador, sem log, sem temas e só rótulos, como `tests/ui/lv_conf.h`), entrada com a thread de 2048 B, workqueue do sistema de 2048 B, FatFs com nomes longos em buffer estático, BLE central e periférico (4 conexões, RX do BT com 3072 B), settings em NVS, log por UART, `CONFIG_RESET_ON_FATAL_ERROR`, otimização de tamanho |
 | `boards/*.conf` | o ZMS e o PWM da luz no nRF54LM20 |
 | `sysbuild.conf` | `SB_CONFIG_PARTITION_MANAGER=n` |
 | `CMakeLists.txt` | fontes por camada, o módulo `modules/gnss_drivers` por `EXTRA_ZEPHYR_MODULES`, `-Wall -Wextra` |

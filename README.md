@@ -100,7 +100,7 @@ bash tools/fw/fw.sh build          # compila o zephyr_app (sysbuild) para o nRF5
 bash tools/fw/fw.sh flash          # grava no DK pelo J-Link
 BOARD=nrf54lm20dk/nrf54lm20a/cpuapp BUILD_DIR=zephyr_app/build_54 bash tools/fw/fw.sh build
 ANT=1 bash tools/fw/fw.sh build pristine   # com a pilha ANT do sdk-ant
-bash tools/fw/host_tests.sh        # 10 conjuntos de testes de host
+bash tools/fw/host_tests.sh        # 12 conjuntos de testes de host
 python tools/ui/render_screens.py  # desenha as 29 telas no PC (docs/telas)
 python tools/docs/mermaid_check.py # valida os diagramas da documentação
 ```

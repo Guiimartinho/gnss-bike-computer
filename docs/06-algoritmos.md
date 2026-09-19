@@ -126,7 +126,8 @@ Legacy (`legacy/source/model/Locator.cpp:111-134`): a simulada (`$LOC`) vence e 
 ## Bateria
 
 - Legacy (`libraries/utils/utils.c:290-312`, `percentageBatt`): compensa a queda na resistência interna (0,273 Ω) e usa um polinômio cúbico entre 3,78 e 4,2 V e `10^−11,4·V^22,315` entre 3,2 e 3,78 V.
-- Port: linear entre 3,3 e 4,2 V.
+- Port (placa nova): a carga é o `RepSOC` do MAX17262 (ModelGauge m5 EZ: modelo da célula mais contagem de carga), lido pela API de fuel gauge do Zephyr com o driver próprio de `zephyr_app/modules/gnss_drivers` (as unidades da ficha, tabela 2, em `max17262_regs.h`, com `test_max17262`). O medidor declara 0 % na tensão de vazio (`VEmpty`, 3,3 V, o valor de fábrica). Sem medidor (o alvo da V3, cujo STC3100 não tem driver no Zephyr), a tela não mostra bateria.
+- Bateria fraca e crítica (`src/svc/power/battery.c`, `test_battery`), novas: o legacy não tem regra de bateria baixa. Uma notificação ao chegar a 10 % descarregando, outra só depois de subir a 15 %; a 0 % descarregando, a máquina de sistema grava e desliga. Carregando (VBUS ou corrente média positiva, como a do painel), nunca é crítica.
 - STC3100 (os dois): V = raw·2,44 mV, I = raw·11,77 µV/Rs, Q = raw·6,7 µVh/Rs, T = raw·0,125 °C, com Rs = 100 mΩ no código. O esquema da V3 mostra R15 = 20 mΩ: se for esse o valor montado, corrente e carga ficam 5 vezes menores que o real.
 
 ## Formatação dos números

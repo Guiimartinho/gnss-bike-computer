@@ -8,11 +8,18 @@
  * power-off, the mode in force. When the machine turns the device off, the
  * nPM1300 enters ship mode (alias pmic-regulators); with VBUS present, or on
  * a board without the PMIC, the MCU enters System OFF.
+ *
+ * Every POWER_GAUGE_PERIOD_MS it reads the fuel gauge of the alias
+ * fuel-gauge0 (the MAX17262 of the new board) through the Zephyr fuel gauge
+ * API: voltage, average current, charge, temperature and time to empty go
+ * to power_status; battery.c turns the charge into the low-battery
+ * notification and the critical event of the system machine.
  */
 
 #include <string.h>
 
 #include <zephyr/device.h>
+#include <zephyr/drivers/fuel_gauge.h>
 #include <zephyr/drivers/regulator.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
@@ -22,23 +29,37 @@
 
 #include "app/app_channels.h"
 #include "app/app_svc.h"
+#include "svc/battery.h"
 #include "svc/sys_fsm.h"
 
 LOG_MODULE_REGISTER(power_svc, CONFIG_LOG_DEFAULT_LEVEL);
 
 /*
- * A state change publishes on zbus and logs (about 0.8 KB); the power-off
- * flushes the log with LOG_PANIC in this thread (about 0.75 KB).
+ * The critical battery runs the system machine from the gauge reading into a
+ * zbus publication with a log (about 1.1 KB measured with CONFIG_STACK_USAGE);
+ * the gauge read over I2C takes about 0.3 KB and the power-off flushes the
+ * log with LOG_PANIC (about 0.75 KB).
  */
-#define POWER_STACK_SIZE        2048
+#define POWER_STACK_SIZE        3072
 #define POWER_INBOX_LEN         16
 /** power_status is published at least this often (docs/16, Eventos) */
 #define POWER_STATUS_PERIOD_MS  60000U
+/** The fuel gauge is read this often; a change on screen publishes at once */
+#define POWER_GAUGE_PERIOD_MS   10000U
+/** Tenths of a kelvin at 0 degC, the fuel gauge API unit */
+#define POWER_DECI_KELVIN_0C    2732
 
 /** Services that take part in the shutdown: all of them */
 #define POWER_ACK_MASK          ((1UL << APP_SVC_COUNT) - 1UL)
 
 #define PMIC_REGULATORS         DT_ALIAS(pmic_regulators)
+#define FUEL_GAUGE              DT_ALIAS(fuel_gauge0)
+
+#if DT_NODE_HAS_STATUS_OKAY(FUEL_GAUGE) && defined(CONFIG_FUEL_GAUGE)
+static const struct device *const gauge = DEVICE_DT_GET(FUEL_GAUGE);
+#else
+static const struct device *const gauge = NULL;
+#endif
 
 enum power_msg_kind {
     PM_CMD = 0,
@@ -58,6 +79,8 @@ K_MSGQ_DEFINE(power_inbox, sizeof(struct power_msg), POWER_INBOX_LEN, 4);
 
 static struct sys_fsm fsm;
 static struct app_power_status status;
+static struct app_power_status published;
+static battery_t battery;
 
 /* Only what the machine uses enters the inbox */
 static void power_listener(const struct zbus_channel *chan)
@@ -155,7 +178,89 @@ static const struct sys_fsm_ops fsm_ops = {
 
 static void publish_status(void)
 {
+    published = status;
     (void)app_publish(&chan_power_status, &status);
+}
+
+/** What the screens show changed since the last publication */
+static bool status_changed(void)
+{
+    int32_t dmv = (int32_t)status.mv - (int32_t)published.mv;
+
+    return (status.gauge != published.gauge) || (status.pct != published.pct) ||
+           (status.charge != published.charge) || (status.vbus != published.vbus) ||
+           (status.critical != published.critical) || (dmv > 20) || (dmv < -20);
+}
+
+/** Tenths of a kelvin to whole degrees Celsius, rounded */
+static int8_t celsius(uint16_t deci_kelvin)
+{
+    int32_t tenths = (int32_t)deci_kelvin - POWER_DECI_KELVIN_0C;
+
+    return (int8_t)((tenths >= 0) ? ((tenths + 5) / 10) : ((tenths - 5) / 10));
+}
+
+static void on_battery_event(battery_event_t ev)
+{
+    if (ev == BATTERY_EV_LOW) {
+        LOG_WRN("battery low: %u %%", status.pct);
+        app_notify("Bateria", "Carga baixa", "10%", false, 0U);
+    } else if (ev == BATTERY_EV_CRITICAL) {
+        LOG_WRN("battery at its end");
+        app_notify("Bateria", "No fim: desligando", "0%", false, 0U);
+        sys_fsm_event(&fsm, SYS_EV_BATT_CRITICAL, 0);
+    } else {
+        /* nothing to say */
+    }
+}
+
+/**
+ * Read the fuel gauge into the status. A gauge that stops answering keeps the
+ * last values and clears status.gauge, so the screens show no battery data.
+ */
+static void read_gauge(void)
+{
+    static const fuel_gauge_prop_t props[] = {
+        FUEL_GAUGE_VOLTAGE,
+        FUEL_GAUGE_AVG_CURRENT,
+        FUEL_GAUGE_RELATIVE_STATE_OF_CHARGE,
+        FUEL_GAUGE_TEMPERATURE,
+        FUEL_GAUGE_RUNTIME_TO_EMPTY,
+    };
+    union fuel_gauge_prop_val vals[ARRAY_SIZE(props)];
+    battery_reading_t reading;
+    int32_t ma;
+
+    if ((gauge == NULL) || !device_is_ready(gauge)) {
+        status.gauge = false;
+        return;
+    }
+    if (fuel_gauge_get_props(gauge, props, vals, ARRAY_SIZE(props)) != 0) {
+        if (status.gauge) {
+            LOG_WRN("fuel gauge not answering");
+        }
+        status.gauge = false;
+        return;
+    }
+    ma = vals[1].avg_current / 1000;
+    status.gauge = true;
+    status.mv = (uint16_t)CLAMP(vals[0].voltage / 1000, 0, UINT16_MAX);
+    status.ma = (int16_t)CLAMP(ma, INT16_MIN, INT16_MAX);
+    status.pct = vals[2].relative_state_of_charge;
+    status.temp_c = celsius(vals[3].temperature);
+    /* hours left while discharging; unknown or charging shows nothing */
+    if ((vals[4].runtime_to_empty == UINT32_MAX) || (vals[1].avg_current >= 0)) {
+        status.autonomy_h = 0U;
+    } else {
+        status.autonomy_h = (uint16_t)MIN(vals[4].runtime_to_empty / 60U, (uint32_t)UINT16_MAX);
+    }
+    reading.pct = status.pct;
+    reading.avg_ua = vals[1].avg_current;
+    reading.vbus = status.vbus;
+    battery_event_t ev = battery_update(&battery, &reading);
+
+    status.critical = battery.critical;
+    on_battery_event(ev);
 }
 
 static void power_thread(void *p1, void *p2, void *p3)
@@ -166,9 +271,15 @@ static void power_thread(void *p1, void *p2, void *p3)
 
     struct power_msg msg;
     uint32_t last_status_ms = k_uptime_get_32();
+    uint32_t last_gauge_ms = last_status_ms;
 
     sys_fsm_init(&fsm, &fsm_ops, POWER_ACK_MASK);
+    battery_init(&battery);
     (void)memset(&status, 0, sizeof(status));
+    if (gauge == NULL) {
+        LOG_INF("no fuel gauge (alias fuel-gauge0): no battery readings");
+    }
+    read_gauge();
     publish_status();
 
     int wdt = app_wdt_add("power");
@@ -200,7 +311,12 @@ static void power_thread(void *p1, void *p2, void *p3)
         } else {
             sys_fsm_event(&fsm, SYS_EV_TICK, 0);
         }
-        if ((k_uptime_get_32() - last_status_ms) >= POWER_STATUS_PERIOD_MS) {
+        if ((k_uptime_get_32() - last_gauge_ms) >= POWER_GAUGE_PERIOD_MS) {
+            read_gauge();
+            last_gauge_ms = k_uptime_get_32();
+        }
+        if (status_changed() ||
+            ((k_uptime_get_32() - last_status_ms) >= POWER_STATUS_PERIOD_MS)) {
             publish_status();
             last_status_ms = k_uptime_get_32();
         }

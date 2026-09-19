@@ -1,0 +1,21 @@
+# SPDX-License-Identifier: Apache-2.0
+
+config GNSS_FUEL_GAUGE_MAX17262
+	bool "MAX17262 fuel gauge (adi,max17262)"
+	default y
+	depends on DT_HAS_ADI_MAX17262_ENABLED
+	depends on FUEL_GAUGE
+	select I2C
+	help
+	  MAX17262 fuel gauge by the Zephyr fuel gauge API, with the
+	  ModelGauge m5 EZ configuration and the register units of its
+	  datasheet (the driver of the Zephyr tree, maxim,max17262, gets
+	  them wrong).
+
+if GNSS_FUEL_GAUGE_MAX17262
+
+module = GNSS_FUEL_GAUGE_MAX17262
+module-str = max17262
+source "subsys/logging/Kconfig.template.log_config"
+
+endif
