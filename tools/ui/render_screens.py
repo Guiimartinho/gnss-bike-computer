@@ -5,8 +5,8 @@ runs ui_render, which draws every screen of docs/18-interface-telas.md with samp
 panel colours, labels out of their boxes and the key navigation, then turns the PPM frames into PNG
 files and contact sheets.
 
-Usage: python tools/ui/render_screens.py [--build-dir DIR] [--sheets DIR] [--no-build]
-       (defaults: build/ui and docs/img/telas-lvgl)
+Usage: python tools/ui/render_screens.py [--build-dir DIR] [--sheets DIR] [--screens DIR] [--no-build]
+       (defaults: build/ui, docs/img/telas-lvgl and docs/telas)
 Exit status 1 when the build or a check fails.
 """
 import argparse
@@ -106,6 +106,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--build-dir", default=str(ROOT / "build" / "ui"))
     ap.add_argument("--sheets", default=str(ROOT / "docs" / "img" / "telas-lvgl"))
+    ap.add_argument("--screens", default=str(ROOT / "docs" / "telas"),
+                    help="folder that receives one PNG per screen and theme")
     ap.add_argument("--no-build", action="store_true")
     args = ap.parse_args()
 
@@ -120,8 +122,12 @@ def main():
     exe = build / ("ui_render.exe" if sys.platform == "win32" else "ui_render")
     status = run([str(exe), str(out)])
 
+    screens = pathlib.Path(args.screens)
+    screens.mkdir(parents=True, exist_ok=True)
     for ppm in sorted(out.glob("*.ppm")):
-        Image.open(ppm).save(ppm.with_suffix(".png"), optimize=True)
+        png = ppm.with_suffix(".png")
+        Image.open(ppm).save(png, optimize=True)
+        shutil.copyfile(png, screens / png.name)
 
     sheets = pathlib.Path(args.sheets)
     sheets.mkdir(parents=True, exist_ok=True)

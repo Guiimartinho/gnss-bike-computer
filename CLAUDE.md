@@ -170,6 +170,7 @@ flowchart LR
 | Arquitetura do firmware e máquinas de estado da placa nova | [docs/16-arquitetura-firmware.md](docs/16-arquitetura-firmware.md) |
 | Dispositivos BLE e ANT+ | [docs/17-dispositivos-ble-ant.md](docs/17-dispositivos-ble-ant.md) |
 | Interface e telas da placa nova | [docs/18-interface-telas.md](docs/18-interface-telas.md) |
+| As 29 telas, uma a uma | [docs/telas/README.md](docs/telas/README.md) |
 | Lista de compras da placa nova | [docs/19-lista-de-compras.md](docs/19-lista-de-compras.md) |
 | Build e ambiente | [docs/03-ambiente-build.md](docs/03-ambiente-build.md) |
 | Legacy | [docs/04-arquitetura-legacy.md](docs/04-arquitetura-legacy.md), [legacy/README.md](legacy/README.md) |

@@ -70,7 +70,7 @@ python tools/ui/render_screens.py --no-build   # pula o CMake e usa o ui_render 
 | `zephyr_app/tests/ui/CMakeLists.txt` | o LVGL do NCS (`C:/ncs/v3.3.0/modules/lib/gui/lvgl`, ou a variável `NCS_LVGL`) com o `lv_conf.h` da pasta, e a interface de `src/ui` com `-Werror` |
 | `zephyr_app/tests/ui/ui_samples.c` | dados de exemplo: pedal com 0, 1 e 2 segmentos, GNSS procurando, rolo, sensores e percursos |
 | `zephyr_app/tests/ui/ui_render.c` | monta cada tela, desenha num quadro RGB565 de 240 × 400, quantiza como o painel e grava PPM; confere cores, textos e navegação; mede o heap do LVGL |
-| `tools/ui/render_screens.py` | CMake, `ui_render`, PPM para PNG e as folhas por grupo e tema |
+| `tools/ui/render_screens.py` | CMake, `ui_render`, PPM para PNG, as folhas por grupo e tema e uma imagem por tela e tema em `docs/telas/` |
 | `tools/ui/font_gen.py` | as fontes de 1 bit de `zephyr_app/src/ui/fonts` (DejaVu Sans, sem suavização) |
 
 - O `ui_render` sai com erro quando aparece cor no tema preto e branco, quando um texto sai da caixa, quando a navegação não chega à tela esperada ou quando uma ação não sai.

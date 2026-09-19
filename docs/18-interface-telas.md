@@ -144,7 +144,7 @@ No tema preto e branco, cada papel vira preto sobre branco (ou branco sobre pret
 
 ## Telas
 
-Todas no tamanho da tela, 240 × 400. As que o legacy tem mantêm o conteúdo e o arranjo; as marcadas "nova" vêm do hardware novo. Em cada seção, a primeira imagem é o tema de 8 cores e a segunda o preto e branco.
+Todas no tamanho da tela, 240 × 400. As que o legacy tem mantêm o conteúdo e o arranjo; as marcadas "nova" vêm do hardware novo. Em cada seção, a primeira imagem é o tema de 8 cores e a segunda o preto e branco. Cada tela em tamanho real, com o que mostra campo a campo, está em [telas/](telas/README.md).
 
 ### Ciclismo (CRS)
 
