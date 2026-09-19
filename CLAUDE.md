@@ -62,7 +62,7 @@ flowchart TB
     ZA --> ZS["src/ e include/<br/>app · svc (serviços) · model · rf · ui"]
     ZA --> ZB["boards/&lt;placa&gt;.overlay e .conf<br/>nRF52840 DK (pinos da V3) e nRF54LM20 DK"]
     ZA --> ZT["tests/host/<br/>Unity + CTest, shims e falsos<br/>tests/ui/: renderizador de telas"]
-    ZA --> ZC["CMakeLists.txt · prj.conf · ant.conf · sysbuild.conf<br/>modules/ant_ncs33_compat"]
+    ZA --> ZC["CMakeLists.txt · prj.conf · ant.conf · sysbuild.conf<br/>modules/ant_ncs33_compat · modules/gnss_drivers"]
     ROOT --> LEG["legacy/ · libraries/<br/>stravaV10 original"]
     ROOT --> TOOLS["tools/fw · tools/docs · tools/ui<br/>tools/TDD · TDDW · zpm · MMD · jumper"]
     ROOT --> DOCS["docs/01 a 19 · img · historico"]
@@ -83,8 +83,7 @@ flowchart TB
 | Placas conectadas | `bash tools/fw/fw.sh devices` |
 | Memória e maiores símbolos | `bash tools/fw/fw.sh size` |
 | Testes de host | `bash tools/fw/host_tests.sh` (10 conjuntos, 95 casos) |
-| Telas no PC (LVGL, PNG em `docs/telas`) | `python tools/ui/render_screens.py` |
-| Telas da interface no PC (LVGL) | `python tools/ui/render_screens.py` (29 telas em 2 temas, gera `docs/img/telas-lvgl/`) |
+| Telas da interface no PC (LVGL) | `python tools/ui/render_screens.py` (29 telas em 2 temas, gera `docs/img/telas-lvgl/` e `docs/telas/`) |
 | Diagramas e links da documentação | `python tools/docs/mermaid_check.py` e `python tools/docs/links_check.py` |
 | Ambiente do NCS no shell | `source tools/fw/ncs_env.sh` |
 
@@ -104,7 +103,7 @@ flowchart LR
     A["1 · base de execução<br/>feito: serviços, zbus, SMF, watchdog, auto-off<br/>falta: board própria (nRF54LM20A)"] --> B["2 · fidelidade<br/>Kalman, potência,<br/>distância, FDIR"]
     B --> C["3 · armazenamento<br/>SD, formatos, segmentos"]
     C --> D["4 · rádio<br/>BLE central, ANT+"]
-    D --> E["5 · interface<br/>feito: telas LVGL no PC<br/>falta: driver, thread, botões"]
+    D --> E["5 · interface<br/>feito: telas LVGL, driver da tela,<br/>thread, teclas e luz<br/>falta: mapa e segmentos, painel"]
     E --> F["6 · comandos e USB"]
     F --> G["7 · extras<br/>Komoot, LNS, EPO, WS2812"]
 ```
