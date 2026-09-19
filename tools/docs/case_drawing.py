@@ -1,7 +1,8 @@
 """Draw the proposed device of docs/13-placa-nova.md as an SVG (front, side, back and layout).
 
-Concept drawing from the printed V3 case: JDI color memory LCD, solar modules on the angled front
-facet and on the side chamfers, GNSS antennas on the top wall. Geometry is in millimetres, scaled
+Concept drawing from the printed V3 case: memory LCD (the render shows the JDI 8-colour option; the
+shopping list buys the Sharp mono with a front light for the same connector), solar modules on the
+angled front facet and on the side chamfers, GNSS antennas on the top wall. Geometry is in millimetres, scaled
 by S px/mm.
 
 Usage: python tools/docs/case_drawing.py [output.svg]   (default: docs/img/placa-nova-caixa.svg)
@@ -153,7 +154,7 @@ add("""<defs>
 add(f'<rect width="{CANVAS_W}" height="{CANVAS_H}" fill="#f3f1ec"/>')
 label(40, 52, "GNSS Bike Computer · proposta da placa nova", 30, "#1d1d1f", weight=700)
 label(40, 82, "Conceito em escala (6 px por mm), a partir da caixa impressa da V3 (docs/img/front1.png): "
-      "JDI LPM027M128C colorido, painéis solares na frente inclinada e nos chanfros laterais. Medidas em mm.", 16, "#555")
+      "tela na opção JDI de 8 cores, painéis solares na frente inclinada e nos chanfros laterais. Medidas em mm.", 16, "#555")
 
 # ======================= FRONT (render) =====================================
 fv = View(70, 150)
@@ -321,16 +322,16 @@ for sx, sy in ((6.5, 12.5), (55.5, 12.5), (6.5, 91.5), (55.5, 91.5)):
     bv.line(sx - 0.8, sy, sx + 0.8, sy, stroke="#0b0c0d", stroke_width=1.2)
     bv.line(sx, sy - 0.8, sx, sy + 0.8, stroke="#0b0c0d", stroke_width=1.2)
 # seen from the back the device's left side is on the right: microSD door there, low;
-# USB-C with rubber flap in the middle of the bottom edge
+# IPX8 USB-C in the middle of the bottom edge, sealed by its ring, no flap
 bv.rect(W - 1.6, 71.0, 3.2, 16.0, 1.2, fill="#232428", stroke="#46494e", stroke_width=1)
-bv.rect(25.0, H - 1.8, 12.0, 3.6, 1.2, fill="#232428", stroke="#46494e", stroke_width=1)
+bv.rect(26.2, H - 1.4, 9.6, 2.8, 1.2, fill="none", stroke="#46494e", stroke_width=1)
 bv.rect(27.4, H - 0.9, 7.2, 1.8, 0.8, fill="#050505")
 bv.text(31, 70.0, "GNSS BIKE COMPUTER", 2.0, "#3a3c41", "middle", 700, letter_spacing="1")
 label(bv.X(W / 2), bv.Y(H) + 58, "Traseira", 18, "#1d1d1f", "middle", 700)
 # callouts for the back
 label(bv.X(W) + 14, bv.Y(78.0), "tampa do", 13, "#555")
 label(bv.X(W) + 14, bv.Y(78.0) + 16, "microSD", 13, "#555")
-label(bv.X(W / 2), bv.Y(H) + 26, "USB-C com tampa, na base", 13, "#555", "middle")
+label(bv.X(W / 2), bv.Y(H) + 26, "USB-C IPX8 na base, sem tampa", 13, "#555", "middle")
 
 # ======================= X-RAY (component layout) ==========================
 xv = View(1230, 150)
@@ -353,10 +354,10 @@ xv.line(6.0, 1.3, 28.5, 1.3, stroke="#ff9800", stroke_width=5, stroke_linecap="r
 xv.line(33.5, 1.3, 56.0, 1.3, stroke="#e65100", stroke_width=5, stroke_linecap="round")      # L5
 xv.circle(27.0, 3.3, 0.7, fill="#ff9800")
 xv.circle(35.0, 3.3, 0.7, fill="#e65100")
-# BM20C module (BLE + ANT): antenna end in the bottom-right corner, opposite the GNSS and outside
-# the panel area
-xv.rect(48.5, 76.5, 10.0, 14.8, 0.6, fill="#ffcdd2", stroke="#c62828", stroke_width=1.2)
-xv.rect(48.5, 88.3, 10.0, 6.4, 0.5, fill="url(#hatch)", stroke="#c62828", stroke_width=1)
+# BM20C module (BLE + ANT), 10.0 x 16.2 mm: the last 5.5 mm are the antenna area, in the
+# bottom-right corner, opposite the GNSS and outside the panel area, with a copper-free zone
+xv.rect(48.5, 75.1, 10.0, 16.2, 0.6, fill="#ffcdd2", stroke="#c62828", stroke_width=1.2)
+xv.rect(48.5, 85.8, 10.0, 8.9, 0.5, fill="url(#hatch)", stroke="#c62828", stroke_width=1)
 # display FPC to the left, away from the antennas
 xv.rect(7.2, 33.0, 3.4, 10.0, 0.4, fill="#b0bec5", stroke="#455a64", stroke_width=1)
 # microSD low on the left side (door on the left wall)
@@ -404,7 +405,7 @@ items = [
     ("6", "LiPo 2000 mAh 36 × 60 × 7 mm, atrás da placa"),
     ("7", "USB-C na base, nPM1300 e MAX17262"),
     ("8", "AEM10900 e conectores dos painéis"),
-    ("9", "LSM6DSV16X e LIS2MDL"),
+    ("9", "BMI270 e MMC5633NJL"),
     ("10", "LED RGB em cima (como na V3), OPT3001"),
     ("", "embaixo à esquerda, longe das antenas"),
     ("11", "buzzer piezo"),
@@ -427,7 +428,8 @@ y += 30
 facts = [
     "62 × 104 × 19 mm, mais 3 mm do encaixe;",
     "a V3 tem cerca de 60 × 85 mm",
-    "tela JDI 2,7\" 400 × 240, 8 cores, 3,0 V",
+    "tela Sharp 2,7\" 400 × 240 com luz frontal;",
+    "a imagem mostra a opção JDI de 8 cores",
     "6 módulos solares de 3 células, 23 × 8 mm",
     "(11 cm² de células), todos em paralelo;",
     "cada um dá cerca de 2 V; o AEM10900 carrega",

@@ -34,7 +34,7 @@ Conferidos no NCS v3.3.0 local (`C:\ncs\v3.3.0`, Zephyr 4.3.99).
 | GNSS | `zephyr/include/zephyr/drivers/gnss.h` | posição por `GNSS_DATA_CALLBACK_DEFINE` (graus em nanograus, velocidade em mm/s) e satélites por `CONFIG_GNSS_SATELLITES`; os callbacks rodam no workqueue do modem; não há driver do M10 nesta versão |
 | BLE | `CONFIG_BT_MAX_CONN`, clientes do NCS em `nrf/subsys/bluetooth/services` | o NCS traz clientes de FC (`hrs_client`), bateria, NUS e hora; **CSC, CPS, LNS e FTMS não têm cliente pronto**: o port mantém os seus, sobre o `BT_GATT_DM` |
 | Energia | drivers `npm13xx` (mfd, regulador, carregador, GPIO, LED, watchdog), `maxim,max17262`, `sys_poweroff()` | o carregador expõe estado, erro e VBUS como canais de sensor; o nRF54L não tem PM de sistema, só PM de dispositivo e o System OFF |
-| Sensores | `bosch,bmp581`, `st,lsm6dsv16x`, `st,lis2mdl`, `ti,opt3001` | o BMP581 lê por RTIO e só avisa dado pronto no modo de stream (pede o pino de interrupção); a fusão do LSM6DSV16X (vetor de gravidade) sai só pela FIFO; o LSM6DSV16X lê o LIS2MDL pelo sensor hub; o OPT3001 fica em modo contínuo, sem limiares |
+| Sensores | `bosch,bmp581`, `bosch,bmi270`, `memsic,mmc56x3`, `ti,opt3001`; `st,lsm6dsv16x` para o IMU alternativo | o BMP581 lê por RTIO e só avisa dado pronto no modo de stream (pede o pino de interrupção); o BMI270 carrega um arquivo de configuração na partida e dá gatilhos de dado pronto e de movimento, mas o de movimento pede a configuração `base` (8 KB, compatível extra `bosch,bmi270-base`, sem exemplo no NCS) em vez da `max_fifo` padrão (328 bytes); o BMI270 não tem fusão, e a inclinação sai do acelerômetro, como no legacy; com o LSM6DSV16X no mesmo footprint, o devicetree declara os dois e o firmware usa o que `device_is_ready()` aceitar; o MMC5633NJL fica no mesmo I2C, e o firmware nunca varre o barramento (o endereço 0x7E o põe em I3C); o OPT3001 fica em modo contínuo, sem limiares |
 | Watchdog | `CONFIG_TASK_WDT` | 5 canais por padrão: com 6 threads da aplicação, `CONFIG_TASK_WDT_CHANNELS` sobe para 8; o `wdt31` vem desligado no dtsi do SoC, e o overlay do port o liga |
 
 ## Camadas
@@ -54,7 +54,7 @@ flowchart TB
     subgraph SVC["serviços"]
         PWR["energia<br/>nPM1300, AEM10900, MAX17262"]
         GNS["GNSS<br/>u-blox por UBX"]
-        SNS["sensores<br/>BMP585, LSM6DSV16X, LIS2MDL, OPT3001"]
+        SNS["sensores<br/>BMP585, BMI270, MMC5633NJL, OPT3001"]
         RAD["rádio<br/>BLE e ANT+"]
         STO["armazenamento<br/>FatFs e comandos"]
         CFG["configurações<br/>ZMS"]
@@ -78,7 +78,7 @@ As camadas só se falam para baixo por chamada e para cima por evento: um servi�
 |---|---|---|---|
 | Energia | ligar e desligar, ship mode, trilhos, carga pelo USB e pelo painel, estado de carga, desligamento automático, botão de ligar | estado da bateria e da carga, pedido de desligar | nPM1300, AEM10900, MAX17262 |
 | GNSS | configuração por UBX, modos LEAP e potência plena, AssistNow, backup, reinício por falta de dado | uma posição por época (NAV-PVT), satélites | u-blox MAX-M10N-10B pelo TXU0204 |
-| Sensores | barômetro a 10 Hz (como o legacy), IMU por FIFO, magnetômetro, luz ambiente | amostras filtradas | BMP585, LSM6DSV16X, LIS2MDL, OPT3001 |
+| Sensores | barômetro a 10 Hz (como o legacy), IMU por FIFO, magnetômetro, luz ambiente | amostras filtradas | BMP585, BMI270, MMC5633NJL, OPT3001 |
 | Rádio | BLE central (sensores e celular), ANT+ (HRM, BSC, FE-C), pareamento, religação | dados de cada sensor, estado de cada ligação | nRF54LM20A |
 | Armazenamento | FatFs, formatos do legacy, lotes de gravação, carga de segmentos e percursos, modo MSC, comandos `$LOC`, `$DWN`, `$QRY` | resultados de carga, estado do cartão | SD NAND ou microSD no `spi00` |
 | Configurações | FTP, peso, sensores pareados, campos das telas, calibração do magnetômetro | mudanças de configuração | ZMS no RRAM |
@@ -125,7 +125,7 @@ O zbus passa mensagens por canais com cópia: quem publica não espera quem lê,
 flowchart LR
     GNSSM["MAX-M10N-10B"] -->|"NAV-PVT"| GS["serviço GNSS"]
     BARO["BMP585"] --> SS["serviço de sensores"]
-    IMU["LSM6DSV16X e LIS2MDL"] --> SS
+    IMU["BMI270 e MMC5633NJL"] --> SS
     EXT["sensores BLE e ANT+"] --> RS["serviço de rádio"]
     PHONE["celular"] --> RS
     GS -->|"gnss_fix"| MOD["modelo<br/>boucle do modo"]
@@ -137,7 +137,7 @@ flowchart LR
     PS["serviço de energia"] -->|"power_status"| UI
     PS -->|"power_status"| MOD
     ST --> FS[("FatFs no SD")]
-    UI --> LCD["JDI LPM027M128C"]
+    UI --> LCD["Sharp LS027B7DH01A<br/>ou JDI LPM027M128C"]
 ```
 
 ## Máquinas de estado
@@ -177,7 +177,7 @@ stateDiagram-v2
     end note
     note right of CarregandoDesligado
         o nPM1300 não entra em ship mode com VBUS
-        MCU em System OFF, só o BUCK1 ligado
+        MCU em System OFF, só o BUCK2 (3V0) ligado
         acorda pelo GPIO3 quando o VBUS some
     end note
 ```
@@ -209,7 +209,7 @@ stateDiagram-v2
 ```
 
 - A troca repete o legacy: libera a espera, invalida o modo antigo e inicia o novo sob demanda (`legacy/source/model/Boucle.cpp:101-143`).
-- O GNSS segue o modo: acorda em CRS e PRC (`legacy/source/model/BoucleCRS.cpp:38`) e dorme em FEC e Zwift (`legacy/source/model/BoucleFEC.cpp:45`). No u-blox, dormir é mandar `UBX-RXM-PMREQ` e desligar o BUCK2, com o backup mantido.
+- O GNSS segue o modo: acorda em CRS e PRC (`legacy/source/model/BoucleCRS.cpp:38`) e dorme em FEC e Zwift (`legacy/source/model/BoucleFEC.cpp:45`). No u-blox, dormir é mandar `UBX-RXM-PMREQ` e desligar o BUCK1, com o backup mantido.
 - O MSC fica na máquina de sistema, porque desmonta o FatFs e para o modelo.
 
 ### Gravação
@@ -244,11 +244,11 @@ stateDiagram-v2
     Plena --> Backup: modo FEC ou Zwift, desligar
     Adquirindo --> Backup: modo FEC ou Zwift, desligar
     note right of LEAP
-        13,5 mW, 1 Hz
+        13,7 mW, 1 Hz
         sem depender do TIMEPULSE
     end note
     note right of Backup
-        UBX-RXM-PMREQ, depois o BUCK2 desligado
+        UBX-RXM-PMREQ, depois o BUCK1 desligado
         V_BCKP pelo TPS7A02
     end note
 ```
@@ -340,7 +340,7 @@ stateDiagram-v2
     Temporaria --> Automatica: pouca luz
 ```
 
-Nova: a V3 não tem luz. O OPT3001 decide "pouca luz", com histerese para não piscar; limite, tempo e brilho (PWM) se ajustam na bancada. Com a luz acesa, a ficha do JDI pede o COM perto de 60 Hz; como o COM é metade do EXTCOMIN (até 70 e 140 Hz na ficha), o EXTCOMIN vai a cerca de 120 Hz, e volta a 1 Hz com a luz apagada.
+Nova: a V3 não tem luz. O OPT3001 decide "pouca luz", com histerese para não piscar; limite, tempo e brilho (PWM) se ajustam na bancada. Com a luz acesa, a ficha do JDI pede o COM perto de 60 Hz; como o COM é metade do EXTCOMIN (até 70 e 140 Hz na ficha), o EXTCOMIN vai a cerca de 120 Hz, e volta a 1 Hz com a luz apagada. Na Sharp da [lista de compras](19-lista-de-compras.md#display), a luz é o filme frontal da Azumo (10 mA), alimentado pela LDSW2 em 3,3 V; a frequência do EXTCOMIN com a luz acesa se acerta na bancada, dentro da faixa da ficha da Sharp.
 
 ## Partida e desligamento
 
@@ -353,12 +353,12 @@ sequenceDiagram
     participant G as GNSS
     participant R as rádio
     participant M as modelo e interface
-    P->>B: SHPHLD ou VBUS, BUCK1 a 3,0 V pelo VSET1
+    P->>B: SHPHLD ou VBUS, BUCK2 a 3,0 V pelo VSET2
     B->>E: aplicação válida
     E->>E: causa do reset, limites do nPM1300, MAX17262, AEM10900 por I2C
     E->>S: ZMS e FatFs
     S->>M: tela inicial e notificação de falha anterior
-    E->>G: BUCK2, configuração UBX, LEAP
+    E->>G: BUCK1, configuração UBX, LEAP
     E->>R: BLE e ANT, religação dos sensores salvos
     E->>M: modo CRS e páginas
 ```
@@ -376,7 +376,7 @@ sequenceDiagram
     E->>M: parar o ciclo
     M->>S: último lote e estado do FDIR
     S->>S: fechar arquivos e desmontar
-    E->>G: UBX-RXM-PMREQ, depois BUCK2 desligado
+    E->>G: UBX-RXM-PMREQ, depois BUCK1 desligado
     E->>R: fechar canais ANT e ligações BLE
     E->>U: limpar a tela e DISP baixo
     E->>E: AEM10900 de volta aos pinos
@@ -392,7 +392,7 @@ sequenceDiagram
 
 ## Energia por estado
 
-| Estado | MCU | BUCK1 3V0 | BUCK2 1V8 | LDSW1 | GNSS | Rádio | Tela | Consumo |
+| Estado | MCU | 3V0 (BUCK2) | 1V8 (BUCK1) | LDSW1 | GNSS | Rádio | Tela | Consumo |
 |---|---|---|---|---|---|---|---|---|
 | Desligado | sem alimentação | desligado | desligado | desligado | backup | desligado | desligada | cerca de 40 µA ([14](14-hardware-placa-nova.md#estados-de-energia)) |
 | Carregando desligado | System OFF | ligado | desligado | desligado | backup | desligado | desligada | do USB |
@@ -440,8 +440,8 @@ O que o legacy usa e o que o `sdk-ant` oferece estão em [07](07-radio-ant-ble.m
 | `display` a cada 50 ms, lendo o modelo sob `model_lock()` | thread `ui` com LVGL, lendo a cópia do `model_state` |
 | `hal_gpio`, `hal_i2c`, `hal_spi`, `hal_uart` | drivers do Zephyr direto, pelo devicetree |
 | `gps_mgmt`, `nmea_parser`, `gps_epo` (MediaTek) | serviço GNSS por UBX, com AssistNow no lugar do EPO |
-| `ls027` | driver do JDI e LVGL; o Sharp no mesmo conector |
-| BME280, FXOS8700, STC3100 | BMP585, LSM6DSV16X e LIS2MDL, MAX17262 e nPM1300 |
+| `ls027` | driver próprio e LVGL, para a Sharp da lista de compras e para o JDI no mesmo conector |
+| BME280, FXOS8700, STC3100 | BMP585, BMI270 e MMC5633NJL, MAX17262 e nPM1300 |
 | `power_scheduler` pelo STC3100 | máquina de sistema no serviço de energia, ship mode do nPM1300 |
 | `neopixel` (WS2812) | `pwm-leds` com o LED RGB |
 | `user_settings` | ZMS, sem mudança |

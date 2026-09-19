@@ -54,23 +54,23 @@ flowchart LR
 
 ![Proposta do aparelho: frente, lateral direita, traseira e arranjo interno](docs/img/placa-nova-caixa.svg)
 
-Conceito em escala, a partir da caixa da V3: 62 × 104 × 19 mm, PCB de 55 × 97 mm em 4 camadas, 6 módulos solares na frente inclinada e nos chanfros laterais. A escolha de cada componente, com os números dos datasheets, está em [docs/15-avaliacao-componentes.md](docs/15-avaliacao-componentes.md).
+Conceito em escala, a partir da caixa da V3: 62 × 104 × 19 mm, PCB de 55 × 97 mm em 4 camadas, 6 módulos solares na frente inclinada e nos chanfros laterais. A escolha de cada componente, com os números dos datasheets, está em [docs/15-avaliacao-componentes.md](docs/15-avaliacao-componentes.md); a lista de compras, validada peça a peça, em [docs/19-lista-de-compras.md](docs/19-lista-de-compras.md).
 
 ```mermaid
 flowchart LR
     MCU["Fanstel BM20C<br/>nRF54LM20A, BLE e ANT+"]
-    GNSS2["u-blox MAX-M10N-10B<br/>13,5 mW em LEAP"] -->|UART| MCU
-    LCD2["JDI LPM027M128C<br/>MIP de 8 cores"] ---|SPI| MCU
+    GNSS2["u-blox MAX-M10N-10B<br/>13,7 mW em LEAP"] -->|UART| MCU
+    LCD2["Sharp LS027B7DH01A com luz<br/>ou JDI de 8 cores"] ---|SPI| MCU
     PWR["nPM1300, AEM10900, MAX17262<br/>USB-C e painel solar"] -.->|I2C| MCU
-    SENS2["BMP585, LSM6DSV16X,<br/>LIS2MDL, OPT3001"] -->|I2C| MCU
+    SENS2["BMP585, BMI270,<br/>MMC5633NJL, OPT3001"] -->|I2C| MCU
     MEM["SD NAND"] ---|SPI| MCU
 ```
 
 | Bloco | Escolha | Por quê |
 |---|---|---|
 | Carga | nPM1300 no USB-C, AEM10900 no painel, MAX17262 na célula | o painel carrega com o aparelho desligado e corte térmico próprio; o USB bloqueia a carga solar no hardware |
-| GNSS | u-blox MAX-M10N-10B, com o MAX-F10S (L1 + L5) no mesmo footprint | o aparelho gasta cerca de 21 mW contra 58 mW com o F10S: cerca de 320 h sem sol, e o painel cobre o consumo num pedal de sol (estimativa) |
-| Tela | JDI LPM027M128C, com o Sharp LS027B7DH01 previsto no mesmo conector | cor e 30 µW a 1 quadro/s; o Sharp cobre o risco de compra do JDI |
+| GNSS | u-blox MAX-M10N-10B, com o MAX-F10S (L1 + L5) no mesmo footprint | o aparelho gasta cerca de 21 mW contra 58 mW com o F10S: cerca de 310 h sem sol, e o painel cobre o consumo num pedal de sol (estimativa) |
+| Tela | Sharp LS027B7DH01A com luz frontal; o JDI LPM027M128C de 8 cores no mesmo conector | o JDI não tem canal autorizado de compra; a Sharp tem estoque e já roda no port |
 | USB e armazenamento | USB-C IPX8 e SD NAND soldado | caixa sem tampas e sem cartão solto na vibração |
 
 ## Funcionalidades
@@ -144,6 +144,7 @@ flowchart TB
 | [16 · Arquitetura do firmware](docs/16-arquitetura-firmware.md) | arquitetura-alvo e máquinas de estado para a placa nova |
 | [17 · Dispositivos BLE e ANT+](docs/17-dispositivos-ble-ant.md) | catálogo de sensores e acessórios, prioridades e limites do rádio |
 | [18 · Interface e telas](docs/18-interface-telas.md) | LVGL, paleta de 8 cores e maquetes de todas as telas da placa nova |
+| [19 · Lista de compras](docs/19-lista-de-compras.md) | peças validadas em duas passagens, trocas, correções de integração e códigos da DigiKey |
 | [CHANGELOG](CHANGELOG.md) | histórico de mudanças |
 
 ## Estado e próximos passos

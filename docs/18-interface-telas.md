@@ -18,9 +18,9 @@ Interface gráfica do firmware da placa nova: a tela, o framework de desenho, a 
 | Consumo | 5 µW parada e 30 µW atualizando a tela toda a 1 Hz em 3 bits (141 µW no máximo) | ficha, seção 4.1 |
 | COM | de 0,5 a 70 Hz; perto de 60 Hz com a luz acesa; o EXTCOMIN vai de 1 a 140 Hz | ficha, seção 4.2 |
 | Luz | 16 mA na versão C | [14](14-hardware-placa-nova.md#componentes-principais) |
-| Plano B | Sharp LS027B7DH01 no mesmo conector, monocromático | [15](15-avaliacao-componentes.md#display) |
+| Tela da lista de compras | Sharp LS027B7DH01A no mesmo conector, monocromática, com o filme de luz frontal da Azumo (10 mA): o JDI não tem canal autorizado de compra | [19](19-lista-de-compras.md#display) |
 
-Por causa do plano B, **nenhuma informação depende só da cor**: à frente ou atrás do recorde leva o sinal (+ ou −), a zona leva o número, o sensor perdido leva a palavra. No Sharp, as cores viram preto e branco e a interface continua completa.
+Como a tela comprável é a Sharp, **nenhuma informação depende só da cor**: à frente ou atrás do recorde leva o sinal (+ ou −), a zona leva o número, o sensor perdido leva a palavra. Na Sharp, as cores viram preto e branco e a interface continua completa; as maquetes mostram a versão de 8 cores, a do JDI.
 
 ## Framework
 
@@ -150,7 +150,7 @@ Os três botões e as funções do legacy ([08](08-interface.md#botões)), com o
 
 - **Ritmo:** a tela redesenha a cada época do GNSS (1 Hz) ou a cada dado do rolo, e na hora quando um botão é apertado. Só as linhas físicas que mudaram vão para a tela.
 - **Retrato:** montada em retrato, cada coluna da interface é uma linha física do painel, como na V3 ([08](08-interface.md#pipeline-de-desenho)). Um valor que muda na coluna da esquerda reescreve as linhas físicas dessa coluna.
-- **COM:** EXTCOMIN a 1 Hz com a luz apagada; com a luz acesa, cerca de 120 Hz, para o COM ficar perto dos 60 Hz que a ficha pede no modo transmissivo.
+- **COM:** EXTCOMIN a 1 Hz com a luz apagada; com a luz acesa, no JDI, cerca de 120 Hz, para o COM ficar perto dos 60 Hz que a ficha pede no modo transmissivo; na Sharp com o filme frontal, a frequência se acerta na bancada, dentro da faixa da ficha.
 - **Luz:** a máquina de estado de [16](16-arquitetura-firmware.md#luz-do-display): acende 10 s depois de um botão e fica acesa com pouca luz ambiente (OPT3001), com brilho por PWM; limites na bancada.
 - **Contraste:** fundo branco nas páginas de dados; preto só na barra de estado, nas faixas de notificação e na seleção.
 

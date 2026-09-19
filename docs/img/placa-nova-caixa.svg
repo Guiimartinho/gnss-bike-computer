@@ -45,7 +45,7 @@
 </defs>
 <rect width="2100" height="1000" fill="#f3f1ec"/>
 <text x="40" y="52" font-size="30" fill="#1d1d1f" text-anchor="start" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">GNSS Bike Computer · proposta da placa nova</text>
-<text x="40" y="82" font-size="16" fill="#555" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">Conceito em escala (6 px por mm), a partir da caixa impressa da V3 (docs/img/front1.png): JDI LPM027M128C colorido, painéis solares na frente inclinada e nos chanfros laterais. Medidas em mm.</text>
+<text x="40" y="82" font-size="16" fill="#555" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">Conceito em escala (6 px por mm), a partir da caixa impressa da V3 (docs/img/front1.png): tela na opção JDI de 8 cores, painéis solares na frente inclinada e nos chanfros laterais. Medidas em mm.</text>
 <g filter="url(#shadow)">
 <rect x="70" y="150" width="372" height="624" rx="42" ry="42" fill="url(#caseGrad)"/>
 </g>
@@ -196,13 +196,13 @@
 <line x1="1088.2" y1="699" x2="1097.8" y2="699" stroke="#0b0c0d" stroke-width="1.2"/>
 <line x1="1093" y1="694.2" x2="1093" y2="703.8" stroke="#0b0c0d" stroke-width="1.2"/>
 <rect x="1122.4" y="576" width="19.2" height="96" rx="7.2" ry="7.2" fill="#232428" stroke="#46494e" stroke-width="1"/>
-<rect x="910" y="763.2" width="72" height="21.6" rx="7.2" ry="7.2" fill="#232428" stroke="#46494e" stroke-width="1"/>
+<rect x="917.2" y="765.6" width="57.6" height="16.8" rx="7.2" ry="7.2" fill="none" stroke="#46494e" stroke-width="1"/>
 <rect x="924.4" y="768.6" width="43.2" height="10.8" rx="4.8" ry="4.8" fill="#050505"/>
 <text x="946" y="570" font-size="12" fill="#3a3c41" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" letter-spacing="1">GNSS BIKE COMPUTER</text>
 <text x="946" y="832" font-size="18" fill="#1d1d1f" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">Traseira</text>
 <text x="1146" y="618" font-size="13" fill="#555" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">tampa do</text>
 <text x="1146" y="634" font-size="13" fill="#555" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">microSD</text>
-<text x="946" y="800" font-size="13" fill="#555" text-anchor="middle" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">USB-C com tampa, na base</text>
+<text x="946" y="800" font-size="13" fill="#555" text-anchor="middle" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">USB-C IPX8 na base, sem tampa</text>
 <rect x="1230" y="150" width="372" height="624" rx="42" ry="42" fill="#e9edf1" stroke="#1d1d1f" stroke-width="1.6"/>
 <rect x="1251" y="171" width="330" height="582" rx="18" ry="18" fill="#cfe6d1" stroke="#2e7d32" stroke-width="1.4"/>
 <rect x="1308" y="306" width="216" height="360" rx="12" ry="12" fill="#ffe0b2" fill-opacity="0.55" stroke="#ef6c00" stroke-width="1.5" stroke-dasharray="8 5"/>
@@ -219,8 +219,8 @@
 <line x1="1431" y1="157.8" x2="1566" y2="157.8" stroke="#e65100" stroke-width="5" stroke-linecap="round"/>
 <circle cx="1392" cy="169.8" r="4.2" fill="#ff9800"/>
 <circle cx="1440" cy="169.8" r="4.2" fill="#e65100"/>
-<rect x="1521" y="609" width="60" height="88.8" rx="3.6" ry="3.6" fill="#ffcdd2" stroke="#c62828" stroke-width="1.2"/>
-<rect x="1521" y="679.8" width="60" height="38.4" rx="3" ry="3" fill="url(#hatch)" stroke="#c62828" stroke-width="1"/>
+<rect x="1521" y="600.6" width="60" height="97.2" rx="3.6" ry="3.6" fill="#ffcdd2" stroke="#c62828" stroke-width="1.2"/>
+<rect x="1521" y="664.8" width="60" height="53.4" rx="3" ry="3" fill="url(#hatch)" stroke="#c62828" stroke-width="1"/>
 <rect x="1273.2" y="348" width="20.4" height="60" rx="2.4" ry="2.4" fill="#b0bec5" stroke="#455a64" stroke-width="1"/>
 <rect x="1252.8" y="576" width="84" height="90" rx="4.8" ry="4.8" fill="#e1bee7" stroke="#6a1b9a" stroke-width="1.2"/>
 <rect x="1389" y="742.8" width="54" height="21.6" rx="7.2" ry="7.2" fill="#bbdefb" stroke="#0d47a1" stroke-width="1.2"/>
@@ -302,7 +302,7 @@
 <text x="1688" y="400" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">AEM10900 e conectores dos painéis</text>
 <circle cx="1670" cy="419" r="10" fill="#1d1d1f"/>
 <text x="1670" y="424" font-size="12" fill="#fff" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">9</text>
-<text x="1688" y="424" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">LSM6DSV16X e LIS2MDL</text>
+<text x="1688" y="424" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">BMI270 e MMC5633NJL</text>
 <circle cx="1670" cy="443" r="10" fill="#1d1d1f"/>
 <text x="1670" y="448" font-size="12" fill="#fff" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">10</text>
 <text x="1688" y="448" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">LED RGB em cima (como na V3), OPT3001</text>
@@ -324,14 +324,15 @@
 <text x="1660" y="656" font-size="19" fill="#1d1d1f" text-anchor="start" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">Medidas e escolhas</text>
 <text x="1660" y="686" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">62 × 104 × 19 mm, mais 3 mm do encaixe;</text>
 <text x="1660" y="708" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">a V3 tem cerca de 60 × 85 mm</text>
-<text x="1660" y="730" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">tela JDI 2,7" 400 × 240, 8 cores, 3,0 V</text>
-<text x="1660" y="752" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">6 módulos solares de 3 células, 23 × 8 mm</text>
-<text x="1660" y="774" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">(11 cm² de células), todos em paralelo;</text>
-<text x="1660" y="796" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">cada um dá cerca de 2 V; o AEM10900 carrega</text>
-<text x="1660" y="818" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">a LiPo até 3,9 V e o USB, até 4,2 V; os 3,0 V</text>
-<text x="1660" y="840" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">e 1,8 V saem do nPM1300</text>
-<text x="1660" y="862" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">USB-C IPX8 sem tampa, respiro com</text>
-<text x="1660" y="884" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">membrana</text>
-<text x="1660" y="920" font-size="14" fill="#b71c1c" text-anchor="start" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">Conceito para discutir: não há</text>
-<text x="1660" y="940" font-size="14" fill="#b71c1c" text-anchor="start" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">projeto mecânico nem layout ainda.</text>
+<text x="1660" y="730" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">tela Sharp 2,7" 400 × 240 com luz frontal;</text>
+<text x="1660" y="752" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">a imagem mostra a opção JDI de 8 cores</text>
+<text x="1660" y="774" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">6 módulos solares de 3 células, 23 × 8 mm</text>
+<text x="1660" y="796" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">(11 cm² de células), todos em paralelo;</text>
+<text x="1660" y="818" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">cada um dá cerca de 2 V; o AEM10900 carrega</text>
+<text x="1660" y="840" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">a LiPo até 3,9 V e o USB, até 4,2 V; os 3,0 V</text>
+<text x="1660" y="862" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">e 1,8 V saem do nPM1300</text>
+<text x="1660" y="884" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">USB-C IPX8 sem tampa, respiro com</text>
+<text x="1660" y="906" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">membrana</text>
+<text x="1660" y="942" font-size="14" fill="#b71c1c" text-anchor="start" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">Conceito para discutir: não há</text>
+<text x="1660" y="962" font-size="14" fill="#b71c1c" text-anchor="start" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">projeto mecânico nem layout ainda.</text>
 </svg>

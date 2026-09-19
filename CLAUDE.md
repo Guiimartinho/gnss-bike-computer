@@ -65,7 +65,7 @@ flowchart TB
     ZA --> ZC["CMakeLists.txt · prj.conf · ant.conf · sysbuild.conf<br/>modules/ant_ncs33_compat"]
     ROOT --> LEG["legacy/ · libraries/<br/>stravaV10 original"]
     ROOT --> TOOLS["tools/fw · tools/docs<br/>tools/TDD · TDDW · zpm · MMD · jumper"]
-    ROOT --> DOCS["docs/01 a 18 · img · historico"]
+    ROOT --> DOCS["docs/01 a 19 · img · historico"]
     ROOT --> HW["hardware/"]
     ROOT --> AI["CLAUDE.md · AGENTS.md · .claude/skills/"]
     ROOT --> BAT["*.bat da raiz"]
@@ -107,7 +107,7 @@ flowchart LR
 ```
 
 - **Decidido em 2026-09-18:** ANT+ **e** BLE (os equipamentos externos são ANT+), pelo add-on `sdk-ant` v2.1.1 **sobre o NCS v3.3.0** (obrigatório; build com `ANT=1`); **board própria** com o **nRF54LM20A** e esquemático próprio (GNSS, bateria e display melhores, painel solar pequeno na caixa); tela retangular no formato do legacy (2,7", em retrato); CI desligado; um commit por item verificado, na `develop`. Detalhes em [`docs/10-status-do-port.md`](docs/10-status-do-port.md#decisões-do-dono).
-- **Em aberto:** aprovação dos componentes da placa nova (proposta em [`docs/13-placa-nova.md`](docs/13-placa-nova.md), especificação em [`docs/14-hardware-placa-nova.md`](docs/14-hardware-placa-nova.md), avaliação em [`docs/15-avaliacao-componentes.md`](docs/15-avaliacao-componentes.md): GNSS MAX-M10N-10B e carga dupla com o USB bloqueando o solar, a confirmar na bancada), hardware de teste (nRF54LM20 DK e placas de avaliação), formatos no SD, licença do port (o legacy é CC BY-NC 4.0).
+- **Em aberto:** aprovação dos componentes da placa nova (proposta em [`docs/13-placa-nova.md`](docs/13-placa-nova.md), especificação em [`docs/14-hardware-placa-nova.md`](docs/14-hardware-placa-nova.md), avaliação em [`docs/15-avaliacao-componentes.md`](docs/15-avaliacao-componentes.md) e lista de compras validada em [`docs/19-lista-de-compras.md`](docs/19-lista-de-compras.md): GNSS MAX-M10N-10B e carga dupla com o USB bloqueando o solar, a confirmar na bancada; a tela colorida, porque o JDI não tem canal autorizado de compra e a lista usa a Sharp com luz frontal), hardware de teste (nRF54LM20 DK e placas de avaliação), formatos no SD, licença do port (o legacy é CC BY-NC 4.0).
 
 ## 6. Armadilhas conhecidas
 
@@ -166,6 +166,7 @@ flowchart LR
 | Arquitetura do firmware e máquinas de estado da placa nova | [docs/16-arquitetura-firmware.md](docs/16-arquitetura-firmware.md) |
 | Dispositivos BLE e ANT+ | [docs/17-dispositivos-ble-ant.md](docs/17-dispositivos-ble-ant.md) |
 | Interface e telas da placa nova | [docs/18-interface-telas.md](docs/18-interface-telas.md) |
+| Lista de compras da placa nova | [docs/19-lista-de-compras.md](docs/19-lista-de-compras.md) |
 | Build e ambiente | [docs/03-ambiente-build.md](docs/03-ambiente-build.md) |
 | Legacy | [docs/04-arquitetura-legacy.md](docs/04-arquitetura-legacy.md), [legacy/README.md](legacy/README.md) |
 | Port | [docs/05-arquitetura-zephyr.md](docs/05-arquitetura-zephyr.md) |
