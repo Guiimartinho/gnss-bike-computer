@@ -29,6 +29,7 @@ flowchart TB
     subgraph RF["rf/"]
         BLE["ble_manager · ble_nus · ble_lns"]
         CLI["clientes HRS · CSC · FTMS · Komoot"]
+        ANTN["ant (só com ANT=1)"]
     end
     subgraph DRV["drivers/"]
         GPS["gps_mgmt · nmea_parser · gps_epo"]
@@ -103,7 +104,7 @@ O `task_wdt` do Zephyr dá a cada thread o seu canal de 4 s, o mesmo tempo do WD
 
 - `CONFIG_TASK_WDT_MIN_TIMEOUT=4000`, igual aos canais: o timer do kernel não acorda a CPU a cada 100 ms só para alimentar o WDT.
 - O WDT roda durante o sono e pausa com a CPU parada pelo depurador (`WDT_OPT_PAUSE_HALTED_BY_DBG`). O timer do kernel não pausa: depois de um breakpoint longo o `task_wdt` reinicia a placa. Para depurar passo a passo, compile com `-DCONFIG_TASK_WDT=n`.
-- O WDT do nRF52 só para com reset por pino, por energia, por brownout ou do próprio WDT. Depois de um `sys_reboot()` (erro fatal, `task_wdt`) ele continua contando: o `main()` o alimenta (`wdt_feed_if_running()`) entre as etapas da inicialização, até as threads criarem os canais.
+- O WDT do nRF52 só para com reset por pino, por energia, por brownout ou do próprio WDT. Depois de um `sys_reboot()` (erro fatal, `task_wdt`) ele continua contando: o `main()` o alimenta (`wdt_feed_if_running()`) entre as etapas da inicialização, até as threads criarem os canais. O WDT alimentado é o `watchdog0` do devicetree (`wdt0` no nRF52840, `wdt31` no nRF54LM20), então o mesmo código serve às duas famílias.
 - A carga dos segmentos na partida da `main_loop` não está coberta pelo canal dela, porque pode passar de 4 s com muitos arquivos no SD.
 - Não testado na placa.
 
@@ -164,6 +165,7 @@ find build_su/CMakeFiles/app.dir -name "*.su" -exec cat {} + | sort -t$'\t' -k2 
 | `src/model/` | `parcours` | parcial (`load`/`start` sem chamador) |
 | `src/model/` | `loc_source`, `baro_drift`, `rr_zone`, `zwift` | não (descartados pelo linker) |
 | `src/rf/` | `ble/ble_manager.c`, `ble_nus.c`, `ble_lns.c`, `ble_*_client.c` | parcial (scan nunca iniciado) |
+| `src/rf/ant/` | `ant.c` (`rf_ant_init()`, pilha do `sdk-ant`) | só com `ANT=1` |
 | `src/vue/` | `vue.c` | sim |
 | `src/vue/` | `menu.c`, `vue_fec.c`, `vue_crs.c` | não |
 | `src/usb/` | `usb_cdc.c`, `usb_msc.c` | fora do `CMakeLists.txt` |
@@ -172,18 +174,38 @@ find build_su/CMakeFiles/app.dir -name "*.su" -exec cat {} + | sort -t$'\t' -k2 
 
 ## Devicetree e alvo
 
-O build usa a placa `nrf52840dk/nrf52840` com o overlay `boards/nrf52840_strava.overlay`, que aplica os pinos da placa myStravaB V3. O `CMakeLists.txt` fixa `BOARD` e `DTC_OVERLAY_FILE`; por isso o `boards/nrf52840dk_nrf52840.overlay` (console USB CDC) **não é usado**.
+O build usa a placa `nrf52840dk/nrf52840` com o overlay `boards/nrf52840dk_nrf52840.overlay`, que aplica os pinos da placa myStravaB V3 e que o Zephyr acha pelo nome da placa. A placa vem do `-b` (variável `BOARD` dos scripts); o `CMakeLists.txt` não fixa nenhuma.
 
-| Periférico | Instância | Pinos | Observação |
+| Periférico | Alias no código | Instância | Pinos | Observação |
+|---|---|---|---|---|
+| I2C dos sensores | `sensor-i2c` | `i2c0` (TWI) 400 kHz | SDA P1.00, SCL P1.01 | BME280 0x76, FXOS8700 0x1E, STC3100 0x70 |
+| GPS | `gps-uart` | `uart1` 9600 | TX P0.05, RX P0.07 | reset P0.03 e standby P1.15 ativos baixos; FIX P1.14 |
+| LCD | `lcd-spi` | `spi1` 2 MHz | SCK P0.15, MOSI P0.16, CS P0.17 (ativo alto) | driver próprio `ls027.c` |
+| SD | `sdc-spi` | `spi2` 8 MHz | MOSI P0.25, CS P0.26, SCK P0.27, MISO P0.28 | nó `sdhc-spi-slot` presente, FS desligado |
+| Console | `zephyr,console` | `uart0` 115200 | TX P0.06, RX P0.08 | pinos sem conexão na placa real: log só no DK |
+| Botões | `sw0`, `sw1`, `sw2` | GPIO | P0.14, P0.13, P0.11 | ativos baixos com pull-up |
+
+O código chega aos barramentos só pelos aliases da tabela e aos pinos pelos rótulos da aplicação (`gps_reset`, `gps_stdby`, `gps_fix`, `imu_int1`, `imu_reset`, `neo_data`, `baro`, `fxos`, `led0`): uma placa nova só precisa definir esses nomes no overlay dela, sem mexer no C.
+
+Nós do DK desligados no overlay da V3 porque ocupam pinos da placa: `qspi` e `mx25r64`, `spi3`, `pwm0`; o `uart0` perdeu RTS/CTS. Detalhes e divergências em [02-hardware.md](02-hardware.md).
+
+### nRF54LM20 DK
+
+Alvo de desenvolvimento da placa própria (nRF54LM20A); o DK traz o nRF54LM20B, a mesma peça com NPU. Ele não tem os periféricos da myStravaB: o overlay `boards/nrf54lm20dk_nrf54lm20a_cpuapp.overlay` só dá à aplicação os nomes de que ela precisa, em pinos livres do conector de expansão, respeitando os domínios do nRF54L (blocos seriais 20 a 24 nas portas P1 e P3, `spi00` na P2).
+
+| Periférico | Alias no código | Instância | Pinos |
 |---|---|---|---|
-| I2C dos sensores | `i2c0` (TWI) 400 kHz | SDA P1.00, SCL P1.01 | BME280 0x76, FXOS8700 0x1E, STC3100 0x70 |
-| GPS | `uart1` 9600 | TX P0.05, RX P0.07 | reset P0.03 e standby P1.15 ativos baixos; FIX P1.14 |
-| LCD | `spi1` 2 MHz | SCK P0.15, MOSI P0.16, CS P0.17 (ativo alto) | driver próprio `ls027.c` |
-| SD | `spi2` 8 MHz | MOSI P0.25, CS P0.26, SCK P0.27, MISO P0.28 | nó `sdhc-spi-slot` presente, FS desligado |
-| Console | `uart0` 115200 | TX P0.06, RX P0.08 | pinos sem conexão na placa real: log só no DK |
-| Botões | GPIO | P0.14, P0.13, P0.11 | ativos baixos com pull-up |
+| GPS | `gps-uart` | `uart21` 9600 | TX P1.04, RX P1.05; reset P1.06, standby P1.07, FIX P1.13 |
+| I2C dos sensores | `sensor-i2c` | `i2c23` 400 kHz | SDA P1.02, SCL P1.03; INT1 do IMU P3.04, RST P3.05 |
+| LCD | `lcd-spi` | `spi22` 2 MHz | SCK P3.03, MOSI P3.00, CS P3.02 (ativo alto) |
+| SD | `sdc-spi` | `spi00` 8 MHz | SCK P2.01, MOSI P2.02, MISO P2.04, CS P2.03 (a flash MX25R64 do DK, no mesmo barramento, sai do devicetree) |
+| Console | `zephyr,console` | `uart20` 115200 | VCOM0 do DK |
+| Botões e LED | `sw0`–`sw2`, `led0` | GPIO | os do DK: P1.26, P1.09, P1.08; LED P1.22 |
+| Watchdog | `watchdog0` | `wdt31` | ligado no overlay (o DK o deixa desligado) |
 
-Nós do DK desligados no overlay porque ocupam pinos da placa: `qspi` e `mx25r64`, `spi3`, `pwm0`; o `uart0` perdeu RTS/CTS. Detalhes e divergências em [02-hardware.md](02-hardware.md).
+- `boards/nrf54lm20dk_nrf54lm20a_cpuapp.conf` troca o NVS pelo ZMS: a NVM do nRF54L é RRAM, e a Nordic recomenda o ZMS nela; as configurações e os bonds usam o backend `SETTINGS_ZMS` sem mudança no código.
+- Build: `BOARD=nrf54lm20dk/nrf54lm20a/cpuapp bash tools/fw/fw.sh build`; gravar com a mesma `BOARD` (o `nrfutil` recebe `--family nrf54l`).
+- Nada disso rodou num DK: é build verificado, não teste em placa.
 
 ## Configuração
 

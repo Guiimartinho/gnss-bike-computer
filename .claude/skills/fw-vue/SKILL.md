@@ -12,7 +12,7 @@ Referência: `docs/08-interface.md` (telas do legacy, imagens em `docs/img/`, es
 - LS027B7DH01, 400 × 240, 1 bit, sem backlight, CS ativo alto, SPI a 2 MHz LSB primeiro.
 - Buffer de 12.482 B: `[comando][endereço][50 B][dummy] × 240 + [dummy]`; bit 0 = pixel da esquerda; mesmo layout no legacy e no port.
 - VCOM precisa alternar: o port manda o comando a cada 1 s (`ls027_toggle_vcom()`); o legacy alterna o bit M1 a cada quadro.
-- **O aparelho é retrato** (240 de largura × 400 de altura): o legacy usa `setRotation(3)` e `drawPixel(x, y)` → físico `(y, 239 − x)`. O port desenha em paisagem, e `transform_coords` do `ls027.c` tem as contas de retrato erradas.
+- **O aparelho é retrato** (240 de largura × 400 de altura; decisão do dono em 2026-09-18, também para o display colorido da placa nova): o legacy usa `setRotation(3)` e `drawPixel(x, y)` → físico `(y, 239 − x)`. O port desenha em paisagem, e `transform_coords` do `ls027.c` tem as contas de retrato erradas.
 
 ## Regras
 

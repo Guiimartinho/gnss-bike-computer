@@ -33,7 +33,7 @@ LOG_MODULE_REGISTER(hal_uart, CONFIG_LOG_DEFAULT_LEVEL);
  * ========================================================================== */
 
 /* UART1 - GPS */
-static const struct device *uart_gps_dev = DEVICE_DT_GET(DT_NODELABEL(uart1));
+static const struct device *uart_gps_dev = DEVICE_DT_GET(DT_ALIAS(gps_uart));
 
 /* ==========================================================================
  * Private Variables

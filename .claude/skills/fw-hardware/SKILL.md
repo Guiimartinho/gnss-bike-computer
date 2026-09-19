@@ -1,6 +1,6 @@
 ---
 name: fw-hardware
-description: Trabalhar com a placa myStravaB V3 e o devicetree do port Zephyr do GNSS Bike Computer - pinagem das revisões v1/v2/v3, overlay nrf52840_strava.overlay sobre o nRF52840-DK, polaridades de GPIO, nós do DK que colidem com a placa, alimentação e latch pelo STC3100, esquema e placa Eagle. Use ao mexer em zephyr_app/boards/, em pinos, em GPIO, ao criar uma board própria ou ao investigar comportamento elétrico.
+description: Trabalhar com a placa myStravaB V3 e o devicetree do port Zephyr do GNSS Bike Computer - pinagem das revisões v1/v2/v3, overlay nrf52840dk_nrf52840.overlay sobre o nRF52840-DK, polaridades de GPIO, nós do DK que colidem com a placa, alimentação e latch pelo STC3100, esquema e placa Eagle. Use ao mexer em zephyr_app/boards/, em pinos, em GPIO, ao criar uma board própria ou ao investigar comportamento elétrico.
 ---
 
 # Placa e devicetree
@@ -30,7 +30,8 @@ Referência completa: `docs/02-hardware.md`. Fonte de verdade da pinagem: `hardw
 3. **Pinctrl herdado do DK**: um grupo do DK pode deixar propriedades (`bias-pull-up`) no seu grupo; use `/delete-property/`. O `uart0` do console ficou só com TX/RX.
 4. **Sensores com driver nativo** (BME280, FXOS8700): configure pelo devicetree e pelo Kconfig do driver, não por registradores no app. O `reset-gpios` do FXOS garante o reset antes do `main()`.
 5. **Sem binding** (`st,stc3100`): o nó é aceito e ignorado; o driver próprio acessa pelo `hal_i2c`.
-6. Depois de mexer: build, `grep` no `zephyr.dts` gerado para cada pino alterado e registro em `docs/02-hardware.md`.
+6. **O código não cita instâncias do SoC** (`uart1`, `i2c0`, `spi1`): usa os aliases `gps-uart`, `sensor-i2c`, `lcd-spi`, `sdc-spi`, `sw0`–`sw2`, `led0` e os rótulos da aplicação (`gps_reset`, `gps_stdby`, `gps_fix`, `imu_int1`, `imu_reset`, `neo_data`, `baro`, `fxos`). Cada placa define esses nomes no overlay dela.
+7. Depois de mexer: build, `grep` no `zephyr.dts` gerado para cada pino alterado e registro em `docs/02-hardware.md`.
 
 ## Alimentação e latch
 
@@ -41,11 +42,12 @@ Referência completa: `docs/02-hardware.md`. Fonte de verdade da pinagem: `hardw
 
 ## Board própria
 
-**Decidido em 2026-09-18: o produto terá board própria com MCU da Nordic** (candidatos: nRF52840, nRF54LM20, nRF54L15, nRF5340; comparação em `docs/02-hardware.md#próxima-placa`; o nRF54L15 não tem USB).
+**Decidido em 2026-09-18: o produto terá board própria com o nRF54LM20A** e esquemático próprio (GNSS, bateria e display melhores, display colorido de 2,7", painel solar pequeno na caixa). A V3 existe só como esquema: não há placa física para testar. Comparação dos MCUs em `docs/02-hardware.md#próxima-placa`; a proposta de componentes (display, GNSS e antena, energia e painel solar, sensores, pinos) está em `docs/13-placa-nova.md`, a especificação (trilhos, lista de materiais, endereços I2C, pinos, PCB de 55 × 97 mm e empilhamento) em `docs/14-hardware-placa-nova.md`, e a avaliação que escolheu cada componente (carga por USB-C e painel solar, GNSS MAX-M10N-10B, display com o Sharp como plano B no mesmo conector) em `docs/15-avaliacao-componentes.md`.
 
-- Enquanto o MCU não é escolhido, o alvo é o DK com o overlay da V3.
+- Enquanto a placa própria não existe, há dois alvos: o nRF52840-DK com o overlay da V3 e o nRF54LM20 DK (`nrf54lm20dk/nrf54lm20a/cpuapp`, com `boards/nrf54lm20dk_nrf54lm20a_cpuapp.overlay` e `.conf`; o DK vem com o nRF54LM20B, igual ao A mais a NPU). Mudança no devicetree ou no Kconfig compila nos dois.
+- Ao portar para o nRF54L: UARTE, SPIM e TWIM têm outras instâncias (`uart20`, `uart21`, `spi00`, `i2c22`...), o tempo vem do GRTC, a NVM é RRAM (settings no ZMS, não no NVS), o WDT é `wdt30`/`wdt31`, a causa do reset fica no periférico RESET e não há QSPI.
 - A board entra em `zephyr_app/boards/<vendor>/<board>/` no modelo de hardware v2 do Zephyr (`board.yml`, `Kconfig.<board>`, `<board>_<soc>.dts`, pinctrl, `_defconfig`, `board.cmake`), sem nós que não existem na placa, com console por RTT ou USB CDC.
-- Com a board própria, tire `BOARD` e `DTC_OVERLAY_FILE` fixos do `CMakeLists.txt` e deixe o overlay do DK com o nome automático (`boards/nrf52840dk_nrf52840.overlay`).
+- A placa já vem do `-b` e o overlay de cada alvo tem o nome automático (`boards/<placa>.overlay`): a board própria entra sem mexer no `CMakeLists.txt`.
 - O MCU precisa estar na lista do `sdk-ant` (ANT+ é obrigatório).
 
 ## Cuidados com a placa real

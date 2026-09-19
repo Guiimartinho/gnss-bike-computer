@@ -34,8 +34,8 @@ static const uint8_t bit_clr[8] = {0xFE, 0xFD, 0xFB, 0xF7, 0xEF, 0xDF, 0xBF, 0x7
  * Device Tree Bindings
  * ========================================================================== */
 
-static const struct device *spi_dev = DEVICE_DT_GET(DT_NODELABEL(spi1));
-static const struct gpio_dt_spec cs_gpio = GPIO_DT_SPEC_GET(DT_NODELABEL(spi1), cs_gpios);
+static const struct device *spi_dev = DEVICE_DT_GET(DT_ALIAS(lcd_spi));
+static const struct gpio_dt_spec cs_gpio = GPIO_DT_SPEC_GET(DT_ALIAS(lcd_spi), cs_gpios);
 
 /* ==========================================================================
  * Private Variables

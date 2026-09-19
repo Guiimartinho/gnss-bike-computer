@@ -21,7 +21,7 @@ description: Portar ou corrigir um módulo do stravaV10 original (legacy/, C/C++
 | `source/vue/*`, `source/display/*`, Adafruit GFX | `src/vue/*`, `src/drivers/lcd/ls027.c` |
 | `rf/*` (ANT+ e BLE) | `src/rf/*` (só BLE) |
 | `source/sd/*`, `source/usb/*` | `sd_logger.c`, `utils/fs_stubs.c`, `src/usb/*` (fora do build) |
-| `custom_board_v3.h` | `boards/nrf52840_strava.overlay` |
+| `custom_board_v3.h` | `boards/nrf52840dk_nrf52840.overlay` |
 
 Glossário dos nomes em francês: `docs/04-arquitetura-legacy.md#glossário`.
 

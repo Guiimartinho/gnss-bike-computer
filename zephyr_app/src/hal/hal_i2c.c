@@ -17,7 +17,7 @@ LOG_MODULE_REGISTER(hal_i2c, CONFIG_LOG_DEFAULT_LEVEL);
  * ========================================================================== */
 
 /* I2C0 - Sensors */
-static const struct device *i2c_sensors_dev = DEVICE_DT_GET(DT_NODELABEL(i2c0));
+static const struct device *i2c_sensors_dev = DEVICE_DT_GET(DT_ALIAS(sensor_i2c));
 
 /* ==========================================================================
  * Private Variables

@@ -2,14 +2,19 @@
 # Comandos do firmware Zephyr no Git Bash, com o mesmo fluxo dos .bat da raiz.
 #
 #   tools/fw/fw.sh build [pristine]   compila zephyr_app (sysbuild)
-#   tools/fw/fw.sh flash [keep]       grava no nRF52840-DK pelo J-Link
+#   tools/fw/fw.sh flash [keep]       grava no DK pelo J-Link
 #   tools/fw/fw.sh recover            desbloqueia um chip protegido (apaga tudo)
 #   tools/fw/fw.sh devices            lista as placas conectadas
 #   tools/fw/fw.sh size               memória por região e maiores símbolos de RAM/flash
 #
 # Variáveis: BUILD_DIR (padrão: zephyr_app/build), BOARD (padrão:
-# nrf52840dk/nrf52840), NRF_SERIAL (número de série do J-Link) e as de
-# tools/fw/ncs_env.sh (NCS_ROOT, NCS_VERSION, NCS_TOOLCHAIN).
+# nrf52840dk/nrf52840; o nRF54LM20 DK é nrf54lm20dk/nrf54lm20a/cpuapp),
+# FAMILY (família do nrfutil, deduzida da BOARD: nrf52 ou nrf54l),
+# NRF_SERIAL (número de série do J-Link) e as de tools/fw/ncs_env.sh
+# (NCS_ROOT, NCS_VERSION, NCS_TOOLCHAIN).
+# ANT=1 compila com o ANT: o add-on sdk-ant em SDK_ANT_DIR (padrão
+# $NCS_ROOT/sdk-ant), zephyr_app/modules/ant_ncs33_compat e zephyr_app/ant.conf;
+# ao trocar ANT, use pristine ou outra BUILD_DIR.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -18,7 +23,19 @@ source "$ROOT/tools/fw/ncs_env.sh"
 
 APP_DIR="$ROOT/zephyr_app"
 BUILD_DIR="${BUILD_DIR:-$APP_DIR/build}"
+# Um BUILD_DIR relativo vale a partir da pasta de quem chamou: o build roda
+# dentro do zephyr_app e o west o resolveria a partir de lá.
+case "$BUILD_DIR" in
+    /*|[A-Za-z]:*) ;;
+    *) BUILD_DIR="$PWD/$BUILD_DIR" ;;
+esac
 BOARD="${BOARD:-nrf52840dk/nrf52840}"
+case "$BOARD" in
+    *nrf54l*) DEFAULT_FAMILY=nrf54l ;;
+    *) DEFAULT_FAMILY=nrf52 ;;
+esac
+FAMILY="${FAMILY:-$DEFAULT_FAMILY}"
+SDK_ANT_DIR="${SDK_ANT_DIR:-$NCS_ROOT/sdk-ant}"
 
 select_probe() {
     if [ -n "${NRF_SERIAL:-}" ]; then
@@ -61,9 +78,21 @@ case "$cmd" in
         if [ "${1:-}" = "pristine" ]; then
             pristine=always
         fi
+        extra=()
+        if [ "${ANT:-0}" = "1" ]; then
+            if [ ! -f "$SDK_ANT_DIR/zephyr/module.yml" ]; then
+                echo "fw.sh: sdk-ant não encontrado em $SDK_ANT_DIR (defina SDK_ANT_DIR)" >&2
+                exit 1
+            fi
+            # O add-on e o módulo de compatibilidade com o NCS v3.3.0 entram como
+            # módulos extras; ant.conf liga o ANT só na imagem do app.
+            ZEPHYR_EXTRA_MODULES="$(cygpath -m "$SDK_ANT_DIR");$(cygpath -m "$APP_DIR/modules/ant_ncs33_compat")"
+            export ZEPHYR_EXTRA_MODULES
+            extra=(-- -Dzephyr_app_EXTRA_CONF_FILE=ant.conf)
+        fi
         # O west precisa rodar no drive do projeto (F:), não no do NCS (C:).
         cd "$APP_DIR"
-        python -m west build -p "$pristine" -b "$BOARD" -d "$BUILD_DIR" --sysbuild "$APP_DIR"
+        python -m west build -p "$pristine" -b "$BOARD" -d "$BUILD_DIR" --sysbuild "$APP_DIR" "${extra[@]}"
         ;;
     flash)
         erase=ERASE_ALL
@@ -73,12 +102,12 @@ case "$cmd" in
         hex="$(firmware_hex)"
         echo "Gravando $hex (apagamento: $erase)"
         # shellcheck disable=SC2046
-        nrfutil device program $(select_probe) --family nrf52 --firmware "$hex" \
+        nrfutil device program $(select_probe) --family "$FAMILY" --firmware "$hex" \
             --options "chip_erase_mode=$erase,verify=VERIFY_READ,reset=RESET_SYSTEM"
         ;;
     recover)
         # shellcheck disable=SC2046
-        nrfutil device recover $(select_probe) --family nrf52
+        nrfutil device recover $(select_probe) --family "$FAMILY"
         ;;
     devices)
         nrfutil device list
@@ -94,7 +123,7 @@ case "$cmd" in
         arm-zephyr-eabi-nm --size-sort -S -t d "$elf" | awk '$3 ~ /[tTrR]/ {print $2+0, $4}' | sort -rn | head -20
         ;;
     *)
-        sed -n '2,13p' "$0"
+        sed -n '2,17p' "$0"
         exit 2
         ;;
 esac
