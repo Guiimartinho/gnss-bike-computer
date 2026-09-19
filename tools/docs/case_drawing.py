@@ -394,13 +394,13 @@ label(xv.X(W / 2), xv.Y(H) + 58, "Por dentro (raio X)", 18, "#1d1d1f", "middle",
 lx, ly = 1660, 150
 label(lx, ly, "Por dentro", 19, "#1d1d1f", weight=700)
 items = [
-    ("1", "GNSS u-blox MAX-F10S (L1 + L5) sob blindagem"),
+    ("1", "GNSS u-blox MAX-M10N-10B sob blindagem"),
     ("2", "antenas GNSS L1 e L5 na parede de cima,"),
     ("", "longe dos painéis, com contatos de mola"),
     ("3", "BM20C (nRF54LM20A, BLE + ANT+): antena"),
     ("", "de 2,4 GHz no canto oposto ao GNSS"),
     ("4", "FPC do display sai pela esquerda"),
-    ("5", "microSD, tampa na lateral esquerda"),
+    ("5", "microSD só no protótipo; depois SD NAND"),
     ("6", "LiPo 2000 mAh 36 × 60 × 7 mm, atrás da placa"),
     ("7", "USB-C na base, nPM1300 e MAX17262"),
     ("8", "AEM10900 e conectores dos painéis"),
@@ -430,10 +430,10 @@ facts = [
     "tela JDI 2,7\" 400 × 240, 8 cores, 3,0 V",
     "6 módulos solares de 3 células, 23 × 8 mm",
     "(11 cm² de células), todos em paralelo;",
-    "cada um dá cerca de 2 V e o AEM10900",
-    "carrega a LiPo até 4,2 V; os 3,0 V e 1,8 V",
-    "saem do nPM1300",
-    "USB-C e microSD com tampa, respiro com",
+    "cada um dá cerca de 2 V; o AEM10900 carrega",
+    "a LiPo até 3,9 V e o USB, até 4,2 V; os 3,0 V",
+    "e 1,8 V saem do nPM1300",
+    "USB-C IPX8 sem tampa, respiro com",
     "membrana",
 ]
 for s in facts:

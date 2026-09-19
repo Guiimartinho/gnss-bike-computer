@@ -10,7 +10,7 @@ Proposta de hardware da placa própria do GNSS Bike Computer, com o nRF54LM20A e
 |---|---|---|---|
 | MCU | nRF52840 no módulo BMD-340 | nRF54LM20A no módulo Fanstel BM20C | o chip em CSP98 com antena própria |
 | Display | Sharp LS027B7DH01, monocromático, 5 V | JDI LPM027M128C, MIP de 8 cores, 3,0 V, com luz | LS027 no mesmo conector; TFT transflectivo com ST7789 |
-| GNSS | Antenova M10578-A3 (MediaTek MT3333), só L1 | u-blox MAX-F10S (L1 + L5) no footprint MAX, 47 mW a 1,8 V | MAX-M10N-10B no mesmo footprint (só L1, 14 mW em LEAP); Quectel LC76G(PA), com driver no NCS |
+| GNSS | Antenova M10578-A3 (MediaTek MT3333), só L1 | u-blox MAX-M10N-10B (só L1) no footprint MAX, 13,5 mW em LEAP a 1,8 V ([15](15-avaliacao-componentes.md#gnss)) | MAX-F10S (L1 + L5) no mesmo footprint, 47 mW; Quectel LC76G(PA), com driver no NCS |
 | Antena GNSS | chip Antenova SR4G008 na borda | antena linear L1/L5 na borda de cima, como nos ciclocomputadores do mercado | patch cerâmica, com a caixa de 25 a 35 mm mais longa |
 | Carregador e reguladores | MCP73831, TPS63051, REG710 | Nordic nPM1300 | TI BQ25798 (carregador único com duas entradas) |
 | Medidor de carga e liga/desliga | STC3100 com latch | MAX17262 na célula; ship mode do nPM1300 | medidor do próprio nPM1300, sem enxergar o painel |
@@ -19,9 +19,9 @@ Proposta de hardware da placa própria do GNSS Bike Computer, com o nRF54LM20A e
 | Barômetro | Bosch BME280 | Bosch BMP585 | ST LPS28DFW; BMP581 com membrana |
 | Movimento | NXP FXOS8700CQ (fora de produção) | ST LSM6DSV16X e LIS2MDL | ST LIS2DW12 e Memsic MMC5603NJ |
 | Luz ambiente | não tem | TI OPT3001 | Lite-On LTR-329ALS-01 |
-| Armazenamento | microSD por SPI | microSD no `spi00`, com detecção e chave de alimentação | NOR soldada de 32 a 64 MB |
+| Armazenamento | microSD por SPI | SD NAND soldado no `spi00` (microSD e SD NAND no protótipo), com chave de alimentação ([15](15-avaliacao-componentes.md#armazenamento)) | microSD em soquete com tampa; NOR soldada de 32 a 64 MB |
 | Configurações | FRAM FM24CL16B | ZMS no RRAM do MCU | — |
-| USB | micro-USB B | USB-C com proteção ESD | — |
+| USB | micro-USB B | USB-C IPX8, sem tampa, com proteção ESD ([15](15-avaliacao-componentes.md#usb-c-e-proteção)) | USB-C comum com tampa de borracha |
 | LED e som | WS2812B; sem buzzer | LED RGB por PWM e buzzer piezo | WS2812B pelo driver SPI; buzzer magnético |
 
 ## Requisitos
@@ -53,7 +53,7 @@ flowchart LR
         MCU["nRF54LM20A<br/>BLE e ANT+"]
     end
     subgraph GNSSB["GNSS"]
-        ANT["antena linear L1/L5<br/>na borda de cima"] --> GMOD["módulo MAX<br/>F10S ou M10N-10B<br/>SAW, LNA, SAW"]
+        ANT["antena linear L1/L5<br/>na borda de cima"] --> GMOD["módulo MAX<br/>M10N-10B ou F10S<br/>SAW, LNA, SAW"]
     end
     subgraph IHM["Interface"]
         LCD["JDI LPM027M128C<br/>2,7 pol, 8 cores"]
@@ -96,7 +96,7 @@ Conceito em escala a partir da caixa impressa da V3 ([foto](img/front1.png)), ge
 - **Tela:** JDI LPM027M128C com a interface em 8 cores; a janela é a mesma do LS027.
 - **Painéis:** 6 módulos de 3 células de 23 × 8 mm, 2 numa face inclinada abaixo da tela e 2 em cada chanfro de 45° das bordas longas ([painel solar](#painel-solar)).
 - **Antenas:** GNSS L1 e L5 na parede de cima, longe dos painéis; o módulo BM20C (BLE e ANT+) no canto de baixo à direita, com a antena fora da área dos painéis.
-- **Conectores:** USB-C com tampa na base, microSD com tampa na lateral esquerda, respiro do barômetro com membrana na traseira.
+- **Conectores:** USB-C IPX8 na base, sem tampa; microSD com tampa na lateral esquerda só no protótipo, porque o produto usa SD NAND soldado ([15](15-avaliacao-componentes.md#armazenamento)); respiro do barômetro com membrana na traseira.
 
 ## MCU: nRF54LM20A
 
@@ -193,13 +193,13 @@ Energia só do GNSS numa pedalada de 10 h: 0,92 Wh no M10578-A3 da V3, 0,59 Wh n
 
 ### Recomendação: footprint MAX da u-blox
 
-O MAX-M10S, o MAX-M10N e o MAX-F10S têm o mesmo footprint e a mesma pinagem de UART, reset, EXTINT e TIMEPULSE (conferido nas tabelas de pinos; o M10N não tem I2C). A placa sai com esse footprint e decide o módulo no teste:
+O MAX-M10S, o MAX-M10N e o MAX-F10S têm o mesmo footprint e a mesma pinagem de UART, reset, EXTINT e TIMEPULSE (conferido nas tabelas de pinos; o M10N não tem I2C). A placa sai com esse footprint. A [avaliação](15-avaliacao-componentes.md#gnss) escolheu o M10N pelo consumo, e o F10S fica como variante no mesmo footprint:
 
-- **Principal: MAX-F10S (L1 + L5).** A banda dupla ataca o multipercurso de prédios e árvores, que é o que pesa nos segmentos do Strava; 1 m de CEP; 47 mW a 1,8 V, metade do módulo da V3; entrada com SAW, LNA e SAW, que aguenta o BLE de +8 dBm do nRF54LM20A; AssistNow com TTFF de 1 a 4 s; 10.808 peças na DigiKey. Contra: sem GLONASS, sem modo só L1 (gasta sempre de 47 a 57 mW) e a antena de L5 numa caixa pequena é o ponto fraco.
-- **Alternativa de menor consumo: MAX-M10N-10B.** 14 mW em LEAP a 1,8 V, um sétimo do módulo da V3, com 1,5 m de CEP, AssistNow Live Orbits incluso e firmware atualizável; só L1, sem GLONASS e até 1 Hz em LEAP.
+- **Escolhido: MAX-M10N-10B.** 13,5 mW em LEAP a 1,8 V, um sétimo do módulo da V3, com 1,5 m de CEP, AssistNow Live Orbits incluso e firmware atualizável; entrada com SAW, LNA e SAW, que aguenta o BLE de +8 dBm do nRF54LM20A. Com ele, o aparelho gasta cerca de 21 mW e o painel cobre o consumo num pedal de sol. Contra: só L1, sem GLONASS, até 1 Hz em LEAP, e o LEAP perde sensibilidade de rastreio (−159 contra −167 dBm).
+- **Variante de banda dupla: MAX-F10S (L1 + L5).** A banda dupla ataca o multipercurso de prédios e árvores; 1 m de CEP; 47 mW a 1,8 V; AssistNow com TTFF de 1 a 4 s; 10.808 peças na DigiKey. Contra: sem GLONASS, sem modo só L1 (gasta sempre de 47 a 57 mW) e a antena de L5 numa caixa pequena é o ponto fraco.
 - **Se o critério for driver pronto e custo: Quectel LC76G(PA).** Único da lista com driver no NCS v3.3.0; footprint e tensão diferentes (família L76, 3,3 V). O caminho de banda dupla dessa família é o LC79H(AL), com o chip AG3335M que aparece no COROS DURA; a compatibilidade de pinos entre os dois não foi confirmada.
 
-Como decidir: protótipos com o F10S e o M10N lado a lado, na caixa real, medindo o C/N0 por banda e o ruído na banda (`UBX-MON-SPAN`), e pedaladas na cidade e sob árvores contra uma referência. Com o módulo alimentado a 1,8 V (pino `VIO_SEL`), o F10S gasta cerca de 17 % menos que a 3,0 V; o MCU fica em 3,0 V por causa do display, então a UART e os sinais de controle do GNSS a 1,8 V passam por um tradutor de nível ([Energia](#energia)).
+Como confirmar: protótipos com o M10N e o F10S lado a lado, na caixa real, medindo o C/N0 por banda e o ruído na banda (`UBX-MON-SPAN`), e pedaladas na cidade e sob árvores contra uma referência. Com o módulo alimentado a 1,8 V (pino `VIO_SEL`), o M10N em LEAP gasta cerca de 18 % menos que a 3,0 V (13,5 contra 16,5 mW) e o F10S cerca de 17 %; o MCU fica em 3,0 V por causa do display, então a UART e os sinais de controle do GNSS a 1,8 V passam por um tradutor de nível ([Energia](#energia)).
 
 A altitude continua vindo do barômetro: o GNSS erra mais na vertical (o LC79H declara 1 m na horizontal e 2 m na vertical) e só corrige a deriva do barômetro, como no legacy ([06](06-algoritmos.md#barômetro-e-drift)).
 
@@ -317,7 +317,7 @@ O nPM1300 (USB) e o AEM10900 (sol) carregam a mesma célula pelo mesmo nó, e o 
 
 1. O limiar de carga do AEM10900 fica abaixo da tensão de término do nPM1300: 3,90 V pelo pino no boot (perfil "Li-ion long life"), e cerca de 4,05 V por I2C com a placa ligada; o nPM1300 termina em 4,20 V (ou 4,10 V para vida longa). O harvester para antes da fase de tensão constante e não confunde a detecção de fim de carga.
 2. O corte térmico dos dois carregadores funciona sem o MCU: JEITA no nPM1300 (0, 10, 45 e 60 °C) e TEMPCOLD e TEMPHOT no AEM10900 (0 e 45 °C), com um NTC colado na célula para cada um. Parado ao sol, desligado, o painel continua carregando.
-3. Com USB presente, o firmware pode bloquear o harvester pelo pino `DIS_STO_CH`.
+3. Com USB presente, o VBUSOUT do nPM1300 bloqueia o harvester pelo pino `DIS_STO_CH`, sem firmware ([15](15-avaliacao-componentes.md#convivência-das-duas-cargas)).
 4. A soma das correntes (até 800 mA do nPM1300 e 175 mA do AEM10900) fica dentro da corrente de carga da célula.
 
 Alternativa sem dois carregadores: o **TI BQ25798**, carregador buck-boost com duas entradas e MPPT. Resolve a disputa na célula, mas pede painel de pelo menos 3,6 V (8 células ou mais em série, sensível a sombra), consome 17 µA só com a bateria, precisa de reguladores externos e não tem driver no NCS.
@@ -341,10 +341,10 @@ Alternativa sem dois carregadores: o **TI BQ25798**, carregador buck-boost com d
 
 | Função | V3 | Proposta | Observação |
 |---|---|---|---|
-| Armazenamento | microSD por SPI, sem detecção de cartão | **microSD no `spi00`** (o único SPI de 32 MHz; os outros vão até 8 MHz), soquete Hirose DM3AT-SF-PEJM5 com detecção de cartão e chave de alimentação | pilha upstream de ponta a ponta (`zephyr,sdhc-spi-slot` com `cd-gpios` e `pwr-gpios`, FAT, `usbd_msc`); o fluxo do USB mass storage fica igual ao do legacy; o push-push pode soltar o cartão na vibração: avaliar soquete com trava |
+| Armazenamento | microSD por SPI, sem detecção de cartão | **microSD no `spi00`** (o único SPI de 32 MHz; os outros vão até 8 MHz), soquete Hirose DM3AT-SF-PEJM5 com detecção de cartão e chave de alimentação; a [avaliação](15-avaliacao-componentes.md#armazenamento) troca o cartão por SD NAND soldado no produto | pilha upstream de ponta a ponta (`zephyr,sdhc-spi-slot` com `cd-gpios` e `pwr-gpios`, FAT, `usbd_msc`); o fluxo do USB mass storage fica igual ao do legacy; o push-push pode soltar o cartão na vibração: avaliar soquete com trava |
 | Alternativa ao microSD | — | flash NOR soldada de 32 a 64 MB (W25Q256JV, W25Q512JV) | mais robusta a água e vibração, como nas V1 e V2; FAT sobre NOR não nivela desgaste |
 | Configurações | FRAM FM24CL16B | **ZMS no RRAM do MCU** | a FRAM sai; o port já usa ZMS no nRF54LM20 DK |
-| USB | micro-USB B | **USB-C** GCT USB4105-GF-A, CC1 e CC2 direto nos pinos do nPM1300 (que têm o Rd interno), TI TPD4E05U06 nas linhas de dados e TPD1E10B06 no VBUS | USB High Speed do nRF54LM20A; D+ e D− como par diferencial de 90 Ω; o conector não é vedado |
+| USB | micro-USB B | **USB-C** GCT USB4105-GF-A, CC1 e CC2 direto nos pinos do nPM1300 (que têm o Rd interno), TI TPD4E05U06 nas linhas de dados e TPD1E10B06 no VBUS; a [avaliação](15-avaliacao-componentes.md#usb-c-e-proteção) troca por um receptáculo IPX8 e pelo ESD751 no VBUS | USB High Speed do nRF54LM20A; D+ e D− como par diferencial de 90 Ω; o USB4105 não é vedado |
 | LED | WS2812B com conversor de nível e 5 V | **LED RGB discreto em 3 canais PWM** (`pwm-leds`) | sem 5 V e sem protocolo de tempo crítico; o driver `ws2812-gpio` do Zephyr não roda no nRF54L (o Kconfig só aceita nRF51, 52, 53 e 91); se o dono quiser o WS2812B, ele vai pelo driver SPI |
 | Buzzer | não tem | **piezo** Same Sky CPT-1117-83-SMT-TR, em ponte por dois PWM em contrafase | sem ímã perto do magnetômetro; o volume cai se o I/O rodar abaixo de 3 V |
 | Vibração | não tem | não usar | no guidão ela não se sente e gasta dezenas de mA; se o dono quiser, TI DRV2605L com atuador LRA (`ti,drv2605`) |
@@ -382,6 +382,8 @@ Estimativa, não medida. A base de cada linha está na coluna do meio.
 | Sensores e microSD | estimativa | 1,3 mW | 2,5 mW | 4 mW |
 | PMIC, medidor e harvester | menos de 20 µA somados | < 0,1 mW | < 0,1 mW | < 0,1 mW |
 | **Na bateria** (reguladores a cerca de 90 %) | | cerca de 19 mW | cerca de 58 mW | cerca de 74 mW |
+
+As colunas "típico" e "pesado" usam o MAX-F10S. Com o MAX-M10N-10B em LEAP, que a [avaliação](15-avaliacao-componentes.md#efeito-no-aparelho) escolheu, o uso típico cai para cerca de 21 mW e a autonomia sem sol com 2000 mAh sobe para cerca de 320 h.
 
 Autonomia sem sol, com 90 % da energia nominal (3,7 V) utilizável. Para comparar: só o GNSS da V3 gasta 92 mW.
 

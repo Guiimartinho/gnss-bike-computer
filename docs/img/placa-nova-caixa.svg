@@ -276,7 +276,7 @@
 <text x="1660" y="150" font-size="19" fill="#1d1d1f" text-anchor="start" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">Por dentro</text>
 <circle cx="1670" cy="179" r="10" fill="#1d1d1f"/>
 <text x="1670" y="184" font-size="12" fill="#fff" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">1</text>
-<text x="1688" y="184" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">GNSS u-blox MAX-F10S (L1 + L5) sob blindagem</text>
+<text x="1688" y="184" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">GNSS u-blox MAX-M10N-10B sob blindagem</text>
 <circle cx="1670" cy="203" r="10" fill="#1d1d1f"/>
 <text x="1670" y="208" font-size="12" fill="#fff" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">2</text>
 <text x="1688" y="208" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">antenas GNSS L1 e L5 na parede de cima,</text>
@@ -290,7 +290,7 @@
 <text x="1688" y="304" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">FPC do display sai pela esquerda</text>
 <circle cx="1670" cy="323" r="10" fill="#1d1d1f"/>
 <text x="1670" y="328" font-size="12" fill="#fff" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">5</text>
-<text x="1688" y="328" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">microSD, tampa na lateral esquerda</text>
+<text x="1688" y="328" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">microSD só no protótipo; depois SD NAND</text>
 <circle cx="1670" cy="347" r="10" fill="#1d1d1f"/>
 <text x="1670" y="352" font-size="12" fill="#fff" text-anchor="middle" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">6</text>
 <text x="1688" y="352" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">LiPo 2000 mAh 36 × 60 × 7 mm, atrás da placa</text>
@@ -327,10 +327,10 @@
 <text x="1660" y="730" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">tela JDI 2,7" 400 × 240, 8 cores, 3,0 V</text>
 <text x="1660" y="752" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">6 módulos solares de 3 células, 23 × 8 mm</text>
 <text x="1660" y="774" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">(11 cm² de células), todos em paralelo;</text>
-<text x="1660" y="796" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">cada um dá cerca de 2 V e o AEM10900</text>
-<text x="1660" y="818" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">carrega a LiPo até 4,2 V; os 3,0 V e 1,8 V</text>
-<text x="1660" y="840" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">saem do nPM1300</text>
-<text x="1660" y="862" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">USB-C e microSD com tampa, respiro com</text>
+<text x="1660" y="796" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">cada um dá cerca de 2 V; o AEM10900 carrega</text>
+<text x="1660" y="818" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">a LiPo até 3,9 V e o USB, até 4,2 V; os 3,0 V</text>
+<text x="1660" y="840" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">e 1,8 V saem do nPM1300</text>
+<text x="1660" y="862" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">USB-C IPX8 sem tampa, respiro com</text>
 <text x="1660" y="884" font-size="14" fill="#333" text-anchor="start" font-weight="400" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">membrana</text>
 <text x="1660" y="920" font-size="14" fill="#b71c1c" text-anchor="start" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">Conceito para discutir: não há</text>
 <text x="1660" y="940" font-size="14" fill="#b71c1c" text-anchor="start" font-weight="700" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">projeto mecânico nem layout ainda.</text>

@@ -65,7 +65,7 @@ flowchart TB
     ZA --> ZC["CMakeLists.txt · prj.conf · ant.conf · sysbuild.conf<br/>modules/ant_ncs33_compat"]
     ROOT --> LEG["legacy/ · libraries/<br/>stravaV10 original"]
     ROOT --> TOOLS["tools/fw · tools/docs<br/>tools/TDD · TDDW · zpm · MMD · jumper"]
-    ROOT --> DOCS["docs/01 a 14 · img · historico"]
+    ROOT --> DOCS["docs/01 a 15 · img · historico"]
     ROOT --> HW["hardware/"]
     ROOT --> AI["CLAUDE.md · AGENTS.md · .claude/skills/"]
     ROOT --> BAT["*.bat da raiz"]
@@ -107,7 +107,7 @@ flowchart LR
 ```
 
 - **Decidido em 2026-09-18:** ANT+ **e** BLE (os equipamentos externos são ANT+), pelo add-on `sdk-ant` v2.1.1 **sobre o NCS v3.3.0** (obrigatório; build com `ANT=1`); **board própria** com o **nRF54LM20A** e esquemático próprio (GNSS, bateria e display melhores, painel solar pequeno na caixa); tela retangular no formato do legacy (2,7", em retrato); CI desligado; um commit por item verificado, na `develop`. Detalhes em [`docs/10-status-do-port.md`](docs/10-status-do-port.md#decisões-do-dono).
-- **Em aberto:** aprovação dos componentes da placa nova (proposta em [`docs/13-placa-nova.md`](docs/13-placa-nova.md), especificação em [`docs/14-hardware-placa-nova.md`](docs/14-hardware-placa-nova.md); GNSS e carga dupla ainda em aberto), hardware de teste (nRF54LM20 DK e placas de avaliação), formatos no SD, licença do port (o legacy é CC BY-NC 4.0).
+- **Em aberto:** aprovação dos componentes da placa nova (proposta em [`docs/13-placa-nova.md`](docs/13-placa-nova.md), especificação em [`docs/14-hardware-placa-nova.md`](docs/14-hardware-placa-nova.md), avaliação em [`docs/15-avaliacao-componentes.md`](docs/15-avaliacao-componentes.md): GNSS MAX-M10N-10B e carga dupla com o USB bloqueando o solar, a confirmar na bancada), hardware de teste (nRF54LM20 DK e placas de avaliação), formatos no SD, licença do port (o legacy é CC BY-NC 4.0).
 
 ## 6. Armadilhas conhecidas
 
@@ -162,6 +162,7 @@ flowchart LR
 | Placa e pinagem | [docs/02-hardware.md](docs/02-hardware.md) |
 | Proposta da placa nova | [docs/13-placa-nova.md](docs/13-placa-nova.md) |
 | Especificação de hardware da placa nova | [docs/14-hardware-placa-nova.md](docs/14-hardware-placa-nova.md) |
+| Avaliação dos componentes da placa nova | [docs/15-avaliacao-componentes.md](docs/15-avaliacao-componentes.md) |
 | Build e ambiente | [docs/03-ambiente-build.md](docs/03-ambiente-build.md) |
 | Legacy | [docs/04-arquitetura-legacy.md](docs/04-arquitetura-legacy.md), [legacy/README.md](legacy/README.md) |
 | Port | [docs/05-arquitetura-zephyr.md](docs/05-arquitetura-zephyr.md) |

@@ -140,7 +140,7 @@ Ainda em aberto:
 
 | Decisão | Opções | Consequência |
 |---|---|---|
-| Componentes da placa nova | proposta em [13](13-placa-nova.md) e especificação em [14](14-hardware-placa-nova.md): nRF54LM20A no módulo Fanstel BM20C, display JDI LPM027M128C (MIP de 8 cores), GNSS u-blox MAX-F10S ou MAX-M10N no mesmo footprint com antena linear na borda de cima, nPM1300 com MAX17262 e carregador solar AEM10900, BMP585, LSM6DSV16X, LIS2MDL e OPT3001 | o dono aprova ou troca cada item; amostras e placas de avaliação antes do esquemático |
+| Componentes da placa nova | proposta em [13](13-placa-nova.md), especificação em [14](14-hardware-placa-nova.md) e avaliação em [15](15-avaliacao-componentes.md): nRF54LM20A no módulo Fanstel BM20C, display JDI LPM027M128C (MIP de 8 cores, com o Sharp LS027B7DH01 no mesmo conector), GNSS u-blox MAX-M10N-10B (o MAX-F10S no mesmo footprint) com antena linear na borda de cima, nPM1300 com MAX17262 e carregador solar AEM10900, BMP585, LSM6DSV16X, LIS2MDL e OPT3001 | o dono aprova ou troca cada item; amostras e placas de avaliação antes do esquemático |
 | Hardware de teste | nRF54LM20 DK para desenvolver até a placa própria existir, e as placas de avaliação da [proposta](13-placa-nova.md#próximos-passos) | sem placa, nada roda de verdade: hoje só há build e testes de host |
 | Formatos no SD | compatíveis com o legacy (segmentos em texto com nome base36, `.PAR`, `@DDMMYY.txt`) ou formatos novos com conversor | há 138 segmentos e 2 percursos de exemplo em `tools/TDD/DB` no formato do legacy |
 | Licença do projeto | o legacy é CC BY-NC 4.0; o port deriva dele | afeta uso comercial e a escolha da licença do repositório |
