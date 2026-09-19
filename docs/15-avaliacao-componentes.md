@@ -19,7 +19,7 @@ Avaliação de engenharia, bloco a bloco, dos componentes principais da placa no
 | Convivência das cargas | o USB bloqueia o solar no hardware (DIS_STO_CH pelo VBUSOUT) | os dois carregadores nunca trabalham juntos | bloqueio por registrador, pelo firmware |
 | Medição | Analog Devices MAX17262 | vê as duas fontes, também com o aparelho desligado | nRF Fuel Gauge corrigido pelo APM (perde a carga em ship mode) |
 | GNSS | u-blox MAX-M10N-10B, em LEAP | 13,7 mW contra 46,8 mW do MAX-F10S: o aparelho gasta cerca de 21 mW contra 58 mW e dura cerca de 310 h contra 115 h, e o painel cobre o consumo num pedal de sol | MAX-F10S no mesmo footprint |
-| MCU | Fanstel BM20C (nRF54LM20A) | módulo certificado, 66 GPIO, antena e cristais inclusos; o QFN52 não tem pinos suficientes | chip em CSP98 com antena própria |
+| MCU | Fanstel BM20C (nRF54LM20A) | módulo certificado, 64 GPIO, antena e cristais inclusos; o QFN52 não tem pinos suficientes | chip em CSP98 com antena própria |
 | Display | Sharp LS027B7DH01A com a luz frontal Azumo 11103-06_A1; o JDI LPM027M128C no mesmo conector | o JDI (cor e 30 µW a 1 quadro/s) não tem canal autorizado de compra; a Sharp tem estoque e já roda no port | JDI de revendedores, se a cor voltar ao plano |
 | Antena GNSS | TE L000670 no protótipo | L1 e L5 numa alimentação só: serve ao M10N e ao F10S | elementos de parede sob medida |
 | Barômetro | Bosch BMP585 | robusto a água e produtos químicos (15 bar sem efeito, pela ficha), 1,3 µA a 1 Hz, ±0,5 Pa/K | ST LPS28DFW |
@@ -258,7 +258,7 @@ O MCU está decidido (nRF54LM20A); a escolha aqui é como montá-lo.
 
 | Opção | Dados | Veredito |
 |---|---|---|
-| **Fanstel BM20C** | nRF54LM20A (ou B) em 10,0 × 16,2 × 2 mm (a página e o texto da ficha dizem 14,8 mm; a tabela, o desenho e a biblioteca da Fanstel, 16,2 mm), antena em chip, cristais de 32 MHz e de 32,768 kHz integrados; a página da Fanstel cita 90 pinos LGA e 66 GPIO; FCC ID X8WBM20C, ISED 4100A-BM20C e TELEC R201-260622, conforme na Europa e na Austrália e Nova Zelândia; produção prevista para 09/2026; US$ 6,50 (US$ 5,94 no lote de mil) | **escolhido** |
+| **Fanstel BM20C** | nRF54LM20A (ou B) em 10,0 × 16,2 × 2 mm (a página e o texto da ficha dizem 14,8 mm; a tabela, o desenho e a biblioteca da Fanstel, 16,2 mm), antena em chip, cristais de 32 MHz e de 32,768 kHz integrados; a página da Fanstel cita 90 pinos LGA e 66 GPIO, e a pinagem da ficha, 64 (o cristal de 32,768 kHz ocupa P1.20 e P1.21); FCC ID X8WBM20C, ISED 4100A-BM20C e TELEC R201-260622, conforme na Europa e na Austrália e Nova Zelândia; produção prevista para 09/2026; US$ 6,50 (US$ 5,94 no lote de mil) | **escolhido** |
 | Outras variantes da Fanstel | BM20M com antena de PCB (10 × 14 mm), BM20E com conector u.FL, BM20NE e BM20XE (10 × 24 mm) | o BM20E serve se a antena de 2,4 GHz precisar sair do canto da placa |
 | Chip na placa, CSP98 | 66 GPIO, mas antena, casamento e certificação ficam por conta do projeto | só com volume que pague a certificação |
 | Chip na placa, QFN52 | 32 GPIO, menos que os 35 a 37 da [alocação](14-hardware-placa-nova.md#alocação-de-pinos) | não cabe |

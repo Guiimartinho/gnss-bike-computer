@@ -124,6 +124,7 @@ flowchart LR
 | A camada de comandos do Git Bash transforma `\\n` em quebra de linha real | para caminhos com `\` (arquivos `.bat`), use a ferramenta de edição, não `sed` com `\\` |
 | As ferramentas de escrita gravam LF | depois de editar um `.bat`, volte para CRLF: `sed -i 's/\r$//; s/$/\r/' arquivo.bat` |
 | O overlay entra pelo nome da placa | `boards/<placa>.overlay`, com `/` trocado por `_` (`nrf52840dk_nrf52840.overlay`); com outro nome ele é ignorado sem aviso |
+| No nRF54LM20A, o SCL do TWIM e o SCK do SPIM precisam de pino de clock (tabela 79), e P1.01 e P1.02 saem do reset como antena NFC, sem GPIO | pinos de clock e pads do NFC na skill `fw-hardware` e em [14](docs/14-hardware-placa-nova.md#alocação-de-pinos); no DK, o I2C dos sensores usa SDA P1.29 e SCL P1.03, e o de energia, SDA P1.11 e SCL P1.14 |
 | Desligar um nó do DK não desliga os filhos | o `mx25r64` precisa de `status = "disabled"` próprio, senão o driver `qspi-nor` volta |
 | Build incremental guarda símbolos Kconfig que saíram (`NRFX_QSPI=y` continuou depois de desligar o QSPI) | afirmações sobre `.config`, devicetree ou tamanho só com `bash tools/fw/fw.sh build pristine` |
 | Caminho de build longo (pasta temporária do usuário) passa do limite de 250 caracteres dos objetos | compile dentro do repositório: `zephyr_app/build` ou uma pasta `build/` da raiz |

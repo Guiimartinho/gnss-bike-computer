@@ -291,7 +291,7 @@ A placa vem do `-b` (variável `BOARD` dos scripts); o Zephyr aplica `boards/<pl
 | Alias | Serviço | nRF54LM20 DK (periféricos da placa nova) | nRF52840 DK (pinos da V3) |
 |---|---|---|---|
 | `gnss` | GNSS | `gnss-nmea-generic` no `uart21` (TX P1.04, RX P1.05), até o driver UBX do M10 | `gnss-nmea-generic` no `uart1` (TX P0.05, RX P0.07), o M10578-A3 |
-| `baro0` | sensores | BMP585 (`bosch,bmp581`) em 0x47 no `i2c23` (SDA P1.02, SCL P1.03) | BME280 em 0x76 no `i2c0` (SDA P1.00, SCL P1.01) |
+| `baro0` | sensores | BMP585 (`bosch,bmp581`) em 0x47 no `i2c23` (SDA P1.29, SCL P1.03) | BME280 em 0x76 no `i2c0` (SDA P1.00, SCL P1.01) |
 | `imu0` | sensores | BMI270 em 0x68, INT1 em P3.04 | FXOS8700 em 0x1E |
 | `mag0` | sensores | MMC5633NJL (`memsic,mmc56x3`) em 0x30 | FXOS8700 |
 | `light0` | sensores | OPT3001 em 0x44 | — |
@@ -301,7 +301,7 @@ A placa vem do `-b` (variável `BOARD` dos scripts); o Zephyr aplica `boards/<pl
 | `zephyr,display` | interface | JDI LPM027M128B (`jdi,lpm027m128b`) no `spi22` (SCK P3.03, MOSI P3.00, CS P3.02 ativo alto), DISP P3.05, EXTCOMIN P3.06 | Sharp LS027B7DH01 (`sharp,ls027b7dh01`) no `spi1` (SCK P0.15, MOSI P0.16, CS P0.17 ativo alto), VCOM serial |
 | rótulo `longpress` | interface | botões 0, 1 e 2 do DK (`INPUT_KEY_0` a `INPUT_KEY_2`) | B1 P0.14, B2 P0.13, B3 P0.11 (`INPUT_KEY_LEFT`, `ENTER`, `RIGHT`) |
 | `backlight` | interface | LED 1 do DK no `pwm20`, no lugar da luz da tela | — (a V3 não tem luz) |
-| `fuel-gauge0` | energia | MAX17262 (`adi,max17262`) em 0x36 no `i2c24` (SDA P1.11, SCL P1.12, os pinos das amostras da Nordic para o nPM1300 EK) | — (o STC3100 não tem driver no Zephyr) |
+| `fuel-gauge0` | energia | MAX17262 (`adi,max17262`) em 0x36 no `i2c24` (SDA P1.11, o pino das amostras da Nordic para o nPM1300 EK, e SCL P1.14, pino de clock) | — (o STC3100 não tem driver no Zephyr) |
 | `pmic`, `pmic-charger`, `pmic-regulators` | energia | nPM1300 em 0x6B no `i2c24`, interrupção do GPIO3 em P0.04 | — |
 | `backlight-supply` | interface | LDO2 do nPM1300 em 3,3 V (3V3BL) | — |
 | `solar-charger` | energia | AEM10900 (`e-peas,aem10900`) em 0x41 no `i2c24` | — |

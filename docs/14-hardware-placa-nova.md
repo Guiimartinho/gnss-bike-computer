@@ -249,15 +249,20 @@ Provisória. Os blocos seriais seguem os domínios de pinos do nRF54LM20A (`spi0
 | Display | SCK, MOSI, CS, DISP, EN do REG710 | `spi22` e GPIO | P3 | SCK P3.03, MOSI P3.00, CS P3.02, DISP P3.05 |
 | Display | EXTCOMIN (1 Hz sem luz; cerca de 120 Hz com a luz acesa, para o COM perto dos 60 Hz que a ficha pede) e luz | `pwm20` | P1 | EXTCOMIN P3.06 por GPIO e timer; a luz no LED 1 (`pwm20`) |
 | GNSS | TXD, RXD, RESET_N, EXTINT, TIMEPULSE (o OE do tradutor fica fixo no VCCA) | `uart21` e GPIO | P1 | TX P1.04, RX P1.05, RESET P1.06, EXTINT P1.07, TIMEPULSE P1.13 |
-| Sensores | SDA, SCL, INT1 e INT2 do IMU, INT do barômetro | `i2c23` e GPIO | P1 e P3 | SDA P1.02, SCL P1.03, INT1 P3.04 |
-| Energia | SDA, SCL, interrupção do nPM1300 (GPIO3), ALRT do MAX17262 e IRQ do AEM10900 (o bloqueio da carga solar vem do VBUSOUT, sem pino do MCU) | `i2c30` e GPIO | P0 | `i2c24`: SDA P1.11, SCL P1.12, e a interrupção do GPIO3 do nPM1300 em P0.04, os pinos das amostras da Nordic para o nPM1300 EK (lá no `i2c21`, que aqui é do `uart21` do GNSS); MAX17262 e AEM10900 no mesmo barramento |
+| Sensores | SDA, SCL, INT1 e INT2 do IMU, INT do barômetro | `i2c23` e GPIO | P1 e P3 | SDA P1.29, SCL P1.03, INT1 P3.04 |
+| Energia | SDA, SCL, interrupção do nPM1300 (GPIO3), ALRT do MAX17262 e IRQ do AEM10900 (o bloqueio da carga solar vem do VBUSOUT, sem pino do MCU) | `i2c30` e GPIO | P0 | `i2c24`: SDA P1.11 e SCL P1.14, e a interrupção do GPIO3 do nPM1300 em P0.04; o SDA e a interrupção são os pinos das amostras da Nordic para o nPM1300 EK (lá no `i2c21`, que aqui é do `uart21` do GNSS, e com o SCL em P1.12, que não é pino de clock); MAX17262 e AEM10900 no mesmo barramento |
 | Botões | 2 entradas com despertar; o central chega pelo SHPHLD e pelo GPIO3 do nPM1300 | GPIO | P0 ou P1 | P1.26, P1.09, P1.08 |
 | LED RGB | 3 canais | `pwm22` | P1 ou P3 | — |
 | Buzzer | 2 canais em contrafase | `pwm21` | P1 ou P3 | — |
 | Console | TX, RX em pads de teste | `uart30` | P0 | — |
 | Dedicados | USB (D+, D−, VBUS), SWD, cristais internos do módulo | — | — | — |
 
-Total: 37 GPIO no protótipo, com o microSD e o SD NAND, e 35 no produto, só com o SD NAND, dos 66 do módulo.
+Total: 37 GPIO no protótipo, com o microSD e o SD NAND, e 35 no produto, só com o SD NAND, dos 64 do módulo (o chip tem 66; o cristal de 32,768 kHz ocupa P1.20 e P1.21).
+
+Duas regras de pino do nRF54LM20A (ficha 4539_001 v1.0) mandam no mapa:
+
+1. **Pinos de clock.** O SCL do TWIM e o SCK do SPIM só funcionam nos pinos de clock (tabela 79): P0.03, P0.04, P0.06, P0.07, P1.03, P1.04, P1.07, P1.13, P1.14, P1.17, P1.18, P1.23, P1.24, P2.01, P2.06, P3.03 e P3.04. O dado do mesmo periférico fica num pino vizinho, para os atrasos internos baterem. As amostras da Nordic para o nPM1300 EK põem o SCL em P1.12, que não é pino de clock.
+2. **Pads do NFC.** P1.01 (NFC1) e P1.02 (NFC2) saem do reset como pinos de antena NFC, com a função de GPIO desligada (tabela 78 e registrador `PADCONFIG` do NFCT, que vale 1 no reset). O Zephyr só os libera com `nfct-pins-as-gpios` no nó `uicr`, e aí não há NFC. O mapa deixa os dois de fora, então a antena NFC continua possível.
 
 ## Placa de circuito impresso
 
