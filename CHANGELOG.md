@@ -49,6 +49,7 @@ Revisão completa de 2026-09-18: análise do legacy e do port, migração para o
 
 ### Alterado
 
+- `README.md`: o nRF54LM20A e o rádio BLE + ANT+ nos badges, a seção "Placa nova" com o desenho do aparelho, um diagrama e as escolhas principais, os comandos de build para o nRF54LM20 DK e com `ANT=1`, o aviso de que nada rodou em placa nem nos DKs, o estado do ANT e da placa nova, e a nota de que o material ANT+ fica fora do repositório.
 - `docs/14-hardware-placa-nova.md` segue a avaliação: GNSS MAX-M10N-10B (com `UBX-RXM-PMREQ` antes de cortar o 1V8, rampa do V_IO, TIMEPULSE sem pull-down e RF_IN de no máximo 0 dBm), bloqueio da carga solar pelo VBUSOUT, indutor de 6,8 µH, 5 V opcional (REG710) para o Sharp, TXU0204 em VQFN-14 com o OE fixo, MAX17262 em WLP, SD NAND, USB-C IPX8, ESD751 no lugar do TPD1E10B06 (que conduziria com 9 a 20 V no VBUS), conector da bateria de 4 vias e 37 GPIO no protótipo. O `docs/13` e o desenho do aparelho passaram a apontar para essas escolhas, e o BMP585 deixou de ser descrito com gel, que a ficha não cita.
 - `build.bat`, `build_ncs.bat`, `flash.bat`, `recover.bat` e `serial.bat` reescritos para o NCS v3.3.0: ambiente em `tools/fw/ncs_env.bat`, `west` rodando no drive do projeto, sysbuild, `-p auto`, gravação filtrada por J-Link (`--traits jlink` ou `NRF_SERIAL`), opção de preservar a partição de settings, porta serial por parâmetro.
 - `.gitignore`: builds, caches do clangd, `__pycache__`, `node_modules` e `.claude/settings.local.json`.
