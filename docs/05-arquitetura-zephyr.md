@@ -5,7 +5,7 @@ Como o `zephyr_app/` está organizado desde 2026-09-19: um serviço por assunto,
 > [!IMPORTANT]
 > Build verificado nos dois alvos (nRF52840 DK e nRF54LM20 DK, com e sem ANT) e testes de host; **nada rodou em placa**.
 
-**Nesta página:** [Camadas](#camadas) · [Boot](#boot) · [Threads](#threads) · [Eventos](#eventos) · [Máquinas de estado](#máquinas-de-estado) · [Watchdog](#watchdog) · [Fluxo de dados](#fluxo-de-dados) · [Pilhas](#pilhas) · [Tela](#tela) · [Medidor de bateria](#medidor-de-bateria) · [Módulos](#módulos) · [Devicetree e alvos](#devicetree-e-alvos) · [Configuração](#configuração) · [Regras de concorrência](#regras-de-concorrência)
+**Nesta página:** [Camadas](#camadas) · [Boot](#boot) · [Threads](#threads) · [Eventos](#eventos) · [Máquinas de estado](#máquinas-de-estado) · [Watchdog](#watchdog) · [Fluxo de dados](#fluxo-de-dados) · [Pilhas](#pilhas) · [Tela](#tela) · [Medidor de bateria](#medidor-de-bateria) · [Carregador](#carregador) · [Módulos](#módulos) · [Devicetree e alvos](#devicetree-e-alvos) · [Configuração](#configuração) · [Regras de concorrência](#regras-de-concorrência)
 
 ## Camadas
 
@@ -91,11 +91,11 @@ Prioridade no Zephyr: número menor ganha. Pilhas medidas (ver [Pilhas](#pilhas)
 | `radio` | `src/svc/radio/radio_svc.c` | 6 | 3072 B | caixa de entrada | sobe o ANT (com `ANT=1`) e o BLE, liga os clientes aos canais, atualiza o nível da bateria no BLE |
 | `ui` | `src/svc/ui/ui_svc.c` | 7 | 6144 B | caixa de entrada, o próximo timer do LVGL; ao menos 1 vez por segundo | a única que chama o LVGL: telas do retrato, teclas, notificações, telas de USB e de desligamento, luz e COM; o driver manda ao painel só as linhas que mudaram |
 | `storage` | `src/svc/storage/storage_svc.c` | 8 | 3584 B | caixa de entrada | monta o cartão, carrega segmentos, lista percursos, grava o log de atividade |
-| `power` | `src/svc/power/power_svc.c` | 9 | 3072 B | caixa de entrada; tique de 1 s; o medidor a cada 10 s | máquina de sistema, desligamento automático, ship mode ou System OFF; lê o medidor e publica `power_status`; bateria fraca e crítica (`battery.c`) |
+| `power` | `src/svc/power/power_svc.c` | 9 | 3072 B | caixa de entrada; tique de 1 s; o medidor e o carregador a cada 10 s; eventos do nPM1300 | máquina de sistema, desligamento automático, ship mode ou System OFF; lê o medidor e o carregador e publica `power_status`; bateria fraca e crítica (`battery.c`); estado da carga (`charge.c`) |
 | workqueue do modem | Zephyr (`CONFIG_MODEM_DEDICATED_WORKQUEUE`) | do sistema | 2048 B | bytes do receptor | o driver GNSS interpreta e chama os callbacks do serviço, que publicam `gnss_fix` e `gnss_sky` |
 | RX do BT | Zephyr | cooperativa | 3072 B | pacotes do rádio | os clientes BLE chamam os callbacks do serviço de rádio, que publicam `ext_sensor` e `link_status` |
 | entrada | Zephyr (`CONFIG_INPUT_THREAD_STACK_SIZE`) | 0 | 2048 B | eventos das teclas | o `zephyr,input-longpress` separa toque curto e longo; o callback de `src/svc/ui/ui_input.c` publica `input` |
-| workqueue do sistema | Zephyr | do sistema | 2048 B | trabalhos | o debounce das teclas e, na V3, o VCOM serial da tela |
+| workqueue do sistema | Zephyr | do sistema | 2048 B | trabalhos | o debounce das teclas, os eventos do nPM1300 (o driver lê os registradores e chama o callback do serviço, que só põe a mensagem na caixa) e, na V3, o VCOM serial da tela |
 
 Ficam por conta do Zephyr e do NCS: o log, o TX do BT, o MPSL e o idle.
 
@@ -134,6 +134,7 @@ As mensagens estão em `zephyr_app/include/app/app_events.h`, em C sem tipos do 
 |---|---|---|---|
 | Sistema e energia | `src/svc/power/sys_fsm.c` | Partida, Ligado e MSC sob um pai comum que aceita o desligamento; Desligando espera a resposta de cada serviço por até 5 s; Desligado corta a energia (ship mode do nPM1300 sem VBUS, System OFF com VBUS ou sem PMIC) | `test_sys_fsm` (16 casos), com o `lib/smf/smf.c` do Zephyr |
 | Modo | `src/svc/model/model_svc.c` | CRS, PRC, FEC, Zwift, DBG, com as entradas e saídas de `boucle__change_mode()` (`legacy/source/model/Boucle.cpp:101-143`): PRC inicia o percurso carregado e o para ao sair, FEC zera as zonas e o score | pelo build; sem teste de host |
+| Carga | `src/svc/power/charge.c` | Bateria, Solar, USB, USB cheia, Pausa térmica, Falha, lidos dos registradores do nPM1300 a cada evento e a cada 10 s: com VBUS, o hardware bloqueia o solar | `test_charge` (11 casos) |
 | Luz da tela | `src/svc/ui/backlight.c` | Apagada, Temporária (10 s depois de uma tecla) e Automática (pouca luz ambiente, com histerese entre 20 e 50 lux); desligada pelo menu, nada a acende; limites a acertar na bancada | `test_backlight` (11 casos) |
 
 O desligamento automático é o do legacy (`legacy/source/scheduling/power_scheduler.cpp`): cada posição com fix em CRS, PRC e DBG, e cada dado do rolo em FEC, reinicia a contagem de 15 min (`src/model/power_scheduler.c`, `test_power_scheduler`). Diagramas das máquinas em [16](16-arquitetura-firmware.md#máquinas-de-estado).
@@ -187,7 +188,7 @@ Medidas com `CONFIG_STACK_USAGE=y` (arquivos `.su` do GCC) em 2026-09-19, no bui
 | `gnss` | publicação no zbus e log | ~0,7 KB | 2048 B | ~1,3 KB |
 | `ui` | `ui_thread` 136 + `lv_timer_handler` 40 + `lv_display_refr_timer` 144 + `refr_area` 88 + 4 níveis da árvore de objetos × (`lv_obj_refr` 272 + `lv_obj_redraw` 352) + evento de desenho ~0,3 KB + arco (`ui_draw_disc` 200, `lv_draw_arc` 128, `lv_draw_sw_arc` 600, máscara e mistura ~0,4 KB) | ~4,7 KB | 6144 B | ~1,4 KB |
 | entrada | `input_thread` 40 + `ui_keys_cb` 16 + publicação no zbus (`zbus_chan_pub` 56, `ui_listener` 80, `app_inbox_put` 56) + log | ~0,9 KB | 2048 B | ~1,1 KB |
-| workqueue do sistema | VCOM serial da V3: `com_work_handler` 16 + `send_mode` 32 + `spi_nrfx_transceive` 128 + `nrfx_spim_xfer` 40 + espera + log | ~1,0 KB | 2048 B | ~1,0 KB |
+| workqueue do sistema | VCOM serial da V3: `com_work_handler` 16 + `send_mode` 32 + `spi_nrfx_transceive` 128 + `nrfx_spim_xfer` 40 + espera + log; no nRF54LM20, os eventos do nPM1300: `work_callback` 104 + leitura I2C + `pmic_event` 16 + `app_inbox_put` 56 + log, ~0,7 KB | ~1,0 KB | 2048 B | ~1,0 KB |
 | workqueue do modem | interpretação NMEA (`modem_chat_process_handler` 64, `gnss_nmea0183_parse_rmc`) + `gnss_data_cb` 72 + publicação | ~0,9 KB | 2048 B | ~1,1 KB |
 | `main` | `settings_zms_save` 144 e o ZMS, ou `zms_mount` 232, com log | ~0,8 KB | 2048 B | ~1,2 KB |
 
@@ -247,12 +248,27 @@ O MAX17262 da placa nova é lido pela API de fuel gauge do Zephyr, com um driver
 
 - Não testado com o medidor: a configuração, os tempos de espera e as leituras ficam para a bancada, com a placa de avaliação do MAX17262 no `i2c24` do DK.
 
+## Carregador
+
+O nPM1300 usa os drivers do Zephyr (MFD, reguladores e o carregador pela API de sensores), com a configuração de [14](14-hardware-placa-nova.md#alimentação) no devicetree.
+
+| Item | Como funciona | Fonte |
+|---|---|---|
+| Trilhos | BUCK1 travado em 1,8 V (o V_IO do GNSS tem máximo absoluto de 1,98 V) e ligado na partida; BUCK2 travado em 3,0 V e sempre ligado (o MCU); LDO1 como chave do cartão, ligada; LDO2 como LDO de 3,3 V da luz, ligado só com a luz acesa pela thread `ui` | [14](14-hardware-placa-nova.md#árvore) |
+| Carga | 600 mA, fim em 4,20 V e em 10 % da corrente (60 mA, o `IChgTerm` do medidor), NTC de 10 kΩ B3380 com os limites JEITA de fábrica | [14](14-hardware-placa-nova.md#carga) |
+| VBUS | 500 mA na partida; quando o VBUS chega, o serviço lê o que a fonte USB-C oferece pelo CC (500 mA ou 1,5 A) e sobe o limite, que o nPM1300 volta ao padrão quando o cabo sai; o VBUS vai para a máquina de sistema, que escolhe ship mode ou System OFF | ficha do nPM1300; amostras `npm13xx_*` do NCS |
+| Eventos | VBUS entrou e saiu, carga completa e erro do carregador: o driver do MFD os recebe pelo GPIO3 e chama o callback no workqueue do sistema, que só põe uma mensagem na caixa da thread `power` | `mfd_npm13xx_add_callback()` |
+| Estado | `charge.c` lê `BCHGCHARGESTATUS`, `BCHGERRREASON`, o `VBUSINSTATUS` e o `NTCSTATUS` e dá o estado da [máquina de carga](16-arquitetura-firmware.md#carga); pausa térmica e falha viram notificação | `test_charge` (11 casos) |
+
+- O LED de carga do nPM1300 (LED1) acende sozinho, sem firmware ([14](14-hardware-placa-nova.md#componentes-principais)); o devicetree não mexe nos LEDs.
+- Não testado com o nPM1300: o EK liga no `i2c24` do DK com a interrupção em P0.04.
+
 ## Módulos
 
 | Pasta | Arquivos | Papel |
 |---|---|---|
 | `src/app/` | `main.c`, `app_channels.c`, `app_svc.c` | boot, canais, watchdog e caixas de entrada |
-| `src/svc/power/` | `power_svc.c`, `sys_fsm.c`, `battery.c` | serviço de energia, máquina de sistema, bateria fraca e crítica |
+| `src/svc/power/` | `power_svc.c`, `sys_fsm.c`, `battery.c`, `charge.c` | serviço de energia, máquina de sistema, bateria fraca e crítica, estado da carga |
 | `src/svc/gnss/` | `gnss_svc.c` | receptor pela API GNSS do Zephyr |
 | `src/svc/sensors/` | `sensors_svc.c`, `tilt.c` | sensores pela API de sensores; inclinação, rumo e rugosidade |
 | `src/svc/radio/` | `radio_svc.c` | ANT e BLE, clientes para eventos |
@@ -284,6 +300,8 @@ A placa vem do `-b` (variável `BOARD` dos scripts); o Zephyr aplica `boards/<pl
 | rótulo `longpress` | interface | botões 0, 1 e 2 do DK (`INPUT_KEY_0` a `INPUT_KEY_2`) | B1 P0.14, B2 P0.13, B3 P0.11 (`INPUT_KEY_LEFT`, `ENTER`, `RIGHT`) |
 | `backlight` | interface | LED 1 do DK no `pwm20`, no lugar da luz da tela | — (a V3 não tem luz) |
 | `fuel-gauge0` | energia | MAX17262 (`adi,max17262`) em 0x36 no `i2c24` (SDA P1.11, SCL P1.12, os pinos das amostras da Nordic para o nPM1300 EK) | — (o STC3100 não tem driver no Zephyr) |
+| `pmic`, `pmic-charger`, `pmic-regulators` | energia | nPM1300 em 0x6B no `i2c24`, interrupção do GPIO3 em P0.04 | — |
+| `backlight-supply` | interface | LDO2 do nPM1300 em 3,3 V (3V3BL) | — |
 
 - O nRF52840 DK não tem leitura de bateria: o STC3100 da V3 não tem driver no Zephyr. A V3 existe só como esquema.
 - Os três botões são `gpio-keys` com códigos de tecla; o nó `longpress` (`zephyr,input-longpress`, 1 s) gera o toque curto (esquerda, `ENTER`, direita) ao soltar e o longo (`HOME`, `MENU`, `END`) depois de 1 s apertado. Os nós falsos de `gpio-keys` que davam nomes a pinos do GPS, do IMU e do NeoPixel saíram, porque o subsistema de entrada os trataria como teclas.
@@ -298,7 +316,7 @@ A placa vem do `-b` (variável `BOARD` dos scripts); o Zephyr aplica `boards/<pl
 | Arquivo | O que define |
 |---|---|
 | `prj.conf` | zbus e SMF, `task_wdt` com 8 canais, `CONFIG_POWEROFF`, a API de fuel gauge, GNSS com satélites e o workqueue próprio do modem, sensores, tela e LVGL (RGB565, pool de 32 KB, buffer de desenho de 10 % a 16 bits, só os formatos RGB565 e A8 no renderizador, sem log, sem temas e só rótulos, como `tests/ui/lv_conf.h`), entrada com a thread de 2048 B, workqueue do sistema de 2048 B, FatFs com nomes longos em buffer estático, BLE central e periférico (4 conexões, RX do BT com 3072 B), settings em NVS, log por UART, `CONFIG_RESET_ON_FATAL_ERROR`, otimização de tamanho |
-| `boards/*.conf` | o ZMS e o PWM da luz no nRF54LM20 |
+| `boards/*.conf` | o ZMS, o PWM da luz e os reguladores (`CONFIG_REGULATOR`) no nRF54LM20 |
 | `sysbuild.conf` | `SB_CONFIG_PARTITION_MANAGER=n` |
 | `CMakeLists.txt` | fontes por camada, o módulo `modules/gnss_drivers` por `EXTRA_ZEPHYR_MODULES`, `-Wall -Wextra` |
 

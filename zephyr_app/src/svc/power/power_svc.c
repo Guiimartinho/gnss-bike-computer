@@ -14,13 +14,24 @@
  * API: voltage, average current, charge, temperature and time to empty go
  * to power_status; battery.c turns the charge into the low-battery
  * notification and the critical event of the system machine.
+ *
+ * With the nPM1300 (aliases pmic and pmic-charger) it also reads the
+ * charger: VBUS goes to the system machine (ship mode or System OFF), the
+ * USB-C current of the source raises the VBUS limit, and charge.c turns
+ * the charger registers into the charge state of the screens. The PMIC
+ * events (VBUS in and out, charge done, charger error) arrive from its
+ * work item as inbox messages and trigger a new reading.
  */
 
 #include <string.h>
 
 #include <zephyr/device.h>
 #include <zephyr/drivers/fuel_gauge.h>
+#include <zephyr/drivers/gpio.h>
+#include <zephyr/drivers/mfd/npm13xx.h>
 #include <zephyr/drivers/regulator.h>
+#include <zephyr/drivers/sensor.h>
+#include <zephyr/drivers/sensor/npm13xx_charger.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/logging/log_ctrl.h>
@@ -30,6 +41,7 @@
 #include "app/app_channels.h"
 #include "app/app_svc.h"
 #include "svc/battery.h"
+#include "svc/charge.h"
 #include "svc/sys_fsm.h"
 
 LOG_MODULE_REGISTER(power_svc, CONFIG_LOG_DEFAULT_LEVEL);
@@ -61,13 +73,32 @@ static const struct device *const gauge = DEVICE_DT_GET(FUEL_GAUGE);
 static const struct device *const gauge = NULL;
 #endif
 
+#define PMIC_NODE               DT_ALIAS(pmic)
+#define CHARGER_NODE            DT_ALIAS(pmic_charger)
+
+#if DT_NODE_HAS_STATUS_OKAY(PMIC_NODE) && DT_NODE_HAS_STATUS_OKAY(CHARGER_NODE) && \
+    defined(CONFIG_MFD_NPM13XX) && defined(CONFIG_NPM13XX_CHARGER)
+#define POWER_HAS_PMIC          1
+static const struct device *const pmic = DEVICE_DT_GET(PMIC_NODE);
+static const struct device *const charger = DEVICE_DT_GET(CHARGER_NODE);
+#else
+#define POWER_HAS_PMIC          0
+#endif
+
+/* nPM1300 datasheet 6.2.14: charger block, NTC comparator status */
+#define NPM1300_CHARGER_BASE    0x03U
+#define NPM1300_NTCSTATUS       0x32U
+/* VBUSINSTATUS.VBUSINPRESENT */
+#define NPM1300_VBUS_PRESENT    0x01U
+
 enum power_msg_kind {
     PM_CMD = 0,
     PM_ACK,
     PM_FIX,
     PM_TRAINER,
     PM_MODE,
-    PM_READY
+    PM_READY,
+    PM_PMIC                     /**< arg: the event bit of the nPM1300 */
 };
 
 struct power_msg {
@@ -214,6 +245,107 @@ static void on_battery_event(battery_event_t ev)
     }
 }
 
+#if POWER_HAS_PMIC
+static charge_state_t charge = CHARGE_BATTERY;
+static struct gpio_callback pmic_cb;
+
+static void on_charge_change(charge_state_t now)
+{
+    if (now == CHARGE_THERMAL_PAUSE) {
+        LOG_WRN("charging paused: cell or die temperature");
+        app_notify("Carga", "Pausada: temperatura", NULL, false, 0U);
+    } else if (now == CHARGE_FAULT) {
+        LOG_ERR("charger error");
+        app_notify("Carga", "Erro no carregador", NULL, false, 0U);
+    } else {
+        LOG_INF("charge state %u", (unsigned int)now);
+    }
+}
+
+/** PMIC event, from the work item of the MFD driver: only a message here */
+static void pmic_event(const struct device *dev, struct gpio_callback *cb, uint32_t events)
+{
+    struct power_msg msg = {.kind = PM_PMIC, .arg = (int32_t)events};
+
+    ARG_UNUSED(dev);
+    ARG_UNUSED(cb);
+    app_inbox_put(&power_inbox, &msg, "power");
+}
+
+/** A new VBUS: take what the USB-C source offers (500 mA or 1.5 A), reset on removal */
+static void vbus_limit(void)
+{
+    struct sensor_value cap;
+
+    if ((sensor_attr_get(charger, SENSOR_CHAN_CURRENT, SENSOR_ATTR_UPPER_THRESH, &cap) == 0) &&
+        ((cap.val1 != 0) || (cap.val2 != 0))) {
+        (void)sensor_attr_set(charger, SENSOR_CHAN_CURRENT, SENSOR_ATTR_CONFIGURATION, &cap);
+        LOG_INF("VBUS limit %d mA", (int)((cap.val1 * 1000) + (cap.val2 / 1000)));
+    }
+}
+
+/** Charger registers into VBUS and the charge state */
+static void read_charger(void)
+{
+    struct sensor_value val = {0};
+    charge_inputs_t in = {0};
+    uint8_t ntc = 0U;
+
+    if (!device_is_ready(charger) || (sensor_sample_fetch(charger) != 0)) {
+        return;
+    }
+    (void)sensor_channel_get(charger, (enum sensor_channel)SENSOR_CHAN_NPM13XX_CHARGER_VBUS_STATUS,
+                             &val);
+    in.vbus = ((uint32_t)val.val1 & NPM1300_VBUS_PRESENT) != 0U;
+    (void)sensor_channel_get(charger, (enum sensor_channel)SENSOR_CHAN_NPM13XX_CHARGER_STATUS, &val);
+    in.status = (uint8_t)val.val1;
+    (void)sensor_channel_get(charger, (enum sensor_channel)SENSOR_CHAN_NPM13XX_CHARGER_ERROR, &val);
+    in.error = (uint8_t)val.val1;
+    (void)mfd_npm13xx_reg_read(pmic, NPM1300_CHARGER_BASE, NPM1300_NTCSTATUS, &ntc);
+    in.ntc = ntc;
+
+    if (in.vbus != status.vbus) {
+        LOG_INF("VBUS %s", in.vbus ? "in" : "out");
+        status.vbus = in.vbus;
+        sys_fsm_event(&fsm, SYS_EV_VBUS, in.vbus ? 1 : 0);
+        if (in.vbus) {
+            vbus_limit();
+        }
+    }
+
+    charge_state_t now = charge_state(&in);
+
+    if (now != charge) {
+        charge = now;
+        on_charge_change(now);
+    }
+    status.charge = charge_app(now);
+}
+
+static void pmic_init(void)
+{
+    if (!device_is_ready(pmic) || !device_is_ready(charger)) {
+        LOG_WRN("nPM1300 not ready: no charger readings");
+        return;
+    }
+    gpio_init_callback(&pmic_cb, pmic_event,
+                       BIT(NPM13XX_EVENT_VBUS_DETECTED) | BIT(NPM13XX_EVENT_VBUS_REMOVED) |
+                           BIT(NPM13XX_EVENT_CHG_COMPLETED) | BIT(NPM13XX_EVENT_CHG_ERROR));
+    if (mfd_npm13xx_add_callback(pmic, &pmic_cb) != 0) {
+        LOG_WRN("nPM1300 events not enabled");
+    }
+}
+#else
+static void read_charger(void)
+{
+}
+
+static void pmic_init(void)
+{
+    LOG_INF("no nPM1300 (aliases pmic, pmic-charger): no charger readings");
+}
+#endif
+
 /**
  * Read the fuel gauge into the status. A gauge that stops answering keeps the
  * last values and clears status.gauge, so the screens show no battery data.
@@ -279,6 +411,8 @@ static void power_thread(void *p1, void *p2, void *p3)
     if (gauge == NULL) {
         LOG_INF("no fuel gauge (alias fuel-gauge0): no battery readings");
     }
+    pmic_init();
+    read_charger();
     read_gauge();
     publish_status();
 
@@ -305,6 +439,9 @@ static void power_thread(void *p1, void *p2, void *p3)
             case PM_READY:
                 sys_fsm_event(&fsm, SYS_EV_READY, 0);
                 break;
+            case PM_PMIC:
+                read_charger();
+                break;
             default:
                 break;
             }
@@ -312,6 +449,7 @@ static void power_thread(void *p1, void *p2, void *p3)
             sys_fsm_event(&fsm, SYS_EV_TICK, 0);
         }
         if ((k_uptime_get_32() - last_gauge_ms) >= POWER_GAUGE_PERIOD_MS) {
+            read_charger();
             read_gauge();
             last_gauge_ms = k_uptime_get_32();
         }

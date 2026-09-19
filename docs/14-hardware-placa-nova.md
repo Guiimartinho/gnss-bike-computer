@@ -250,7 +250,7 @@ Provisória. Os blocos seriais seguem os domínios de pinos do nRF54LM20A (`spi0
 | Display | EXTCOMIN (1 Hz sem luz; cerca de 120 Hz com a luz acesa, para o COM perto dos 60 Hz que a ficha pede) e luz | `pwm20` | P1 | EXTCOMIN P3.06 por GPIO e timer; a luz no LED 1 (`pwm20`) |
 | GNSS | TXD, RXD, RESET_N, EXTINT, TIMEPULSE (o OE do tradutor fica fixo no VCCA) | `uart21` e GPIO | P1 | TX P1.04, RX P1.05, RESET P1.06, EXTINT P1.07, TIMEPULSE P1.13 |
 | Sensores | SDA, SCL, INT1 e INT2 do IMU, INT do barômetro | `i2c23` e GPIO | P1 e P3 | SDA P1.02, SCL P1.03, INT1 P3.04 |
-| Energia | SDA, SCL, interrupção do nPM1300 (GPIO3), ALRT do MAX17262 e IRQ do AEM10900 (o bloqueio da carga solar vem do VBUSOUT, sem pino do MCU) | `i2c30` e GPIO | P0 | `i2c24`: SDA P1.11, SCL P1.12, os pinos das amostras da Nordic para o nPM1300 EK (lá no `i2c21`, que aqui é do `uart21` do GNSS) |
+| Energia | SDA, SCL, interrupção do nPM1300 (GPIO3), ALRT do MAX17262 e IRQ do AEM10900 (o bloqueio da carga solar vem do VBUSOUT, sem pino do MCU) | `i2c30` e GPIO | P0 | `i2c24`: SDA P1.11, SCL P1.12, e a interrupção do GPIO3 do nPM1300 em P0.04, os pinos das amostras da Nordic para o nPM1300 EK (lá no `i2c21`, que aqui é do `uart21` do GNSS) |
 | Botões | 2 entradas com despertar; o central chega pelo SHPHLD e pelo GPIO3 do nPM1300 | GPIO | P0 ou P1 | P1.26, P1.09, P1.08 |
 | LED RGB | 3 canais | `pwm22` | P1 ou P3 | — |
 | Buzzer | 2 canais em contrafase | `pwm21` | P1 ou P3 | — |

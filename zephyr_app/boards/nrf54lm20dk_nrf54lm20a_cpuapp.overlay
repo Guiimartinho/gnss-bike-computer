@@ -17,17 +17,20 @@
  *   Display SPI (spi22)   SCK P3.03, MOSI P3.00, CS P3.02; DISP P3.05,
  *                         EXTCOMIN P3.06
  *   Energy I2C (i2c24)    SDA P1.11, SCL P1.12 (the pins of the Nordic samples
- *                         for the nPM1300 EK); MAX17262 0x36
+ *                         for the nPM1300 EK); nPM1300 0x6B with its GPIO3
+ *                         interrupt on P0.04, MAX17262 0x36
  *   Keys                  buttons 0, 1 and 2 of the DK (left, centre, right)
  *   Light                 LED 1 of the DK (pwm20) stands for the display light
  *
  * The services find the devices by these aliases: gnss, baro0, imu0, mag0,
- * light0, backlight and fuel-gauge0 (docs/16, Serviços), the display by the chosen node
+ * light0, backlight, backlight-supply, fuel-gauge0, pmic, pmic-charger and
+ * pmic-regulators (docs/16, Serviços), the display by the chosen node
  * zephyr,display and the keys by the node label longpress. A device that
  * does not answer is left out.
  */
 
 #include <zephyr/dt-bindings/input/input-event-codes.h>
+#include <zephyr/dt-bindings/regulator/npm13xx.h>
 #include <zephyr/dt-bindings/sensor/bmp581.h>
 
 / {
@@ -42,7 +45,11 @@
         mag0 = &mmc5633;
         light0 = &opt3001;
         backlight = &pwm_led1;
+        backlight-supply = &npm1300_ldo2;
         fuel-gauge0 = &max17262;
+        pmic = &npm1300_pmic;
+        pmic-charger = &npm1300_charger;
+        pmic-regulators = &npm1300_regulators;
     };
 
     /*
@@ -154,6 +161,67 @@
         design-capacity-mah = <2000>;
         charge-term-current-ma = <60>;
         charge-voltage-mv = <4200>;
+    };
+
+    /*
+     * nPM1300 (docs/14, Alimentação), with the GPIO3 interrupt on P0.04 as
+     * the Nordic samples wire the EK. Ship mode through the regulators node
+     * (alias pmic-regulators); VBUS and charger events for the power service.
+     */
+    npm1300_pmic: pmic@6b {
+        compatible = "nordic,npm1300";
+        reg = <0x6b>;
+        host-int-gpios = <&gpio0 4 GPIO_ACTIVE_HIGH>;
+        pmic-int-pin = <3>;
+
+        npm1300_regulators: regulators {
+            compatible = "nordic,npm1300-regulator";
+
+            /* 1V8: GNSS VCC and V_IO; the V_IO absolute maximum is 1.98 V,
+             * so the voltage is locked (VSET1 of 47k starts it at 1.8 V) */
+            npm1300_buck1: BUCK1 {
+                regulator-min-microvolt = <1800000>;
+                regulator-max-microvolt = <1800000>;
+                regulator-boot-on;
+            };
+
+            /* 3V0: MCU, display, sensors; VSET2 of 150k starts it at 3.0 V */
+            npm1300_buck2: BUCK2 {
+                regulator-min-microvolt = <3000000>;
+                regulator-max-microvolt = <3000000>;
+                regulator-always-on;
+            };
+
+            /* SD3V0: load switch of the card */
+            npm1300_ldo1: LDO1 {
+                regulator-initial-mode = <NPM13XX_LDSW_MODE_LDSW>;
+                regulator-boot-on;
+            };
+
+            /* 3V3BL: LDO of the display light, on only with the light */
+            npm1300_ldo2: LDO2 {
+                regulator-initial-mode = <NPM13XX_LDSW_MODE_LDO>;
+                regulator-min-microvolt = <3300000>;
+                regulator-max-microvolt = <3300000>;
+            };
+        };
+
+        /*
+         * 600 mA (0.3C of the 2000 mAh cell), end at 4.20 V and at 10 % of
+         * the current (60 mA, the IChgTerm of the MAX17262), 500 mA from VBUS
+         * until the USB-C source says more, JEITA with the 10k B3380 NTC of
+         * the pack at the register defaults (0, 10, 45 and 60 degC).
+         */
+        npm1300_charger: charger {
+            compatible = "nordic,npm1300-charger";
+            term-microvolt = <4200000>;
+            current-microamp = <600000>;
+            dischg-limit-microamp = <1000000>;
+            vbus-limit-microamp = <500000>;
+            thermistor-ohms = <10000>;
+            thermistor-beta = <3380>;
+            charging-enable;
+        };
     };
 };
 

@@ -27,6 +27,7 @@
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/display.h>
 #include <zephyr/drivers/pwm.h>
+#include <zephyr/drivers/regulator.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/settings/settings.h>
@@ -76,6 +77,14 @@ static const struct pwm_dt_spec light_pwm = PWM_DT_SPEC_GET(DT_ALIAS(backlight))
 #define UI_LIGHT_PCT        50U
 #else
 #define UI_HAS_LIGHT 0
+#endif
+
+/* The supply of the light, when the board switches it (3V3BL of the nPM1300 LDO2) */
+#if DT_NODE_EXISTS(DT_ALIAS(backlight_supply)) && defined(CONFIG_REGULATOR)
+#define UI_HAS_LIGHT_SUPPLY 1
+static const struct device *const light_supply = DEVICE_DT_GET(DT_ALIAS(backlight_supply));
+#else
+#define UI_HAS_LIGHT_SUPPLY 0
 #endif
 
 BUILD_ASSERT(DT_NODE_HAS_STATUS_OKAY(UI_DISPLAY_NODE), "the interface needs a zephyr,display");
@@ -228,8 +237,19 @@ static void light_apply(void)
         return;
     }
     light_shown = on;
+#if UI_HAS_LIGHT_SUPPLY
+    /* supply up before the PWM, down after it */
+    if (on && device_is_ready(light_supply)) {
+        (void)regulator_enable(light_supply);
+    }
+#endif
 #if UI_HAS_LIGHT
     (void)pwm_set_pulse_dt(&light_pwm, on ? ((light_pwm.period * UI_LIGHT_PCT) / 100U) : 0U);
+#endif
+#if UI_HAS_LIGHT_SUPPLY
+    if (!on && device_is_ready(light_supply)) {
+        (void)regulator_disable(light_supply);
+    }
 #endif
 #if defined(CONFIG_MEMLCD)
     (void)memlcd_set_com_hz(display, on ? UI_COM_HZ_LIGHT : UI_COM_HZ_DARK);

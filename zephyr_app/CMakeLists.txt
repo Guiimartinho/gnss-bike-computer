@@ -48,6 +48,7 @@ target_sources(app PRIVATE
 # =============================================================================
 target_sources(app PRIVATE
     src/svc/power/battery.c
+    src/svc/power/charge.c
     src/svc/power/power_svc.c
     src/svc/power/sys_fsm.c
     src/svc/gnss/gnss_svc.c
