@@ -6,9 +6,9 @@ Onde o port Zephyr (`zephyr_app/`) está em relação ao firmware original (`leg
 
 ## Resumo
 
-- **Compila** no NCS v3.3.0 (FLASH 296.320 B, RAM 116.928 B, 7 avisos conhecidos) e **passa em 7 conjuntos de testes de host** (50 casos). **Nada foi testado na placa** nem no nRF52840-DK.
+- **Compila** no NCS v3.3.0 (FLASH 296.320 B, RAM 116.928 B, 7 avisos conhecidos) e **passa em 8 conjuntos de testes de host** (60 casos). **Nada foi testado na placa** nem no nRF52840-DK.
 - A maior parte dos módulos do legacy **existe** no port, mas muitos **não estão ligados** ao fluxo principal (menu, FEC, notificações, zonas RR, fontes de posição, allocator de segmentos, parcours, EPO, USB) e alguns **não funcionariam** mesmo ligados (BLE central, segmentos, formatos de arquivo).
-- A interface do port é **nova**, em paisagem; o aparelho é retrato.
+- A interface do firmware atual (`src/vue`) é **nova**, em paisagem, e o aparelho é retrato. A interface da placa nova, em LVGL, retrato e com os arranjos do legacy, está escrita em `src/ui` e testada no PC (29 telas em 2 temas), mas ainda não entrou no firmware ([18](18-interface-telas.md)).
 - ANT+: a pilha do add-on `sdk-ant` entra no build com `ANT=1` e sobe no boot (`rf_ant_init()`), mas os perfis (HRM, BSC, FE-C) ainda não foram portados; os clientes BLE ainda não funcionam de ponta a ponta.
 
 ```mermaid
@@ -43,7 +43,7 @@ Estados: **fiel** (mesmo comportamento), **diferente** (existe com regras ou con
 | Recuperação de falha (FDIR) | `.noinit` + CRC-8, restauração por data | `crash_recovery.c` | quebrado | CRC cobre o próprio campo; `has_data` nunca verdadeiro |
 | BLE | só central (NUS→stravaAP, LNS, CPS, Komoot) | periférico + central (HRS, CSC, FTMS) | quebrado | scan nunca iniciado; `bt_gatt_subscribe` com `ccc_handle=0` faria `memset(NULL)` ([07](07-radio-ant-ble.md)) |
 | ANT+ | HRM, BSC, FE-C, busca em background | pilha do `sdk-ant` com `ANT=1` (`src/rf/ant/ant.c`), sem perfis | parcial | compila no NCS v3.3.0; mapa de integração em [07](07-radio-ant-ble.md#ant-no-ncs-v330) |
-| Interface | retrato, `Org_01`, cadrans, menu, notificações | paisagem, 5×7, 9 páginas | diferente | menu, FEC e notificações não ligados ([08](08-interface.md)) |
+| Interface | retrato, `Org_01`, cadrans, menu, notificações | paisagem, 5×7, 9 páginas (`src/vue`); LVGL em retrato, 29 telas (`src/ui`, só no PC) | diferente | menu, FEC e notificações não ligados no `src/vue` ([08](08-interface.md)); a `src/ui` segue o legacy com as diferenças de [18](18-interface-telas.md#diferenças-para-o-legacy) e ainda não tem driver de tela |
 | Comandos (`$LOC`, `$DWN`, `$QRY`) e USB | VParser via USB CDC e NUS; MSC | nada; USB fora do build | ausente | stack USB antigo depreciado no Zephyr 4.3 |
 
 ## Correções de 2026-09-18
@@ -102,7 +102,7 @@ flowchart TD
     F2["2 · fidelidade dos algoritmos<br/>Kalman (ones, bound, taxa), potência, distância,<br/>zonas, FDIR, testes diferenciais contra o legacy"]:::pending --> F3
     F3["3 · armazenamento<br/>SD e FAT montados, formatos do legacy,<br/>log @DDMMYY, loader e allocator de segmentos, liste_points"]:::pending --> F4
     F4["4 · rádio<br/>ANT+ pelo sdk-ant (HRM, BSC, FE-C) e BLE central,<br/>sensores no modelo, pareamento"]:::pending --> F5
-    F5["5 · interface<br/>retrato, Org_01 e cadrans, menu com modos,<br/>telas CRS, PRC, FEC, notificações"]:::pending --> F6
+    F5["5 · interface<br/>feito: telas LVGL em retrato, testadas no PC<br/>falta: driver da tela, thread, botões, ligar ao modelo"]:::partial --> F6
     F6["6 · comandos e USB<br/>VParser $LOC/$DWN/$QRY, USB device_next CDC e MSC,<br/>stravaAP e tools/zpm"]:::pending --> F7
     F7["7 · extras<br/>Komoot, LNS, EPO e host aiding, WS2812, FRAM"]:::pending
     classDef done fill:#2e7d32,color:#ffffff
@@ -123,6 +123,15 @@ Tamanhos estimados pelos relatórios de análise: fase 1 M, fase 2 M, fase 3 G, 
 | Latch e auto-off pelo STC3100 | feito em 2026-09-18: 15 min sem posição em CRS/PRC desligam pelo STC3100; item "Power Off" no menu; o ping do rolo fica para quando houver modo FEC; não testado na placa | `src/model/power_scheduler.c`, `src/drivers/sensors/stc3100.c`, `test_power_scheduler` |
 | Board própria | MCU escolhido em 2026-09-18 (nRF54LM20A) e esquemático próprio em projeto; o firmware já compila para o nRF54LM20 DK (placa pelo `-b`, aliases no lugar das instâncias do nRF52, configurações no ZMS, `hwinfo` para a causa do reset); não testado em placa | `boards/nrf54lm20dk_nrf54lm20a_cpuapp.overlay` e `.conf` |
 
+### Andamento da fase 5
+
+| Item | Estado | Onde |
+|---|---|---|
+| Telas | feito em 2026-09-19, no PC: 29 telas em LVGL nos temas de 8 cores e preto e branco, com os arranjos, os campos e os formatos do legacy e as diferenças registradas em [18](18-interface-telas.md#diferenças-para-o-legacy); o renderizador de host confere cores, textos e navegação | `src/ui/`, `include/ui/`, `tests/ui/`, `tools/ui/` |
+| Formatação dos números | feito em 2026-09-19: `_fmkstr`, `_secjmkstr` e os limites do `cadran`, com duas diferenças de propósito ([06](06-algoritmos.md#formatação-dos-números)) | `src/ui/ui_fmt.c`, `test_ui_fmt` |
+| Driver da tela | a fazer: JDI em 3 bits e Sharp em 1 bit, retrato, quantização e linhas que mudaram ([18](18-interface-telas.md#framework)) | — |
+| Thread da tela, botões e ligação ao modelo | a fazer, com a base da placa nova ([16](16-arquitetura-firmware.md)) | — |
+
 ## Decisões do dono
 
 Tomadas em 2026-09-18:
@@ -132,7 +141,7 @@ Tomadas em 2026-09-18:
 | Rádio | **ANT+ e BLE juntos**: os sensores e equipamentos externos falam ANT+ | ANT+ pelo add-on **ANT for nRF Connect SDK** (`sdk-ant`); a v2.1.1 foi feita para o **sdk-nrf v3.2.4**, e o port a usa no NCS v3.3.0 com o módulo `ant_ncs33_compat` (ver a linha seguinte); exige aceitar o ANT+ Adopter Agreement e usar a chave de avaliação (`CONFIG_ANT_EVALUATION_KEY`) até haver licença comercial (ver [07](07-radio-ant-ble.md#decisão-ant-e-ble)) |
 | ANT no NCS v3.3.0 | **obrigatório**: o `sdk-ant` v2.1.1 roda sobre o NCS v3.3.0, não sobre o v3.2.4 | add-on clonado em `C:\ncs\sdk-ant` e usado como módulo extra do Zephyr com `ANT=1`; compila nos dois alvos; não testado em placa ([07](07-radio-ant-ble.md#ant-no-ncs-v330)) |
 | Placa | **board própria com o nRF54LM20A**, no lugar do DK com overlay, e **esquemático próprio**: GNSS, bateria e display melhores, painel solar pequeno na caixa e o que mais fizer sentido | a V3 existe só como esquema, não há placa física; o nRF54LM20 DK vem com o nRF54LM20B (a mesma peça com NPU) e o NCS v3.3.0 e o `sdk-ant` v2.1.x suportam os dois (ver [02](02-hardware.md#próxima-placa)) |
-| Tela | **retangular, no formato do legacy**: 2,7", 400 × 240, em retrato | a interface do port, hoje em paisagem, passa para retrato (fase 5); o display novo mantém o tamanho |
+| Tela | **retangular, no formato do legacy**: 2,7", 400 × 240, em retrato | a interface nova já é retrato ([18](18-interface-telas.md)) e substitui a do `src/vue`, em paisagem; o display novo mantém o tamanho |
 | CI | **desligado**: `.github/workflows/ci.yml` só roda à mão | não gasta minutos do GitHub Actions; ligar só com pedido do dono |
 | Commits | um commit por item pronto e verificado, na `develop`; Conventional Commits em inglês, nunca atribuídos a IA | regra permanente deste projeto (skill `commit-gnss`); a `main` só recebe merge da `develop` quando o dono pedir |
 

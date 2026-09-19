@@ -11,7 +11,7 @@ Portar para **Zephyr / nRF Connect SDK** o **stravaV10**, computador de bordo GP
 | Port Zephyr | `zephyr_app/` | o firmware ativo, em C puro sobre NCS v3.3.0 |
 | Original | `legacy/` | nRF5 SDK 16 + S340, C/C++: **especificação de comportamento**, só leitura |
 | Bibliotecas do original | `libraries/` | Adafruit GFX, TinyGPS++, Kalman, SEGGER, etc.: só leitura |
-| Ferramentas | `tools/` | `fw/` e `docs/` são do projeto; `TDD/`, `TDDW/`, `zpm/`, `MMD/`, `jumper/` vêm do legacy |
+| Ferramentas | `tools/` | `fw/`, `docs/` e `ui/` são do projeto; `TDD/`, `TDDW/`, `zpm/`, `MMD/`, `jumper/` vêm do legacy |
 | Placa | `hardware/` | Eagle da V3 (os Gerbers da pasta são da **V2**) |
 
 O dono do projeto é um desenvolvedor brasileiro de eletrônica embarcada que quer investigação completa, código nativo e verificação de verdade, não atalhos.
@@ -59,12 +59,12 @@ O dono do projeto é um desenvolvedor brasileiro de eletrônica embarcada que qu
 flowchart TB
     ROOT["gnss_bike_computer/"]
     ROOT --> ZA["zephyr_app/"]
-    ZA --> ZS["src/ e include/<br/>hal · drivers · model · rf · vue · usb · utils"]
+    ZA --> ZS["src/ e include/<br/>hal · drivers · model · rf · vue · ui · usb · utils"]
     ZA --> ZB["boards/&lt;placa&gt;.overlay e .conf<br/>nRF52840 DK (pinos da V3) e nRF54LM20 DK"]
-    ZA --> ZT["tests/host/<br/>Unity + CTest, shims e falsos"]
+    ZA --> ZT["tests/host/<br/>Unity + CTest, shims e falsos<br/>tests/ui/: renderizador de telas"]
     ZA --> ZC["CMakeLists.txt · prj.conf · ant.conf · sysbuild.conf<br/>modules/ant_ncs33_compat"]
     ROOT --> LEG["legacy/ · libraries/<br/>stravaV10 original"]
-    ROOT --> TOOLS["tools/fw · tools/docs<br/>tools/TDD · TDDW · zpm · MMD · jumper"]
+    ROOT --> TOOLS["tools/fw · tools/docs · tools/ui<br/>tools/TDD · TDDW · zpm · MMD · jumper"]
     ROOT --> DOCS["docs/01 a 19 · img · historico"]
     ROOT --> HW["hardware/"]
     ROOT --> AI["CLAUDE.md · AGENTS.md · .claude/skills/"]
@@ -82,7 +82,8 @@ flowchart TB
 | Desbloquear chip | `bash tools/fw/fw.sh recover` |
 | Placas conectadas | `bash tools/fw/fw.sh devices` |
 | Memória e maiores símbolos | `bash tools/fw/fw.sh size` |
-| Testes de host | `bash tools/fw/host_tests.sh` (7 conjuntos, 50 casos) |
+| Testes de host | `bash tools/fw/host_tests.sh` (8 conjuntos, 60 casos) |
+| Telas da interface no PC (LVGL) | `python tools/ui/render_screens.py` (29 telas em 2 temas, gera `docs/img/telas-lvgl/`) |
 | Diagramas e links da documentação | `python tools/docs/mermaid_check.py` e `python tools/docs/links_check.py` |
 | Ambiente do NCS no shell | `source tools/fw/ncs_env.sh` |
 
@@ -94,6 +95,7 @@ Referência de 2026-09-18: FLASH 296.320 B (28,3 %), RAM 116.928 B (44,6 %), 7 a
 
 - **Port:** compila no NCS v3.3.0 e passa nos testes de host; **nunca rodou em placa nem no DK**. Matriz completa em [`docs/10-status-do-port.md`](docs/10-status-do-port.md).
 - **Feito em 2026-09-18:** revisão completa do legacy e do port (7 análises), build com sysbuild, scripts novos, testes de host, documentação, e 13 correções críticas: pilha da `main_loop` (4 KB), GPS fora da ISR (ring buffer + processamento na thread), um callback de fix por época, checksum NMEA, parser NMEA, estouro do `sd_logger`, botões, polaridades do GPS e do FXOS, nós do DK desligados, reset em erro fatal, símbolo do SoC. Depois, da fase 1: a `main_loop` como única escritora do modelo, com `model_lock()` para a tela; `task_wdt` com um canal de 4 s por thread; auto-off de 15 min e desligamento pelo STC3100 (`power_scheduler`).
+- **Feito em 2026-09-19:** a interface da placa nova em LVGL (`src/ui`, `include/ui`): 29 telas em retrato, nos temas de 8 cores e preto e branco, com os arranjos e formatos do legacy, testadas no PC pelo renderizador de host (`tests/ui`); ainda fora do firmware, sem driver de tela.
 - **Ordem proposta do que falta:**
 
 ```mermaid
@@ -101,7 +103,7 @@ flowchart LR
     A["1 · base de execução<br/>feito: trava do modelo, watchdog, auto-off<br/>falta: board própria (nRF54LM20A)"] --> B["2 · fidelidade<br/>Kalman, potência,<br/>distância, FDIR"]
     B --> C["3 · armazenamento<br/>SD, formatos, segmentos"]
     C --> D["4 · rádio<br/>BLE central, ANT+"]
-    D --> E["5 · interface<br/>retrato, menu, telas"]
+    D --> E["5 · interface<br/>feito: telas LVGL no PC<br/>falta: driver, thread, botões"]
     E --> F["6 · comandos e USB"]
     F --> G["7 · extras<br/>Komoot, LNS, EPO, WS2812"]
 ```
@@ -131,7 +133,8 @@ flowchart LR
 | Breakpoint longo com o `task_wdt` ligado | a placa reinicia ao continuar (o timer do kernel não pausa); para depurar passo a passo, compile com `-DCONFIG_TASK_WDT=n` |
 | O WDT do nRF52 continua contando depois de um reset por software (`sys_reboot`, erro fatal) | o `main()` o alimenta até as threads criarem os canais (`wdt_feed_if_running()`); inicialização nova e demorada precisa alimentá-lo também |
 | cppcheck acusa `syntaxError` nos `ble_*.c` e no `neopixel.c` | macros do Zephyr sem os headers: falso positivo |
-| clangd do editor reclama dos testes de host | ele usa o `compile_commands.json` do firmware; `tests/host/.clangd` aponta para o dos testes depois do primeiro `host_tests.sh` |
+| clangd do editor reclama dos testes de host ou da interface | ele usa o `compile_commands.json` do firmware; `tests/host/.clangd` aponta para o dos testes depois do primeiro `host_tests.sh`, e `tests/ui/.clangd` e `src/ui/.clangd` para `build/ui` depois do primeiro `render_screens.py` |
+| O LVGL 9.5 não desliga a suavização das primitivas | `lv_display_set_antialiasing()` só vale para camadas e imagens; círculos, linhas inclinadas e cantos saem suavizados, e o driver quantiza para as cores do painel ([18](docs/18-interface-telas.md#implementação)) |
 | Testes de host no mesmo shell do `ncs_env.sh` | o ambiente do NCS troca o `cmake`; use um shell limpo |
 | Mermaid: `;` numa mensagem de `sequenceDiagram` | é separador de comandos; escreva "e" |
 | Gerbers em `hardware/myStravaB_V3_2018-12-12/` | são da V2; não fabrique a V3 com eles |
@@ -150,7 +153,7 @@ flowchart LR
 | `fw-hardware` | placa, pinagem, devicetree, overlay, alimentação |
 | `fw-gps-sensores` | GPS MTK/NMEA/PMTK/EPO, BME280, FXOS8700, STC3100, FRAM |
 | `fw-radio` | BLE central e periférico, clientes de sensores, ANT+, stravaAP, Komoot |
-| `fw-vue` | LCD LS027, telas, menus, botões, notificações |
+| `fw-vue` | LCD LS027, interface LVGL da placa nova, telas, menus, botões, notificações |
 | `docs-gnss` | escrever e validar documentação |
 | `commit-gnss` | preparar e fazer commits |
 

@@ -34,7 +34,7 @@ description: Preparar, verificar e commitar mudanças no repositório do GNSS Bi
 |---|---|
 | `app` | `zephyr_app/src/main.c`, threads, `prj.conf` |
 | `model` | `zephyr_app/src/model/` (boucle, attitude, locator, segmentos, parcours, zonas) |
-| `vue` | `zephyr_app/src/vue/` (telas, menus, fontes) |
+| `vue` | `zephyr_app/src/vue/` e `zephyr_app/src/ui/` (telas, menus, fontes) |
 | `rf` | `zephyr_app/src/rf/` (BLE, ANT+) |
 | `drivers` | `zephyr_app/src/drivers/` (LCD, GPS, sensores, neopixel) |
 | `hal` | `zephyr_app/src/hal/` |

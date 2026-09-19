@@ -72,6 +72,7 @@ gnss_add_test(test_sd_logger SOURCES model/sd_logger.c SUPPORT host_kernel.c hos
 gnss_add_test(test_gps_mgmt
     SOURCES drivers/gps/gps_mgmt.c drivers/gps/nmea_parser.c
     SUPPORT host_kernel.c fake_gps_hal.c)
+gnss_add_test(test_ui_fmt SOURCES ui/ui_fmt.c)
 gnss_add_test(test_power_scheduler
     SOURCES model/power_scheduler.c
     SUPPORT host_kernel.c fake_shutdown.c)

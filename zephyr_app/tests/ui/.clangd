@@ -1,0 +1,5 @@
+# O renderizador de telas compila com o GCC do PC e o LVGL do NCS, não com o
+# toolchain do Zephyr: o clangd usa a base de compilação de build/ui, criada
+# por python tools/ui/render_screens.py.
+CompileFlags:
+  CompilationDatabase: ../../../build/ui

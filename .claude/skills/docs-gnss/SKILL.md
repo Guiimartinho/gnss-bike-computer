@@ -99,7 +99,7 @@ python tools/docs/links_check.py        # links relativos e âncoras
 | avaliação dos componentes da placa nova | `docs/15-avaliacao-componentes.md` |
 | arquitetura do firmware e máquinas de estado da placa nova | `docs/16-arquitetura-firmware.md` |
 | catálogo de dispositivos BLE e ANT+ | `docs/17-dispositivos-ble-ant.md` |
-| interface e telas da placa nova (maquetes por `tools/docs/screens_drawing.py`) | `docs/18-interface-telas.md` |
+| interface e telas da placa nova (imagens por `tools/ui/render_screens.py`) | `docs/18-interface-telas.md` |
 | lista de compras da placa nova, validada em duas passagens | `docs/19-lista-de-compras.md` |
 | código herdado | `legacy/README.md` |
 

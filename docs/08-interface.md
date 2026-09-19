@@ -1,6 +1,6 @@
 # Interface: telas, menus, botões e notificações
 
-Como o stravaV10 original desenha as telas no Sharp Memory LCD, como os três botões navegam pelos modos e menus, e em que pé está a interface do port Zephyr. A interface do port **não é uma tradução** da original: é uma interface nova, em paisagem, com várias partes ainda desligadas. A interface planejada para a placa nova (LVGL, 8 cores, retrato e todas as telas com maquetes) está em [18-interface-telas.md](18-interface-telas.md).
+Como o stravaV10 original desenha as telas no Sharp Memory LCD, como os três botões navegam pelos modos e menus, e em que pé está a interface do port Zephyr. A interface do port **não é uma tradução** da original: é uma interface nova, em paisagem, com várias partes ainda desligadas. A interface da placa nova (LVGL, retrato, 8 cores ou preto e branco, com os arranjos do legacy), com todas as telas desenhadas e testadas no PC, está em [18-interface-telas.md](18-interface-telas.md).
 
 **Nesta página:** [Display](#display) · [Interface original](#interface-original) · [Imagens](#imagens) · [Interface do port](#interface-do-port) · [Comparação](#comparação) · [Defeitos conhecidos](#defeitos-conhecidos) · [O que falta](#o-que-falta)
 

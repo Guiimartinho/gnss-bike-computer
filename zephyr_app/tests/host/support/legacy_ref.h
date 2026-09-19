@@ -11,6 +11,55 @@
 #define LEGACY_REF_H
 
 #include <math.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+
+/**
+ * legacy/source/vue/Screenutils.cpp: _fmkstr(), with a char buffer in place
+ * of the Arduino String. Decimals are truncated digit by digit in float.
+ */
+static inline void legacy_fmkstr(char *out, size_t size, float value, unsigned int nb_digits)
+{
+    char res[48] = "";
+
+    if (fabsf(value) > 100000) {
+        (void)snprintf(out, size, "---");
+        return;
+    }
+    int ent_val = (int)value;
+
+    if (ent_val == 0 && value < 0.0F) {
+        (void)snprintf(res, sizeof(res), "-");
+    }
+    (void)snprintf(res + strlen(res), sizeof(res) - strlen(res), "%d", ent_val);
+    if (nb_digits > 0) {
+        (void)snprintf(res + strlen(res), sizeof(res) - strlen(res), ".");
+        for (uint16_t i = 0; i < nb_digits; i++) {
+            value = fabsf(value - (float)ent_val);
+            value *= 10;
+            ent_val = (int)value;
+            uint32_t dec_val = (uint32_t)value;
+            (void)snprintf(res + strlen(res), sizeof(res) - strlen(res), "%lu", (unsigned long)dec_val);
+        }
+    }
+    (void)snprintf(out, size, "%s", res);
+}
+
+/** legacy/source/vue/Screenutils.cpp: _secjmkstr() */
+static inline void legacy_secjmkstr(char *out, size_t size, uint32_t value, char sep)
+{
+    if (value >= 86400) {
+        (void)snprintf(out, size, " --:--:--");
+        return;
+    }
+    uint8_t hours = (uint8_t)(value / 3600);
+    value -= hours * 3600;
+    uint8_t minutes = (uint8_t)(value / 60);
+    value -= minutes * 60;
+    uint8_t seconds = (uint8_t)(value % 60);
+    (void)snprintf(out, size, "%02u%c%02u%c%02u", hours, sep, minutes, sep, seconds);
+}
 
 /** libraries/utils/utils.h: toRadians() */
 static inline float legacy_to_radians(float angle)

@@ -1,0 +1,230 @@
+"""Generate the 1-bpp LVGL fonts of the user interface (docs/18-interface-telas.md).
+
+The memory LCD has no grey levels, so the glyphs are rendered without anti-aliasing (FreeType
+monochrome through Pillow) and stored as LVGL 9 "fmt_txt" fonts with 1 bit per pixel, rows packed
+without padding and a single sparse character map. Glyph id 0 is the reserved empty glyph, as in
+lv_font_conv output.
+
+Source fonts (DejaVu fonts license, see zephyr_app/src/ui/fonts/LICENSE-DejaVu.txt):
+  regular  DejaVuSans.ttf       found in the LVGL module of the NCS (scripts/built_in_font)
+  bold     DejaVuSans-Bold.ttf  found in matplotlib's mpl-data, or given with --bold
+The generated fonts are named ui_font_*, which the license allows for modified fonts.
+
+Usage: python tools/ui/font_gen.py [--regular PATH] [--bold PATH] [--out DIR]
+       (default output: zephyr_app/src/ui/fonts)
+"""
+import argparse
+import glob
+import os
+import pathlib
+import site
+import sys
+
+from PIL import Image, ImageDraw, ImageFont
+
+ROOT = pathlib.Path(__file__).resolve().parents[2]
+DEFAULT_OUT = ROOT / "zephyr_app" / "src" / "ui" / "fonts"
+NCS_LVGL = pathlib.Path(os.environ.get("NCS_LVGL", "C:/ncs/v3.3.0/modules/lib/gui/lvgl"))
+
+# Characters: printable ASCII plus the Portuguese accents and the symbols the screens use.
+FULL = "".join(chr(c) for c in range(0x20, 0x7F)) + "ÀÁÂÃÇÉÊÍÓÔÕÚÜàáâãçéêíóôõúü°µ·–—…−×"
+# Big numeric fonts: values, times, signs, percent, degrees.
+NUM = " 0123456789.,:-+%°/−"
+
+# (name, style, pixel size, characters)
+FONTS = [
+    ("ui_font_r10", "regular", 10, FULL),
+    ("ui_font_r12", "regular", 12, FULL),
+    ("ui_font_b12", "bold", 12, FULL),
+    ("ui_font_b14", "bold", 14, FULL),
+    ("ui_font_b16", "bold", 16, FULL),
+    ("ui_font_b18", "bold", 18, FULL),
+    ("ui_font_b22", "bold", 22, FULL),
+    ("ui_font_b28", "bold", 28, NUM),
+    ("ui_font_b32", "bold", 32, NUM),
+    ("ui_font_b44", "bold", 44, NUM),
+    ("ui_font_b64", "bold", 64, NUM),
+]
+
+
+def find_font(filename, extra_dirs):
+    candidates = []
+    for d in extra_dirs:
+        candidates.append(pathlib.Path(d) / filename)
+    for base in site.getsitepackages() + [site.getusersitepackages()]:
+        candidates += [pathlib.Path(p) for p in glob.glob(os.path.join(base, "**", filename), recursive=True)]
+    for c in candidates:
+        if c.is_file():
+            return c
+    return None
+
+
+def render_glyph(font, ch, ascent, descent):
+    """Render one character in monochrome; returns (box_w, box_h, ofs_x, ofs_y, rows, adv_w16)."""
+    adv = font.getlength(ch)
+    pad = 8
+    w = int(adv) + 2 * pad + font.size
+    h = ascent + descent + 2 * pad
+    img = Image.new("1", (w, h), 0)
+    draw = ImageDraw.Draw(img)
+    draw.fontmode = "1"                      # no anti-aliasing
+    x0, base = pad, pad + ascent
+    draw.text((x0, base), ch, font=font, fill=1, anchor="ls")
+    bbox = img.getbbox()
+    adv16 = int(round(adv * 16))
+    if bbox is None:                         # blank glyph (space)
+        return 0, 0, 0, 0, [], adv16
+    left, top, right, bottom = bbox
+    box_w, box_h = right - left, bottom - top
+    rows = []
+    px = img.load()
+    for y in range(top, bottom):
+        rows.append([1 if px[x, y] else 0 for x in range(left, right)])
+    ofs_x = left - x0
+    ofs_y = base - bottom                    # bottom of the box above the baseline
+    return box_w, box_h, ofs_x, ofs_y, rows, adv16
+
+
+def pack_bits(rows):
+    """Rows of 0/1 packed MSB first, no padding between rows (LVGL bpp 1, stride 0)."""
+    out, acc, n = [], 0, 0
+    for row in rows:
+        for bit in row:
+            acc = (acc << 1) | bit
+            n += 1
+            if n == 8:
+                out.append(acc)
+                acc, n = 0, 0
+    if n:
+        out.append(acc << (8 - n))
+    return out
+
+
+def c_char_comment(ch):
+    code = ord(ch)
+    if ch == "*" or ch == "/" or ch == "\\":
+        return f"U+{code:04X}"
+    return f"U+{code:04X} '{ch}'" if 0x20 < code < 0x7F or code > 0xA0 else f"U+{code:04X}"
+
+
+def generate(name, font_path, size, chars, src_label):
+    font = ImageFont.truetype(str(font_path), size)
+    ascent, descent = font.getmetrics()
+    chars = sorted(set(chars), key=ord)
+    bitmap, dsc = [], []
+    for ch in chars:
+        box_w, box_h, ofs_x, ofs_y, rows, adv16 = render_glyph(font, ch, ascent, descent)
+        if box_w > 255 or box_h > 255 or not -128 <= ofs_x <= 127 or not -128 <= ofs_y <= 127:
+            raise SystemExit(f"{name}: glyph {ch!r} out of range")
+        if adv16 >= 4096:
+            raise SystemExit(f"{name}: glyph {ch!r} advance too large")
+        dsc.append((len(bitmap), adv16, box_w, box_h, ofs_x, ofs_y, ch))
+        bitmap += pack_bits(rows)
+    first = ord(chars[0])
+    span = ord(chars[-1]) - first + 1
+    if span > 0xFFFF:
+        raise SystemExit(f"{name}: character span too large")
+
+    lines = []
+    lines.append("/*")
+    lines.append(f" * {name}: {size} px, 1 bpp, {len(chars)} glyphs.")
+    lines.append(f" * Generated by tools/ui/font_gen.py from {src_label}; do not edit.")
+    lines.append(" * DejaVu fonts license: see LICENSE-DejaVu.txt in this folder.")
+    lines.append(" */")
+    lines.append("")
+    lines.append('#include "lvgl.h"')
+    lines.append("")
+    lines.append("static LV_ATTRIBUTE_LARGE_CONST const uint8_t glyph_bitmap[] = {")
+    for off, adv16, bw, bh, ox, oy, ch in dsc:
+        n = len(pack_bits([[0] * bw] * bh)) if bw and bh else 0
+        data = bitmap[off:off + n]
+        if not data:
+            continue
+        lines.append(f"    /* {c_char_comment(ch)} */")
+        for i in range(0, len(data), 16):
+            lines.append("    " + ", ".join(f"0x{b:02x}" for b in data[i:i + 16]) + ",")
+    if not bitmap:
+        lines.append("    0x00,")
+    lines.append("};")
+    lines.append("")
+    lines.append("static const lv_font_fmt_txt_glyph_dsc_t glyph_dsc[] = {")
+    lines.append("    {.bitmap_index = 0, .adv_w = 0, .box_w = 0, .box_h = 0, .ofs_x = 0, .ofs_y = 0}, /* id 0: reserved */")
+    for off, adv16, bw, bh, ox, oy, ch in dsc:
+        lines.append(f"    {{.bitmap_index = {off}, .adv_w = {adv16}, .box_w = {bw}, .box_h = {bh}, "
+                     f".ofs_x = {ox}, .ofs_y = {oy}}}, /* {c_char_comment(ch)} */")
+    lines.append("};")
+    lines.append("")
+    lines.append("static const uint16_t unicode_list[] = {")
+    offs = [ord(c) - first for c in chars]
+    for i in range(0, len(offs), 12):
+        lines.append("    " + ", ".join(f"0x{v:04x}" for v in offs[i:i + 12]) + ",")
+    lines.append("};")
+    lines.append("")
+    lines.append("static const lv_font_fmt_txt_cmap_t cmaps[] = {")
+    lines.append(f"    {{.range_start = 0x{first:04x}, .range_length = {span}, .glyph_id_start = 1, "
+                 f".unicode_list = unicode_list, .glyph_id_ofs_list = NULL, .list_length = {len(chars)}, "
+                 f".type = LV_FONT_FMT_TXT_CMAP_SPARSE_TINY}},")
+    lines.append("};")
+    lines.append("")
+    lines.append("static const lv_font_fmt_txt_dsc_t font_dsc = {")
+    lines.append("    .glyph_bitmap = glyph_bitmap,")
+    lines.append("    .glyph_dsc = glyph_dsc,")
+    lines.append("    .cmaps = cmaps,")
+    lines.append("    .kern_dsc = NULL,")
+    lines.append("    .kern_scale = 0,")
+    lines.append("    .cmap_num = 1,")
+    lines.append("    .bpp = 1,")
+    lines.append("    .kern_classes = 0,")
+    lines.append("    .bitmap_format = LV_FONT_FMT_TXT_PLAIN,")
+    lines.append("    .stride = 0,")
+    lines.append("};")
+    lines.append("")
+    lines.append(f"const lv_font_t {name} = {{")
+    lines.append("    .get_glyph_dsc = lv_font_get_glyph_dsc_fmt_txt,")
+    lines.append("    .get_glyph_bitmap = lv_font_get_bitmap_fmt_txt,")
+    lines.append(f"    .line_height = {ascent + descent},")
+    lines.append(f"    .base_line = {descent},")
+    lines.append("    .subpx = LV_FONT_SUBPX_NONE,")
+    lines.append("    .underline_position = -1,")
+    lines.append("    .underline_thickness = 1,")
+    lines.append("    .dsc = &font_dsc,")
+    lines.append("    .fallback = NULL,")
+    lines.append("    .user_data = NULL,")
+    lines.append("};")
+    lines.append("")
+    return "\n".join(lines), len(chars), len(bitmap)
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--regular")
+    ap.add_argument("--bold")
+    ap.add_argument("--out", default=str(DEFAULT_OUT))
+    args = ap.parse_args()
+
+    regular = pathlib.Path(args.regular) if args.regular else find_font(
+        "DejaVuSans.ttf", [NCS_LVGL / "scripts" / "built_in_font"])
+    bold = pathlib.Path(args.bold) if args.bold else find_font("DejaVuSans-Bold.ttf", [])
+    if regular is None or bold is None:
+        sys.exit("DejaVuSans.ttf or DejaVuSans-Bold.ttf not found: pass --regular and --bold")
+
+    out = pathlib.Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    total = 0
+    header = ["/* 1-bpp fonts of the user interface, generated by tools/ui/font_gen.py. */",
+              "#ifndef UI_FONTS_H", "#define UI_FONTS_H", "", '#include "lvgl.h"', ""]
+    for name, style, size, chars in FONTS:
+        path = regular if style == "regular" else bold
+        label = "DejaVuSans.ttf" if style == "regular" else "DejaVuSans-Bold.ttf"
+        text, n, nbytes = generate(name, path, size, chars, label)
+        (out / f"{name}.c").write_text(text, encoding="utf-8", newline="\n")
+        header.append(f"LV_FONT_DECLARE({name})")
+        total += nbytes
+        print(f"{name}: {n} glyphs, {nbytes} bitmap bytes")
+    header += ["", "#endif /* UI_FONTS_H */", ""]
+    (out / "ui_fonts.h").write_text("\n".join(header), encoding="utf-8", newline="\n")
+    print(f"total bitmap bytes: {total}")
+
+
+if __name__ == "__main__":
+    main()

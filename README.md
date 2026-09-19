@@ -9,7 +9,7 @@
 ![RTOS](https://img.shields.io/badge/Zephyr-4.3.99-7929D2)
 ![Rádio](https://img.shields.io/badge/r%C3%A1dio-BLE%20%2B%20ANT%2B-0082FC)
 ![Linguagem](https://img.shields.io/badge/C-C11-A8B9CC?logo=c&logoColor=white)
-![Testes](https://img.shields.io/badge/testes%20de%20host-50%20casos-2E7D32)
+![Testes](https://img.shields.io/badge/testes%20de%20host-60%20casos-2E7D32)
 ![CI](https://img.shields.io/badge/CI-desligado-lightgrey)
 ![Estado](https://img.shields.io/badge/estado-port%20em%20andamento-EF6C00)
 ![Licença](https://img.shields.io/badge/licen%C3%A7a-a%20definir-lightgrey)
@@ -99,7 +99,7 @@ bash tools/fw/fw.sh build          # compila o zephyr_app (sysbuild) para o nRF5
 bash tools/fw/fw.sh flash          # grava no DK pelo J-Link
 BOARD=nrf54lm20dk/nrf54lm20a/cpuapp BUILD_DIR=zephyr_app/build_54 bash tools/fw/fw.sh build
 ANT=1 bash tools/fw/fw.sh build pristine   # com a pilha ANT do sdk-ant
-bash tools/fw/host_tests.sh        # 7 conjuntos de testes de host
+bash tools/fw/host_tests.sh        # 8 conjuntos de testes de host
 python tools/docs/mermaid_check.py # valida os diagramas da documentação
 ```
 
@@ -143,7 +143,7 @@ flowchart TB
 | [15 · Avaliação dos componentes](docs/15-avaliacao-componentes.md) | escolha de cada componente da placa nova, com números de datasheet |
 | [16 · Arquitetura do firmware](docs/16-arquitetura-firmware.md) | arquitetura-alvo e máquinas de estado para a placa nova |
 | [17 · Dispositivos BLE e ANT+](docs/17-dispositivos-ble-ant.md) | catálogo de sensores e acessórios, prioridades e limites do rádio |
-| [18 · Interface e telas](docs/18-interface-telas.md) | LVGL, paleta de 8 cores e maquetes de todas as telas da placa nova |
+| [18 · Interface e telas](docs/18-interface-telas.md) | interface LVGL da placa nova: todas as telas, desenhadas e testadas no PC, em 8 cores e em preto e branco |
 | [19 · Lista de compras](docs/19-lista-de-compras.md) | peças validadas em duas passagens, trocas, correções de integração e códigos da DigiKey |
 | [CHANGELOG](CHANGELOG.md) | histórico de mudanças |
 

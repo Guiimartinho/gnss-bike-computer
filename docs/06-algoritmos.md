@@ -116,3 +116,18 @@ Legacy (`legacy/source/model/Locator.cpp:111-134`): a simulada (`$LOC`) vence e 
 - Legacy (`libraries/utils/utils.c:290-312`, `percentageBatt`): compensa a queda na resistência interna (0,273 Ω) e usa um polinômio cúbico entre 3,78 e 4,2 V e `10^−11,4·V^22,315` entre 3,2 e 3,78 V.
 - Port: linear entre 3,3 e 4,2 V.
 - STC3100 (os dois): V = raw·2,44 mV, I = raw·11,77 µV/Rs, Q = raw·6,7 µVh/Rs, T = raw·0,125 °C, com Rs = 100 mΩ no código. O esquema da V3 mostra R15 = 20 mΩ: se for esse o valor montado, corrente e carga ficam 5 vezes menores que o real.
+
+## Formatação dos números
+
+Legacy: `legacy/source/vue/Screenutils.cpp` (`_fmkstr`, `_secjmkstr`) e `legacy/source/vue/Vue.cpp` (`cadran`, `cadranH`). Port, na interface nova: `zephyr_app/src/ui/ui_fmt.c`, testado por `test_ui_fmt` contra a transcrição do legacy em `zephyr_app/tests/host/support/legacy_ref.h`.
+
+| Regra | Legacy | Port |
+|---|---|---|
+| Casas decimais | truncadas dígito a dígito em `float`: 0,21 vira `0.20` e 23,4 vira `23.39` | igual |
+| Separador decimal | ponto | igual |
+| Valor absoluto acima de 100000 | `---` | igual |
+| Negativo entre −1 e 0 | o sinal fica (`-0.5`) | igual |
+| NaN | `(int)NaN`, comportamento indefinido em C | `---` |
+| Hora do dia ou tempo decorrido | `HH:MM:SS`; de 24 h em diante, ` --:--:--`, com um espaço na frente | igual, mas `--:--:--` sem o espaço |
+| Texto do `cadran` | `---` acima de 6 caracteres | igual |
+| Texto do `cadranH` | `-----` acima de 9 caracteres | igual |

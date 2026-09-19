@@ -19,6 +19,16 @@ Por baixo, em `zephyr_app/tests/host/`: `cmake --preset host-tests`, `cmake --bu
 - Um conjunto sozinho: `zephyr_app/tests/host/build/host-tests/test_power_zone.exe` mostra arquivo, linha e mensagem de cada falha.
 - Reporte o número exato ("3 de 3 conjuntos, 20 casos"), nunca "os testes passam".
 
+## Renderizador de telas
+
+```sh
+python tools/ui/render_screens.py      # compila o LVGL do NCS e a src/ui no PC, desenha e confere as telas
+```
+
+- Passa com `0 problems`: nenhum pixel colorido no tema preto e branco, nenhum texto fora da caixa, navegação e ações dos menus como o esperado. Reporte o número de quadros e o pico do heap do LVGL que ele imprime.
+- Usa o mesmo GCC dos testes de host (shell limpo, sem o `ncs_env.sh`); o build fica em `build/ui`.
+- A formatação dos números tem conjunto de host próprio (`test_ui_fmt`), com o oráculo `legacy_fmkstr` e `legacy_secjmkstr` em `support/legacy_ref.h`.
+
 ## Como funciona
 
 ```mermaid
@@ -68,6 +78,7 @@ cppcheck --enable=warning,style,performance,portability --std=c11 --inline-suppr
   -I zephyr_app/include zephyr_app/src
 ```
 
+- Na interface (`src/ui`, `tests/ui`), passe o LVGL para o cppcheck entender `LV_FONT_DECLARE` e ignore os achados dentro dele: `-DLV_CONF_INCLUDE_SIMPLE=1 -I zephyr_app/src/ui -I zephyr_app/tests/ui -I C:/ncs/v3.3.0/modules/lib/gui/lvgl --suppress="*:C:/ncs/v3.3.0/modules/lib/gui/lvgl/*"`.
 - `syntaxError` em `ble_*.c` e `neopixel.c` vem das macros do Zephyr (`BT_GATT_*`, `DT_*`) sem os headers: falso positivo.
 - Achados reais conhecidos estão em `docs/11-qualidade-misra.md`. Corrija o que for seu; supressão só inline, `// cppcheck-suppress <id>`, com o motivo na linha de cima.
 

@@ -34,8 +34,21 @@ Referência: `docs/08-interface.md` (telas do legacy, imagens em `docs/img/`, es
 | mapa e mini-mapa com projeção linear e zoom `nível² × 250 / 100` m | mapa sem zoom | ver `legacy/source/display/Zoom.cpp` e `VuePRC.cpp` |
 | ícones Komoot 110 × 110 | 6 ícones de 32 × 32 sem uso | `libraries/komoot/komoot_icons.h` (~45 KB de flash) |
 
+## Interface da placa nova (LVGL)
+
+A interface da placa nova está em `zephyr_app/src/ui` e `zephyr_app/include/ui` (`docs/18-interface-telas.md`): C puro sobre o LVGL 9.5 do NCS, sem Zephyr, testada no PC antes de ir para o firmware. Substitui a `src/vue` quando o driver da tela e a thread existirem.
+
+1. **Legacy primeiro:** antes de mexer numa tela, leia a função original (`VueCRS.cpp`, `VuePRC.cpp`, `VueFEC.cpp`, `VueGPS.cpp`, `VueDebug.cpp`, `Menuable.cpp`, `MenuObjects.cpp`) e cite a linha no comentário. Campo, ordem, formato e limite seguem o legacy; diferença nova entra na tabela "Diferenças para o legacy" do `docs/18`.
+2. **Dados só pelo retrato:** a tela lê `ui_ctx.m` (`ui_model_t`), nunca o modelo nem drivers; pedidos saem por `ui_action()`. Mapas chegam projetados em milésimos da janela (`UI_PM`).
+3. **Nada só por cor:** o tema preto e branco precisa dizer o mesmo, pelo sinal, pela palavra ou pela forma.
+4. **Textos** na tabela de `ui_text.c` (pt e en); **números** por `ui_fmt.c`, com os formatos do legacy.
+5. **Fontes** só por `tools/ui/font_gen.py`: caractere novo entra na lista `FULL` ou `NUM` e as fontes são geradas de novo.
+6. **Uma thread só** chama `ui_*` (o LVGL não é reentrante).
+7. O LVGL 9.5 suaviza círculos, linhas inclinadas e cantos sem opção de desligar: vale o quadro depois da quantização (regra no `docs/18`, seção Implementação).
+
 ## Verificar
 
 - Build sem aviso novo; hoje há 7 avisos de funções de `vue.c` portadas e não ligadas: ao ligar uma, o número cai.
-- Sem placa, a única forma de ver a tela é gravar no DK com um LS027 ligado aos pinos do overlay; não há simulador de tela para o port (o do legacy, `tools/TDD` + `LS027simulator.jar`, não compila aqui).
+- Interface nova: `python tools/ui/render_screens.py` precisa terminar com `0 problems`; olhe as folhas de `docs/img/telas-lvgl/` nos dois temas. Tela nova ganha um `snap()` e, se tiver navegação, `expect_screen` e `expect_action` em `zephyr_app/tests/ui/ui_render.c`, e entra numa folha de `tools/ui/render_screens.py`.
+- Interface do firmware atual (`src/vue`): sem placa, a única forma de ver a tela é gravar no DK com um LS027 ligado aos pinos do overlay (o simulador do legacy, `tools/TDD` + `LS027simulator.jar`, não compila aqui).
 - Diga o que não foi visto na tela de verdade.

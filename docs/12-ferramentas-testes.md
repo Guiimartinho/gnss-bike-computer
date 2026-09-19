@@ -1,8 +1,8 @@
 # Ferramentas e testes
 
-As ferramentas herdadas do stravaV10 em `tools/` (simulador de host, scripts Node, debug em monitor mode, emulador), as ferramentas novas do projeto (`tools/fw/`, `tools/docs/`), os testes de host do port e as bibliotecas de terceiros com suas licenças.
+As ferramentas herdadas do stravaV10 em `tools/` (simulador de host, scripts Node, debug em monitor mode, emulador), as ferramentas novas do projeto (`tools/fw/`, `tools/docs/`, `tools/ui/`), os testes de host do port, o renderizador das telas e as bibliotecas de terceiros com suas licenças.
 
-**Nesta página:** [Mapa de tools/](#mapa-de-tools) · [Testes de host do port](#testes-de-host-do-port) · [Simulador TDD do legacy](#simulador-tdd-do-legacy) · [Outras ferramentas herdadas](#outras-ferramentas-herdadas) · [Bibliotecas e licenças](#bibliotecas-e-licenças)
+**Nesta página:** [Mapa de tools/](#mapa-de-tools) · [Testes de host do port](#testes-de-host-do-port) · [Renderizador de telas](#renderizador-de-telas) · [Simulador TDD do legacy](#simulador-tdd-do-legacy) · [Outras ferramentas herdadas](#outras-ferramentas-herdadas) · [Bibliotecas e licenças](#bibliotecas-e-licenças)
 
 ## Mapa de tools/
 
@@ -10,6 +10,7 @@ As ferramentas herdadas do stravaV10 em `tools/` (simulador de host, scripts Nod
 |---|---|---|
 | `tools/fw/` | projeto | `ncs_env.sh`/`.bat` (ambiente do NCS), `fw.sh` (build, flash, recover, devices, size), `host_tests.sh` |
 | `tools/docs/` | projeto | `mermaid_check.py` e `links_check.py` (skill `docs-gnss`); `case_drawing.py` gera o desenho do aparelho da [placa nova](13-placa-nova.md#como-fica-o-aparelho) e `screens_drawing.py`, as maquetes das [telas](18-interface-telas.md#telas) |
+| `tools/ui/` | projeto | `font_gen.py` (fontes de 1 bit da interface) e `render_screens.py` (compila e roda o [renderizador de telas](#renderizador-de-telas) e gera `docs/img/telas-lvgl/`) |
 | `tools/TDD/`, `tools/TDDW/` | stravaV10 | simulador de host do firmware original (Linux e Windows) |
 | `tools/zpm/` | stravaV10 | scripts Node: posição do Zwift (`$LOC`), download de logs, conversão para GPX |
 | `tools/MMD/` | stravaV10 | monitor mode debugging do J-Link |
@@ -32,6 +33,7 @@ bash tools/fw/host_tests.sh -R nmea     # um conjunto
 | `test_nmea_parser` | `drivers/gps/nmea_parser.c` | 12 | GGA, RMC, GSA, GSV, hemisférios, fração de segundo, checksum, linha longa, caminho caractere a caractere, posição que volta a falso com RMC `V` |
 | `test_sd_logger` | `model/sd_logger.c` | 4 | intervalo de 15 m, lote de 5 com cabeçalho CSV, **nenhuma escrita fora do buffer sem cartão** |
 | `test_gps_mgmt` | `drivers/gps/gps_mgmt.c` + parser | 6 | um callback por época, checksum, fim do fix no RMC `V`, níveis lógicos de reset e standby |
+| `test_ui_fmt` | `ui/ui_fmt.c` | 10 | números como o `_fmkstr` do legacy numa varredura, truncamento em `float` (0,21 vira `0.20`), negativos, limite de 100000, NaN, buffer pequeno, horas e hora desconhecida, larguras do `cadran` e do `cadranH`, valores com sinal |
 | `test_power_scheduler` | `model/power_scheduler.c` | 8 | 15 min exatos mantêm ligado, depois zera a atividade salva antes de soltar o latch, pings de posição e do rolo, nova tentativa 15 min depois, volta do contador de 32 bits |
 
 ```mermaid
@@ -47,9 +49,32 @@ flowchart LR
 - **Shims**: log vira nada, `k_mutex` nunca bloqueia, relógio controlável (`host_uptime_set/advance`), `k_msleep` avança o relógio.
 - **Falsos**: `host_fs` (sistema de arquivos em memória que pode "sumir"), `fake_gps_hal` (linhas de UART, GPIO e EPO para o `gps_mgmt`), `fake_shutdown` (`stc3100_shutdown()` e `crash_recovery_clear_saved_state()` contados, para o `power_scheduler`).
 - **Oráculo**: `support/legacy_ref.h` transcreve fórmulas do legacy com a origem.
-- **Mutação**: as correções de 2026-09-18 do parser NMEA, do log e do GPS e as regras do `power_scheduler` foram revertidas uma a uma e os testes falharam, como deviam (a exceção é a conta em `double` do parser, cujo ganho fica dentro da resolução do `float`).
+- **Mutação**: as correções de 2026-09-18 do parser NMEA, do log e do GPS e as regras do `power_scheduler` foram revertidas uma a uma e os testes falharam, como deviam; o mesmo com as 5 mutações do `ui_fmt.c` em 2026-09-19 (a exceção é a conta em `double` do parser, cujo ganho fica dentro da resolução do `float`).
 - Compilador: MinGW-w64 GCC 15.2 no Windows; o mesmo CMake funciona com o GCC do Linux.
 - Os testes de ztest do Zephyr (`native_sim`, `unit_testing`) só rodam em Linux e não são usados.
+
+## Renderizador de telas
+
+A interface da placa nova ([18](18-interface-telas.md)) compila no PC com o LVGL do NCS e o GCC do PC, e o `ui_render` desenha cada tela nos dois temas, como o painel mostra.
+
+```sh
+python tools/ui/render_screens.py              # compila, desenha, confere e gera docs/img/telas-lvgl
+python tools/ui/render_screens.py --no-build   # pula o CMake e usa o ui_render já compilado
+```
+
+| Peça | Papel |
+|---|---|
+| `zephyr_app/tests/ui/CMakeLists.txt` | o LVGL do NCS (`C:/ncs/v3.3.0/modules/lib/gui/lvgl`, ou a variável `NCS_LVGL`) com o `lv_conf.h` da pasta, e a interface de `src/ui` com `-Werror` |
+| `zephyr_app/tests/ui/ui_samples.c` | dados de exemplo: pedal com 0, 1 e 2 segmentos, GNSS procurando, rolo, sensores e percursos |
+| `zephyr_app/tests/ui/ui_render.c` | monta cada tela, desenha num quadro RGB565 de 240 × 400, quantiza como o painel e grava PPM; confere cores, textos e navegação; mede o heap do LVGL |
+| `tools/ui/render_screens.py` | CMake, `ui_render`, PPM para PNG e as folhas por grupo e tema |
+| `tools/ui/font_gen.py` | as fontes de 1 bit de `zephyr_app/src/ui/fonts` (DejaVu Sans, sem suavização) |
+
+- O `ui_render` sai com erro quando aparece cor no tema preto e branco, quando um texto sai da caixa, quando a navegação não chega à tela esperada ou quando uma ação não sai.
+- Resultado em 2026-09-19: 29 telas em 2 temas, 58 quadros, 0 problemas; 23,7 KB de heap do LVGL no pico, com ponteiros de 64 bits.
+- O aviso do LVGL sobre as conferências de objeto e de estilo (`LV_USE_ASSERT_OBJ`, `LV_USE_ASSERT_STYLE`) é esperado: estão ligadas de propósito, para pegar uso errado da API.
+- O clangd usa a base de compilação de `build/ui` pelos `.clangd` de `zephyr_app/tests/ui` e `zephyr_app/src/ui`, depois da primeira execução.
+- O teste confere o desenho, não o painel: tempo de SPI, COM, luz e leitura ao sol ficam para a bancada.
 
 ## Simulador TDD do legacy
 

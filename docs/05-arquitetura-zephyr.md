@@ -168,6 +168,7 @@ find build_su/CMakeFiles/app.dir -name "*.su" -exec cat {} + | sort -t$'\t' -k2 
 | `src/rf/ant/` | `ant.c` (`rf_ant_init()`, pilha do `sdk-ant`) | só com `ANT=1` |
 | `src/vue/` | `vue.c` | sim |
 | `src/vue/` | `menu.c`, `vue_fec.c`, `vue_crs.c` | não |
+| `src/ui/`, `include/ui/` | interface LVGL da placa nova ([18](18-interface-telas.md)) | não: compila só no renderizador de host (`tests/ui`) |
 | `src/usb/` | `usb_cdc.c`, `usb_msc.c` | fora do `CMakeLists.txt` |
 | `src/utils/` | `fs_stubs.c` | sim: todas as chamadas `fs_*` retornam `-ENOTSUP` |
 | `src/utils/` | `utils.c`, `ring_buffer.c` | não (sem header, sem chamador) |
