@@ -260,7 +260,7 @@ stateDiagram-v2
 
 ### Sensor externo
 
-Uma máquina por sensor pareado: frequência cardíaca, velocidade e cadência, potência, rolo, e o que o catálogo de dispositivos acrescentar ([07](07-radio-ant-ble.md) tem a base).
+Uma máquina por sensor pareado: frequência cardíaca, velocidade e cadência, potência, rolo, e o que o [catálogo de dispositivos](17-dispositivos-ble-ant.md) acrescentar.
 
 ```mermaid
 stateDiagram-v2
@@ -417,7 +417,7 @@ sequenceDiagram
 | ANT+ | HRM, BSC e FE-C nos canais do legacy, busca em fundo para o pareamento | `sdk-ant` v2.1.1 ([07](07-radio-ant-ble.md#ant-no-ncs-v330)) |
 | Comandos | `$LOC`, `$DWN`, `$QRY` pelo USB e pelo NUS | VParser do legacy ([07](07-radio-ant-ble.md#stravaap-e-comandos)) |
 
-O que o legacy usa e o que o `sdk-ant` oferece estão em [07](07-radio-ant-ble.md); a lista completa de dispositivos, com perfis e prioridades, fica num catálogo próprio.
+O que o legacy usa e o que o `sdk-ant` oferece estão em [07](07-radio-ant-ble.md); a lista completa de dispositivos, com perfis, prioridades e o orçamento de canais e conexões, está em [17](17-dispositivos-ble-ant.md).
 
 ## Atualização de firmware
 

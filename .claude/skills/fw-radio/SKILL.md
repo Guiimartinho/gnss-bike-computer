@@ -5,7 +5,7 @@ description: Trabalhar com o rádio do GNSS Bike Computer no port Zephyr - BLE c
 
 # Rádio: BLE e ANT+
 
-Referência: `docs/07-radio-ant-ble.md`. Topologia do legacy: BLE **só central** (NUS para o stravaAP, LNS, Cycling Power, Komoot) + ANT+ (HRM, BSC, FE-C). O port é periférico + central; com `ANT=1` a pilha ANT sobe no boot, ainda sem perfis.
+Referências: `docs/07-radio-ant-ble.md` e o catálogo de dispositivos com prioridades e limites do rádio em `docs/17-dispositivos-ble-ant.md`. Topologia do legacy: BLE **só central** (NUS para o stravaAP, LNS, Cycling Power, Komoot) + ANT+ (HRM, BSC, FE-C). O port é periférico + central; com `ANT=1` a pilha ANT sobe no boot, ainda sem perfis.
 
 ## Estado no port (2026-09-18)
 

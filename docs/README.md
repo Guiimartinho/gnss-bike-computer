@@ -20,5 +20,6 @@
 | 14 | [Hardware da placa nova](14-hardware-placa-nova.md) | especificação técnica: decisões, arquitetura, árvore de alimentação, lista de materiais, barramentos, pinos, PCB, empilhamento, regras de layout, bring-up |
 | 15 | [Avaliação dos componentes](15-avaliacao-componentes.md) | escolha de cada componente da placa nova: carga por USB-C e painel solar, GNSS, MCU, display, antena, sensores, armazenamento, USB, bateria; testes de bancada antes do layout |
 | 16 | [Arquitetura do firmware](16-arquitetura-firmware.md) | arquitetura-alvo para a placa nova: serviços, threads, eventos no zbus, máquinas de estado no SMF (sistema e energia, modo, gravação, GNSS, sensores, carga, interface, luz), partida e desligamento, energia por estado, atualização de firmware, migração do port |
+| 17 | [Dispositivos BLE e ANT+](17-dispositivos-ble-ant.md) | catálogo dos dispositivos externos (FC, velocidade e cadência, potência, rolo, radar, luzes, câmbio, e-bike, celular), perfis ANT+ e serviços BLE, o que o SDK já tem, prioridades, limites de canais e conexões, pareamento |
 
 Imagens da interface e fotos do aparelho ficam em [`img/`](img/). Os documentos de novembro de 2025, substituídos por estes, estão em [`historico/`](historico/).
