@@ -28,17 +28,16 @@ Referência completa: `docs/02-hardware.md`. Fonte de verdade da pinagem: `hardw
 1. **Flags de GPIO dizem a verdade elétrica**: `GPIO_ACTIVE_LOW` quando o nível baixo liga a função; o código trabalha com nível lógico (`gpio_pin_set_dt(…, 1)` = ativo). Nunca inverta no C o que o devicetree já inverte.
 2. **Nó do DK em pino da placa é desligado**, inclusive os filhos (`&qspi` e `&mx25r64`, `&spi3`, `&pwm0` já estão). Confira no `build/zephyr_app/zephyr/zephyr.dts` e no `.config` que o driver saiu.
 3. **Pinctrl herdado do DK**: um grupo do DK pode deixar propriedades (`bias-pull-up`) no seu grupo; use `/delete-property/`. O `uart0` do console ficou só com TX/RX.
-4. **Sensores com driver nativo** (BME280, FXOS8700): configure pelo devicetree e pelo Kconfig do driver, não por registradores no app. O `reset-gpios` do FXOS garante o reset antes do `main()`.
-5. **Sem binding** (`st,stc3100`): o nó é aceito e ignorado; o driver próprio acessa pelo `hal_i2c`.
-6. **O código não cita instâncias do SoC** (`uart1`, `i2c0`, `spi1`): usa os aliases `gps-uart`, `sensor-i2c`, `lcd-spi`, `sdc-spi`, `sw0`–`sw2`, `led0` e os rótulos da aplicação (`gps_reset`, `gps_stdby`, `gps_fix`, `imu_int1`, `imu_reset`, `neo_data`, `baro`, `fxos`). Cada placa define esses nomes no overlay dela.
+4. **Sensores e receptor com driver do Zephyr**: configure pelo devicetree e pelo Kconfig do driver, não por registradores no app. O `reset-gpios` do FXOS garante o reset antes do `main()`.
+5. **`gpio-keys` só para teclas**: com o subsistema de entrada, todo nó `gpio-keys` vira teclado. Não use `gpio-keys` para dar nome a pinos (os nós falsos da V3 saíram em 2026-09-19).
+6. **O código não cita instâncias do SoC** (`uart1`, `i2c0`, `spi1`): os serviços acham os dispositivos pelos aliases `gnss`, `baro0`, `imu0`, `mag0`, `light0`, `watchdog0`, pelo disco `SD` (`zephyr,sdmmc-disk`) e, na energia, por `pmic-regulators`. Cada placa define esses nomes no overlay dela; um alias ausente deixa o serviço sem o dispositivo.
 7. Depois de mexer: build, `grep` no `zephyr.dts` gerado para cada pino alterado e registro em `docs/02-hardware.md`.
 
 ## Alimentação e latch
 
-- O botão central liga os reguladores (SWON → M2 → POW_EN). O firmware precisa escrever `REG_CONTROL = 0x02` no STC3100 (IO0 em 0) para manter a placa ligada; isso está em `stc3100_init()`.
+- O botão central liga os reguladores (SWON → M2 → POW_EN). O firmware precisa escrever `REG_CONTROL = 0x02` no STC3100 (IO0 em 0) para manter a placa ligada (o port fazia isso em `stc3100_init()`, que saiu em 2026-09-19 com os drivers da V3).
 - Para desligar: `REG_MODE = 0` e `REG_CONTROL = 0x01`. **Qualquer escrita em `REG_CONTROL` com o bit 0 em 1 desliga a placa na hora.**
-- No port: `stc3100_shutdown()` faz isso; o `power_scheduler` (porta de `legacy/source/scheduling/power_scheduler.cpp`) chama depois de 15 min sem posição processada em CRS/PRC, e o menu tem "Power Off". Na USB a placa não apaga; o agendador tenta de novo 15 min depois.
-- Não escreva em `REG_CONTROL` fora do `stc3100.c`: um bit 0 em 1 por engano desliga a placa em campo.
+- No port de hoje, quem desliga é a máquina de sistema do serviço de energia (`src/svc/power/sys_fsm.c`): ship mode do nPM1300 na placa nova (alias `pmic-regulators`), System OFF com VBUS ou sem PMIC. As regras dos 15 min vêm do `legacy/source/scheduling/power_scheduler.cpp`.
 
 ## Board própria
 

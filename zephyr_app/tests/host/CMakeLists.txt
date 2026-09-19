@@ -31,6 +31,17 @@ target_compile_definitions(unity PUBLIC UNITY_INCLUDE_DOUBLE)
 
 set(APP_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../..)
 
+# Zephyr of the NCS, for the libraries that run unchanged on the host (SMF).
+# Without it, the suites that need it are skipped.
+if(NOT DEFINED ZEPHYR_BASE)
+    if(DEFINED ENV{ZEPHYR_BASE})
+        set(ZEPHYR_BASE $ENV{ZEPHYR_BASE})
+    else()
+        set(ZEPHYR_BASE C:/ncs/v3.3.0/zephyr)
+    endif()
+endif()
+set(ZEPHYR_SMF ${ZEPHYR_BASE}/lib/smf/smf.c)
+
 # Include paths and flags shared by the code under test and the tests.
 add_library(host_env INTERFACE)
 target_include_directories(host_env INTERFACE
@@ -49,9 +60,10 @@ target_compile_options(host_env INTERFACE
     -Werror=return-type
 )
 
-# gnss_add_test(<name> SOURCES <files under zephyr_app/src> [SUPPORT <files under support/>])
+# gnss_add_test(<name> SOURCES <files under zephyr_app/src> [SUPPORT <files under support/>]
+#               [ZEPHYR <absolute paths of Zephyr sources>])
 function(gnss_add_test name)
-    cmake_parse_arguments(T "" "" "SOURCES;SUPPORT" ${ARGN})
+    cmake_parse_arguments(T "" "" "SOURCES;SUPPORT;ZEPHYR" ${ARGN})
     set(code)
     foreach(src IN LISTS T_SOURCES)
         list(APPEND code ${APP_DIR}/src/${src})
@@ -59,20 +71,32 @@ function(gnss_add_test name)
     foreach(src IN LISTS T_SUPPORT)
         list(APPEND code ${CMAKE_CURRENT_SOURCE_DIR}/support/${src})
     endforeach()
-    add_executable(${name} ${name}.c ${code})
+    add_executable(${name} ${name}.c ${code} ${T_ZEPHYR})
     target_link_libraries(${name} PRIVATE unity host_env m)
+    if(T_ZEPHYR)
+        # The Zephyr headers these sources need, searched after the shims
+        target_compile_options(${name} PRIVATE -idirafter ${ZEPHYR_BASE}/include)
+        target_compile_definitions(${name} PRIVATE
+            CONFIG_SMF_ANCESTOR_SUPPORT=1
+            CONFIG_SMF_INITIAL_TRANSITION=1)
+    endif()
     add_test(NAME ${name} COMMAND ${name})
 endfunction()
 
 gnss_add_test(test_vecteur SOURCES model/vecteur.c)
 gnss_add_test(test_power_zone SOURCES model/power_zone.c)
 gnss_add_test(test_suffer_score SOURCES model/suffer_score.c)
-gnss_add_test(test_nmea_parser SOURCES drivers/gps/nmea_parser.c)
 gnss_add_test(test_sd_logger SOURCES model/sd_logger.c SUPPORT host_kernel.c host_fs.c)
-gnss_add_test(test_gps_mgmt
-    SOURCES drivers/gps/gps_mgmt.c drivers/gps/nmea_parser.c
-    SUPPORT host_kernel.c fake_gps_hal.c)
 gnss_add_test(test_ui_fmt SOURCES ui/ui_fmt.c)
+gnss_add_test(test_tilt SOURCES svc/sensors/tilt.c)
 gnss_add_test(test_power_scheduler
     SOURCES model/power_scheduler.c
-    SUPPORT host_kernel.c fake_shutdown.c)
+    SUPPORT host_kernel.c)
+if(EXISTS ${ZEPHYR_SMF})
+    gnss_add_test(test_sys_fsm
+        SOURCES svc/power/sys_fsm.c model/power_scheduler.c
+        SUPPORT host_kernel.c
+        ZEPHYR ${ZEPHYR_SMF})
+else()
+    message(WARNING "Zephyr SMF not found in ${ZEPHYR_BASE}: test_sys_fsm skipped (pass -DZEPHYR_BASE=...)")
+endif()

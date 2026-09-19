@@ -76,7 +76,7 @@ python -m west build -p auto -b nrf52840dk/nrf52840 -d build --sysbuild .
 ```
 
 - **Alvo:** `nrf52840dk/nrf52840`, com os pinos da placa myStravaB em `zephyr_app/boards/nrf52840dk_nrf52840.overlay`, que o Zephyr aplica pelo nome da placa. Outro alvo: `BOARD=<placa> bash tools/fw/fw.sh build` ou `set BOARD=<placa>` antes do `build.bat`.
-- **nRF54LM20 DK:** `BOARD=nrf54lm20dk/nrf54lm20a/cpuapp BUILD_DIR=zephyr_app/build_54 bash tools/fw/fw.sh build`. Usa `boards/nrf54lm20dk_nrf54lm20a_cpuapp.overlay` (pinos no conector de expansão do DK) e `boards/nrf54lm20dk_nrf54lm20a_cpuapp.conf` (configurações no ZMS). Detalhes em [05](05-arquitetura-zephyr.md#nrf54lm20-dk).
+- **nRF54LM20 DK:** `BOARD=nrf54lm20dk/nrf54lm20a/cpuapp BUILD_DIR=zephyr_app/build_54 bash tools/fw/fw.sh build`. Usa `boards/nrf54lm20dk_nrf54lm20a_cpuapp.overlay` (pinos no conector de expansão do DK) e `boards/nrf54lm20dk_nrf54lm20a_cpuapp.conf` (configurações no ZMS). Detalhes em [05](05-arquitetura-zephyr.md#devicetree-e-alvos).
 - **ANT:** `ANT=1 bash tools/fw/fw.sh build pristine` (ou `set ANT=1` antes do `build.bat`), com `BOARD` para o nRF54LM20 DK. Precisa do add-on em `C:\ncs\sdk-ant` ([07](07-radio-ant-ble.md#ant-no-ncs-v330)); mostra um aviso esperado a mais, `Deprecated symbol SOC_SERIES_NRF52X is enabled` (ou `SOC_SERIES_NRF54LX`).
 - **Sysbuild** é o fluxo padrão do NCS. O `zephyr_app/sysbuild.conf` desliga o Partition Manager (`SB_CONFIG_PARTITION_MANAGER=n`), depreciado no NCS 3.3; o layout vem do devicetree.
 - **Saída:** `zephyr_app/build/zephyr_app/zephyr/zephyr.hex` (e `.elf`, `.map`, `.config`, `zephyr.dts`). Sem MCUboot não há `merged.hex`.
@@ -91,19 +91,19 @@ python -m west build -p auto -b nrf52840dk/nrf52840 -d build --sysbuild .
 
 ### Resultado de referência
 
-Build com sysbuild da `develop` em 2026-09-18 (atualizado a cada commit que muda o tamanho):
+Build com sysbuild da `develop` em 2026-09-19 (atualizado a cada commit que muda o tamanho):
 
 | Item | Valor |
 |---|---|
-| FLASH | 296.320 B (28,26 % de 1 MB) |
-| RAM | 116.928 B (44,60 % de 256 KB) |
-| Avisos | 7, todos `defined but not used` em `src/vue/vue.c` |
+| FLASH | 317.836 B (30,31 % de 1 MB) |
+| RAM | 140.928 B (53,76 % de 256 KB) |
+| Avisos | 0 |
 | Erros | 0 |
 | Tempo | cerca de 1 min 45 s do zero |
-| nRF54LM20 DK | FLASH 298.468 B (15,02 % de 1.940 KB), RAM 117.656 B (22,49 % de 511 KB), os mesmos 7 avisos |
-| Com `ANT=1` | nRF52840 DK: FLASH 324.912 B, RAM 121.536 B; nRF54LM20 DK: FLASH 328.408 B, RAM 122.248 B; os 7 avisos e o do símbolo obsoleto |
+| nRF54LM20 DK | FLASH 327.032 B (16,46 % de 1.940 KB), RAM 145.400 B (27,79 % de 511 KB), 0 avisos |
+| Com `ANT=1` | nRF52840 DK: FLASH 346.428 B, RAM 145.536 B; nRF54LM20 DK: FLASH 356.984 B, RAM 149.992 B; só o aviso do símbolo obsoleto |
 
-Maiores consumidores de RAM (`bash tools/fw/fw.sh size`): `seg_runtime` 22.000 B, heap do sistema 16.384 B (`CONFIG_HEAP_MEM_POOL_SIZE`), framebuffer `spi_buffer` 12.482 B, `points` 8.000 B, pool do controlador BLE 5.247 B.
+Maiores consumidores de RAM (`bash tools/fw/fw.sh size`): `seg_runtime` 22.000 B, heap do sistema 16.384 B (`CONFIG_HEAP_MEM_POOL_SIZE`), `points` 8.000 B, pool do controlador BLE 5.247 B, as pilhas das threads de serviço ([05](05-arquitetura-zephyr.md#pilhas)) e três cópias do retrato da tela (`ui_model_t`, 2.404 B: a do modelo, a do canal e a da interface).
 
 ## Gravar e ver o log
 

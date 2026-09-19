@@ -61,6 +61,25 @@ static inline void legacy_secjmkstr(char *out, size_t size, uint32_t value, char
     (void)snprintf(out, size, "%02u%c%02u%c%02u", hours, sep, minutes, sep, seconds);
 }
 
+/**
+ * legacy/source/sensors/fxos.cpp:741-766: mean of the buffered samples, then
+ * the mean absolute deviation, both in float over int16 counts.
+ */
+static inline float legacy_fxos_roughness(const int16_t *buff, unsigned int count)
+{
+    float mean = 0.0f;
+    float rough = 0.0f;
+
+    for (unsigned int i = 0; i < count; i++) {
+        mean += (float)buff[i];
+    }
+    mean /= count;
+    for (unsigned int i = 0; i < count; i++) {
+        rough += fabsf((float)buff[i] - mean) / count;
+    }
+    return rough;
+}
+
 /** libraries/utils/utils.h: toRadians() */
 static inline float legacy_to_radians(float angle)
 {

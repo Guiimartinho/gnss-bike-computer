@@ -29,6 +29,8 @@ python tools/ui/render_screens.py      # compila o LVGL do NCS e a src/ui no PC,
 - Usa o mesmo GCC dos testes de host (shell limpo, sem o `ncs_env.sh`); o build fica em `build/ui`.
 - A formatação dos números tem conjunto de host próprio (`test_ui_fmt`), com o oráculo `legacy_fmkstr` e `legacy_secjmkstr` em `support/legacy_ref.h`.
 
+- `test_sys_fsm` compila o `lib/smf/smf.c` do Zephyr (`ZEPHYR_BASE`, padrão `C:/ncs/v3.3.0/zephyr`); sem o NCS, o conjunto é pulado com aviso.
+
 ## Como funciona
 
 ```mermaid
@@ -69,6 +71,7 @@ Um teste só vale se falhar quando o comportamento some:
 2. Quebre o comportamento (mude um limite, inverta uma condição, apague uma linha).
 3. Rode `bash tools/fw/host_tests.sh -R <conjunto>`: precisa falhar. Se passar, o teste está fraco; melhore o teste.
 4. Restaure o arquivo e confirme que tudo volta a passar. Nunca deixe uma mutação no código: confira `git status` e `git diff` no fim.
+5. **Automatizando por script**: no Windows, um `bash` chamado de Python ou do `cmd` é o `bash.exe` do `System32`, o lançador do WSL, que o projeto não usa (e tudo "morre" porque nada roda). Chame `cmake --build --preset host-tests` e `ctest --preset host-tests -R ...` direto em `zephyr_app/tests/host`, confira que o conjunto passa antes da primeira mutação e que o filtro achou algo, e ponha o horário do arquivo mutado no futuro (`os.utime`), porque o Ninja não recompila um arquivo com o mesmo horário do objeto.
 
 ## cppcheck
 
@@ -79,11 +82,11 @@ cppcheck --enable=warning,style,performance,portability --std=c11 --inline-suppr
 ```
 
 - Na interface (`src/ui`, `tests/ui`), passe o LVGL para o cppcheck entender `LV_FONT_DECLARE` e ignore os achados dentro dele: `-DLV_CONF_INCLUDE_SIMPLE=1 -I zephyr_app/src/ui -I zephyr_app/tests/ui -I C:/ncs/v3.3.0/modules/lib/gui/lvgl --suppress="*:C:/ncs/v3.3.0/modules/lib/gui/lvgl/*"`.
-- `syntaxError` em `ble_*.c` e `neopixel.c` vem das macros do Zephyr (`BT_GATT_*`, `DT_*`) sem os headers: falso positivo.
+- `syntaxError` em `ble_*.c` vem das macros do Zephyr (`BT_GATT_*`) sem os headers: falso positivo. Nos serviços, os `#if DT_...` pedem `"-DDT_NODE_HAS_STATUS(n,s)=1" "-DDT_ALIAS(a)=a"` na linha do cppcheck.
 - Achados reais conhecidos estão em `docs/11-qualidade-misra.md`. Corrija o que for seu; supressão só inline, `// cppcheck-suppress <id>`, com o motivo na linha de cima.
 
 ## Antes de dizer que passou
 
 - Rode de novo depois da última edição; não confie em resultado antigo.
-- Firmware também: `bash tools/fw/fw.sh build` sem aviso novo (os 7 de `vue.c` são conhecidos).
+- Firmware também: `bash tools/fw/fw.sh build` sem aviso.
 - Diga o que não foi testado: nada disto substitui teste na placa.

@@ -9,7 +9,7 @@
 ![RTOS](https://img.shields.io/badge/Zephyr-4.3.99-7929D2)
 ![Rádio](https://img.shields.io/badge/r%C3%A1dio-BLE%20%2B%20ANT%2B-0082FC)
 ![Linguagem](https://img.shields.io/badge/C-C11-A8B9CC?logo=c&logoColor=white)
-![Testes](https://img.shields.io/badge/testes%20de%20host-60%20casos-2E7D32)
+![Testes](https://img.shields.io/badge/testes%20de%20host-65%20casos-2E7D32)
 ![CI](https://img.shields.io/badge/CI-desligado-lightgrey)
 ![Estado](https://img.shields.io/badge/estado-port%20em%20andamento-EF6C00)
 ![Licença](https://img.shields.io/badge/licen%C3%A7a-a%20definir-lightgrey)
@@ -150,7 +150,7 @@ flowchart TB
 ## Estado e próximos passos
 
 - **Feito em 2026-09-18:** build no NCS v3.3.0 com sysbuild; correção de 13 defeitos críticos (estouro de pilha no Kalman, GPS e modelo dentro de ISR, corrupção de memória no log, botões e pinos do GPS invertidos, conflitos de pinos com o DK); testes de host; documentação e contexto para assistentes de IA.
-- **Fase 1 do roteiro:** a `main_loop` é a única escritora do modelo e a tela lê com trava, watchdog por thread e desligamento automático pelo STC3100 depois de 15 min parado.
+- **Fase 1 do roteiro:** a base da arquitetura nova (serviços com thread própria, eventos no zbus, máquinas de sistema e de modo no SMF, watchdog por serviço, desligamento automático do legacy), feita em 2026-09-19.
 - **Novos alvos e rádio:** o port compila para o nRF54LM20 DK, e a pilha ANT do add-on `sdk-ant` v2.1.1 compila sobre o NCS v3.3.0 nos dois DKs (`ANT=1`); nada disso foi testado em placa.
 - **Placa nova:** desenho do aparelho, especificação ([14](docs/14-hardware-placa-nova.md)) e avaliação dos componentes ([15](docs/15-avaliacao-componentes.md)). O esquemático é do dono; antes do layout vêm os testes de bancada da carga dupla, do GNSS, da coexistência dos rádios e do display.
 - **Decidido:** ANT+ e BLE juntos (os equipamentos externos falam ANT+) e placa própria com o nRF54LM20A. Decisões e pendências em [docs/10-status-do-port.md](docs/10-status-do-port.md#decisões-do-dono).

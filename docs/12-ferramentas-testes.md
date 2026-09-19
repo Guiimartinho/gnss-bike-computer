@@ -22,7 +22,7 @@ Os módulos de lógica do `zephyr_app/src` compilam com o GCC do PC contra shims
 
 ```sh
 bash tools/fw/host_tests.sh             # tudo
-bash tools/fw/host_tests.sh -R nmea     # um conjunto
+bash tools/fw/host_tests.sh -R tilt     # um conjunto
 ```
 
 | Conjunto | Código testado | Casos | O que garante |
@@ -30,26 +30,29 @@ bash tools/fw/host_tests.sh -R nmea     # um conjunto
 | `test_vecteur` | `model/vecteur.c` | 9 | distância dentro de 0,5 % da fórmula do legacy, sinais dos eixos, produto escalar, normalização |
 | `test_power_zone` | `model/power_zone.c` | 6 | limites das 7 zonas pelo FTP, janela de 50 a 1950 W, acumulação |
 | `test_suffer_score` | `model/suffer_score.c` | 5 | zonas de FC e pontos por hora do legacy |
-| `test_nmea_parser` | `drivers/gps/nmea_parser.c` | 12 | GGA, RMC, GSA, GSV, hemisférios, fração de segundo, checksum, linha longa, caminho caractere a caractere, posição que volta a falso com RMC `V` |
 | `test_sd_logger` | `model/sd_logger.c` | 4 | intervalo de 15 m, lote de 5 com cabeçalho CSV, **nenhuma escrita fora do buffer sem cartão** |
-| `test_gps_mgmt` | `drivers/gps/gps_mgmt.c` + parser | 6 | um callback por época, checksum, fim do fix no RMC `V`, níveis lógicos de reset e standby |
 | `test_ui_fmt` | `ui/ui_fmt.c` | 10 | números como o `_fmkstr` do legacy numa varredura, truncamento em `float` (0,21 vira `0.20`), negativos, limite de 100000, NaN, buffer pequeno, horas e hora desconhecida, larguras do `cadran` e do `cadranH`, valores com sinal |
-| `test_power_scheduler` | `model/power_scheduler.c` | 8 | 15 min exatos mantêm ligado, depois zera a atividade salva antes de soltar o latch, pings de posição e do rolo, nova tentativa 15 min depois, volta do contador de 32 bits |
+| `test_tilt` | `svc/sensors/tilt.c` | 8 | inclinação, rolagem e rumo contra leituras construídas por rotação (aerospacial, norte-leste-baixo), janela de 50 amostras, rugosidade contra o laço de `fxos.cpp:761-766` |
+| `test_power_scheduler` | `model/power_scheduler.c` | 7 | 15 min exatos mantêm ligado, pings de posição e do rolo, ping desconhecido não conta, nova tentativa 15 min depois, volta do contador de 32 bits |
+| `test_sys_fsm` | `svc/power/sys_fsm.c` + `lib/smf/smf.c` do Zephyr | 16 | Partida e Ligado, desligamento que espera cada serviço por até 5 s, System OFF com USB, auto-off por modo (CRS, PRC e DBG pela posição, FEC pelo rolo), bateria no fim, MSC, desligamento no boot, comandos durante o desligamento, energia cortada uma vez só |
 
 ```mermaid
 flowchart LR
     SRC["zephyr_app/src/*.c"] --> EXE["test_x.exe"]
-    SHIM["tests/host/shim/zephyr/<br/>kernel.h · logging/log.h · fs/fs.h"] --> EXE
-    SUP["tests/host/support/<br/>host_kernel · host_fs · fake_gps_hal · fake_shutdown · legacy_ref.h"] --> EXE
+    SHIM["tests/host/shim/zephyr/<br/>kernel.h · logging/log.h · fs/fs.h · sys/util.h"] --> EXE
+    SUP["tests/host/support/<br/>host_kernel · host_fs · legacy_ref.h"] --> EXE
+    ZEP["lib/smf/smf.c do Zephyr<br/>(ZEPHYR_BASE)"] --> EXE
     T["tests/host/test_x.c"] --> EXE
     UNITY["Unity 2.6.1<br/>FetchContent com SHA-256"] --> EXE
     EXE --> CT["ctest"]
 ```
 
 - **Shims**: log vira nada, `k_mutex` nunca bloqueia, relógio controlável (`host_uptime_set/advance`), `k_msleep` avança o relógio.
-- **Falsos**: `host_fs` (sistema de arquivos em memória que pode "sumir"), `fake_gps_hal` (linhas de UART, GPIO e EPO para o `gps_mgmt`), `fake_shutdown` (`stc3100_shutdown()` e `crash_recovery_clear_saved_state()` contados, para o `power_scheduler`).
+- **Falsos**: `host_fs` (sistema de arquivos em memória que pode "sumir").
+- **Zephyr de verdade**: `test_sys_fsm` compila o `lib/smf/smf.c` do NCS (`ZEPHYR_BASE`, padrão `C:/ncs/v3.3.0/zephyr`), com os headers do Zephyr procurados depois dos shims (`-idirafter`) e o shim `sys/util.h` com os macros `IF_ENABLED` e `COND_CODE_1`; sem o NCS, o conjunto é pulado com um aviso.
 - **Oráculo**: `support/legacy_ref.h` transcreve fórmulas do legacy com a origem.
-- **Mutação**: as correções de 2026-09-18 do parser NMEA, do log e do GPS e as regras do `power_scheduler` foram revertidas uma a uma e os testes falharam, como deviam; o mesmo com as 5 mutações do `ui_fmt.c` em 2026-09-19 (a exceção é a conta em `double` do parser, cujo ganho fica dentro da resolução do `float`).
+- **Mutação**: as correções de 2026-09-18 do log foram revertidas e o teste falhou, como devia. Em 2026-09-19, com um executor que chama o `cmake` e o `ctest` direto: 6 de 6 mutações do `ui_fmt.c`, 6 de 6 da máquina de sistema, 3 de 3 do `tilt.c` e a do `power_scheduler` mortas, com os conjuntos verdes antes e depois.
+- **Cuidado ao automatizar**: no Windows, um `bash` chamado de Python ou do `cmd` é o `bash.exe` do `System32`, o lançador do WSL, que este projeto não usa. Chame o `cmake` e o `ctest` direto, ou o Git Bash pelo caminho completo, e confira o código de saída e se o filtro achou o conjunto.
 - Compilador: MinGW-w64 GCC 15.2 no Windows; o mesmo CMake funciona com o GCC do Linux.
 - Os testes de ztest do Zephyr (`native_sim`, `unit_testing`) só rodam em Linux e não são usados.
 
@@ -109,8 +112,8 @@ Nenhuma pasta de `libraries/` é compilada pelo port; ele reimplementa o que pre
 
 | Pasta | Origem | Licença | No port |
 |---|---|---|---|
-| `AdafruitGFX` | Adafruit GFX + Print (Arduino) + fontes | BSD; `Print.cpp` LGPL-2.1; fonte `Tiny3x3a` **CC BY-NC-SA 3.0** (sem uso) | reimplementada em `vue.c`; `font_5x7.h` deriva do `glcdfont` (manter o aviso BSD) |
-| `TinyGPSPlus` | TinyGPS++ (Mikal Hart) | LGPL-2.1+ | reimplementada em `nmea_parser.c` |
+| `AdafruitGFX` | Adafruit GFX + Print (Arduino) + fontes | BSD; `Print.cpp` LGPL-2.1; fonte `Tiny3x3a` **CC BY-NC-SA 3.0** (sem uso) | substituída pelo LVGL do NCS (a interface em paisagem que a reimplementava saiu em 2026-09-19) |
+| `TinyGPSPlus` | TinyGPS++ (Mikal Hart) | LGPL-2.1+ | substituída pela API de GNSS do Zephyr (o parser próprio do port saiu em 2026-09-19) |
 | `rtt`, `sysview` | SEGGER | estilo BSD da SEGGER | sem uso |
 | `task_manager`, `SST/app_sdcard.c` | nRF5 SDK | Nordic 5 cláusulas | substituídas pelo Zephyr |
 | `utils/WString` | Arduino | LGPL-2.1 | sem uso |

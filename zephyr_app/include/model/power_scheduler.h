@@ -1,16 +1,18 @@
 /**
  * @file power_scheduler.h
- * @brief Auto-off after a period without activity, and deliberate power-off
+ * @brief Automatic power-off after a period without activity
  *
- * Port of legacy/source/scheduling/power_scheduler.cpp: the model pings the
- * scheduler on each location processed in CRS or PRC mode and on each
- * trainer update in FEC mode; after 15 minutes without a ping the device
- * turns itself off through the STC3100 power latch.
+ * Port of legacy/source/scheduling/power_scheduler.cpp: each location in CRS
+ * or PRC and each trainer update in FEC pings the scheduler; 15 minutes
+ * without a ping turn the device off. The system state machine
+ * (svc/sys_fsm.h) pings it and runs the shutdown when it expires; the
+ * legacy called power_scheduler__shutdown() from here.
  */
 
 #ifndef POWER_SCHEDULER_H
 #define POWER_SCHEDULER_H
 
+#include <stdbool.h>
 #include <stdint.h>
 
 /** Minutes without a ping before the device turns off (legacy POWER_SCHEDULER_MAX_IDLE_MIN) */
@@ -34,19 +36,14 @@ void power_scheduler_init(void);
 void power_scheduler_ping(power_ping_t type);
 
 /**
- * @brief Turn the device off once the idle time passes the limit
+ * @brief Check the idle time
  *
- * Call it periodically from main_loop. If the device is still running after
- * the power-off (USB power), the next attempt comes one limit later.
- */
-void power_scheduler_run(void);
-
-/**
- * @brief Power the device off now
+ * Call it periodically. Past the limit it returns true once and counts a
+ * whole limit again, so a device still running afterwards (on USB, as the
+ * legacy retried on every loop) tries again one limit later.
  *
- * Forgets the saved activity state, so the next boot does not restore it,
- * and releases the power latch through the STC3100.
+ * @return true when the device should turn off
  */
-void power_scheduler_shutdown(void);
+bool power_scheduler_run(void);
 
 #endif /* POWER_SCHEDULER_H */

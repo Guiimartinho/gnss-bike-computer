@@ -70,8 +70,8 @@ Estado `X = [h, α_bar, α0]`: elevação, pitch medido e offset de montagem do 
 | P0 | 900 em **todos** os 9 elementos (`matP.ones(900)`) | 900·I (`udmat_ones` gera identidade) |
 | Limite de P⁻ | valor absoluto em [1e-15, 1e12], sinal preservado | com sinal: todo negativo vira +1e-15, zerando as covariâncias cruzadas (**α0 nunca é estimado**) |
 | Velocidade mínima | 1,5 m/s | igual |
-| Taxa | uma vez por localização (1 Hz), barômetro médio de 1 s | a cada 100 ms com a mesma amostra do barômetro |
-| Pitch | `−atan2f(Ay, −Az)` da média de 50 amostras (eixos da V11) | `atan2f(−ax, √(ay² + az²))` de uma amostra |
+| Taxa | uma vez por localização (1 Hz), barômetro médio de 1 s | a cada amostra do barômetro (10 Hz) |
+| Pitch | `−atan2f(Ay, −Az)` da média de 50 amostras (eixos da V11) | média de 50 amostras a 50 Hz, pelas equações do AN4248 nos eixos da placa ([Inclinação, rumo e rugosidade](#inclinação-rumo-e-rugosidade)) |
 | Saídas | `slope = α_bar − α0`; com mais de 60 pontos: `att.slope = 100·slope`, `vit_asc = slope·v` | igual, mas o contador de pontos avançava por sentença NMEA (corrigido: agora por época) |
 
 ## Barômetro e drift
@@ -103,9 +103,21 @@ Estado `X = [h, α_bar, α0]`: elevação, pitch medido e offset de montagem do 
 
 | Módulo | Regras (legacy) | Port |
 |---|---|---|
-| Potência (`PowerZone.cpp`) | 7 zonas com limites × FTP: −100, 0,55, 0,75, 0,90, 1,05, 1,20, 1,50, 100; só 50 a 1950 W; a primeira amostra só inicia o relógio | `power_zone.c` fiel (`test_power_zone`); recebe a potência estimada e FTP fixo de 200 W |
-| Suffer score (`SufferScore.cpp`) | FC em (80,120], (120,144], (144,165], (165,176], >176; 16, 33, 72, 85 e 95 pontos por hora | `suffer_score.c` fiel (`test_suffer_score`); recebe BPM 0 |
-| RR (`RRZone.cpp`) | limites de FC −1000, 70, 108, 143, 161, 178, 1000; RMSSD de 20 intervalos por zona | `rr_zone.c` fiel, sem chamador |
+| Potência (`PowerZone.cpp`) | 7 zonas com limites × FTP: −100, 0,55, 0,75, 0,90, 1,05, 1,20, 1,50, 100; só 50 a 1950 W; a primeira amostra só inicia o relógio; alimentado só em FEC, com a potência do rolo a cada dado (`BoucleFEC.cpp:75`) | `power_zone.c` fiel (`test_power_zone`), alimentado da mesma forma; FTP das configurações (200 W sem elas) |
+| Suffer score (`SufferScore.cpp`) | FC em (80,120], (120,144], (144,165], (165,176], >176; 16, 33, 72, 85 e 95 pontos por hora; alimentado a cada volta do laço, em todos os modos, com a FC que houver (`Model.cpp:377`, ~50 ms) | `suffer_score.c` fiel (`test_suffer_score`); alimentado a cada 1 s com a FC do momento, 0 com a cinta perdida ou sem dado há 5 s |
+| RR (`RRZone.cpp`) | limites de FC −1000, 70, 108, 143, 161, 178, 1000; RMSSD de 20 intervalos por zona; `addRRData` a cada volta do laço, que repete o último RR até o batimento seguinte (`Model.cpp:378`) | `rr_zone.c` fiel, alimentado a cada dado da cinta com RR: cada intervalo entra uma vez |
+
+## Inclinação, rumo e rugosidade
+
+Legacy: `legacy/source/sensors/fxos.cpp`. Port: `zephyr_app/src/svc/sensors/tilt.c`, no serviço de sensores, testado por `test_tilt`.
+
+| Item | Legacy | Port |
+|---|---|---|
+| Amostragem | FXOS8700 em modo híbrido a 50 Hz (`fxos.cpp:600`), ±4 g (`:484`) | acelerômetro pela API de sensores do Zephyr a 50 Hz, em m/s² |
+| Janela | média de 50 amostras, 1 s (`MAX_ACCEL_AVG_COUNT`, `:72`, `:741-758`) | igual |
+| Rugosidade | desvio médio absoluto de cada eixo na janela, em contagens (`:761-766`) | igual, convertida para contagens de ±4 g (2048 por g) para os números da tela baterem com os do legacy; o quarto valor, do barômetro (`baro.getRoughness()`), ainda não foi portado |
+| Inclinação e rolagem | `atan2f` sobre os eixos da V11 | equações do AN4248 da Freescale sobre os eixos da placa (X à frente, Y à esquerda, Z para cima); a montagem dos sensores na placa nova a confirmar |
+| Rumo | magnetômetro médio menos os offsets da calibração (`:776-777`), `atan2f` sem compensação da inclinação (`:815-821`) | AN4248, eq. 22, com a inclinação e a rolagem da janela; calibração ainda não portada |
 
 ## Fontes de posição
 

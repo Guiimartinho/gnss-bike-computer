@@ -241,7 +241,7 @@ Com o SD3V0 desligado, os pinos do `spi00` ficam em nível baixo ou em alta impe
 
 ## Alocação de pinos
 
-Provisória. Os blocos seriais seguem os domínios de pinos do nRF54LM20A (`spi00` na porta P2; blocos 20 a 24 nas portas P1 e P3; bloco 30 na porta P0), e as funções que já existem no port repetem os pinos do alvo nRF54LM20 DK ([05](05-arquitetura-zephyr.md#nrf54lm20-dk)). O mapeamento final depende da pinagem do BM20C.
+Provisória. Os blocos seriais seguem os domínios de pinos do nRF54LM20A (`spi00` na porta P2; blocos 20 a 24 nas portas P1 e P3; bloco 30 na porta P0), e as funções que já existem no port repetem os pinos do alvo nRF54LM20 DK ([05](05-arquitetura-zephyr.md#devicetree-e-alvos)). O mapeamento final depende da pinagem do BM20C.
 
 | Função | Sinais | Periférico | Porta | Pino no DK (referência) |
 |---|---|---|---|---|

@@ -9,30 +9,17 @@ Referência: `docs/08-interface.md` (telas do legacy, imagens em `docs/img/`, es
 
 ## Display
 
-- LS027B7DH01, 400 × 240, 1 bit, sem backlight, CS ativo alto, SPI a 2 MHz LSB primeiro.
-- Buffer de 12.482 B: `[comando][endereço][50 B][dummy] × 240 + [dummy]`; bit 0 = pixel da esquerda; mesmo layout no legacy e no port.
-- VCOM precisa alternar: o port manda o comando a cada 1 s (`ls027_toggle_vcom()`); o legacy alterna o bit M1 a cada quadro.
-- **O aparelho é retrato** (240 de largura × 400 de altura; decisão do dono em 2026-09-18, também para o display colorido da placa nova): o legacy usa `setRotation(3)` e `drawPixel(x, y)` → físico `(y, 239 − x)`. O port desenha em paisagem, e `transform_coords` do `ls027.c` tem as contas de retrato erradas.
+- Placa nova: Sharp LS027B7DH01A (1 bit) ou JDI LPM027M128C (8 cores) no mesmo conector, em retrato, pelo driver próprio do passo da interface (`docs/18-interface-telas.md#framework`): quadro na orientação do painel, só as linhas que mudaram, EXTCOMIN por PWM, a quantização da interface.
+- V3 e legacy: LS027B7DH01, 400 × 240, 1 bit, sem luz, CS ativo alto, SPI a 2 MHz LSB primeiro; buffer de 12.482 B `[comando][endereço][50 B][dummy] × 240 + [dummy]`; VCOM alternado pelo bit M1 a cada quadro (`legacy/drivers/lcd/ls027.c`).
+- **O aparelho é retrato** (240 × 400; decisão do dono em 2026-09-18): o legacy usa `setRotation(3)` e `drawPixel(x, y)` → físico `(y, 239 − x)`.
 
 ## Regras
 
-1. **Só a thread `display` desenha.** Outras threads pedem (flag, `k_msgq`), nunca chamam primitivas: o framebuffer e o SPI não têm trava nas primitivas.
-2. **Nada de desenho fora da tela**: recorte antes de converter float para inteiro (o mapa hoje converte sem saturar).
-3. **`snprintf` com float** está habilitado (`CONFIG_CBPRINTF_FP_SUPPORT`), mas custa pilha (a `display` tem 2 KB) e arredonda, enquanto o legacy trunca (`_fmkstr`).
-4. **Item selecionado do menu** em XOR ou texto branco sobre barra preta (hoje é preto sobre preto).
-5. **Botões** chegam por `hal_gpio_btn_process()` (polling de 100 ms na `main_loop`): curto na liberação, longo com 1 s. `gpio_pin_get_dt()` já devolve nível lógico; não inverta de novo (corrigido em 2026-09-18).
-6. **Energia**: um quadro inteiro custa ~50 ms de SPI; o legacy atualiza por evento (~1 Hz). Evite subir a taxa.
-
-## Fidelidade com o legacy
-
-| Legacy | Port | Para portar |
-|---|---|---|
-| fonte `Org_01` (`libraries/AdafruitGFX/Fonts/Org_01.h`) escalada de 1 a 4 | 5×7 de 256 glifos | renderizador GFXfont sobre `include/vue/gfxfont.h` |
-| grade de 2 × 7 cadrans com rótulo, valor e unidade | listas de texto | `cadran`, `cadranH`, alinhamento à direita (`printRev`) |
-| menu com Back, modos CRS/PRC/FEC/Zwift/DBG, Settings (pareamento, FTP, peso, calibração, formatar), Shutdown | `menu.c` não ligado, com controle de atividade | ligar no botão central, rotear os eventos antes de `vue_handle_button` |
-| fila de 10 notificações numa faixa no topo | um slot, sem produtores | fila e produtores (boot, GPS, pareamento, FDIR) |
-| mapa e mini-mapa com projeção linear e zoom `nível² × 250 / 100` m | mapa sem zoom | ver `legacy/source/display/Zoom.cpp` e `VuePRC.cpp` |
-| ícones Komoot 110 × 110 | 6 ícones de 32 × 32 sem uso | `libraries/komoot/komoot_icons.h` (~45 KB de flash) |
+1. **Só a thread `ui` desenha.** Os outros serviços publicam (`model_state`, `notif`); ninguém chama o LVGL de fora dela.
+2. **Nada de desenho fora da tela**: recorte antes de converter float para inteiro.
+3. **Números pelo `ui_fmt.c`**, que trunca como o `_fmkstr` do legacy; `snprintf` com float arredonda.
+4. **Teclas** pelo subsistema de entrada (`gpio-keys` e `zephyr,input-longpress`; na placa nova o centro chega pelo nPM1300), publicadas no `chan_input`.
+5. **Energia**: a tela redesenha a cada época do GNSS ou botão, não num período fixo.
 
 ## Interface da placa nova (LVGL)
 
@@ -48,7 +35,7 @@ A interface da placa nova está em `zephyr_app/src/ui` e `zephyr_app/include/ui`
 
 ## Verificar
 
-- Build sem aviso novo; hoje há 7 avisos de funções de `vue.c` portadas e não ligadas: ao ligar uma, o número cai.
+- Build sem aviso.
 - Interface nova: `python tools/ui/render_screens.py` precisa terminar com `0 problems`; olhe as folhas de `docs/img/telas-lvgl/` nos dois temas. Tela nova ganha um `snap()` e, se tiver navegação, `expect_screen` e `expect_action` em `zephyr_app/tests/ui/ui_render.c`, e entra numa folha de `tools/ui/render_screens.py`.
-- Interface do firmware atual (`src/vue`): sem placa, a única forma de ver a tela é gravar no DK com um LS027 ligado aos pinos do overlay (o simulador do legacy, `tools/TDD` + `LS027simulator.jar`, não compila aqui).
+- A interface em paisagem do port (`src/vue`) saiu em 2026-09-19. Sem placa, a tela só se vê no PC (`render_screens.py`); o simulador do legacy (`tools/TDD` + `LS027simulator.jar`) não compila aqui.
 - Diga o que não foi visto na tela de verdade.

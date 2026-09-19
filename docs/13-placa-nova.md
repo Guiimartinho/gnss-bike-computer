@@ -210,7 +210,7 @@ A altitude continua vindo do barômetro: o GNSS erra mais na vertical (o LC79H d
 
 - **Driver.** O NCS v3.3.0 tem drivers para LC26G, LC76G, LC86G, u-blox M8 e F9P, Air530Z e NMEA genérico, mas não para M10 nem F10. O antigo driver "M10" virou `u-blox,m8` no Zephyr 4.0 porque só servia ao M8 (`doc/releases/migration-guide-4.0.rst:221`): não use o `u-blox,m8` com um M10. Um driver `u-blox,m10` novo entrou no `main` do Zephyr em 2026-06-09 e sai no Zephyr 4.5, sem standby e sem AssistNow. Caminhos: trazer esse driver para fora da árvore até o NCS chegar lá (e acrescentar o F10, que usa a mesma interface de configuração), ou manter o parser do port e mandar os quadros UBX de configuração.
 - **Comandos do legacy.** O legacy fala PMTK com o MediaTek (`legacy/source/sensors/GPSMGMT.cpp`): velocidade da UART (linha 32), intervalo de fix (`PMTK220`, linha 487), posição do celular (`PMTK741`, linha 458) e o EPO (máquina de estados das linhas 268 a 340). Na u-blox viram `CFG-UART1-BAUDRATE`, `CFG-RATE-MEAS`, `UBX-MGA-INI-POS_LLH` com `UBX-MGA-INI-TIME_UTC` e AssistNow Offline ou Autonomous; o standby por pino vira `UBX-RXM-PMREQ` ou EXTINT. Cada diferença vai para [06](06-algoritmos.md) e [10](10-status-do-port.md) quando for portada.
-- **Fim de época.** O `gps_mgmt.c` dispara o callback de fix no RMC válido, supondo a ordem dos MediaTek (GGA antes do RMC). Com UBX, a mensagem `NAV-PVT` é uma por época e resolve isso.
+- **Fim de época.** O `gps_mgmt.c` do port antigo disparava o callback de fix no RMC válido, supondo a ordem dos MediaTek (GGA antes do RMC). Com UBX, a mensagem `NAV-PVT` é uma por época e resolve isso; desde 2026-09-19 o port usa a API de GNSS do Zephyr ([05](05-arquitetura-zephyr.md#threads)).
 - **Modelo dinâmico.** No u-blox, o modelo `BIKE` é de motocicleta; para bicicleta vale o padrão `PORT`.
 
 ## Antena GNSS dentro da caixa
@@ -370,7 +370,7 @@ Alternativa sem dois carregadores: o **TI BQ25798**, carregador buck-boost com d
 | Console | TX, RX em pads de teste | `uart30` | P0 |
 | USB, NFC, SWD, cristais | pinos dedicados | — | — |
 
-Somam de 33 a 39 GPIO, conforme o I2C dos sensores seja dividido com o da energia e o número de botões. Cabem no módulo (66 GPIO) com folga; **não cabem no QFN52** (32 GPIO), o que reforça a escolha do módulo ou do CSP. Os blocos seriais seguem os domínios de pinos do nRF54L ([05](05-arquitetura-zephyr.md#nrf54lm20-dk)).
+Somam de 33 a 39 GPIO, conforme o I2C dos sensores seja dividido com o da energia e o número de botões. Cabem no módulo (66 GPIO) com folga; **não cabem no QFN52** (32 GPIO), o que reforça a escolha do módulo ou do CSP. Os blocos seriais seguem os domínios de pinos do nRF54L ([05](05-arquitetura-zephyr.md#devicetree-e-alvos)).
 
 ## Orçamento de energia
 

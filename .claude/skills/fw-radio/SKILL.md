@@ -16,7 +16,7 @@ Referências: `docs/07-radio-ant-ble.md` e o catálogo de dispositivos com prior
 | `bt_conn_le_create` sem `bt_conn_unref` | `ble_manager.c:218` | soltar a referência do create; o callback `connected` recebe a sua |
 | classificação por endereço pendente | `ble_manager.c:299-342` | usar `bt_conn_get_info()` e `info.role` |
 | velocidade CSC 3600× menor, flags do FTMS, 1 RR só | clientes | parsers pela especificação (FTMS Indoor Bike Data: cadência bit 2, tempo bit 11, energia 5 B) |
-| dados só na tela | clientes → `vue.c` | callbacks → `boucle_update_hrm/bsc`, zonas, log |
+| dados do sensor | clientes → callbacks do `radio_svc.c` → `ext_sensor` e `link_status` → modelo (feito em 2026-09-19) | com o scan e o CCC corrigidos, chegam ao modelo e às zonas |
 | Komoot com UUID de característica, layout e papel errados | `ble_komoot_client.c` | central, característica `503DD605-9BCB-4F6E-B235-270A57483026`, pacote id(4) direção(1) distância(4 LE) rua(UTF-8), leitura depois da notificação |
 | sem SMP | `prj.conf` | LESC com passkey no display, lista de permitidos |
 

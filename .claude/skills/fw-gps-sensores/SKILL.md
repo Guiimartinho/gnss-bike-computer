@@ -1,34 +1,23 @@
 ---
 name: fw-gps-sensores
-description: Trabalhar com o GNSS e os sensores do GNSS Bike Computer no port Zephyr - módulo MediaTek M10578-A3 (NMEA, PMTK, EPO, host aiding, reset e standby), parser NMEA, BME280 (altitude), FXOS8700 (pitch, rumo), STC3100 (bateria e latch), FRAM. Use ao mexer em zephyr_app/src/drivers/gps/, drivers/sensors/ ou na leitura de sensores do modelo.
+description: Trabalhar com o GNSS e os sensores do GNSS Bike Computer no port Zephyr - serviço GNSS pela API de GNSS do Zephyr (u-blox M10 por UBX na placa nova, NMEA genérico nos DKs), serviço de sensores pela API de sensores (BMP585, BMI270, MMC5633NJL, OPT3001; BME280 e FXOS8700 da V3), inclinação, rumo e rugosidade (tilt.c), e o que o legacy fazia com o MediaTek M10578-A3 (PMTK, EPO), o STC3100 e a FRAM. Use ao mexer em zephyr_app/src/svc/gnss/, src/svc/sensors/ ou na leitura de sensores do modelo.
 ---
 
 # GPS e sensores
 
-## GNSS: Antenova M10578-A3 (MediaTek MT3333)
+## GNSS no port
+
+- O serviço (`src/svc/gnss/gnss_svc.c`) usa o receptor do alias `gnss` pela API de GNSS do Zephyr: `GNSS_DATA_CALLBACK_DEFINE` e `GNSS_SATELLITES_CALLBACK_DEFINE`. Os callbacks rodam no workqueue próprio do modem (`CONFIG_MODEM_DEDICATED_WORKQUEUE`, 2048 B) e só convertem e publicam `gnss_fix` e `gnss_sky`: uma posição por época.
+- Nos dois DKs o receptor é o `gnss-nmea-generic` (o M10 da placa nova e o M10578-A3 da V3 falam NMEA ao ligar). O driver UBX do MAX-M10N-10B (`u-blox,m10`, derivado do `gnss_u_blox_f9p.c` do NCS, com LEAP, backup por `UBX-RXM-PMREQ` e taxa da UART) é o passo do GNSS.
+- O modo manda: o receptor fica ativo em CRS, PRC e DBG e dorme em FEC e Zwift, como o legacy (`BoucleCRS.cpp:38`, `BoucleFEC.cpp:45`).
+- Modelo dinâmico da u-blox: o `BIKE` é de motocicleta; para bicicleta vale o `PORT` (`docs/13-placa-nova.md`).
+
+## GNSS da V3: Antenova M10578-A3 (MediaTek MT3333)
 
 - UART 9600 no boot; saída padrão GGA, GSA, GSV, RMC, VTG por época (1 Hz); multi-constelação (pode mandar `GN`/`GL`).
-- Pinos: reset e standby **ativos baixos**, FIX **alto com fix** (datasheet: "indicates once a GPS fix has been obtained").
-- Backup (BV) na bateria: configurações feitas por PMTK (inclusive baud) sobrevivem ao desligamento. Se o legacy deixou o módulo em 115200, o port a 9600 fica surdo até um reset de fábrica ou um WDT de baud.
-
-### Caminho dos dados no port
-
-```mermaid
-flowchart LR
-    ISR["ISR UARTE1<br/>ring_buf 512 B"] --> P["hal_uart_process()<br/>main_loop, 100 ms"]
-    P --> L["linha '$...'"]
-    L --> C{"checksum ok?"}
-    C -- não --> X["descarta"]
-    C -- sim --> N["nmea_parser_sentence"]
-    N --> G["gps_data (GGA, RMC, GSA, VTG)"]
-    G --> E{"RMC válido?"}
-    E -- sim --> CB["callback de fix<br/>1 vez por época"]
-    E -- "RMC V" --> LOST["fix perdido na hora"]
-```
-
-- `nmea_parser_sentence()` aceita a linha com ou sem `$`; não valida checksum (o `gps_mgmt` valida antes com `nmea_verify_checksum()`); o caminho `nmea_parser_char()` valida sozinho.
-- Coordenadas convertidas em `double` antes de virar `float`.
-- Testes: `test_nmea_parser` e `test_gps_mgmt` (skill `fw-testes`).
+- Pinos: reset e standby **ativos baixos**, FIX **alto com fix**.
+- Backup (BV) na bateria: configurações feitas por PMTK (inclusive baud) sobrevivem ao desligamento.
+- O port teve parser e gestão próprios (`gps_mgmt.c`, `nmea_parser.c`, `gps_epo.c`) até 2026-09-19; saíram para a API de GNSS do Zephyr.
 
 ### PMTK do legacy (`libraries/GlobalTop/LocusCommands.h`)
 
@@ -43,22 +32,18 @@ flowchart LR
 
 Antes de mandar PMTK novo: checksum XOR entre `$` e `*`, com `*` fora da conta (o `gps_mgmt_set_rate()` do port inclui o `*`: defeito).
 
-## BME280 (altitude)
+## Sensores no port
 
-- Driver nativo do Zephyr (`bosch,bme280` em 0x76) com `baro.c` por cima (`sensor_sample_fetch`).
-- Legacy: pressão ×16, temperatura ×1, umidade desligada, IIR ×16, standby 62,5 ms, média de 10 leituras. Port (Kconfig padrão): pressão ×16, temperatura ×2, umidade ×16, IIR ×4, standby 1000 ms. Para aproximar: `CONFIG_BME280_STANDBY_62MS`, `CONFIG_BME280_FILTER_16`, `CONFIG_BME280_TEMP_OVER_1X`.
-- Altitude e referência ao nível do mar: fórmulas em `docs/06-algoritmos.md#barômetro-e-drift`.
+- O serviço (`src/svc/sensors/sensors_svc.c`) acha os sensores pelos aliases `baro0`, `imu0`, `mag0` e `light0` e lê pela API de sensores do Zephyr (`sensor_sample_fetch` e `sensor_channel_get`); um alias ausente deixa o sensor de fora. Placa nova: BMP585 (`bosch,bmp581`), BMI270, MMC5633NJL (`memsic,mmc56x3`), OPT3001. V3: BME280 e FXOS8700.
+- Ritmo do legacy: acelerômetro a 50 Hz com média de 50 amostras (`fxos.cpp:600`, `:72`), barômetro a 10 Hz; magnetômetro e luz a 1 Hz.
+- `src/svc/sensors/tilt.c` (teste `test_tilt`): inclinação e rolagem da média pelas equações do AN4248 nos eixos da placa (X à frente, Y à esquerda, Z para cima); rumo compensado da inclinação (o legacy não compensava: `fxos.cpp:796-821`); rugosidade como desvio médio absoluto, na unidade do legacy (contagens de ±4 g, 2048 por g). A montagem dos sensores na placa nova e a calibração do magnetômetro ainda faltam.
+- A API de sensores dá a pressão em kPa, a aceleração em m/s² e o campo em gauss.
 
-## FXOS8700CQ (pitch e rumo)
+## BME280, FXOS8700 e STC3100 (V3)
 
-- Driver nativo (`nxp,fxos8700` em 0x1E) com `fxos.c` por cima; `reset-gpios` ativo alto no overlay.
-- Legacy: ±4 g, 50 Hz por interrupção, média de 50 amostras, pitch `−atan2f(Ay, −Az)` nos eixos da V11, calibração do magnetômetro salva na FRAM. Port: ±8 g, 6,25 Hz por polling, uma amostra, fórmulas genéricas, magnetômetro com 10 µT por contagem. Diferenças catalogadas em `docs/10-status-do-port.md`.
-
-## STC3100 (bateria e latch)
-
-- Driver próprio (`stc3100.c`, I2C 0x70). `stc3100_init()` segura o latch de energia (ver skill `fw-hardware`); **bit 0 do `REG_CONTROL` em 1 desliga a placa**.
-- Conversões: V = raw·2,44 mV, I = raw·11,77 µV/Rs, Q = raw·6,7 µVh/Rs, T = raw·0,125 °C. Rs = 100 mΩ no código, 20 mΩ no esquema: confirme antes de confiar.
-- SOC: o legacy compensa a resistência interna (0,273 Ω) e usa curva não linear; o port é linear de 3,3 a 4,2 V.
+- BME280: legacy com pressão ×16, temperatura ×1, IIR ×16, standby 62,5 ms, média de 10 leituras; o driver do Zephyr tem outros padrões de Kconfig (`CONFIG_BME280_STANDBY_62MS`, `CONFIG_BME280_FILTER_16`, `CONFIG_BME280_TEMP_OVER_1X` aproximam).
+- FXOS8700: ±4 g, 50 Hz por interrupção no legacy; `reset-gpios` ativo alto no overlay.
+- STC3100: sem driver no Zephyr; o do port saiu em 2026-09-19 com a V3, e o nRF52840 DK ficou sem leitura de bateria. Conversões do legacy em `docs/06-algoritmos.md#bateria`.
 
 ## FRAM FM24CL16B
 

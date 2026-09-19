@@ -3,14 +3,14 @@
 Arquitetura-alvo do firmware para a placa nova (nRF54LM20A, [14-hardware-placa-nova.md](14-hardware-placa-nova.md)): princípios, camadas, serviços, threads, eventos, máquinas de estado, energia, armazenamento, comunicação, atualização de firmware e a migração a partir do port atual ([05-arquitetura-zephyr.md](05-arquitetura-zephyr.md)). O comportamento continua sendo o do legacy ([04](04-arquitetura-legacy.md), [06](06-algoritmos.md), [08](08-interface.md)); o que muda é como o firmware se organiza para o hardware novo.
 
 > [!IMPORTANT]
-> Plano, não implementação. Nenhuma parte deste documento foi escrita em código nem testada em placa. Toda diferença de comportamento em relação ao legacy aparece marcada como proposta e, quando aprovada, vai para [06](06-algoritmos.md) e [10](10-status-do-port.md).
+> Plano, em implementação. A base (serviços, threads, zbus, máquinas de sistema e de modo, watchdog por serviço) está no código desde 2026-09-19, descrita em [05](05-arquitetura-zephyr.md); o resto é plano. Nada foi testado em placa. Toda diferença de comportamento em relação ao legacy aparece marcada como proposta e, quando aprovada, vai para [06](06-algoritmos.md) e [10](10-status-do-port.md).
 
 **Nesta página:** [Princípios](#princípios) · [Blocos do Zephyr e do NCS](#blocos-do-zephyr-e-do-ncs) · [Camadas](#camadas) · [Serviços](#serviços) · [Threads](#threads) · [Eventos](#eventos) · [Fluxo de dados](#fluxo-de-dados) · [Máquinas de estado](#máquinas-de-estado) · [Partida e desligamento](#partida-e-desligamento) · [Energia por estado](#energia-por-estado) · [Armazenamento](#armazenamento) · [Comunicação](#comunicação) · [Atualização de firmware](#atualização-de-firmware) · [Falhas](#falhas) · [Migração do port](#migração-do-port) · [Ordem de implementação](#ordem-de-implementação) · [Decisões em aberto](#decisões-em-aberto)
 
 ## Princípios
 
 1. **O legacy é a especificação.** Modos, ciclo por localização, segmentos, telas, botões, menu e desligamento automático seguem o stravaV10; o que muda é a organização do código.
-2. **Um dono por dado.** A thread do modelo é a única que escreve o estado do aparelho, como a `main_loop` de hoje; as outras recebem cópias.
+2. **Um dono por dado.** A thread do modelo é a única que escreve o estado do aparelho, como a `main_loop` do port antigo; as outras recebem cópias.
 3. **Eventos, não varredura.** Cada serviço publica quando tem dado novo e dorme no resto do tempo. A CPU só acorda por motivo, o que conta num aparelho que gasta cerca de 21 mW ([15](15-avaliacao-componentes.md#efeito-no-aparelho)).
 4. **ISR não processa.** A regra do projeto continua: a interrupção copia e acorda uma thread.
 5. **Zephyr nativo.** Devicetree, drivers e subsistemas do Zephyr e do NCS: máquinas de estado no SMF, eventos no zbus, interface no LVGL, botões no subsistema de entrada, USB no `device_next`, arquivos no FatFs, configurações no ZMS, atualização pelo MCUboot.
@@ -90,7 +90,7 @@ Prioridade no Zephyr: número menor ganha. Os valores de pilha são estimativas 
 | Thread | Prioridade | Pilha inicial | Acorda com | Faz |
 |---|---|---|---|---|
 | `sensors` | 4 | 1536 B | timer de 100 ms e interrupção da FIFO do IMU | lê os sensores e publica |
-| `model` | 5 | 4096 B | qualquer evento que o modelo assina | o ciclo do modo (a `main_loop` de hoje), a única que escreve o modelo; publica uma cópia do estado por época |
+| `model` | 5 | 4096 B | qualquer evento que o modelo assina | o ciclo do modo (a `main_loop` do port antigo), a única que escreve o modelo; publica uma cópia do estado por época |
 | `radio` | 6 | 2048 B | eventos do BT e do ANT, timers de religação | máquinas de estado de cada sensor, conversão em eventos |
 | `ui` | 7 | 4096 B | cópia nova do modelo, botão, notificação, timer do LVGL | compõe e envia a tela, menu, luz |
 | `storage` | 8 | 3072 B | lote de gravação, pedido de carga, comando | FatFs e comandos |
@@ -100,7 +100,7 @@ Ficam por conta do Zephyr e do NCS: as threads do BT host e do MPSL, as do `sdk-
 
 ## Eventos
 
-O zbus passa mensagens por canais com cópia: quem publica não espera quem lê, e quem lê recebe um retrato consistente, sem a trava que a interface usa hoje (`model_lock()`).
+O zbus passa mensagens por canais com cópia: quem publica não espera quem lê, e quem lê recebe um retrato consistente, sem a trava que a interface antiga usava (`model_lock()`). No código, cada serviço tem uma caixa de entrada enchida por listeners ([05](05-arquitetura-zephyr.md#eventos)), e a lista de canais cresceu para 20.
 
 | Canal | Quem publica | Quem assina | Ritmo | Conteúdo |
 |---|---|---|---|---|
@@ -434,7 +434,7 @@ O que o legacy usa e o que o `sdk-ant` oferece estão em [07](07-radio-ant-ble.m
 
 ## Migração do port
 
-| Hoje ([05](05-arquitetura-zephyr.md)) | Alvo |
+| Até 2026-09-18 | Alvo (a base entrou em 2026-09-19, [05](05-arquitetura-zephyr.md)) |
 |---|---|
 | `main_loop` a cada 100 ms, com botões por varredura | thread `model` que dorme até um evento; botões pelo subsistema de entrada |
 | `display` a cada 50 ms, lendo o modelo sob `model_lock()` | thread `ui` com LVGL, lendo a cópia do `model_state` |

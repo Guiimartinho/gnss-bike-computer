@@ -1,72 +1,33 @@
 /*
- * nRF54LM20 DK (nrf54lm20dk/nrf54lm20a/cpuapp): development target for the
- * board of our own, which uses the nRF54LM20A. The DK carries the
- * nRF54LM20B, the same part plus an NPU.
+ * nRF54LM20 DK (nrf54lm20dk/nrf54lm20a/cpuapp): development target of the
+ * new board, which uses the nRF54LM20A (the DK carries the nRF54LM20B, the
+ * same part plus an NPU).
  *
- * The DK has none of the myStravaB peripherals. This overlay only gives the
- * application the names it needs (aliases and pin labels) on free pins of
- * the DK expansion header, so the port builds and runs here, and breakout
- * boards can be wired to these pins. The pins follow the nRF54L power
- * domains: serial blocks 20 to 24 on ports P1 and P3, spi00 on P2.
+ * The DK has none of the peripherals of the new board. This overlay puts
+ * them on free pins of the DK, with the pins of docs/14-hardware-placa-nova.md
+ * (Alocação de pinos, "Pino no DK"), so evaluation boards can be wired to
+ * them. The serial blocks follow the nRF54L power domains: 20 to 24 on
+ * ports P1 and P3, spi00 on P2.
  *
  * Console: uart20 (VCOM0 of the DK), from the board files.
- * Buttons and LED: the DK's sw0, sw1, sw2 and led0.
  *
- *   GPS UART (uart21)     TX P1.04, RX P1.05; reset P1.06, standby P1.07,
- *                         FIX P1.13
- *   Sensor I2C (i2c23)    SDA P1.02, SCL P1.03; IMU INT1 P3.04, RST P3.05
- *   LCD SPI (spi22)       SCK P3.03, MOSI P3.00, CS P3.02 (active high)
+ *   GNSS UART (uart21)    TX P1.04, RX P1.05
+ *   Sensor I2C (i2c23)    SDA P1.02, SCL P1.03; IMU INT1 P3.04
  *   SD SPI (spi00)        SCK P2.01, MOSI P2.02, MISO P2.04, CS P2.03
- *   NeoPixel              P3.06
+ *
+ * The services find the devices by these aliases: gnss, baro0, imu0, mag0,
+ * light0 (docs/16, Serviços). A device that does not answer is left out.
  */
 
+#include <zephyr/dt-bindings/sensor/bmp581.h>
+
 / {
-    chosen {
-        zephyr,display = &ls027;
-    };
-
     aliases {
-        gps-uart = &uart21;
-        lcd-spi = &spi22;
-        sdc-spi = &spi00;
-        sensor-i2c = &i2c23;
-    };
-
-    /* Same polarities as the myStravaB V3 (see nrf52840dk_nrf52840.overlay) */
-    gps_ctrl {
-        compatible = "gpio-keys";
-        gps_reset: gps_reset {
-            gpios = <&gpio1 6 GPIO_ACTIVE_LOW>;
-            label = "GPS Reset";
-        };
-        gps_stdby: gps_stdby {
-            gpios = <&gpio1 7 GPIO_ACTIVE_LOW>;
-            label = "GPS Standby";
-        };
-        gps_fix: gps_fix {
-            gpios = <&gpio1 13 (GPIO_PULL_DOWN | GPIO_ACTIVE_HIGH)>;
-            label = "GPS Fix";
-        };
-    };
-
-    imu_ctrl {
-        compatible = "gpio-keys";
-        imu_int1: imu_int1 {
-            gpios = <&gpio3 4 (GPIO_PULL_DOWN | GPIO_ACTIVE_HIGH)>;
-            label = "IMU INT1";
-        };
-        imu_reset: imu_reset {
-            gpios = <&gpio3 5 GPIO_ACTIVE_HIGH>;
-            label = "IMU Reset";
-        };
-    };
-
-    neopixel_pin {
-        compatible = "gpio-keys";
-        neo_data: neo_data {
-            gpios = <&gpio3 6 GPIO_ACTIVE_HIGH>;
-            label = "Neopixel Data";
-        };
+        gnss = &gnss;
+        baro0 = &bmp585;
+        imu0 = &bmi270;
+        mag0 = &mmc5633;
+        light0 = &opt3001;
     };
 };
 
@@ -75,16 +36,28 @@
     status = "okay";
 };
 
-/* GPS module */
+/*
+ * GNSS: u-blox MAX-M10N-10B. Until its UBX driver (u-blox,m10) lands, the
+ * NMEA the module sends at power-up goes through gnss-nmea-generic. The rate
+ * below is where the receiver starts; the UBX driver sets it with
+ * CFG-UART1-BAUDRATE.
+ */
 &uart21 {
     status = "okay";
     current-speed = <9600>;
     pinctrl-0 = <&uart21_default>;
     pinctrl-1 = <&uart21_sleep>;
     pinctrl-names = "default", "sleep";
+
+    gnss: gnss-nmea-generic {
+        compatible = "gnss-nmea-generic";
+    };
 };
 
-/* Barometer, IMU and fuel gauge, as on the V3 bus */
+/*
+ * Sensors of the new board (docs/14, Barramentos e endereços): no address
+ * collides, and nothing scans the bus (0x7E puts the MMC5633NJL in I3C).
+ */
 &i2c23 {
     status = "okay";
     clock-frequency = <I2C_BITRATE_FAST>;
@@ -92,35 +65,34 @@
     pinctrl-1 = <&i2c23_sleep>;
     pinctrl-names = "default", "sleep";
 
-    baro: bme280@76 {
-        compatible = "bosch,bme280";
-        reg = <0x76>;
+    /* Bosch BMP585 (the BMP581 driver accepts its chip ID); SDO high: 0x47 */
+    bmp585: bmp585@47 {
+        compatible = "bosch,bmp581";
+        reg = <0x47>;
+        power-mode = <BMP581_DT_MODE_NORMAL>;
+        odr = <BMP581_DT_ODR_10_HZ>;
+        press-osr = <BMP581_DT_OVERSAMPLING_8X>;
+        temp-osr = <BMP581_DT_OVERSAMPLING_2X>;
     };
 
-    fxos: fxos8700@1e {
-        compatible = "nxp,fxos8700";
-        reg = <0x1e>;
-        reset-gpios = <&gpio3 5 GPIO_ACTIVE_HIGH>;
-        int1-gpios = <&gpio3 4 GPIO_ACTIVE_HIGH>;
+    /* Bosch BMI270, SDO low: 0x68 */
+    bmi270: bmi270@68 {
+        compatible = "bosch,bmi270";
+        reg = <0x68>;
+        irq-gpios = <&gpio3 4 GPIO_ACTIVE_HIGH>;
     };
 
-    stc3100: stc3100@70 {
-        compatible = "st,stc3100";
-        reg = <0x70>;
+    /* Memsic MMC5633NJL, fixed address; a measurement per fetch */
+    mmc5633: mmc5633@30 {
+        compatible = "memsic,mmc56x3";
+        reg = <0x30>;
+        magn-odr = <0>;
     };
-};
 
-/* LCD on the SPI of the expansion header; the LS027 chip select is active high */
-&spi22 {
-    status = "okay";
-    cs-gpios = <&gpio3 2 GPIO_ACTIVE_HIGH>;
-
-    ls027: ls027b7dh01@0 {
-        compatible = "sharp,ls0xx";
-        reg = <0>;
-        spi-max-frequency = <2000000>;
-        width = <400>;
-        height = <240>;
+    /* TI OPT3001, ADDR low: 0x44 */
+    opt3001: opt3001@44 {
+        compatible = "ti,opt3001";
+        reg = <0x44>;
     };
 };
 

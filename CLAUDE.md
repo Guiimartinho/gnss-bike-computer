@@ -32,7 +32,7 @@ O dono do projeto é um desenvolvedor brasileiro de eletrônica embarcada que qu
 - **ISR não processa:** só copia dados para um buffer e acorda uma thread. Nada de mutex, arquivo, `snprintf` com float ou trigonometria em ISR.
 - **Sem alocação dinâmica depois do boot**; buffers estáticos dimensionados e documentados.
 - **Pilha medida:** thread nova ou cadeia pesada nova passa por `CONFIG_STACK_USAGE` (skill `fw-threads`) com pelo menos 1 KB de folga.
-- **Verificação antes de dizer que terminou:** build sem aviso novo (os 7 de `vue.c` são conhecidos), testes de host, cppcheck nos arquivos tocados e, se mexeu em docs, `tools/docs/*.py`.
+- **Verificação antes de dizer que terminou:** build sem aviso (com `ANT=1`, só o do símbolo obsoleto), testes de host, cppcheck nos arquivos tocados e, se mexeu em docs, `tools/docs/*.py`.
 
 ### Commits
 
@@ -59,7 +59,7 @@ O dono do projeto é um desenvolvedor brasileiro de eletrônica embarcada que qu
 flowchart TB
     ROOT["gnss_bike_computer/"]
     ROOT --> ZA["zephyr_app/"]
-    ZA --> ZS["src/ e include/<br/>hal · drivers · model · rf · vue · ui · usb · utils"]
+    ZA --> ZS["src/ e include/<br/>app · svc (serviços) · model · rf · ui"]
     ZA --> ZB["boards/&lt;placa&gt;.overlay e .conf<br/>nRF52840 DK (pinos da V3) e nRF54LM20 DK"]
     ZA --> ZT["tests/host/<br/>Unity + CTest, shims e falsos<br/>tests/ui/: renderizador de telas"]
     ZA --> ZC["CMakeLists.txt · prj.conf · ant.conf · sysbuild.conf<br/>modules/ant_ncs33_compat"]
@@ -82,25 +82,25 @@ flowchart TB
 | Desbloquear chip | `bash tools/fw/fw.sh recover` |
 | Placas conectadas | `bash tools/fw/fw.sh devices` |
 | Memória e maiores símbolos | `bash tools/fw/fw.sh size` |
-| Testes de host | `bash tools/fw/host_tests.sh` (8 conjuntos, 60 casos) |
+| Testes de host | `bash tools/fw/host_tests.sh` (8 conjuntos, 65 casos) |
 | Telas da interface no PC (LVGL) | `python tools/ui/render_screens.py` (29 telas em 2 temas, gera `docs/img/telas-lvgl/`) |
 | Diagramas e links da documentação | `python tools/docs/mermaid_check.py` e `python tools/docs/links_check.py` |
 | Ambiente do NCS no shell | `source tools/fw/ncs_env.sh` |
 
 Equivalentes no `cmd`: `build.bat [pristine]`, `flash.bat [keep]`, `recover.bat`, `serial.bat COMx`. Variáveis: `BUILD_DIR`, `NRF_SERIAL`, `NCS_VERSION`, `NCS_TOOLCHAIN`, `NOPAUSE`.
 
-Referência de 2026-09-18: FLASH 296.320 B (28,3 %), RAM 116.928 B (44,6 %), 7 avisos (`vue.c`). nRF54LM20 DK: FLASH 298.468 B, RAM 117.656 B, os mesmos 7 avisos. Com `ANT=1`: 324.912 B / 121.536 B (nRF52840) e 328.408 B / 122.248 B (nRF54LM20), com um aviso esperado a mais, de símbolo obsoleto.
+Referência de 2026-09-19: nRF52840 DK FLASH 317.836 B (30,3 %), RAM 140.928 B (53,8 %); nRF54LM20 DK FLASH 327.032 B, RAM 145.400 B; 0 avisos. Com `ANT=1`: 346.428 B / 145.536 B (nRF52840) e 356.984 B / 149.992 B (nRF54LM20), com um aviso esperado, de símbolo obsoleto.
 
 ## 5. Estado e próximos passos
 
 - **Port:** compila no NCS v3.3.0 e passa nos testes de host; **nunca rodou em placa nem no DK**. Matriz completa em [`docs/10-status-do-port.md`](docs/10-status-do-port.md).
 - **Feito em 2026-09-18:** revisão completa do legacy e do port (7 análises), build com sysbuild, scripts novos, testes de host, documentação, e 13 correções críticas: pilha da `main_loop` (4 KB), GPS fora da ISR (ring buffer + processamento na thread), um callback de fix por época, checksum NMEA, parser NMEA, estouro do `sd_logger`, botões, polaridades do GPS e do FXOS, nós do DK desligados, reset em erro fatal, símbolo do SoC. Depois, da fase 1: a `main_loop` como única escritora do modelo, com `model_lock()` para a tela; `task_wdt` com um canal de 4 s por thread; auto-off de 15 min e desligamento pelo STC3100 (`power_scheduler`).
-- **Feito em 2026-09-19:** a interface da placa nova em LVGL (`src/ui`, `include/ui`): 29 telas em retrato, nos temas de 8 cores e preto e branco, com os arranjos e formatos do legacy, testadas no PC pelo renderizador de host (`tests/ui`); ainda fora do firmware, sem driver de tela.
+- **Feito em 2026-09-19:** a base da arquitetura nova ([`docs/05`](docs/05-arquitetura-zephyr.md)): sete serviços com thread e caixa de entrada, eventos no zbus, máquinas de sistema e de modo no SMF, watchdog por serviço, hardware pelas APIs do Zephyr por aliases do devicetree; saíram o HAL próprio, os drivers da V3, a interface em paisagem e a USB antiga. E a interface da placa nova em LVGL (`src/ui`, `include/ui`): 29 telas em retrato, nos temas de 8 cores e preto e branco, com os arranjos e formatos do legacy, testadas no PC pelo renderizador de host (`tests/ui`); ainda fora do firmware, sem driver de tela.
 - **Ordem proposta do que falta:**
 
 ```mermaid
 flowchart LR
-    A["1 · base de execução<br/>feito: trava do modelo, watchdog, auto-off<br/>falta: board própria (nRF54LM20A)"] --> B["2 · fidelidade<br/>Kalman, potência,<br/>distância, FDIR"]
+    A["1 · base de execução<br/>feito: serviços, zbus, SMF, watchdog, auto-off<br/>falta: board própria (nRF54LM20A)"] --> B["2 · fidelidade<br/>Kalman, potência,<br/>distância, FDIR"]
     B --> C["3 · armazenamento<br/>SD, formatos, segmentos"]
     C --> D["4 · rádio<br/>BLE central, ANT+"]
     D --> E["5 · interface<br/>feito: telas LVGL no PC<br/>falta: driver, thread, botões"]
@@ -131,8 +131,9 @@ flowchart LR
 | ST-LINK e outras seriais conectadas nesta máquina | os scripts usam `--traits jlink`; com vários J-Link, `NRF_SERIAL` |
 | Console no `uart0` (P0.06/P0.08) | só existe no DK; na placa real esses pinos não têm ligação |
 | Breakpoint longo com o `task_wdt` ligado | a placa reinicia ao continuar (o timer do kernel não pausa); para depurar passo a passo, compile com `-DCONFIG_TASK_WDT=n` |
-| O WDT do nRF52 continua contando depois de um reset por software (`sys_reboot`, erro fatal) | o `main()` o alimenta até as threads criarem os canais (`wdt_feed_if_running()`); inicialização nova e demorada precisa alimentá-lo também |
-| cppcheck acusa `syntaxError` nos `ble_*.c` e no `neopixel.c` | macros do Zephyr sem os headers: falso positivo |
+| O WDT do nRF52 continua contando depois de um reset por software (`sys_reboot`, erro fatal) | o `main()` o alimenta até os serviços criarem os canais (`app_wdt_feed_if_running()`); inicialização nova e demorada precisa alimentá-lo também |
+| cppcheck acusa `syntaxError` nos `ble_*.c` ou nos `#if DT_...` dos serviços | macros do Zephyr sem os headers: falso positivo nos `ble_*.c`; nos serviços, passe `"-DDT_NODE_HAS_STATUS(n,s)=1" "-DDT_ALIAS(a)=a"` |
+| Script (Python, `cmd`) chama `bash` | no Windows isso abre o `bash.exe` do `System32`, o lançador do **WSL**, que o projeto proíbe; chame as ferramentas direto (`cmake`, `ctest`) ou o Git Bash pelo caminho completo, e confira o código de saída |
 | clangd do editor reclama dos testes de host ou da interface | ele usa o `compile_commands.json` do firmware; `tests/host/.clangd` aponta para o dos testes depois do primeiro `host_tests.sh`, e `tests/ui/.clangd` e `src/ui/.clangd` para `build/ui` depois do primeiro `render_screens.py` |
 | O LVGL 9.5 não desliga a suavização das primitivas | `lv_display_set_antialiasing()` só vale para camadas e imagens; círculos, linhas inclinadas e cantos saem suavizados, e o driver quantiza para as cores do painel ([18](docs/18-interface-telas.md#implementação)) |
 | Testes de host no mesmo shell do `ncs_env.sh` | o ambiente do NCS troca o `cmake`; use um shell limpo |

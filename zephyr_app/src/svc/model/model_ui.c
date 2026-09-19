@@ -1,0 +1,291 @@
+/**
+ * @file model_ui.c
+ * @brief The snapshot of the screens (ui_model_t) from the model state
+ *
+ * Runs in the model thread, the only reader of the model modules. The
+ * values keep the units and sources of the legacy pages (VueCRS, VueFEC,
+ * VueGPS, VueDebug); what the legacy computed at display time is computed
+ * here, so the interface only draws.
+ */
+
+#include <math.h>
+#include <stdio.h>
+#include <string.h>
+
+#include <zephyr/kernel.h>
+
+#include "app_types.h"
+#include "model/attitude.h"
+#include "model/user_settings.h"
+#include "model_internal.h"
+
+/** A position older than this shows the GNSS screen (legacy LOCATOR_MAX_DATA_AGE_MS) */
+#define POS_MAX_AGE_MS  6000U
+
+uint32_t model_time_of_day(const struct model_ctx *ctx)
+{
+    if (!ctx->have_fix_msg || !ctx->fix.time_valid) {
+        return UI_TIME_UNKNOWN;
+    }
+    /* seconds of the day at the epoch, plus the time since it came */
+    uint32_t s = ((uint32_t)ctx->fix.hour * 3600U) + ((uint32_t)ctx->fix.minute * 60U) +
+                 (ctx->fix.millisecond / 1000U);
+
+    s += (k_uptime_get_32() - ctx->fix.uptime_ms) / 1000U;
+    return s % 86400U;
+}
+
+static ui_gnss_mode_t gnss_mode(uint8_t mode)
+{
+    switch (mode) {
+    case APP_GNSS_MODE_ACQ:
+        return UI_GNSS_MODE_ACQ;
+    case APP_GNSS_MODE_LEAP:
+        return UI_GNSS_MODE_LEAP;
+    case APP_GNSS_MODE_FULL:
+        return UI_GNSS_MODE_FULL;
+    default:
+        return UI_GNSS_MODE_BACKUP;
+    }
+}
+
+static void fill_status(const struct model_ctx *ctx, ui_model_t *m, uint32_t now)
+{
+    ui_status_t *s = &m->status;
+    bool recent = ctx->have_fix_msg && ctx->fix.fix && ((now - ctx->fix_uptime_ms) <= POS_MAX_AGE_MS);
+
+    s->time_s = model_time_of_day(ctx);
+    if (!ctx->have_fix_msg || (ctx->fix.mode == APP_GNSS_MODE_BACKUP)) {
+        s->gnss = UI_GNSS_OFF;
+    } else {
+        s->gnss = recent ? UI_GNSS_FIX : UI_GNSS_SEARCH;
+    }
+    for (uint32_t k = 0U; k < APP_EXT_KINDS; k++) {
+        if (ctx->link[k].link == APP_LINK_CONNECTED) {
+            if (ctx->link[k].ant) {
+                s->ant_link = true;
+            } else {
+                s->ble_link = true;
+            }
+        }
+    }
+    /* the legacy logs every location in CRS and PRC: recording while they come */
+    s->recording = recent && ((ctx->mode == APP_MODE_ID_CRS) || (ctx->mode == APP_MODE_ID_PRC) ||
+                              (ctx->mode == APP_MODE_ID_DBG));
+    s->charge = (ui_charge_t)ctx->power.charge;
+    s->batt_pct = ctx->power.gauge ? ctx->power.pct : 0U;
+}
+
+static void fill_ride(const struct model_ctx *ctx, ui_model_t *m)
+{
+    attitude_t att;
+    ui_ride_t *r = &m->ride;
+
+    if (attitude_get(&att) != APP_OK) {
+        return;
+    }
+    r->dist_m = att.dist;
+    r->speed_kmh = att.loc.speed;
+    /* legacy afficheScreen1: dist * 3.6 / active seconds */
+    r->avg_kmh = (att.nbsec_act > 0U) ? ((att.dist * 3.6f) / (float)att.nbsec_act) : 0.0f;
+    r->climb_m = att.climb;
+    r->alt_m = att.loc.alt;
+    r->va_ms = att.vit_asc;
+    r->score = suffer_score_get(&ctx->suffer);
+    r->pwr_w = att.pwr;
+    r->next_seg_m = att.next;
+    r->solar_mw = ctx->power.solar_mw;
+    r->cad_rpm = ctx->ext[APP_EXT_BSC].cadence_rpm;
+    r->hr_bpm = ctx->ext[APP_EXT_HR].hr_bpm;
+    r->slope_pct = att.slope;
+    r->pr = att.pr;
+}
+
+static void fill_attitude(const struct model_ctx *ctx, ui_model_t *m)
+{
+    ui_attitude_t *a = &m->att;
+
+    a->pitch_pct = tanf(ctx->pitch_deg * 0.0174533f) * 100.0f;
+    a->histo_n = ctx->pitch_histo_n;
+    (void)memcpy(a->histo, ctx->pitch_histo, sizeof(a->histo));
+    a->heading_deg = ctx->heading_valid ? (int16_t)lroundf(ctx->heading_deg) % 360
+                                        : (int16_t)UI_ANGLE_UNKNOWN;
+    a->rough[0] = ctx->rough[0];
+    a->rough[1] = ctx->rough[1];
+    a->rough[2] = ctx->rough[2];
+    /* the barometer roughness of the legacy (baro.getRoughness()) is not ported yet */
+    a->rough[3] = 0.0f;
+}
+
+static void fill_zones(const struct model_ctx *ctx, ui_model_t *m)
+{
+    ui_rr_t *rr = &m->rr;
+    ui_fec_t *f = &m->fec;
+    uint32_t total = power_zone_get_total_time(&ctx->zones);
+
+    rr->nzones = (RR_ZONES_NB < UI_RR_ZONES) ? RR_ZONES_NB : UI_RR_ZONES;
+    for (uint8_t z = 0U; z < rr->nzones; z++) {
+        rr->val[z] = rr_zone_get_value(&ctx->rr, z);
+    }
+    rr->cur = rr_zone_get_current(&ctx->rr);
+
+    f->time_s = ctx->ext[APP_EXT_FEC].elapsed_s;
+    f->score = suffer_score_get(&ctx->suffer);
+    f->pwr_w = ctx->ext[APP_EXT_FEC].power_w;
+    f->rr_ms = ctx->ext[APP_EXT_HR].rr_ms;
+    f->cad_rpm = ctx->ext[APP_EXT_FEC].cadence_rpm;
+    f->hr_bpm = ctx->ext[APP_EXT_HR].hr_bpm;
+    f->zone = power_zone_get_current(&ctx->zones);
+    for (uint8_t z = 0U; (z < UI_PWR_ZONES) && (z < PW_ZONES_NB); z++) {
+        uint32_t t = power_zone_get_time(&ctx->zones, z);
+
+        f->zone_pct[z] = (total > 0U) ? (uint8_t)((t * 100U) / total) : 0U;
+    }
+    f->vector_valid = false;
+}
+
+static void fill_gnss(const struct model_ctx *ctx, ui_model_t *m, uint32_t now)
+{
+    ui_gnss_info_t *g = &m->gnss;
+
+    g->mode = gnss_mode(ctx->fix.mode);
+    g->fix3d = ctx->fix.fix;
+    g->nsat = (ctx->sky.n < UI_SAT_MAX) ? ctx->sky.n : UI_SAT_MAX;
+    g->used = 0U;
+    for (uint8_t i = 0U; i < g->nsat; i++) {
+        const struct app_gnss_sat *s = &ctx->sky.sat[i];
+
+        g->sat[i].az_deg = (int16_t)s->az_deg;
+        g->sat[i].el_deg = (int8_t)s->el_deg;
+        g->sat[i].cn0 = s->cn0;
+        g->sat[i].sys = s->sys;
+        g->sat[i].used = s->used;
+        if (s->used) {
+            g->used++;
+        }
+    }
+    if ((ctx->sky.n == 0U) && ctx->fix.fix) {
+        g->used = ctx->fix.nsat;
+    }
+    g->fix_age_s = (ctx->fix_uptime_ms != 0U) ? ((now - ctx->fix_uptime_ms) / 1000U) : 100000U;
+    /* the GNSS API gives the dilution of precision, not the accuracy */
+    g->hacc_m = NAN;
+}
+
+static void fill_energy(const struct model_ctx *ctx, ui_model_t *m)
+{
+    ui_energy_t *e = &m->energy;
+
+    e->mv = ctx->power.mv;
+    e->ma = ctx->power.ma;
+    e->pct = ctx->power.pct;
+    e->source = (ui_charge_t)ctx->power.charge;
+    e->solar_mw = ctx->power.solar_mw;
+    e->solar_limit_mv = ctx->power.solar_limit_mv;
+    e->temp_c = ctx->power.temp_c;
+    e->autonomy_h = ctx->power.autonomy_h;
+}
+
+static void sensor_value(const struct model_ctx *ctx, uint8_t kind, char *buf, size_t size)
+{
+    const struct app_ext_sensor *e = &ctx->ext[kind];
+
+    switch (kind) {
+    case APP_EXT_HR:
+        (void)snprintf(buf, size, "%u bpm", (unsigned int)e->hr_bpm);
+        break;
+    case APP_EXT_BSC:
+        (void)snprintf(buf, size, "%u rpm", (unsigned int)e->cadence_rpm);
+        break;
+    case APP_EXT_POWER:
+    case APP_EXT_FEC:
+        (void)snprintf(buf, size, "%u W", (unsigned int)e->power_w);
+        break;
+    default:
+        buf[0] = '\0';
+        break;
+    }
+}
+
+static void fill_sensors(const struct model_ctx *ctx, ui_model_t *m)
+{
+    ui_sensors_t *s = &m->sensors;
+
+    s->n = 0U;
+    for (uint8_t k = 0U; (k < APP_EXT_KINDS) && (s->n < UI_SENSOR_MAX); k++) {
+        const struct app_link_status *l = &ctx->link[k];
+        ui_sensor_t *u;
+
+        if (l->link == APP_LINK_NONE) {
+            continue;
+        }
+        u = &s->s[s->n++];
+        u->kind = k;
+        u->link = (ui_link_t)l->link;
+        u->ant = l->ant;
+        u->dev_id = l->dev_id;
+        (void)strncpy(u->dev_name, l->name, sizeof(u->dev_name) - 1U);
+        sensor_value(ctx, k, u->value, sizeof(u->value));
+    }
+
+    ui_pair_t *p = &m->pair;
+
+    p->searching = ctx->pair.searching;
+    p->kind = ctx->pair.kind;
+    p->n = (ctx->pair.n < UI_PAIR_MAX) ? ctx->pair.n : UI_PAIR_MAX;
+    for (uint8_t i = 0U; i < p->n; i++) {
+        p->item[i].ant = ctx->pair.dev[i].ant;
+        p->item[i].id = ctx->pair.dev[i].id;
+        p->item[i].rssi = ctx->pair.dev[i].rssi;
+        (void)strncpy(p->item[i].name, ctx->pair.dev[i].name, sizeof(p->item[i].name) - 1U);
+    }
+}
+
+static void fill_nav(const struct model_ctx *ctx, ui_model_t *m)
+{
+    m->nav.valid = ctx->nav.valid;
+    m->nav.dist_m = ctx->nav.dist_m;
+    m->nav.turn = (ui_turn_t)ctx->nav.turn;
+    (void)strncpy(m->nav.street, ctx->nav.street, sizeof(m->nav.street) - 1U);
+}
+
+static void fill_settings(const struct model_ctx *ctx, ui_model_t *m)
+{
+    const user_settings_t *us = user_settings_get_global();
+
+    m->settings.ftp_w = user_settings_get_ftp(us);
+    m->settings.weight_kg = (uint8_t)(user_settings_get_weight(us) / 10U);
+    m->settings.gnss_leap = true;
+    m->settings.light_auto = true;
+    m->settings.solar_limit_mv = ctx->power.solar_limit_mv;
+
+    m->routes.n = (ctx->storage.nroutes < UI_ROUTE_LIST_MAX) ? ctx->storage.nroutes
+                                                             : UI_ROUTE_LIST_MAX;
+    for (uint8_t i = 0U; i < m->routes.n; i++) {
+        (void)strncpy(m->routes.name[i], ctx->storage.route[i], UI_NAME_LEN - 1U);
+    }
+    m->debug.seg_loaded = (ctx->storage.segments > 255U) ? 255U : (uint8_t)ctx->storage.segments;
+    (void)snprintf(m->debug.version, sizeof(m->debug.version), "%u.%u.%u",
+                   (unsigned int)APP_VERSION_MAJOR, (unsigned int)APP_VERSION_MINOR,
+                   (unsigned int)APP_VERSION_PATCH);
+}
+
+void model_ui_fill(const struct model_ctx *ctx, ui_model_t *m)
+{
+    uint32_t now = k_uptime_get_32();
+
+    (void)memset(m, 0, sizeof(*m));
+    fill_status(ctx, m, now);
+    fill_ride(ctx, m);
+    fill_attitude(ctx, m);
+    fill_zones(ctx, m);
+    fill_gnss(ctx, m, now);
+    fill_energy(ctx, m);
+    fill_sensors(ctx, m);
+    fill_nav(ctx, m);
+    fill_settings(ctx, m);
+    /* segment mini-maps and the route map: the projection of the interface step */
+    m->nseg = 0U;
+    m->route.n = 0U;
+    m->route.scale_m = (uint16_t)(ctx->zoom * ctx->zoom * 250U / 100U);
+}
