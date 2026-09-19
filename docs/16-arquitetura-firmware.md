@@ -31,7 +31,7 @@ Conferidos no NCS v3.3.0 local (`C:\ncs\v3.3.0`, Zephyr 4.3.99).
 | Arquivos | FatFs R0.16, `zephyr,sdhc-spi-slot` com `zephyr,sdmmc-disk` | o mesmo caminho serve ao microSD e ao SD NAND; o LittleFS também existe |
 | Configurações | `CONFIG_ZMS` e `CONFIG_SETTINGS_ZMS` | a placa do DK não liga o ZMS por padrão; o port liga |
 | Atualização | MCUboot pelo sysbuild (`SB_CONFIG_BOOTLOADER_MCUBOOT`), mcumgr | no nRF54L o NCS usa `SWAP_USING_MOVE` e assinatura ED25519; transportes BLE (pede o papel periférico) e UART, que chega ao USB pelo CDC ACM (amostra `usb_mcumgr`) |
-| GNSS | `zephyr/include/zephyr/drivers/gnss.h` | posição por `GNSS_DATA_CALLBACK_DEFINE` (graus em nanograus, velocidade em mm/s) e satélites por `CONFIG_GNSS_SATELLITES`; os callbacks rodam no workqueue do modem; não há driver do M10 nesta versão |
+| GNSS | `zephyr/include/zephyr/drivers/gnss.h` | posição por `GNSS_DATA_CALLBACK_DEFINE` (graus em nanograus, velocidade em mm/s) e satélites por `CONFIG_GNSS_SATELLITES`; os callbacks rodam no workqueue do modem; o driver do M10 é do port (`modules/gnss_drivers`, compatível `u-blox,max-m10`) |
 | BLE | `CONFIG_BT_MAX_CONN`, clientes do NCS em `nrf/subsys/bluetooth/services` | o NCS traz clientes de FC (`hrs_client`), bateria, NUS e hora; **CSC, CPS, LNS e FTMS não têm cliente pronto**: o port mantém os seus, sobre o `BT_GATT_DM` |
 | Energia | drivers `npm13xx` (mfd, regulador, carregador, GPIO, LED, watchdog), `maxim,max17262`, `sys_poweroff()` | o carregador expõe estado, erro e VBUS como canais de sensor; o nRF54L não tem PM de sistema, só PM de dispositivo e o System OFF |
 | Sensores | `bosch,bmp581`, `bosch,bmi270`, `memsic,mmc56x3`, `ti,opt3001`; `st,lsm6dsv16x` para o IMU alternativo | o BMP581 lê por RTIO e só avisa dado pronto no modo de stream (pede o pino de interrupção); o BMI270 carrega um arquivo de configuração na partida e dá gatilhos de dado pronto e de movimento, mas o de movimento pede a configuração `base` (8 KB, compatível extra `bosch,bmi270-base`, sem exemplo no NCS) em vez da `max_fifo` padrão (328 bytes); o BMI270 não tem fusão, e a inclinação sai do acelerômetro, como no legacy; com o LSM6DSV16X no mesmo footprint, o devicetree declara os dois e o firmware usa o que `device_is_ready()` aceitar; o MMC5633NJL fica no mesmo I2C, e o firmware nunca varre o barramento (o endereço 0x7E o põe em I3C); o OPT3001 fica em modo contínuo, sem limiares |
@@ -238,7 +238,7 @@ stateDiagram-v2
     Adquirindo --> LEAP: primeiro fix
     LEAP --> Plena: sinal fraco
     Plena --> LEAP: sinal bom por 60 s
-    LEAP --> Assistencia: dados do AssistNow chegam
+    LEAP --> Assistencia: dados do AssistNow chegam (a fazer)
     Assistencia --> LEAP: dados gravados
     LEAP --> Backup: modo FEC ou Zwift, desligar
     Plena --> Backup: modo FEC ou Zwift, desligar
@@ -255,7 +255,8 @@ stateDiagram-v2
 
 - **Sinal fraco:** fix perdido, ou precisão estimada pior que um limite a ajustar na bancada. O LEAP rastreia até −159 dBm e a potência plena até −167 dBm ([15](15-avaliacao-componentes.md#escolha-max-m10n-10b)).
 - **Assistência:** a SPG 5.30 pede o LEAP desligado enquanto os dados do AssistNow Live Orbits vão para a flash do módulo.
-- **Vigia:** o legacy reinicia a UART quando passa 3 s sem hora nem satélites (`legacy/source/sensors/GPSMGMT.cpp:143-176`). No u-blox, 3 s sem NAV-PVT com o módulo ligado reiniciam pelo RESET_N e reconfiguram.
+- **Vigia:** o legacy reinicia a UART quando passa 3 s sem hora nem satélites (`legacy/source/sensors/GPSMGMT.cpp:143-176`), e avisa na tela. Aqui, 10 s sem `UBX-NAV-PVT` com o receptor ligado mandam a configuração de novo, e 30 s puxam o RESET_N (ou mandam `UBX-CFG-RST`, sem o pino), com notificação: a configuração custa cerca de 0,5 s e tira o receptor do LEAP, então não vale repetir a cada 3 s. Implementado em `gnss_power.c` (`GNSS_POWER_SILENCE_MS` e `GNSS_POWER_RESET_MS`), com `test_gnss_power`.
+- **Implementado** em 2026-09-19, sem receptor para testar: a máquina inteira em `src/svc/gnss/gnss_power.c` (pura, com `test_gnss_power`, 16 casos) e as ações no driver próprio do M10 ([05](05-arquitetura-zephyr.md#receptor-gnss)). Falta a assistência: o AssistNow ainda não entrou.
 - **Ajuda do celular:** o legacy manda a posição do LNS ao GPS depois de 5 posições seguidas (`legacy/source/model/Locator.cpp:217`); no u-blox é o `UBX-MGA-INI-POS_LLH`.
 
 ### Sensor externo

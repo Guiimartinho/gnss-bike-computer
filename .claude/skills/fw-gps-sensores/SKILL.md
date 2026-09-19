@@ -8,7 +8,12 @@ description: Trabalhar com o GNSS e os sensores do GNSS Bike Computer no port Ze
 ## GNSS no port
 
 - O serviço (`src/svc/gnss/gnss_svc.c`) usa o receptor do alias `gnss` pela API de GNSS do Zephyr: `GNSS_DATA_CALLBACK_DEFINE` e `GNSS_SATELLITES_CALLBACK_DEFINE`. Os callbacks rodam no workqueue próprio do modem (`CONFIG_MODEM_DEDICATED_WORKQUEUE`, 2048 B) e só convertem e publicam `gnss_fix` e `gnss_sky`: uma posição por época.
-- Nos dois DKs o receptor é o `gnss-nmea-generic` (o M10 da placa nova e o M10578-A3 da V3 falam NMEA ao ligar). O driver UBX do MAX-M10N-10B (`u-blox,m10`, derivado do `gnss_u_blox_f9p.c` do NCS, com LEAP, backup por `UBX-RXM-PMREQ` e taxa da UART) é o passo do GNSS.
+- No alvo da placa nova o receptor é o **u-blox MAX-M10N por UBX**, com driver próprio em `zephyr_app/modules/gnss_drivers/drivers/gnss/` (compatível `u-blox,max-m10`, sobre o `modem_ubx`); o Zephyr do NCS só traz M8 e F9P, e o M10 não aceita as mensagens `UBX-CFG-*` antigas. No alvo da V3 continua o `gnss-nmea-generic` (o M10578-A3 fala NMEA).
+- Documentos da u-blox: "M10 SPG 5.30 Interface description" (UBXDOC-304424225-20395) e "MAX-M10N Integration manual" (UBXDOC-304424225-19802). Nunca invente identificador de chave nem deslocamento de campo: confira no documento (uma chave errada foi pega assim).
+- Configuração por `UBX-CFG-VALSET` nas camadas **RAM e BBR**: o standby por software apaga a RAM do receptor, inclusive a configuração.
+- LEAP é `CFG-PM-OPERATEMODE = 2`, no máximo 2 Hz e sem pulso de tempo; nele o receptor pode perder mensagens do host, então comando vai com repetição e o lote de configuração passa antes pela potência plena. Dormir é `UBX-RXM-PMREQ` com backup e force, acordando pela linha RX.
+- Nada que espere resposta do receptor pode rodar no workqueue do modem: a resposta chega num item de trabalho dele. Quem manda comando é a thread `gnss`.
+- A máquina de energia do receptor (`src/svc/gnss/gnss_power.c`, `test_gnss_power`) é pura: backup, aquisição, LEAP, potência plena, e o reinício por silêncio (10 s reconfigura, 30 s puxa o RESET_N).
 - O modo manda: o receptor fica ativo em CRS, PRC e DBG e dorme em FEC e Zwift, como o legacy (`BoucleCRS.cpp:38`, `BoucleFEC.cpp:45`).
 - Modelo dinâmico da u-blox: o `BIKE` é de motocicleta; para bicicleta vale o `PORT` (`docs/13-placa-nova.md`).
 

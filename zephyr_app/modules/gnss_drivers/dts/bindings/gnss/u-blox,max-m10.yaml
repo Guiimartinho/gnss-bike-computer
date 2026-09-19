@@ -1,0 +1,94 @@
+# Copyright (c) 2026 Luiz Guilherme Ito
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+  u-blox M10 GNSS receiver on a UART, by the UBX protocol (MAX-M10N-10B of
+  the new board). The receiver leaves the factory at 38400 baud with NMEA
+  output; the driver turns NMEA off and asks for UBX-NAV-PVT, and for
+  UBX-NAV-SAT when CONFIG_GNSS_SATELLITES is on.
+
+  Example:
+
+    &uart21 {
+        status = "okay";
+        current-speed = <38400>;
+
+        gnss: gnss@0 {
+            compatible = "u-blox,max-m10";
+            fix-rate-ms = <1000>;
+            dynamic-model = "portable";
+            power-mode = "leap";
+        };
+    };
+
+compatible: "u-blox,max-m10"
+
+include: uart-device.yaml
+
+properties:
+  fix-rate-ms:
+    type: int
+    default: 1000
+    description: |
+      Interval between navigation epochs, in milliseconds (CFG-RATE-MEAS).
+      The default is the 1 Hz of the legacy and of the LEAP mode, whose
+      maximum is 2 Hz. The receiver takes 25 to 65535 ms.
+
+  dynamic-model:
+    type: string
+    default: "portable"
+    description: |
+      Dynamic platform model (CFG-NAVSPG-DYNMODEL). "portable" is what u-blox
+      recommends for most uses and what a bicycle needs: "bike" in the
+      receiver is a motorbike, and "pedestrian" limits speed and altitude
+      changes below what a descent reaches.
+    enum:
+      - "portable"
+      - "stationary"
+      - "pedestrian"
+      - "automotive"
+      - "sea"
+      - "airborne_1g"
+      - "airborne_2g"
+      - "airborne_4g"
+      - "wrist"
+      - "bike"
+
+  power-mode:
+    type: string
+    default: "leap"
+    description: |
+      Power mode of the receiver (CFG-PM-OPERATEMODE): "full" is full power,
+      "leap" is the low energy accurate positioning of u-blox, which the
+      board uses while tracking (5 mA against 11.5 mA at 1.8 V).
+    enum:
+      - "full"
+      - "leap"
+
+  satellites-rate:
+    type: int
+    default: 1
+    description: |
+      Epochs between two UBX-NAV-SAT messages, for the sky plot; 0 turns the
+      message off. Only used when CONFIG_GNSS_SATELLITES is on.
+
+  timepulse-enable:
+    type: boolean
+    description: |
+      Keep the time pulse of the receiver on (CFG-TP-TP1_ENA). The LEAP mode
+      does not support it (integration manual 3.7.2), so it stays off unless
+      the board runs at full power.
+
+  reset-gpios:
+    type: phandle-array
+    description: |
+      RESET_N of the receiver, active low, driven open drain. The driver only
+      configures it; a reset clears the backup memory of the receiver.
+
+  vcc-supply:
+    type: phandle
+    description: |
+      Regulator of the VCC and V_IO rails of the receiver (BUCK1 of the
+      nPM1300 on the new board). With it, the driver cuts the rail after the
+      software standby, which leaves the receiver in hardware backup on
+      V_BCKP, and turns it back on to wake up.

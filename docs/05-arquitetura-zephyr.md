@@ -87,12 +87,12 @@ Prioridade no Zephyr: número menor ganha. Pilhas medidas (ver [Pilhas](#pilhas)
 |---|---|---|---|---|---|
 | `sensors` | `src/svc/sensors/sensors_svc.c` | 4 | 2048 B | a cada 20 ms | acelerômetro a 50 Hz com média de 1 s, barômetro a 10 Hz, magnetômetro e luz a 1 Hz, como o legacy (`fxos.cpp:600`, `Attitude.cpp`) |
 | `model` | `src/svc/model/model_svc.c` | 5 | 4096 B | caixa de entrada; ao menos 1 vez por segundo | o único escritor do modelo: `attitude` e o Kalman, segmentos, zonas, percurso, máquina de modos; publica o retrato da tela e o ponto do log |
-| `gnss` | `src/svc/gnss/gnss_svc.c` | 6 | 2048 B | caixa de entrada | segue o modo (dorme em FEC e Zwift) e o desligamento |
+| `gnss` | `src/svc/gnss/gnss_svc.c`, `gnss_power.c` | 6 | 2048 B | caixa de entrada | máquina de energia do receptor (backup, aquisição, LEAP, plena), configura o M10 por UBX, publica a época e segue o modo e o desligamento |
 | `radio` | `src/svc/radio/radio_svc.c` | 6 | 3072 B | caixa de entrada | sobe o ANT (com `ANT=1`) e o BLE, liga os clientes aos canais, atualiza o nível da bateria no BLE |
 | `ui` | `src/svc/ui/ui_svc.c` | 7 | 6144 B | caixa de entrada, o próximo timer do LVGL; ao menos 1 vez por segundo | a única que chama o LVGL: telas do retrato, teclas, notificações, telas de USB e de desligamento, luz e COM; o driver manda ao painel só as linhas que mudaram |
 | `storage` | `src/svc/storage/storage_svc.c` | 8 | 3584 B | caixa de entrada | monta o cartão, carrega segmentos, lista percursos, grava o log de atividade |
 | `power` | `src/svc/power/power_svc.c` | 9 | 3072 B | caixa de entrada; tique de 1 s; o medidor e o carregador a cada 10 s; eventos do nPM1300 | máquina de sistema, desligamento automático, ship mode ou System OFF; lê o medidor e o carregador e publica `power_status`; bateria fraca e crítica (`battery.c`); estado da carga (`charge.c`) |
-| workqueue do modem | Zephyr (`CONFIG_MODEM_DEDICATED_WORKQUEUE`) | do sistema | 2048 B | bytes do receptor | o driver GNSS interpreta e chama os callbacks do serviço, que publicam `gnss_fix` e `gnss_sky` |
+| workqueue do modem | Zephyr (`CONFIG_MODEM_DEDICATED_WORKQUEUE`) | do sistema | 2048 B | bytes do receptor | o driver GNSS interpreta e chama os callbacks do serviço: a época vai para a caixa de entrada da thread `gnss`, que a publica, e os satélites saem em `gnss_sky` dali mesmo |
 | RX do BT | Zephyr | cooperativa | 3072 B | pacotes do rádio | os clientes BLE chamam os callbacks do serviço de rádio, que publicam `ext_sensor` e `link_status` |
 | entrada | Zephyr (`CONFIG_INPUT_THREAD_STACK_SIZE`) | 0 | 2048 B | eventos das teclas | o `zephyr,input-longpress` separa toque curto e longo; o callback de `src/svc/ui/ui_input.c` publica `input` |
 | workqueue do sistema | Zephyr | do sistema | 2048 B | trabalhos | o debounce das teclas, os eventos do nPM1300 (o driver lê os registradores e chama o callback do serviço, que só põe a mensagem na caixa) e, na V3, o VCOM serial da tela |
@@ -105,7 +105,7 @@ Cada serviço tem uma **caixa de entrada**, uma `k_msgq` estática que um listen
 
 | Canal | Mensagem | Publica | Escutam |
 |---|---|---|---|
-| `chan_gnss_fix` | posição, velocidade, rumo, altitude, hora UTC, satélites, modo do receptor, uma por época | callback do GNSS | modelo, energia |
+| `chan_gnss_fix` | posição, velocidade, rumo, altitude, hora UTC, satélites, modo do receptor, uma por época | thread `gnss` | modelo, energia |
 | `chan_gnss_sky` | satélites em vista | callback do GNSS | modelo |
 | `chan_baro` | pressão e temperatura, 10 Hz | sensores | modelo |
 | `chan_imu` | inclinação, rolagem e rugosidade, 1 Hz | sensores | modelo |
@@ -185,11 +185,11 @@ Medidas com `CONFIG_STACK_USAGE=y` (arquivos `.su` do GCC) em 2026-09-19, no bui
 | `radio` | `bt_enable` 24 + `bt_init` 168 + `bt_hci_cmd_send_sync` 96 + `settings_zms_load` 144 e o ZMS | ~1,5 KB | 3072 B | ~1,5 KB |
 | `sensors` | `sensors_thread` 168 + leitura I2C (`i2c_nrfx_twim_msg_transfer` 56) + publicação no zbus (`zbus_chan_pub` 56, `_zbus_vded_exec` 104, listener até 80, `k_msgq_put`) | ~0,9 KB | 2048 B | ~1,1 KB |
 | `power` | `power_thread` 40 + `read_gauge` 64 + bateria crítica pela máquina de sistema (`smf_set_state` 64, `shutdown_entry` 16) + publicação no zbus (`app_publish` 56, `zbus_chan_pub` 56, `_zbus_vded_exec` 104, listener até 80, `app_inbox_put` 56) + log (~0,3 KB); a leitura I2C do medidor fica em ~0,3 KB | ~1,1 KB | 3072 B | ~1,9 KB |
-| `gnss` | publicação no zbus e log | ~0,7 KB | 2048 B | ~1,3 KB |
+| `gnss` | `gnss_thread` 136 + `apply` 24 + `ublox_m10_configure` 24 + `valset` 32 + `ubx_m10_valset` 48 + `run_script` 32 + `modem_ubx_run_script` 40, ou a publicação no zbus (`zbus_chan_pub` 56, `_zbus_vded_exec` 104, listener até 80, `app_inbox_put` 56) + log | ~0,6 KB | 2048 B | ~1,4 KB |
 | `ui` | `ui_thread` 136 + `lv_timer_handler` 40 + `lv_display_refr_timer` 144 + `refr_area` 88 + 4 níveis da árvore de objetos × (`lv_obj_refr` 272 + `lv_obj_redraw` 352) + evento de desenho ~0,3 KB + arco (`ui_draw_disc` 200, `lv_draw_arc` 128, `lv_draw_sw_arc` 600, máscara e mistura ~0,4 KB) | ~4,7 KB | 6144 B | ~1,4 KB |
 | entrada | `input_thread` 40 + `ui_keys_cb` 16 + publicação no zbus (`zbus_chan_pub` 56, `ui_listener` 80, `app_inbox_put` 56) + log | ~0,9 KB | 2048 B | ~1,1 KB |
 | workqueue do sistema | VCOM serial da V3: `com_work_handler` 16 + `send_mode` 32 + `spi_nrfx_transceive` 128 + `nrfx_spim_xfer` 40 + espera + log; no nRF54LM20, os eventos do nPM1300: `work_callback` 104 + leitura I2C + `pmic_event` 16 + `app_inbox_put` 56 + log, ~0,7 KB | ~1,0 KB | 2048 B | ~1,0 KB |
-| workqueue do modem | interpretação NMEA (`modem_chat_process_handler` 64, `gnss_nmea0183_parse_rmc`) + `gnss_data_cb` 72 + publicação | ~0,9 KB | 2048 B | ~1,1 KB |
+| workqueue do modem | UBX no nRF54LM20 (`modem_ubx_process_handler` 48 + `pvt_handler` 144 + `ubx_m10_parse_pvt` 16 + `gnss_publish_data` 24 + `gnss_data_cb` 64 + `app_inbox_put`), ou os satélites, que publicam no zbus de lá (`sat_handler` 40, `zbus_chan_pub` 56, `_zbus_vded_exec` 104, listener até 80); com NMEA, `modem_chat_process_handler` 64 e `gnss_nmea0183_parse_rmc` | ~0,7 KB | 2048 B | ~1,3 KB |
 | `main` | `settings_zms_save` 144 e o ZMS, ou `zms_mount` 232, com log | ~0,8 KB | 2048 B | ~1,2 KB |
 
 - O workqueue do sistema, de 1024 B, ficaria com ~170 B de folga com os callbacks do GNSS: por isso o modem ganhou workqueue próprio. Com o VCOM serial da tela (V3), o workqueue do sistema subiu para 2048 B.
@@ -271,7 +271,7 @@ O nPM1300 usa os drivers do Zephyr (MFD, reguladores e o carregador pela API de 
 |---|---|---|
 | `src/app/` | `main.c`, `app_channels.c`, `app_svc.c` | boot, canais, watchdog e caixas de entrada |
 | `src/svc/power/` | `power_svc.c`, `sys_fsm.c`, `battery.c`, `charge.c` | serviço de energia, máquina de sistema, bateria fraca e crítica, estado da carga |
-| `src/svc/gnss/` | `gnss_svc.c` | receptor pela API GNSS do Zephyr |
+| `src/svc/gnss/` | `gnss_svc.c`, `gnss_power.c` | receptor pela API GNSS do Zephyr e a máquina de energia dele |
 | `src/svc/sensors/` | `sensors_svc.c`, `tilt.c` | sensores pela API de sensores; inclinação, rumo e rugosidade |
 | `src/svc/radio/` | `radio_svc.c` | ANT e BLE, clientes para eventos |
 | `src/svc/storage/` | `storage_svc.c` | cartão, log, segmentos, percursos |
@@ -280,9 +280,26 @@ O nPM1300 usa os drivers do Zephyr (MFD, reguladores e o carregador pela API de 
 | `src/model/` | `attitude`, `kalman_altitude`, `udmatrix`, `kalman`, `locator`, `loc_source`, `segment`, `liste_points`, `vecteur`, `parcours`, `power_zone`, `suffer_score`, `rr_zone`, `sd_logger`, `crash_recovery`, `user_settings`, `power_scheduler` | os algoritmos do legacy |
 | `src/rf/` | `ble/ble_manager.c`, `ble_nus.c`, `ble_lns.c`, `ble_*_client.c`, `ant/ant.c` | BLE (scan ainda não iniciado) e ANT (só com `ANT=1`) |
 | `src/ui/`, `include/ui/` | interface LVGL da placa nova ([18](18-interface-telas.md)) | a mesma no firmware e no renderizador de host (`tests/ui`) |
-| `modules/gnss_drivers/` | `drivers/display/memlcd.c`, `memlcd_frame.c`, `include/drivers/display/memlcd*.h`, `drivers/fuel_gauge/max17262.c`, `include/drivers/fuel_gauge/max17262_regs.h`, `drivers/charger/aem10900.c`, `include/drivers/charger/aem10900*.h`, `dts/bindings/` (com o prefixo `e-peas` em `vendor-prefixes.txt`) | drivers próprios num módulo do Zephyr dentro da aplicação: a tela ([Tela](#tela)), o medidor MAX17262 ([Medidor de bateria](#medidor-de-bateria)) e o carregador solar AEM10900 ([Carregador](#carregador)) |
+| `modules/gnss_drivers/` | `drivers/display/memlcd.c`, `memlcd_frame.c`, `include/drivers/display/memlcd*.h`, `drivers/fuel_gauge/max17262.c`, `include/drivers/fuel_gauge/max17262_regs.h`, `drivers/charger/aem10900.c`, `include/drivers/charger/aem10900*.h`, `drivers/gnss/gnss_ublox_m10.c`, `ubx_m10.c`, `include/drivers/gnss/ub*_m10.h`, `dts/bindings/` (com o prefixo `e-peas` em `vendor-prefixes.txt`) | drivers próprios num módulo do Zephyr dentro da aplicação: a tela ([Tela](#tela)), o medidor MAX17262 ([Medidor de bateria](#medidor-de-bateria)), o carregador solar AEM10900 ([Carregador](#carregador)) e o receptor u-blox M10 ([Receptor GNSS](#receptor-gnss)) |
 
 Saíram em 2026-09-19, substituídos pelas APIs do Zephyr ou pelos serviços: o HAL próprio (`src/hal`), os drivers da V3 (`ls027`, `baro`, `fxos`, `stc3100`, `gps_mgmt`, `nmea_parser`, `gps_epo`, `neopixel`), a interface em paisagem (`src/vue`), a USB da pilha antiga (`src/usb`), os stubs do sistema de arquivos (`src/utils`), o `boucle`, o `model_lock`, o `zwift` (protocolo próprio, não o do legacy) e o `baro_drift` (duplicado).
+
+## Receptor GNSS
+
+O MAX-M10N-10B da placa nova fala UBX, e o Zephyr do NCS v3.3.0 não tem driver do M10: o do M8 configura pelas mensagens `UBX-CFG-*` antigas, que o M10 não aceita, e o do F9P é um receptor RTK. O port traz o seu, em `modules/gnss_drivers/drivers/gnss/`, sobre a camada UBX do Zephyr (`modem_ubx` num pipe de UART).
+
+| Parte | O que faz | Onde |
+|---|---|---|
+| Protocolo | `ubx_m10.c` monta e lê os quadros em C puro, sem Zephyr: cabeçalho, checksum de Fletcher de 8 bits, `UBX-CFG-VALSET` e `VALGET` (o tamanho do valor sai dos bits 30 a 28 da chave), `UBX-RXM-PMREQ`, `UBX-CFG-RST`, `UBX-NAV-PVT` e `UBX-NAV-SAT` | ficha "u-blox M10 SPG 5.30 Interface description" (UBXDOC-304424225-20395), seções 3.2, 3.4, 3.10, 3.15 e 3.16; `test_ubx_m10` (20 casos) |
+| Driver | `gnss_ublox_m10.c` liga o pipe, trata as mensagens espontâneas e atende a API GNSS do Zephyr (taxa, modelo dinâmico, constelações) | `u-blox,max-m10` no devicetree |
+| Configuração | protocolos do UART em UBX, NMEA desligado (14 chaves), `UBX-NAV-PVT` e `UBX-NAV-SAT` a cada época, taxa de 1 Hz, modelo `portable`, pulso de tempo desligado e o modo LEAP; tudo nas camadas RAM **e** BBR | o standby apaga a RAM do receptor (manual de integração 3.7.4.2), e a BBR, que o V_BCKP segura, devolve a configuração |
+| Energia | `ublox_m10_set_power_mode()` troca LEAP (`CFG-PM-OPERATEMODE` = 2) e potência plena; `ublox_m10_standby()` manda `UBX-RXM-PMREQ` com backup e force e, se o nó tiver `vcc-supply`, corta o trilho; `ublox_m10_wake()` acorda pela linha RX | manual de integração 3.7.2 e 3.7.4.2 |
+| Falhas | `ublox_m10_hw_reset()` puxa o RESET_N por 2 ms quando o receptor para de responder; sem o pino, `UBX-CFG-RST` | `legacy/source/sensors/GPSMGMT.cpp:143-176` reiniciava a UART |
+
+- O receptor pode perder uma mensagem do host enquanto faz o ciclo do LEAP (manual de integração 3.7.2): toda configuração vai com 3 repetições, e o driver leva o receptor à potência plena antes de um lote.
+- Os callbacks do driver rodam no workqueue do modem e **não podem esperar resposta**: quem espera é a thread `gnss`, porque a resposta chega num item de trabalho desse mesmo workqueue.
+- O `hdop` publicado é o pDOP do `UBX-NAV-PVT` (o horizontal sozinho pediria o `UBX-NAV-DOP`, uma mensagem a mais por época), diferença registrada em [06](06-algoritmos.md#fontes-de-posição).
+- Não testado com receptor nenhum: o DK não tem GNSS, e a placa de avaliação ainda não foi comprada.
 
 ## Devicetree e alvos
 
@@ -290,7 +307,7 @@ A placa vem do `-b` (variável `BOARD` dos scripts); o Zephyr aplica `boards/<pl
 
 | Alias | Serviço | nRF54LM20 DK (periféricos da placa nova) | nRF52840 DK (pinos da V3) |
 |---|---|---|---|
-| `gnss` | GNSS | `gnss-nmea-generic` no `uart21` (TX P1.04, RX P1.05), até o driver UBX do M10 | `gnss-nmea-generic` no `uart1` (TX P0.05, RX P0.07), o M10578-A3 |
+| `gnss` | GNSS | u-blox MAX-M10N (`u-blox,max-m10`) no `uart21` a 38400 baud (TX P1.04, RX P1.05) | `gnss-nmea-generic` no `uart1` (TX P0.05, RX P0.07), o M10578-A3 da V3 |
 | `baro0` | sensores | BMP585 (`bosch,bmp581`) em 0x47 no `i2c23` (SDA P1.29, SCL P1.03) | BME280 em 0x76 no `i2c0` (SDA P1.00, SCL P1.01) |
 | `imu0` | sensores | BMI270 em 0x68, INT1 em P3.04 | FXOS8700 em 0x1E |
 | `mag0` | sensores | MMC5633NJL (`memsic,mmc56x3`) em 0x30 | FXOS8700 |

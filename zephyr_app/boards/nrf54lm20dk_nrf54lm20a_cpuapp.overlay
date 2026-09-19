@@ -87,20 +87,25 @@
 };
 
 /*
- * GNSS: u-blox MAX-M10N-10B. Until its UBX driver (u-blox,m10) lands, the
- * NMEA the module sends at power-up goes through gnss-nmea-generic. The rate
- * below is where the receiver starts; the UBX driver sets it with
- * CFG-UART1-BAUDRATE.
+ * GNSS: u-blox MAX-M10N-10B by UBX (driver in modules/gnss_drivers). The
+ * receiver leaves the factory at 38400 baud (CFG-UART1-BAUDRATE, interface
+ * description 5.9.29), which is what the UART uses here; the driver turns
+ * NMEA off, asks for one UBX-NAV-PVT and one UBX-NAV-SAT per second, keeps
+ * the portable dynamic model and tracks in LEAP, without the time pulse.
  */
 &uart21 {
     status = "okay";
-    current-speed = <9600>;
+    current-speed = <38400>;
     pinctrl-0 = <&uart21_default>;
     pinctrl-1 = <&uart21_sleep>;
     pinctrl-names = "default", "sleep";
 
-    gnss: gnss-nmea-generic {
-        compatible = "gnss-nmea-generic";
+    gnss: gnss {
+        compatible = "u-blox,max-m10";
+        fix-rate-ms = <1000>;
+        dynamic-model = "portable";
+        power-mode = "leap";
+        satellites-rate = <1>;
     };
 };
 

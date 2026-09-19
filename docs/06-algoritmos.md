@@ -123,6 +123,13 @@ Legacy: `legacy/source/sensors/fxos.cpp`. Port: `zephyr_app/src/svc/sensors/tilt
 
 Legacy (`legacy/source/model/Locator.cpp:111-134`): a simulada (`$LOC`) vence e bloqueia as outras por 2 s; o GPS vence e bloqueia por 1,5 s; o LNS (celular via BLE) só é aceito sem fix no pino FIX. Depois de 5 posições LNS seguidas, envia host aiding (`$PMTK741`) ao GPS. O port tem o árbitro em `loc_source.c`, sem chamador.
 
+### Do MAX-M10N (placa nova)
+
+- Uma época por segundo em `UBX-NAV-PVT`: posição em 1e-7 grau, altitude sobre o nível do mar em mm, velocidade 2D em mm/s, rumo em 1e-5 grau e `numSV`. O port converte para as unidades do Zephyr (nanograus, mm, mm/s, milésimos de grau) no driver, e o serviço para as do modelo.
+- **Diferença registrada:** o `hdop` publicado é o **pDOP** do `UBX-NAV-PVT` (escala 0,01, multiplicado por 10 para os milésimos da API do Zephyr). O legacy lia o HDOP do `$GPGSA` (`legacy/source/model/Locator.cpp:24`) e não o usava em conta nenhuma; aqui ele só alimenta o serviço de localização do BLE. O horizontal exato pediria o `UBX-NAV-DOP`, uma mensagem a mais por época.
+- A hora só sai do receptor quando `valid` traz data **e** hora (bits 0 e 1); sem isso o campo de hora vai zerado e o modelo não usa.
+- O fix vale quando `gnssFixOK` está ligado, `invalidLlh` desligado e o tipo é 2D ou 3D; morto por estimativa (`dead reckoning`) vira "fix estimado" e não conta como posição válida no serviço.
+
 ## Bateria
 
 - Legacy (`libraries/utils/utils.c:290-312`, `percentageBatt`): compensa a queda na resistência interna (0,273 Ω) e usa um polinômio cúbico entre 3,78 e 4,2 V e `10^−11,4·V^22,315` entre 3,2 e 3,78 V.

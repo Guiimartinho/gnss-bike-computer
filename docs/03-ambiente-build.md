@@ -95,13 +95,13 @@ Build com sysbuild da `develop` em 2026-09-19 (atualizado a cada commit que muda
 
 | Item | Valor |
 |---|---|
-| FLASH | 473.952 B (45,20 % de 1 MB) |
+| FLASH | 474.268 B (45,23 % de 1 MB) |
 | RAM | 220.352 B (84,06 % de 256 KB) |
 | Avisos | 0 |
 | Erros | 0 |
 | Tempo | cerca de 1 min do zero (pelos horários dos logs) |
-| nRF54LM20 DK | FLASH 498.624 B (25,10 % de 1.940 KB), RAM 249.760 B (47,73 % de 511 KB), 0 avisos |
-| Com `ANT=1` | nRF52840 DK: FLASH 502.560 B, RAM 224.832 B; nRF54LM20 DK: FLASH 528.560 B, RAM 254.352 B; só o aviso do símbolo obsoleto |
+| nRF54LM20 DK | FLASH 498.256 B (25,08 % de 1.940 KB), RAM 250.336 B (47,84 % de 511 KB), 0 avisos |
+| Com `ANT=1` | nRF52840 DK: FLASH 502.860 B, RAM 225.152 B; nRF54LM20 DK: FLASH 528.172 B, RAM 254.928 B; só o aviso do símbolo obsoleto |
 
 Maiores consumidores de RAM (`bash tools/fw/fw.sh size`): o heap do LVGL 32.768 B (`CONFIG_LV_Z_MEM_POOL_SIZE`), `seg_runtime` 22.000 B, o buffer de desenho do LVGL 19.200 B, o heap do sistema 16.384 B (`CONFIG_HEAP_MEM_POOL_SIZE`), o quadro da tela (12.482 B da Sharp no nRF52840, 36.482 B do JDI no nRF54LM20), `points` 8.000 B, a pilha da thread `ui` (6.144 B), o pool do controlador BLE 5.247 B, as outras pilhas ([05](05-arquitetura-zephyr.md#pilhas)) e quatro cópias do retrato da tela (`ui_model_t`, 2.404 B: a do modelo, a do canal, a da thread `ui` e a da interface).
 
