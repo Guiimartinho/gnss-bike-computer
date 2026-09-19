@@ -256,7 +256,7 @@ static void fill_settings(const struct model_ctx *ctx, ui_model_t *m)
     m->settings.ftp_w = user_settings_get_ftp(us);
     m->settings.weight_kg = (uint8_t)(user_settings_get_weight(us) / 10U);
     m->settings.gnss_leap = true;
-    m->settings.light_auto = true;
+    m->settings.light_auto = true;     /* the ui service puts its preference over it */
     m->settings.solar_limit_mv = ctx->power.solar_limit_mv;
 
     m->routes.n = (ctx->storage.nroutes < UI_ROUTE_LIST_MAX) ? ctx->storage.nroutes

@@ -58,12 +58,12 @@ Números de referência (build de 2026-09-19, NCS v3.3.0, nRF52840 DK; o nRF54LM
 
 | Região | Uso | Limite |
 |---|---|---|
-| FLASH | 317.836 B (30,3 %) | 1 MB |
-| RAM | 140.928 B (53,8 %) | 256 KB |
+| FLASH | 473.224 B (45,1 %) | 1 MB |
+| RAM | 219.200 B (83,6 %) | 256 KB |
 
 - **Avisos esperados: 0** (com `ANT=1`, só o do símbolo obsoleto do `sdk-ant`). Qualquer aviso é defeito seu: corrija.
-- Maiores consumidores de RAM: `seg_runtime` (22 KB), heap do sistema (16 KB, `CONFIG_HEAP_MEM_POOL_SIZE`), `points` (8 KB), as pilhas das threads de serviço e três cópias do retrato da tela (2,4 KB cada). Confira com `bash tools/fw/fw.sh size` depois de mexer em buffers estáticos.
-- Reporte números exatos ("FLASH 317.836 B, 0 avisos"), nunca "compilou".
+- Maiores consumidores de RAM: heap do LVGL (32 KB, `CONFIG_LV_Z_MEM_POOL_SIZE`), `seg_runtime` (22 KB), buffer de desenho do LVGL (19,2 KB), heap do sistema (16 KB, `CONFIG_HEAP_MEM_POOL_SIZE`), quadro da tela (12,5 KB da Sharp; 36,5 KB do JDI no nRF54LM20), `points` (8 KB), as pilhas das threads de serviço e quatro cópias do retrato da tela (2,4 KB cada). Confira com `bash tools/fw/fw.sh size` depois de mexer em buffers estáticos.
+- Reporte números exatos ("FLASH 473.224 B, 0 avisos"), nunca "compilou".
 
 ## Gravar e ver o log
 

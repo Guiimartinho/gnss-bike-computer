@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: Apache-2.0
+
+menu "GNSS bike computer drivers"
+
+rsource "drivers/display/Kconfig"
+
+endmenu

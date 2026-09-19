@@ -6,17 +6,17 @@ Onde o port Zephyr (`zephyr_app/`) está em relação ao firmware original (`leg
 
 ## Resumo
 
-- **Compila** no NCS v3.3.0 sem aviso (nRF52840 DK: FLASH 317.836 B, RAM 140.928 B; nRF54LM20 DK: FLASH 327.032 B, RAM 145.400 B) e **passa em 8 conjuntos de testes de host** (65 casos). **Nada foi testado na placa** nem nos DKs.
+- **Compila** no NCS v3.3.0 sem aviso (nRF52840 DK: FLASH 473.224 B, RAM 219.200 B; nRF54LM20 DK: FLASH 484.668 B, RAM 247.800 B) e **passa em 10 conjuntos de testes de host** (95 casos). **Nada foi testado na placa** nem nos DKs.
 - Desde 2026-09-19 o firmware é a base da arquitetura de [16](16-arquitetura-firmware.md): sete serviços com thread própria, eventos no zbus, máquinas de sistema e de modo no SMF, hardware pelas APIs do Zephyr ([05](05-arquitetura-zephyr.md)). O HAL próprio, os drivers da V3 e a interface em paisagem saíram.
-- Os algoritmos do legacy continuam no `src/model` e rodam na thread do modelo; alguns **não funcionariam** ainda (segmentos, formatos de arquivo, BLE central), e a interface nova, em LVGL, está escrita e testada no PC (29 telas em 2 temas), mas ainda não tem driver de tela no firmware ([18](18-interface-telas.md)).
+- Os algoritmos do legacy continuam no `src/model` e rodam na thread do modelo; alguns **não funcionariam** ainda (segmentos, formatos de arquivo, BLE central), e a interface nova, em LVGL, está no firmware com o driver próprio da tela (JDI LPM027M128B e Sharp LS027B7DH01, em retrato), as teclas com toque longo e a luz; foi testada no PC (29 telas em 2 temas), mas nunca vista em tela de verdade ([18](18-interface-telas.md)).
 - ANT+: a pilha do add-on `sdk-ant` entra no build com `ANT=1` e sobe no boot (`rf_ant_init()`), mas os perfis (HRM, BSC, FE-C) ainda não foram portados; os clientes BLE ainda não funcionam de ponta a ponta.
 
 ```mermaid
 pie showData
     title Áreas do legacy no port (20 áreas da matriz)
     "fiel" : 1
-    "parcial ou diferente" : 13
-    "stub ou não ligado" : 2
+    "parcial ou diferente" : 14
+    "stub ou não ligado" : 1
     "ausente ou quebrado" : 4
 ```
 
@@ -44,7 +44,7 @@ Estados: **fiel** (mesmo comportamento), **diferente** (existe com regras ou con
 | Recuperação de falha (FDIR) | `.noinit` + CRC-8, restauração por data | `crash_recovery.c` | quebrado | CRC cobre o próprio campo; `has_data` nunca verdadeiro |
 | BLE | só central (NUS→stravaAP, LNS, CPS, Komoot) | periférico + central (HRS, CSC, FTMS) | quebrado | scan nunca iniciado; `bt_gatt_subscribe` com `ccc_handle=0` faria `memset(NULL)` ([07](07-radio-ant-ble.md)) |
 | ANT+ | HRM, BSC, FE-C, busca em background | pilha do `sdk-ant` com `ANT=1` (`src/rf/ant/ant.c`), sem perfis | parcial | compila no NCS v3.3.0; mapa de integração em [07](07-radio-ant-ble.md#ant-no-ncs-v330) |
-| Interface | retrato, `Org_01`, cadrans, menu, notificações | LVGL em retrato, 29 telas (`src/ui`), testadas no PC; a thread `ui` recebe o retrato do modelo | não ligado | falta o driver da tela e a ligação ao LVGL no firmware; a interface em paisagem (`src/vue`) saiu em 2026-09-19 ([18](18-interface-telas.md#diferenças-para-o-legacy)) |
+| Interface | retrato, `Org_01`, cadrans, menu, notificações | LVGL em retrato, 29 telas (`src/ui`) testadas no PC; no firmware, a thread `ui` com o retrato do modelo, o driver `memlcd` (`modules/gnss_drivers`), as teclas por `zephyr,input-longpress` e a luz | parcial | falta projetar o mapa e os segmentos na tela (`nseg` e `route.n` vão em 0) e ver tudo num painel; a interface em paisagem (`src/vue`) saiu em 2026-09-19 ([18](18-interface-telas.md#diferenças-para-o-legacy)) |
 | Comandos (`$LOC`, `$DWN`, `$QRY`) e USB | VParser via USB CDC e NUS; MSC | nada; os arquivos da pilha USB antiga saíram | ausente | a USB `device_next` é o passo da USB |
 
 ## Correções de 2026-09-18
@@ -116,7 +116,7 @@ flowchart TD
     F2["2 · fidelidade dos algoritmos<br/>Kalman (ones, bound, taxa), potência, distância,<br/>zonas, FDIR, testes diferenciais contra o legacy"]:::pending --> F3
     F3["3 · armazenamento<br/>SD e FAT montados, formatos do legacy,<br/>log @DDMMYY, loader e allocator de segmentos, liste_points"]:::pending --> F4
     F4["4 · rádio<br/>ANT+ pelo sdk-ant (HRM, BSC, FE-C) e BLE central,<br/>sensores no modelo, pareamento"]:::pending --> F5
-    F5["5 · interface<br/>feito: telas LVGL em retrato, testadas no PC<br/>falta: driver da tela, thread, botões, ligar ao modelo"]:::partial --> F6
+    F5["5 · interface<br/>feito: telas LVGL testadas no PC, driver da tela,<br/>thread, teclas e luz no firmware<br/>falta: mapa e segmentos na tela, teste em painel"]:::partial --> F6
     F6["6 · comandos e USB<br/>VParser $LOC/$DWN/$QRY, USB device_next CDC e MSC,<br/>stravaAP e tools/zpm"]:::pending --> F7
     F7["7 · extras<br/>Komoot, LNS, EPO e host aiding, WS2812, FRAM"]:::pending
     classDef done fill:#2e7d32,color:#ffffff
@@ -143,8 +143,10 @@ Tamanhos estimados pelos relatórios de análise: fase 1 M, fase 2 M, fase 3 G, 
 |---|---|---|
 | Telas | feito em 2026-09-19, no PC: 29 telas em LVGL nos temas de 8 cores e preto e branco, com os arranjos, os campos e os formatos do legacy e as diferenças registradas em [18](18-interface-telas.md#diferenças-para-o-legacy); o renderizador de host confere cores, textos e navegação | `src/ui/`, `include/ui/`, `tests/ui/`, `tools/ui/` |
 | Formatação dos números | feito em 2026-09-19: `_fmkstr`, `_secjmkstr` e os limites do `cadran`, com duas diferenças de propósito ([06](06-algoritmos.md#formatação-dos-números)) | `src/ui/ui_fmt.c`, `test_ui_fmt` |
-| Driver da tela | a fazer: JDI em 3 bits e Sharp em 1 bit, retrato, quantização e linhas que mudaram ([18](18-interface-telas.md#framework)) | — |
-| Thread da tela, botões e ligação ao modelo | a fazer, com a base da placa nova ([16](16-arquitetura-firmware.md)) | — |
+| Driver da tela | feito em 2026-09-19, no build: JDI LPM027M128B e C em 3 bits e Sharp LS027B7DH01 em 1 bit, retrato, a quantização do renderizador, só as linhas que mudaram, COM pelo EXTCOMIN ou pelo SPI, sequência de partida e de desligamento das fichas ([05](05-arquitetura-zephyr.md#tela)); `test_memlcd` (19 casos), mutação 14 de 14 mortas; não testado em painel | `modules/gnss_drivers/` |
+| Thread da tela, teclas e ligação ao modelo | feito em 2026-09-19, no build: thread `ui` com o LVGL (6 KB de pilha, ~4,7 KB medidos), o retrato do modelo, notificações, telas de USB e de desligamento com o progresso dos serviços, teclas com toque longo, tema e luz guardados em `ui/prefs`; não testado na placa | `src/svc/ui/` |
+| Luz da tela | feito em 2026-09-19: a máquina de [16](16-arquitetura-firmware.md#luz-do-display), com PWM pelo alias `backlight` e o COM a 120 Hz no JDI com a luz acesa; `test_backlight` (11 casos), mutação 8 de 8 mortas; limites a acertar na bancada | `src/svc/ui/backlight.c` |
+| Mapa e segmentos na tela | a fazer: projetar o percurso e os segmentos no retrato (`afficheSegment`, `Zoom.cpp`); hoje `nseg` e `route.n` vão em 0 | `src/svc/model/model_ui.c` |
 
 ## Decisões do dono
 
@@ -159,11 +161,17 @@ Tomadas em 2026-09-18:
 | CI | **desligado**: `.github/workflows/ci.yml` só roda à mão | não gasta minutos do GitHub Actions; ligar só com pedido do dono |
 | Commits | um commit por item pronto e verificado, na `develop`; Conventional Commits em inglês, nunca atribuídos a IA | regra permanente deste projeto (skill `commit-gnss`); a `main` só recebe merge da `develop` quando o dono pedir |
 
+Tomada em 2026-09-19:
+
+| Decisão | Escolha | Consequência |
+|---|---|---|
+| Display | **JDI LPM027M128B**, achado no AliExpress; a Sharp LS027B7DH01A fica de reserva; peças do AliExpress têm preferência | o nRF54LM20 DK usa o LPM027M128B (`jdi,lpm027m128b`) e o tema de 8 cores; o B é refletivo e sem luz própria; a [lista de compras](19-lista-de-compras.md) não muda |
+
 Ainda em aberto:
 
 | Decisão | Opções | Consequência |
 |---|---|---|
-| Componentes da placa nova | proposta em [13](13-placa-nova.md), especificação em [14](14-hardware-placa-nova.md), avaliação em [15](15-avaliacao-componentes.md) e lista de compras validada em [19](19-lista-de-compras.md): nRF54LM20A no módulo Fanstel BM20C, display Sharp LS027B7DH01A com luz frontal (o JDI LPM027M128C de 8 cores no mesmo conector, sem canal autorizado de compra), GNSS u-blox MAX-M10N-10B (o MAX-F10S no mesmo footprint) com antena linear na borda de cima, nPM1300 com MAX17262 e carregador solar AEM10900, BMP585, BMI270, MMC5633NJL e OPT3001 | o dono aprova ou troca cada item; amostras e placas de avaliação antes do esquemático |
+| Componentes da placa nova | proposta em [13](13-placa-nova.md), especificação em [14](14-hardware-placa-nova.md), avaliação em [15](15-avaliacao-componentes.md) e lista de compras validada em [19](19-lista-de-compras.md): nRF54LM20A no módulo Fanstel BM20C, display Sharp LS027B7DH01A com luz frontal (o JDI LPM027M128C de 8 cores no mesmo conector, sem canal autorizado de compra; a tela foi decidida em 2026-09-19: o JDI LPM027M128B, acima), GNSS u-blox MAX-M10N-10B (o MAX-F10S no mesmo footprint) com antena linear na borda de cima, nPM1300 com MAX17262 e carregador solar AEM10900, BMP585, BMI270, MMC5633NJL e OPT3001 | o dono aprova ou troca cada item; amostras e placas de avaliação antes do esquemático |
 | Hardware de teste | nRF54LM20 DK para desenvolver até a placa própria existir, e as placas de avaliação da [proposta](13-placa-nova.md#próximos-passos) | sem placa, nada roda de verdade: hoje só há build e testes de host |
 | Formatos no SD | compatíveis com o legacy (segmentos em texto com nome base36, `.PAR`, `@DDMMYY.txt`) ou formatos novos com conversor | há 138 segmentos e 2 percursos de exemplo em `tools/TDD/DB` no formato do legacy |
 | Licença do projeto | o legacy é CC BY-NC 4.0; o port deriva dele | afeta uso comercial e a escolha da licença do repositório |

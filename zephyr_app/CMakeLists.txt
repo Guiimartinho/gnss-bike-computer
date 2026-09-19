@@ -9,6 +9,10 @@ cmake_minimum_required(VERSION 3.20.0)
 # own live in boards/.
 set(BOARD_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 
+# Drivers of our own, as a Zephyr module inside the application: the
+# memory-in-pixel display in portrait (modules/gnss_drivers, docs/05)
+list(APPEND EXTRA_ZEPHYR_MODULES ${CMAKE_CURRENT_SOURCE_DIR}/modules/gnss_drivers)
+
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 
 project(gnss_bike_computer VERSION 2.0.0 LANGUAGES C)
@@ -52,6 +56,8 @@ target_sources(app PRIVATE
     src/svc/storage/storage_svc.c
     src/svc/model/model_svc.c
     src/svc/model/model_ui.c
+    src/svc/ui/backlight.c
+    src/svc/ui/ui_input.c
     src/svc/ui/ui_svc.c
 )
 
@@ -89,6 +95,34 @@ target_sources(app PRIVATE
     src/rf/ble_bsc_client.c
     src/rf/ble_fec_client.c
     src/rf/ble_komoot_client.c
+)
+
+# =============================================================================
+# Interface: the LVGL screens (docs/18), the same code as the host renderer
+# of tests/ui
+# =============================================================================
+target_sources_ifdef(CONFIG_LVGL app PRIVATE
+    src/ui/ui_core.c
+    src/ui/ui_fields.c
+    src/ui/ui_fmt.c
+    src/ui/ui_scr_crs.c
+    src/ui/ui_scr_menus.c
+    src/ui/ui_scr_modes.c
+    src/ui/ui_scr_system.c
+    src/ui/ui_text.c
+    src/ui/ui_theme.c
+    src/ui/ui_widgets.c
+    src/ui/fonts/ui_font_b12.c
+    src/ui/fonts/ui_font_b14.c
+    src/ui/fonts/ui_font_b16.c
+    src/ui/fonts/ui_font_b18.c
+    src/ui/fonts/ui_font_b22.c
+    src/ui/fonts/ui_font_b28.c
+    src/ui/fonts/ui_font_b32.c
+    src/ui/fonts/ui_font_b44.c
+    src/ui/fonts/ui_font_b64.c
+    src/ui/fonts/ui_font_r10.c
+    src/ui/fonts/ui_font_r12.c
 )
 
 # ANT on the sdk-ant add-on, only in ANT builds (ANT=1 in tools/fw/fw.sh)

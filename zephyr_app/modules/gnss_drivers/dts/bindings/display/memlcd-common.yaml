@@ -1,0 +1,47 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# Common properties of the 2.7" memory-in-pixel panels of the GNSS bike
+# computer (JDI LPM027M128B and C, Sharp LS027B7DH01). width and height are the
+# panel in its native orientation: 400 pixels per line, 240 lines.
+
+include: [spi-device.yaml, display-controller.yaml]
+
+properties:
+  rotation:
+    type: int
+    default: 90
+    enum: [0, 90, 180, 270]
+    description: |
+      Rotation of what the application draws. 90 is the portrait of the
+      myStravaB V3 and of the new board: a point (x, y) of the 240 x 400
+      picture goes to column y of line 239 - x of the panel, as the legacy
+      drawPixel() with setRotation(3).
+
+  disp-gpios:
+    type: phandle-array
+    description: |
+      DISP pin: high shows the picture. Without it, the pin is tied high on
+      the board (myStravaB V3).
+
+  extcomin-gpios:
+    type: phandle-array
+    description: |
+      EXTCOMIN pin, with EXTMODE tied high: the COM inverts on each rising
+      edge. Without it, EXTMODE is tied low and the driver inverts the COM by
+      the serial VCOM bit (M1), as the legacy.
+
+  extcomin-frequency:
+    type: int
+    default: 1
+    description: |
+      COM inversions per second at start: rising edges of EXTCOMIN, or
+      changes of the serial VCOM bit. The Sharp takes 1 to 20 and the JDI
+      1 to 140 (the COM runs at half of it). memlcd_set_com_hz() changes it:
+      about 120 on the JDI with the light on, for the COM near the 60 Hz of
+      its transmissive mode.
+
+  power-gpios:
+    type: phandle-array
+    description: |
+      Enable of the panel supply, when the board switches it (the 5 V
+      REG710 of the Sharp on the new board).

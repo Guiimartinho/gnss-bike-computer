@@ -221,6 +221,13 @@ void ui_show(ui_screen_t screen)
     ui_go(screen);
 }
 
+void ui_show_pages(void)
+{
+    if (started) {
+        ui_go(ui_mode_page());
+    }
+}
+
 ui_screen_t ui_current(void)
 {
     return cur;

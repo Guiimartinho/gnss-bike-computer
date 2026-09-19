@@ -19,7 +19,7 @@ A placa myStravaB V3 de Vincent Gollé (`hardware/`), seus componentes, a pinage
 | IC2 | Rigado BMD-340-A-R (nRF52840) | MCU, BLE e ANT+ | SWD, USB |
 | U$5 | Antenova M10578-A3 (MediaTek MT3333) | GNSS GPS/GLONASS/Galileo/BeiDou | UART 9600, reset (HW_R) e standby (HW_S) ativos baixos, FIX alto com fix; PPS não ligado |
 | U$4 | Antenova SR4G008 | antena GNSS em chip | — |
-| U$16 | Sharp LS027B7DH01 (conector FPC) | LCD de memória 400 × 240, 5 V | SPI; EXTMODE em GND (VCOM por software) |
+| U$16 | Sharp LS027B7DH01 (conector FPC) | LCD de memória 400 × 240, 5 V | SPI; EXTMODE e EXTCOMIN em GND por 10 kΩ (R13, R16), DISP no VCC por 10 kΩ e 0,1 µF (R17, C43): VCOM por software, tela sempre acesa |
 | IC3 | Bosch BME280 | pressão e temperatura | I2C 0x76 |
 | U1 | NXP FXOS8700CQ | acelerômetro e magnetômetro | I2C 0x1E; INT1; RST ativo alto sem resistor |
 | U$6 | ST STC3100 | medidor de bateria e **latch de energia** (IO0) | I2C 0x70; shunt R15 |

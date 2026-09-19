@@ -27,7 +27,18 @@
 #define LV_DRAW_BUF_ALIGN           4
 #define LV_USE_DRAW_SW              1
 #define LV_DRAW_SW_COMPLEX          1
+/* RGB565 is the only picture format; A8 stays for the masks of the letters */
 #define LV_DRAW_SW_SUPPORT_RGB565   1
+#define LV_DRAW_SW_SUPPORT_RGB565_SWAPPED       0
+#define LV_DRAW_SW_SUPPORT_RGB565A8             0
+#define LV_DRAW_SW_SUPPORT_RGB888               0
+#define LV_DRAW_SW_SUPPORT_XRGB8888             0
+#define LV_DRAW_SW_SUPPORT_ARGB8888             0
+#define LV_DRAW_SW_SUPPORT_ARGB8888_PREMULTIPLIED 0
+#define LV_DRAW_SW_SUPPORT_L8                   0
+#define LV_DRAW_SW_SUPPORT_AL88                 0
+#define LV_DRAW_SW_SUPPORT_A8                   1
+#define LV_DRAW_SW_SUPPORT_I1                   0
 
 #define LV_USE_LOG                  1
 #define LV_LOG_LEVEL                LV_LOG_LEVEL_WARN
@@ -38,10 +49,12 @@
 #define LV_USE_ASSERT_STYLE         1
 #define LV_USE_ASSERT_OBJ           1
 
-/* No built-in font: the interface brings its own 1-bpp fonts */
+/* The interface brings its own 1-bpp fonts and sets one on every label; the
+ * default is the smallest built-in font, as CONFIG_LV_FONT_DEFAULT_UNSCII_8
+ * in the firmware (a label without its font would show it) */
 #define LV_FONT_MONTSERRAT_14       0
-#define LV_FONT_CUSTOM_DECLARE      LV_FONT_DECLARE(ui_font_r12)
-#define LV_FONT_DEFAULT             &ui_font_r12
+#define LV_FONT_UNSCII_8            1
+#define LV_FONT_DEFAULT             &lv_font_unscii_8
 
 #define LV_USE_THEME_DEFAULT        0
 #define LV_USE_THEME_SIMPLE         0
@@ -79,6 +92,7 @@
 #define LV_USE_TABVIEW              0
 #define LV_USE_TILEVIEW             0
 #define LV_USE_WIN                  0
+#define LV_USE_ARCLABEL             0
 
 #define LV_BUILD_EXAMPLES           0
 #define LV_BUILD_DEMOS              0

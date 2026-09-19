@@ -25,7 +25,8 @@ Por baixo, em `zephyr_app/tests/host/`: `cmake --preset host-tests`, `cmake --bu
 python tools/ui/render_screens.py      # compila o LVGL do NCS e a src/ui no PC, desenha e confere as telas
 ```
 
-- Passa com `0 problems`: nenhum pixel colorido no tema preto e branco, nenhum texto fora da caixa, navegação e ações dos menus como o esperado. Reporte o número de quadros e o pico do heap do LVGL que ele imprime.
+- Passa com `0 problems`: nenhum pixel colorido no tema preto e branco, nenhum texto fora da caixa, navegação e ações dos menus como o esperado. Reporte o número de quadros e os picos de heap do LVGL e de pilha que ele imprime.
+- As imagens em `docs/telas/` não podem mudar sem motivo: depois de mexer no LVGL, no `lv_conf.h` ou no header de quantização (`memlcd_pixel.h`), `git status docs/telas` precisa mostrar só o que você quis mudar.
 - Usa o mesmo GCC dos testes de host (shell limpo, sem o `ncs_env.sh`); o build fica em `build/ui`.
 - A formatação dos números tem conjunto de host próprio (`test_ui_fmt`), com o oráculo `legacy_fmkstr` e `legacy_secjmkstr` em `support/legacy_ref.h`.
 

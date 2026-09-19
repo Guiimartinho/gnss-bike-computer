@@ -1,0 +1,9 @@
+# Drivers of the GNSS bike computer that the Zephyr of the NCS does not have:
+# the memory-in-pixel display in portrait (JDI LPM027M128B and LPM027M128C,
+# Sharp LS027B7DH01). Added by zephyr_app/CMakeLists.txt to every build.
+name: gnss_drivers
+build:
+  cmake: .
+  kconfig: Kconfig
+  settings:
+    dts_root: .

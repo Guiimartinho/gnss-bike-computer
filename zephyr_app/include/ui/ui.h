@@ -145,6 +145,9 @@ void ui_notify(const char *title, const char *text, const char *value, bool valu
 /** Force a screen: system screens (boot, USB, shutdown) and the host renderer */
 void ui_show(ui_screen_t screen);
 
+/** Leave a system screen (USB) for the page of the mode */
+void ui_show_pages(void);
+
 /** Progress of the shutdown screen, 0..100 */
 void ui_set_progress(uint8_t pct);
 

@@ -18,6 +18,8 @@
  * the V3 is an NMEA module (gnss-nmea-generic), the BME280 is the barometer
  * and the FXOS8700 gives the accelerometer and the magnetometer. The STC3100
  * fuel gauge has no Zephyr driver, so the V3 target has no battery reading.
+ * The LS027 is the chosen display and the node label longpress gives the
+ * keys to the interface (docs/18).
  */
 
 #include <zephyr/dt-bindings/input/input-event-codes.h>
@@ -46,7 +48,20 @@
         };
     };
 
-    buttons {
+    /*
+     * The three keys: short on release before 1 s, long after 1 s held
+     * (docs/18, Botões); the interface reads the codes of this node only.
+     */
+    longpress: longpress {
+        compatible = "zephyr,input-longpress";
+        input = <&v3_buttons>;
+        input-codes = <INPUT_KEY_LEFT>, <INPUT_KEY_ENTER>, <INPUT_KEY_RIGHT>;
+        short-codes = <INPUT_KEY_LEFT>, <INPUT_KEY_ENTER>, <INPUT_KEY_RIGHT>;
+        long-codes = <INPUT_KEY_HOME>, <INPUT_KEY_MENU>, <INPUT_KEY_END>;
+        long-delay-ms = <1000>;
+    };
+
+    v3_buttons: buttons {
         compatible = "gpio-keys";
         button0: button_0 {
             gpios = <&gpio0 14 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
@@ -138,7 +153,15 @@
     };
 };
 
-/* SPI1 - LCD LS027 */
+/*
+ * SPI1 - LCD LS027B7DH01, 5 V from the REG710 (U$16 of the V3). On the V3
+ * EXTMODE and EXTCOMIN go to GND through 10k (R13, R16) and DISP to VCC
+ * through 10k and 0.1 uF (R17, C43): no pins, and the driver of
+ * modules/gnss_drivers inverts the VCOM by the serial bit, as the legacy.
+ * Timing (LS027B7DH01 6-3): 2 MHz at most, chip select active high, 3 us
+ * before the first clock and 1 us after the last (2 us here, margin for the
+ * 220 us the chip select stays high in a one-line update).
+ */
 &spi1 {
     compatible = "nordic,nrf-spim";
     status = "okay";
@@ -147,11 +170,12 @@
     pinctrl-names = "default", "sleep";
     cs-gpios = <&gpio0 17 GPIO_ACTIVE_HIGH>;
 
-    ls027: ls027b4dh01@0 {
-        compatible = "sharp,ls0xx";
+    ls027: display@0 {
+        compatible = "sharp,ls027b7dh01";
         reg = <0>;
         spi-max-frequency = <2000000>;
-        label = "LS027";
+        spi-cs-setup-delay-ns = <3000>;
+        spi-cs-hold-delay-ns = <2000>;
         width = <400>;
         height = <240>;
     };

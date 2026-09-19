@@ -15,11 +15,14 @@ Desde 2026-09-19 (`docs/05-arquitetura-zephyr.md`): um serviço por assunto, cad
 | `model` | 5 | 4096 B | caixa de entrada, 1 s | escrever o modelo (é o único), Kalman, segmentos, zonas, máquina de modos, publicar `model_state` e `log_point` |
 | `gnss` | 6 | 2048 B | caixa de entrada | seguir o modo e o desligamento |
 | `radio` | 6 | 3072 B | caixa de entrada | subir ANT e BLE, atualizar o BAS |
-| `ui` | 7 | 2048 B | caixa de entrada | a tela (LVGL no passo da interface) |
+| `ui` | 7 | 6144 B | caixa de entrada, timer do LVGL, 1 s | a única que chama o LVGL e as funções `ui_*`; luz e COM |
 | `storage` | 8 | 3584 B | caixa de entrada | FatFs, log, segmentos, percursos |
 | `power` | 9 | 2048 B | caixa de entrada, 1 s | máquina de sistema, desligamento |
 | workqueue do modem | do sistema | 2048 B | bytes do receptor | driver GNSS; os callbacks do serviço só convertem e publicam |
 | RX do BT | cooperativa | 3072 B | rádio | clientes BLE; os callbacks só publicam |
+| entrada | 0 | 2048 B | teclas | o callback de `ui_input.c` só publica `input` |
+| workqueue do sistema | do sistema | 2048 B | trabalhos | debounce das teclas; na V3, o VCOM serial da tela (tenta de novo em 5 ms se um quadro está saindo) |
+| timer do EXTCOMIN | ISR | pilha de ISR | meio período do COM | só troca o pino |
 | ISRs | IRQ | pilha de ISR | — | ficam nos drivers do Zephyr; só sinalizam |
 
 O legacy era cooperativo (nada preemptava uma task no meio de uma estrutura); aqui tudo é preemptivo, e o estado compartilhado virou cópia.

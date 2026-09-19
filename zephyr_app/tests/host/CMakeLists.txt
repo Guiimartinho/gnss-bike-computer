@@ -48,6 +48,7 @@ target_include_directories(host_env INTERFACE
     ${CMAKE_CURRENT_SOURCE_DIR}/shim
     ${CMAKE_CURRENT_SOURCE_DIR}/support
     ${APP_DIR}/include
+    ${APP_DIR}/modules/gnss_drivers/include
 )
 target_compile_definitions(host_env INTERFACE GNSS_HOST_TEST=1)
 # Same warning set as zephyr_app/CMakeLists.txt, plus -Werror.
@@ -89,6 +90,9 @@ gnss_add_test(test_suffer_score SOURCES model/suffer_score.c)
 gnss_add_test(test_sd_logger SOURCES model/sd_logger.c SUPPORT host_kernel.c host_fs.c)
 gnss_add_test(test_ui_fmt SOURCES ui/ui_fmt.c)
 gnss_add_test(test_tilt SOURCES svc/sensors/tilt.c)
+gnss_add_test(test_backlight SOURCES svc/ui/backlight.c)
+# The display driver lives in a Zephyr module next to src/
+gnss_add_test(test_memlcd SOURCES ../modules/gnss_drivers/drivers/display/memlcd_frame.c)
 gnss_add_test(test_power_scheduler
     SOURCES model/power_scheduler.c
     SUPPORT host_kernel.c)

@@ -56,4 +56,6 @@ target_compile_options(ui PRIVATE
 
 add_executable(ui_render ui_render.c ui_samples.c)
 target_link_libraries(ui_render PRIVATE ui m)
+# The pixel rules of the display driver (quantisation to the panel colours)
+target_include_directories(ui_render PRIVATE ${APP_DIR}/modules/gnss_drivers/include)
 target_compile_options(ui_render PRIVATE -Wall -Wextra -Wno-unused-parameter -Werror)

@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+  JDI LPM027M128B 2.7" memory-in-pixel LCD, 400 x 240, 8 colours (1 bit per
+  channel), reflective, without a light of its own: the panel of the new
+  board. SPI with the most significant bit first and the chip select active
+  high (LPM027M128B specification, section 6): 6 mode bits (M0 update, M1
+  COM, M2 all clear, M3-M4 data width), a 10-bit line address, 400 pixels of
+  3 bits in red, green, blue order (low is black), and 16 clocks after the
+  last line. Driven in 3-bit mode. Signals at the level of its VDD (3.0 V
+  typical, high above VDD - 0.1 V). DISP low shows solid black and keeps
+  the pixel memory.
+
+compatible: "jdi,lpm027m128b"
+
+include: memlcd-common.yaml

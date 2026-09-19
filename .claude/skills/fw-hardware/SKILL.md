@@ -30,7 +30,8 @@ Referência completa: `docs/02-hardware.md`. Fonte de verdade da pinagem: `hardw
 3. **Pinctrl herdado do DK**: um grupo do DK pode deixar propriedades (`bias-pull-up`) no seu grupo; use `/delete-property/`. O `uart0` do console ficou só com TX/RX.
 4. **Sensores e receptor com driver do Zephyr**: configure pelo devicetree e pelo Kconfig do driver, não por registradores no app. O `reset-gpios` do FXOS garante o reset antes do `main()`.
 5. **`gpio-keys` só para teclas**: com o subsistema de entrada, todo nó `gpio-keys` vira teclado. Não use `gpio-keys` para dar nome a pinos (os nós falsos da V3 saíram em 2026-09-19).
-6. **O código não cita instâncias do SoC** (`uart1`, `i2c0`, `spi1`): os serviços acham os dispositivos pelos aliases `gnss`, `baro0`, `imu0`, `mag0`, `light0`, `watchdog0`, pelo disco `SD` (`zephyr,sdmmc-disk`) e, na energia, por `pmic-regulators`. Cada placa define esses nomes no overlay dela; um alias ausente deixa o serviço sem o dispositivo.
+6. **O código não cita instâncias do SoC** (`uart1`, `i2c0`, `spi1`): os serviços acham os dispositivos pelos aliases `gnss`, `baro0`, `imu0`, `mag0`, `light0`, `watchdog0`, `backlight` (PWM da luz da tela), pelo disco `SD` (`zephyr,sdmmc-disk`), pela tela escolhida (`zephyr,display`), pelas teclas (nó com rótulo `longpress`, `zephyr,input-longpress` sobre os `gpio-keys`) e, na energia, por `pmic-regulators`. Cada placa define esses nomes no overlay dela; um alias ausente deixa o serviço sem o dispositivo.
+7. **Tela** (`docs/05-arquitetura-zephyr.md#tela`): nó `jdi,lpm027m128b` (ou `sharp,ls027b7dh01`) no SPI, com `cs-gpios` **ativo alto**, `spi-cs-setup-delay-ns`/`spi-cs-hold-delay-ns` da ficha, `disp-gpios`, `extcomin-gpios` (sem ele, VCOM pelo SPI) e `power-gpios` quando a placa corta a alimentação do painel. O JDI quer os sinais em 3,0 V.
 7. Depois de mexer: build, `grep` no `zephyr.dts` gerado para cada pino alterado e registro em `docs/02-hardware.md`.
 
 ## Alimentação e latch

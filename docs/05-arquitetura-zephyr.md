@@ -5,7 +5,7 @@ Como o `zephyr_app/` está organizado desde 2026-09-19: um serviço por assunto,
 > [!IMPORTANT]
 > Build verificado nos dois alvos (nRF52840 DK e nRF54LM20 DK, com e sem ANT) e testes de host; **nada rodou em placa**.
 
-**Nesta página:** [Camadas](#camadas) · [Boot](#boot) · [Threads](#threads) · [Eventos](#eventos) · [Máquinas de estado](#máquinas-de-estado) · [Watchdog](#watchdog) · [Fluxo de dados](#fluxo-de-dados) · [Pilhas](#pilhas) · [Módulos](#módulos) · [Devicetree e alvos](#devicetree-e-alvos) · [Configuração](#configuração) · [Regras de concorrência](#regras-de-concorrência)
+**Nesta página:** [Camadas](#camadas) · [Boot](#boot) · [Threads](#threads) · [Eventos](#eventos) · [Máquinas de estado](#máquinas-de-estado) · [Watchdog](#watchdog) · [Fluxo de dados](#fluxo-de-dados) · [Pilhas](#pilhas) · [Tela](#tela) · [Módulos](#módulos) · [Devicetree e alvos](#devicetree-e-alvos) · [Configuração](#configuração) · [Regras de concorrência](#regras-de-concorrência)
 
 ## Camadas
 
@@ -32,16 +32,25 @@ flowchart TB
         BLE["ble_manager e clientes"]
         ANTN["ant (só com ANT=1)"]
     end
+    subgraph UIX["src/ui: telas"]
+        SCRS["telas, campos, textos, tema<br/>o mesmo código do renderizador de host"]
+    end
     subgraph Z["Zephyr e NCS v3.3.0"]
-        ZAPI["zbus, SMF, task_wdt, GNSS, sensores, FatFs,<br/>settings, BT host e SoftDevice Controller"]
+        ZAPI["zbus, SMF, task_wdt, GNSS, sensores, FatFs,<br/>settings, LVGL, entrada, BT host e SoftDevice Controller"]
+    end
+    subgraph DRV["modules/gnss_drivers"]
+        MEM["memlcd: JDI LPM027M128B e C,<br/>Sharp LS027B7DH01, em retrato"]
     end
     MAIN --> SVC
     SVC --> CHAN
     MOD --> MODEL
     STO --> MODEL
     RAD --> RF
+    UIS --> UIX
+    UIX --> ZAPI
     SVC --> ZAPI
     RF --> ZAPI
+    ZAPI --> MEM
 ```
 
 - Um serviço nunca chama outro: publica num canal, e quem precisa escuta. As chamadas só descem, para o modelo e para o Zephyr.
@@ -65,7 +74,8 @@ sequenceDiagram
     M-->>M: retorna (a thread main termina)
 ```
 
-- Os drivers do Zephyr (sensores, receptor GNSS, cartão) iniciam antes do `main()`; um que não responde fica fora, e o serviço dele segue sem ele.
+- Os drivers do Zephyr (sensores, receptor GNSS, cartão, tela) iniciam antes do `main()`; um que não responde fica fora, e o serviço dele segue sem ele. O driver da tela limpa a memória do painel (all clear) e liga o COM; o LVGL inicia logo depois (`CONFIG_LV_Z_AUTO_INIT`), ainda sem desenhar.
+- A thread `ui` monta a tela de partida, desenha e só então acende a imagem (`display_blanking_off()`, pino DISP); o primeiro retrato do modelo leva à página do modo.
 - O `model_svc_init()` roda antes das threads porque o `segment_init()` zera os segmentos: se rodasse depois, apagaria o que o armazenamento acabou de carregar.
 - O armazenamento monta o cartão, carrega os segmentos e publica o que achou; o modelo só usa os segmentos depois dessa mensagem.
 
@@ -79,13 +89,15 @@ Prioridade no Zephyr: número menor ganha. Pilhas medidas (ver [Pilhas](#pilhas)
 | `model` | `src/svc/model/model_svc.c` | 5 | 4096 B | caixa de entrada; ao menos 1 vez por segundo | o único escritor do modelo: `attitude` e o Kalman, segmentos, zonas, percurso, máquina de modos; publica o retrato da tela e o ponto do log |
 | `gnss` | `src/svc/gnss/gnss_svc.c` | 6 | 2048 B | caixa de entrada | segue o modo (dorme em FEC e Zwift) e o desligamento |
 | `radio` | `src/svc/radio/radio_svc.c` | 6 | 3072 B | caixa de entrada | sobe o ANT (com `ANT=1`) e o BLE, liga os clientes aos canais, atualiza o nível da bateria no BLE |
-| `ui` | `src/svc/ui/ui_svc.c` | 7 | 2048 B | caixa de entrada | guarda o último retrato; o LVGL e o driver da tela chegam no passo da interface |
+| `ui` | `src/svc/ui/ui_svc.c` | 7 | 6144 B | caixa de entrada, o próximo timer do LVGL; ao menos 1 vez por segundo | a única que chama o LVGL: telas do retrato, teclas, notificações, telas de USB e de desligamento, luz e COM; o driver manda ao painel só as linhas que mudaram |
 | `storage` | `src/svc/storage/storage_svc.c` | 8 | 3584 B | caixa de entrada | monta o cartão, carrega segmentos, lista percursos, grava o log de atividade |
 | `power` | `src/svc/power/power_svc.c` | 9 | 2048 B | caixa de entrada; tique de 1 s | máquina de sistema, desligamento automático, ship mode ou System OFF, `power_status` |
 | workqueue do modem | Zephyr (`CONFIG_MODEM_DEDICATED_WORKQUEUE`) | do sistema | 2048 B | bytes do receptor | o driver GNSS interpreta e chama os callbacks do serviço, que publicam `gnss_fix` e `gnss_sky` |
 | RX do BT | Zephyr | cooperativa | 3072 B | pacotes do rádio | os clientes BLE chamam os callbacks do serviço de rádio, que publicam `ext_sensor` e `link_status` |
+| entrada | Zephyr (`CONFIG_INPUT_THREAD_STACK_SIZE`) | 0 | 2048 B | eventos das teclas | o `zephyr,input-longpress` separa toque curto e longo; o callback de `src/svc/ui/ui_input.c` publica `input` |
+| workqueue do sistema | Zephyr | do sistema | 2048 B | trabalhos | o debounce das teclas e, na V3, o VCOM serial da tela |
 
-Ficam por conta do Zephyr e do NCS: o log, o TX do BT, o MPSL, o workqueue do sistema e o idle.
+Ficam por conta do Zephyr e do NCS: o log, o TX do BT, o MPSL e o idle.
 
 ## Eventos
 
@@ -106,11 +118,11 @@ Cada serviço tem uma **caixa de entrada**, uma `k_msgq` estática que um listen
 | `chan_power_status` | bateria e carga, a cada 60 s e quando muda | energia | modelo, rádio |
 | `chan_system_cmd` | os pedidos da interface (modo, desligar, parear, FTP, zoom, formatar, MSC) | interface e serviços | cada serviço filtra os seus |
 | `chan_system_state` | Partida, Ligado, MSC, Desligando, Desligado | energia | todos |
-| `chan_mode` | modo em vigor | modelo | energia, GNSS |
-| `chan_shutdown_ack` | um serviço terminou a sua parte do desligamento | serviços | energia |
+| `chan_mode` | modo em vigor | modelo | energia, GNSS, interface |
+| `chan_shutdown_ack` | um serviço terminou a sua parte do desligamento | serviços | energia, interface (progresso na tela) |
 | `chan_notif` | notificação da tela | qualquer um | interface |
 | `chan_log_point` | um ponto do log por época | modelo | armazenamento |
-| `chan_input` | tecla e tipo de toque | teclado | interface |
+| `chan_input` | tecla e tipo de toque | callback das teclas, na thread da entrada | interface |
 | `chan_storage_info` | cartão montado, segmentos carregados, percursos | armazenamento | modelo |
 | `chan_model_state` | o retrato da tela (`ui_model_t`, [18](18-interface-telas.md#implementação)) | modelo | interface |
 
@@ -122,6 +134,7 @@ As mensagens estão em `zephyr_app/include/app/app_events.h`, em C sem tipos do 
 |---|---|---|---|
 | Sistema e energia | `src/svc/power/sys_fsm.c` | Partida, Ligado e MSC sob um pai comum que aceita o desligamento; Desligando espera a resposta de cada serviço por até 5 s; Desligado corta a energia (ship mode do nPM1300 sem VBUS, System OFF com VBUS ou sem PMIC) | `test_sys_fsm` (16 casos), com o `lib/smf/smf.c` do Zephyr |
 | Modo | `src/svc/model/model_svc.c` | CRS, PRC, FEC, Zwift, DBG, com as entradas e saídas de `boucle__change_mode()` (`legacy/source/model/Boucle.cpp:101-143`): PRC inicia o percurso carregado e o para ao sair, FEC zera as zonas e o score | pelo build; sem teste de host |
+| Luz da tela | `src/svc/ui/backlight.c` | Apagada, Temporária (10 s depois de uma tecla) e Automática (pouca luz ambiente, com histerese entre 20 e 50 lux); desligada pelo menu, nada a acende; limites a acertar na bancada | `test_backlight` (11 casos) |
 
 O desligamento automático é o do legacy (`legacy/source/scheduling/power_scheduler.cpp`): cada posição com fix em CRS, PRC e DBG, e cada dado do rolo em FEC, reinicia a contagem de 15 min (`src/model/power_scheduler.c`, `test_power_scheduler`). Diagramas das máquinas em [16](16-arquitetura-firmware.md#máquinas-de-estado).
 
@@ -146,7 +159,11 @@ flowchart LR
     GS -->|"gnss_fix, gnss_sky"| MOD["model_svc<br/>attitude, Kalman, segmentos,<br/>zonas, percurso"]
     SS -->|"baro, imu, mag"| MOD
     RS -->|"ext_sensor, link_status"| MOD
-    MOD -->|"model_state"| UI["ui_svc"]
+    MOD -->|"model_state"| UI["ui_svc<br/>LVGL e luz"]
+    KEY["botões<br/>gpio-keys e longpress"] -->|"input"| UI
+    UI -->|"system_cmd"| MOD
+    UI --> DRVM["driver memlcd<br/>quantiza e manda<br/>as linhas que mudaram"]
+    DRVM --> PAN[("painel")]
     MOD -->|"log_point"| ST["storage_svc<br/>sd_logger"]
     ST --> FS[("FatFs no cartão")]
     ST -->|"storage_info"| MOD
@@ -168,13 +185,16 @@ Medidas com `CONFIG_STACK_USAGE=y` (arquivos `.su` do GCC) em 2026-09-19, no bui
 | `sensors` | `sensors_thread` 168 + leitura I2C (`i2c_nrfx_twim_msg_transfer` 56) + publicação no zbus (`zbus_chan_pub` 56, `_zbus_vded_exec` 104, listener até 80, `k_msgq_put`) | ~0,9 KB | 2048 B | ~1,1 KB |
 | `power` | estado novo pelo SMF (`smf_set_state` 64) + publicação no zbus (~0,4 KB) + log; ou o `LOG_PANIC` do desligamento (`z_cbvprintf_impl` 160) | ~0,85 KB | 2048 B | ~1,2 KB |
 | `gnss` | publicação no zbus e log | ~0,7 KB | 2048 B | ~1,3 KB |
-| `ui` | leitura do canal e log | ~0,6 KB | 2048 B | ~1,4 KB |
+| `ui` | `ui_thread` 136 + `lv_timer_handler` 40 + `lv_display_refr_timer` 144 + `refr_area` 88 + 4 níveis da árvore de objetos × (`lv_obj_refr` 272 + `lv_obj_redraw` 352) + evento de desenho ~0,3 KB + arco (`ui_draw_disc` 200, `lv_draw_arc` 128, `lv_draw_sw_arc` 600, máscara e mistura ~0,4 KB) | ~4,7 KB | 6144 B | ~1,4 KB |
+| entrada | `input_thread` 40 + `ui_keys_cb` 16 + publicação no zbus (`zbus_chan_pub` 56, `ui_listener` 80, `app_inbox_put` 56) + log | ~0,9 KB | 2048 B | ~1,1 KB |
+| workqueue do sistema | VCOM serial da V3: `com_work_handler` 16 + `send_mode` 32 + `spi_nrfx_transceive` 128 + `nrfx_spim_xfer` 40 + espera + log | ~1,0 KB | 2048 B | ~1,0 KB |
 | workqueue do modem | interpretação NMEA (`modem_chat_process_handler` 64, `gnss_nmea0183_parse_rmc`) + `gnss_data_cb` 72 + publicação | ~0,9 KB | 2048 B | ~1,1 KB |
 | `main` | `settings_zms_save` 144 e o ZMS, ou `zms_mount` 232, com log | ~0,8 KB | 2048 B | ~1,2 KB |
 
-- O workqueue do sistema, de 1024 B, ficaria com ~170 B de folga com os callbacks do GNSS: por isso o modem ganhou workqueue próprio.
+- O workqueue do sistema, de 1024 B, ficaria com ~170 B de folga com os callbacks do GNSS: por isso o modem ganhou workqueue próprio. Com o VCOM serial da tela (V3), o workqueue do sistema subiu para 2048 B.
 - A thread RX do BT subiu de 2200 para 3072 B, pelos ~0,45 KB que a publicação dos clientes acrescenta.
-- A tela com o LVGL muda a pilha da `ui` no passo da interface.
+- O desenho do LVGL é recursivo: cada nível da árvore de objetos (tela, célula, campo, rótulo) custa 624 B. O log interno do LVGL fica desligado no firmware, porque `lv_log_add()` sozinho tem 848 B de quadro e cairia no fundo dessa cadeia; o renderizador de host o mantém ligado.
+- No PC, o renderizador de host mede a pilha das telas pintando-a: 7.359 B em x86-64 (ponteiros de 8 B e 32 B de sombra por chamada no Windows), cota superior do que o Cortex-M33 gasta ([12](12-ferramentas-testes.md#renderizador-de-telas)).
 - Na placa, confirme com `CONFIG_THREAD_ANALYZER=y`.
 
 ```sh
@@ -183,6 +203,36 @@ cd zephyr_app
 python -m west build -p always -b nrf54lm20dk/nrf54lm20a/cpuapp -d build_su --no-sysbuild . -- -DCONFIG_STACK_USAGE=y
 find build_su -name "*.su" -exec cat {} + | sort -t$'\t' -k2 -rn | head -40
 ```
+
+## Tela
+
+O driver de `modules/gnss_drivers/drivers/display/memlcd.c` atende os painéis de memória de 2,7" pela API de tela do Zephyr ([18](18-interface-telas.md#framework)). O Zephyr do NCS não tem driver para o LPM027M128B (o `jdi,lpm013m126` limita a tela a 255 px e usa outro cabeçalho), e o `sharp,ls0xx` não gira a tela.
+
+```mermaid
+flowchart LR
+    LV["LVGL<br/>áreas em RGB565<br/>240 × 400"] -->|"display_write"| BL["memlcd_frame_blit<br/>gira 90°, quantiza,<br/>marca as linhas"]
+    BL --> FB[("quadro no formato do fio<br/>JDI 36.482 B · Sharp 12.482 B")]
+    LV -->|"último pedaço do quadro"| TX["send_frame<br/>trechos de linhas seguidas<br/>num envio SPI"]
+    FB --> TX
+    TX --> PNL["painel"]
+    COM["COM: EXTCOMIN por timer<br/>ou VCOM serial"] --> PNL
+```
+
+| Item | Como funciona | Fonte |
+|---|---|---|
+| Retrato | o LVGL desenha 240 × 400; o ponto (x, y) vai para a coluna y da linha 239 − x, como o `drawPixel()` da V3 com `setRotation(3)` | [08](08-interface.md#pipeline-de-desenho) |
+| Cores | cada pixel RGB565 passa pela regra de [18](18-interface-telas.md#implementação) (`memlcd_pixel.h`, a mesma do renderizador de host): 8 cores no JDI; preto e branco na Sharp, com a cor pela luminância | `memlcd_rgb565_to_rgb3()`, `memlcd_rgb565_to_mono()` |
+| Quadro | cada linha fica na memória com os bytes de endereço em volta dos pixels; um trecho de linhas seguidas vai num buffer só do SPI, até 16 trechos por quadro (com mais, o último cresce sobre a lacuna) | `memlcd_frame.h` |
+| JDI | SPI com o bit mais significativo primeiro; por linha, 6 bits de modo (M0 alto, 3 bits por pixel) e 10 de endereço (linha 1 a 240), 150 B de pixels em vermelho, verde e azul; 16 clocks no fim; all clear com M2 | ficha do LPM027M128B, 6.2, 6.8 e 8 |
+| Sharp | SPI com o bit menos significativo primeiro; byte de modo, e por linha o endereço, 50 B (1 é branco) e um byte vazio; mais um byte no fim | ficha do LS027B7DH01, 6-5 |
+| COM | com `extcomin-gpios`, um timer do kernel troca o pino (cada subida inverte o COM); sem ele, o bit M1 vai num comando pelo SPI a cada inversão. Inversões por segundo: `extcomin-frequency` na partida, 1 a 20 na Sharp e 1 a 140 no JDI por `memlcd_set_com_hz()` | fichas: JDI 4.2 e 7; Sharp 6-3 |
+| Partida | alimentação (`power-gpios`), all clear, 2 ms, COM; o DISP sobe no `display_blanking_off()`, com 200 µs para as travas e a polaridade do COM | JDI 4.3; Sharp 6-2 |
+| Desligamento | `memlcd_power_off()`: all clear, DISP baixo, 50 µs, COM parado, alimentação cortada | JDI 4.3 (T5 a T7) |
+| Chip select | ativo alto; atrasos em volta dele pelo devicetree (`spi-cs-setup-delay-ns`, `spi-cs-hold-delay-ns`) | JDI 4.2; Sharp 6-3 |
+
+- O JDI com DISP baixo mostra preto e guarda a memória (ficha, 1.4); a Sharp apaga.
+- Teste de host: `test_memlcd` (19 casos) confere a quantização, a rotação, o empacotamento de cada painel, o formato do quadro (12.482 B da Sharp, os 10 bits de endereço do JDI), as linhas marcadas e os trechos ([12](12-ferramentas-testes.md#testes-de-host-do-port)).
+- Não testado em painel: SPI, COM, tempos e cores ficam para a bancada.
 
 ## Módulos
 
@@ -195,10 +245,11 @@ find build_su -name "*.su" -exec cat {} + | sort -t$'\t' -k2 -rn | head -40
 | `src/svc/radio/` | `radio_svc.c` | ANT e BLE, clientes para eventos |
 | `src/svc/storage/` | `storage_svc.c` | cartão, log, segmentos, percursos |
 | `src/svc/model/` | `model_svc.c`, `model_ui.c` | a thread do modelo e o retrato da tela |
-| `src/svc/ui/` | `ui_svc.c` | a thread da tela |
+| `src/svc/ui/` | `ui_svc.c`, `ui_input.c`, `backlight.c` | a thread da tela; as teclas para o zbus; a máquina de estado da luz ([16](16-arquitetura-firmware.md#luz-do-display)) |
 | `src/model/` | `attitude`, `kalman_altitude`, `udmatrix`, `kalman`, `locator`, `loc_source`, `segment`, `liste_points`, `vecteur`, `parcours`, `power_zone`, `suffer_score`, `rr_zone`, `sd_logger`, `crash_recovery`, `user_settings`, `power_scheduler` | os algoritmos do legacy |
 | `src/rf/` | `ble/ble_manager.c`, `ble_nus.c`, `ble_lns.c`, `ble_*_client.c`, `ant/ant.c` | BLE (scan ainda não iniciado) e ANT (só com `ANT=1`) |
-| `src/ui/`, `include/ui/` | interface LVGL da placa nova ([18](18-interface-telas.md)) | ainda só no renderizador de host (`tests/ui`) |
+| `src/ui/`, `include/ui/` | interface LVGL da placa nova ([18](18-interface-telas.md)) | a mesma no firmware e no renderizador de host (`tests/ui`) |
+| `modules/gnss_drivers/` | `drivers/display/memlcd.c`, `memlcd_frame.c`, `include/drivers/display/memlcd*.h`, `dts/bindings/display/` | driver da tela, um módulo do Zephyr dentro da aplicação ([Tela](#tela)) |
 
 Saíram em 2026-09-19, substituídos pelas APIs do Zephyr ou pelos serviços: o HAL próprio (`src/hal`), os drivers da V3 (`ls027`, `baro`, `fxos`, `stc3100`, `gps_mgmt`, `nmea_parser`, `gps_epo`, `neopixel`), a interface em paisagem (`src/vue`), a USB da pilha antiga (`src/usb`), os stubs do sistema de arquivos (`src/utils`), o `boucle`, o `model_lock`, o `zwift` (protocolo próprio, não o do legacy) e o `baro_drift` (duplicado).
 
@@ -216,9 +267,13 @@ A placa vem do `-b` (variável `BOARD` dos scripts); o Zephyr aplica `boards/<pl
 | `watchdog0` | watchdog | `wdt31`, ligado no overlay | `wdt0` |
 | disco `SD` | armazenamento | `sdhc-spi-slot` no `spi00` (SCK P2.01, MOSI P2.02, MISO P2.04, CS P2.03); a flash MX25R64 do DK sai do devicetree | `sdhc-spi-slot` no `spi2` (MOSI P0.25, CS P0.26, SCK P0.27, MISO P0.28) |
 | `zephyr,console` | log | `uart20`, VCOM0 do DK | `uart0` (TX P0.06, RX P0.08), só no DK |
+| `zephyr,display` | interface | JDI LPM027M128B (`jdi,lpm027m128b`) no `spi22` (SCK P3.03, MOSI P3.00, CS P3.02 ativo alto), DISP P3.05, EXTCOMIN P3.06 | Sharp LS027B7DH01 (`sharp,ls027b7dh01`) no `spi1` (SCK P0.15, MOSI P0.16, CS P0.17 ativo alto), VCOM serial |
+| rótulo `longpress` | interface | botões 0, 1 e 2 do DK (`INPUT_KEY_0` a `INPUT_KEY_2`) | B1 P0.14, B2 P0.13, B3 P0.11 (`INPUT_KEY_LEFT`, `ENTER`, `RIGHT`) |
+| `backlight` | interface | LED 1 do DK no `pwm20`, no lugar da luz da tela | — (a V3 não tem luz) |
 
 - O nRF52840 DK não tem leitura de bateria: o STC3100 da V3 não tem driver no Zephyr. A V3 existe só como esquema.
-- Os três botões da V3 estão como `gpio-keys` com códigos de tecla, para o subsistema de entrada do passo da interface; os nós falsos de `gpio-keys` que davam nomes a pinos do GPS, do IMU e do NeoPixel saíram, porque o subsistema de entrada os trataria como teclas.
+- Os três botões são `gpio-keys` com códigos de tecla; o nó `longpress` (`zephyr,input-longpress`, 1 s) gera o toque curto (esquerda, `ENTER`, direita) ao soltar e o longo (`HOME`, `MENU`, `END`) depois de 1 s apertado. Os nós falsos de `gpio-keys` que davam nomes a pinos do GPS, do IMU e do NeoPixel saíram, porque o subsistema de entrada os trataria como teclas.
+- O JDI quer os sinais no nível do VDD dele (3,0 V; alto acima de VDD − 0,1 V, ficha do LPM027M128B, 3.1): o I/O do DK precisa estar em 3,0 V, ou os sinais precisam de tradutor de nível. Na V3, a Sharp tem EXTMODE e EXTCOMIN em GND por 10 kΩ (R13, R16) e DISP no VCC por 10 kΩ e 0,1 µF (R17, C43), conferido no esquema: o driver inverte o VCOM pelo SPI, como o legacy.
 - Nós do DK desligados no overlay da V3 porque ocupam pinos da placa: `qspi` e `mx25r64`, `spi3`, `pwm0`; o `uart0` perdeu RTS/CTS. Detalhes em [02-hardware.md](02-hardware.md).
 - `boards/nrf54lm20dk_nrf54lm20a_cpuapp.conf` troca o NVS pelo ZMS: a NVM do nRF54L é RRAM, e a Nordic recomenda o ZMS nela.
 - Build do nRF54LM20 DK: `BOARD=nrf54lm20dk/nrf54lm20a/cpuapp bash tools/fw/fw.sh build`.
@@ -228,10 +283,10 @@ A placa vem do `-b` (variável `BOARD` dos scripts); o Zephyr aplica `boards/<pl
 
 | Arquivo | O que define |
 |---|---|
-| `prj.conf` | zbus e SMF, `task_wdt` com 8 canais, `CONFIG_POWEROFF`, GNSS com satélites e o workqueue próprio do modem, sensores, FatFs com nomes longos em buffer estático, BLE central e periférico (4 conexões, RX do BT com 3072 B), settings em NVS, log por UART, `CONFIG_RESET_ON_FATAL_ERROR`, otimização de tamanho |
-| `boards/*.conf` | o ZMS no nRF54LM20 |
+| `prj.conf` | zbus e SMF, `task_wdt` com 8 canais, `CONFIG_POWEROFF`, GNSS com satélites e o workqueue próprio do modem, sensores, tela e LVGL (RGB565, pool de 32 KB, buffer de desenho de 10 % a 16 bits, só os formatos RGB565 e A8 no renderizador, sem log, sem temas e só rótulos, como `tests/ui/lv_conf.h`), entrada com a thread de 2048 B, workqueue do sistema de 2048 B, FatFs com nomes longos em buffer estático, BLE central e periférico (4 conexões, RX do BT com 3072 B), settings em NVS, log por UART, `CONFIG_RESET_ON_FATAL_ERROR`, otimização de tamanho |
+| `boards/*.conf` | o ZMS e o PWM da luz no nRF54LM20 |
 | `sysbuild.conf` | `SB_CONFIG_PARTITION_MANAGER=n` |
-| `CMakeLists.txt` | fontes por camada, `-Wall -Wextra` |
+| `CMakeLists.txt` | fontes por camada, o módulo `modules/gnss_drivers` por `EXTRA_ZEPHYR_MODULES`, `-Wall -Wextra` |
 
 ## Regras de concorrência
 
@@ -240,5 +295,6 @@ A placa vem do `-b` (variável `BOARD` dos scripts); o Zephyr aplica `boards/<pl
 3. **Callbacks** (BT, GNSS, entrada) rodam em threads do Zephyr: só convertem e publicam. Nada de chamar o modelo, esperar o rádio ou segurar mutex de lá.
 4. **Listener do zbus** roda na thread de quem publica, com o canal travado: só copia para a caixa de entrada e retorna.
 5. **Pilha**: toda thread nova ou cadeia pesada nova passa pela medição com `CONFIG_STACK_USAGE` e deixa pelo menos 1 KB de folga.
+6. **LVGL numa thread só**: só a `ui` chama o LVGL e as funções `ui_*`. O driver da tela tem uma trava própria para o SPI, o quadro e o nível do COM; o VCOM serial (V3) roda no workqueue do sistema e, com um quadro saindo, tenta de novo em 5 ms em vez de esperar. O EXTCOMIN troca de nível num timer do kernel, em ISR: só uma escrita no pino.
 
 Procedimento completo na skill `fw-threads`.

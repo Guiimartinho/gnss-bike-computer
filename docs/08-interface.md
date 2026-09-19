@@ -12,10 +12,10 @@ Como o stravaV10 original desenha as telas no Sharp Memory LCD, como os três bo
 | Montagem no aparelho | **retrato**: 240 de largura × 400 de altura (foto `img/front1.png`) |
 | Interface | SPI a 2 MHz, LSB primeiro, CS ativo em nível alto |
 | Buffer | 12.482 B: `[comando][endereço][50 B de pixels][dummy] × 240 linhas + [dummy]`; bit menos significativo = pixel da esquerda |
-| VCOM | precisa alternar: o legacy alterna pelo bit M1 a cada envio; a placa nova usa o EXTCOMIN ([18](18-interface-telas.md#atualização-e-luz)) |
+| VCOM | precisa alternar: o legacy alterna pelo bit M1 a cada envio; na V3, EXTMODE e EXTCOMIN vão ao GND por 10 kΩ (R13, R16) e o DISP ao VCC por 10 kΩ e 0,1 µF (R17, C43); a placa nova usa o EXTCOMIN ([18](18-interface-telas.md#atualização-e-luz)) |
 | Refresh | legacy: por evento, cerca de 1 Hz; placa nova: a cada época do GNSS ou botão, só as linhas que mudaram |
 
-O layout do buffer é o de `legacy/drivers/lcd/ls027.c:22-24`; o driver do port antigo, removido em 2026-09-19, usava o mesmo.
+O layout do buffer é o de `legacy/drivers/lcd/ls027.c:22-24`; o driver do port antigo, removido em 2026-09-19, usava o mesmo, e o driver novo (`memlcd`, [05](05-arquitetura-zephyr.md#tela)) guarda o quadro da Sharp nos mesmos 12.482 B.
 
 ## Interface original
 
@@ -144,7 +144,7 @@ As capturas vêm de versões anteriores do firmware original, provavelmente do s
 
 ## Interface do port
 
-A interface em paisagem do port (`src/vue`: 9 páginas em fonte 5×7, com o driver `ls027.c`) saiu em 2026-09-19, na migração para os serviços ([05](05-arquitetura-zephyr.md)); a descrição dela e dos seus defeitos fica no histórico do git. A interface nova, em LVGL e em retrato, com os arranjos do legacy, está em `zephyr_app/src/ui` e em [18-interface-telas.md](18-interface-telas.md): roda no PC, e no firmware a thread `ui` já recebe o retrato do modelo; faltam o driver da tela e a ligação ao LVGL.
+A interface em paisagem do port (`src/vue`: 9 páginas em fonte 5×7, com o driver `ls027.c`) saiu em 2026-09-19, na migração para os serviços ([05](05-arquitetura-zephyr.md)); a descrição dela e dos seus defeitos fica no histórico do git. A interface nova, em LVGL e em retrato, com os arranjos do legacy, está em `zephyr_app/src/ui` e em [18-interface-telas.md](18-interface-telas.md). Desde 2026-09-19 ela roda no firmware: a thread `ui` recebe o retrato do modelo e as teclas, o driver próprio (`zephyr_app/modules/gnss_drivers`) desenha no JDI LPM027M128B ou na Sharp LS027B7DH01 em retrato, e as ações viram comandos ([05](05-arquitetura-zephyr.md#tela)). Build verificado; nada visto em tela de verdade.
 
 ## Comparação
 
@@ -161,14 +161,15 @@ A interface em paisagem do port (`src/vue`: 9 páginas em fonte 5×7, com o driv
 | fila de 10 notificações e produtores | a fila; os produtores chegam com cada serviço | parcial |
 | LED (pulsos e pisca de segmento) | LED RGB por `pwm-leds` na placa nova | ausente |
 
-Nada disso roda no firmware ainda: a interface é testada no PC, não na placa.
+A interface está no firmware desde 2026-09-19, testada no PC e no build, não na placa.
 
 ## O que falta
 
 Em ordem de prioridade (P = até 1 dia, M = 2 a 5 dias, G = mais de uma semana):
 
-1. **G** · driver próprio da tela: Sharp em 1 bit e JDI em 3 bits, retrato, quantização da interface, só as linhas que mudaram e o EXTCOMIN ([18](18-interface-telas.md#framework)).
-2. **M** · LVGL no firmware, na thread `ui`, com a interface de `src/ui` e as ações publicadas como comandos.
-3. **M** · teclas pelo subsistema de entrada (`gpio-keys` e `zephyr,input-longpress`; o centro pelo SHPHLD e pelo GPIO3 do nPM1300 na placa nova).
-4. **M** · mini-mapas dos segmentos e mapa do PRC projetados pelo modelo, como `afficheSegment` e `Zoom.cpp`.
-5. **M** · luz da tela pelo OPT3001 e notificações dos serviços.
+Feitos em 2026-09-19, no build: o driver próprio da tela (JDI em 3 bits e Sharp em 1 bit, retrato, quantização da interface, só as linhas que mudaram, EXTCOMIN ou VCOM serial), o LVGL na thread `ui` com as ações publicadas como comandos, as teclas pelo subsistema de entrada (`gpio-keys` e `zephyr,input-longpress`) e a máquina da luz. Falta:
+
+1. **M** · mini-mapas dos segmentos e mapa do PRC projetados pelo modelo, como `afficheSegment` e `Zoom.cpp`.
+2. **M** · notificações dos serviços (boot, GPS, pareamento, FDIR).
+3. **M** · na placa nova, o centro pelo SHPHLD e pelo GPIO3 do nPM1300, e a luz de verdade (o LPM027M128B não tem luz própria).
+4. **P** · ver tudo num painel: SPI, COM, cores, tempos e legibilidade ao sol.
