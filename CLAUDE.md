@@ -65,7 +65,7 @@ flowchart TB
     ZA --> ZC["CMakeLists.txt · prj.conf · ant.conf · sysbuild.conf<br/>modules/ant_ncs33_compat"]
     ROOT --> LEG["legacy/ · libraries/<br/>stravaV10 original"]
     ROOT --> TOOLS["tools/fw · tools/docs<br/>tools/TDD · TDDW · zpm · MMD · jumper"]
-    ROOT --> DOCS["docs/01 a 17 · img · historico"]
+    ROOT --> DOCS["docs/01 a 18 · img · historico"]
     ROOT --> HW["hardware/"]
     ROOT --> AI["CLAUDE.md · AGENTS.md · .claude/skills/"]
     ROOT --> BAT["*.bat da raiz"]
@@ -165,6 +165,7 @@ flowchart LR
 | Avaliação dos componentes da placa nova | [docs/15-avaliacao-componentes.md](docs/15-avaliacao-componentes.md) |
 | Arquitetura do firmware e máquinas de estado da placa nova | [docs/16-arquitetura-firmware.md](docs/16-arquitetura-firmware.md) |
 | Dispositivos BLE e ANT+ | [docs/17-dispositivos-ble-ant.md](docs/17-dispositivos-ble-ant.md) |
+| Interface e telas da placa nova | [docs/18-interface-telas.md](docs/18-interface-telas.md) |
 | Build e ambiente | [docs/03-ambiente-build.md](docs/03-ambiente-build.md) |
 | Legacy | [docs/04-arquitetura-legacy.md](docs/04-arquitetura-legacy.md), [legacy/README.md](legacy/README.md) |
 | Port | [docs/05-arquitetura-zephyr.md](docs/05-arquitetura-zephyr.md) |

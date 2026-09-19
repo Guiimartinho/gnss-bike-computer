@@ -143,6 +143,7 @@ flowchart TB
 | [15 · Avaliação dos componentes](docs/15-avaliacao-componentes.md) | escolha de cada componente da placa nova, com números de datasheet |
 | [16 · Arquitetura do firmware](docs/16-arquitetura-firmware.md) | arquitetura-alvo e máquinas de estado para a placa nova |
 | [17 · Dispositivos BLE e ANT+](docs/17-dispositivos-ble-ant.md) | catálogo de sensores e acessórios, prioridades e limites do rádio |
+| [18 · Interface e telas](docs/18-interface-telas.md) | LVGL, paleta de 8 cores e maquetes de todas as telas da placa nova |
 | [CHANGELOG](CHANGELOG.md) | histórico de mudanças |
 
 ## Estado e próximos passos

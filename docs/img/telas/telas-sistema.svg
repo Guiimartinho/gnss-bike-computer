@@ -1,0 +1,245 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2468" height="690" viewBox="0 0 2468 690">
+<rect width="2468" height="690" fill="#ffffff"/>
+<text x="224" y="38" font-size="16" fill="#1d1d1f" text-anchor="middle" font-weight="600" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">Partida</text>
+<g transform="translate(44,68) scale(1.5)">
+<clipPath id="clip-boot"><rect width="240" height="400"/></clipPath>
+<g clip-path="url(#clip-boot)">
+<rect x="0" y="0" width="240" height="400" fill="#f4f5f0"/>
+<circle cx="70" cy="190" r="42" fill="none" stroke="#16181a" stroke-width="5"/>
+<circle cx="170" cy="190" r="42" fill="none" stroke="#16181a" stroke-width="5"/>
+<polyline points="70,190 108,128 150,128 170,190" fill="none" stroke="#16181a" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="108,128 122,190 70,190" fill="none" stroke="#16181a" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="122,190 150,128" fill="none" stroke="#16181a" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="100,112 118,112" fill="none" stroke="#16181a" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="150,128 146,108 160,104" fill="none" stroke="#16181a" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
+<text x="120" y="290" font-size="24" fill="#16181a" text-anchor="middle" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">GNSS Bike</text>
+<text x="120" y="318" font-size="24" fill="#16181a" text-anchor="middle" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">Computer</text>
+<text x="120" y="360" font-size="12" fill="#2f5fb8" text-anchor="middle" font-weight="400" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">3.0.0</text>
+</g>
+<rect width="240" height="400" fill="none" stroke="#1d1d1f" stroke-width="2"/>
+</g>
+<text x="628" y="38" font-size="16" fill="#1d1d1f" text-anchor="middle" font-weight="600" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">Notificação sobre a página</text>
+<g transform="translate(448,68) scale(1.5)">
+<clipPath id="clip-notif"><rect width="240" height="400"/></clipPath>
+<g clip-path="url(#clip-notif)">
+<rect x="0" y="0" width="240" height="400" fill="#f4f5f0"/>
+<rect x="0" y="0" width="240" height="20" fill="#16181a"/>
+<text x="4" y="15" font-size="13" fill="#f4f5f0" text-anchor="start" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">07:42</text>
+<text x="52" y="15" font-size="11" fill="#2e9d4a" text-anchor="start" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">GPS</text>
+<text x="80" y="15" font-size="11" fill="#2aa3b5" text-anchor="start" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">ANT+</text>
+<text x="114" y="15" font-size="11" fill="#2aa3b5" text-anchor="start" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">BLE</text>
+<circle cx="146" cy="10" r="4" fill="#c8323c"/>
+<circle cx="166" cy="10" r="3.2" fill="#d9a900"/>
+<line x1="170.8" y1="10" x2="173" y2="10" stroke="#d9a900" stroke-width="1.2"/>
+<line x1="169.39" y1="13.39" x2="170.95" y2="14.95" stroke="#d9a900" stroke-width="1.2"/>
+<line x1="166" y1="14.8" x2="166" y2="17" stroke="#d9a900" stroke-width="1.2"/>
+<line x1="162.61" y1="13.39" x2="161.05" y2="14.95" stroke="#d9a900" stroke-width="1.2"/>
+<line x1="161.2" y1="10" x2="159" y2="10" stroke="#d9a900" stroke-width="1.2"/>
+<line x1="162.61" y1="6.61" x2="161.05" y2="5.05" stroke="#d9a900" stroke-width="1.2"/>
+<line x1="166" y1="5.2" x2="166" y2="3" stroke="#d9a900" stroke-width="1.2"/>
+<line x1="169.39" y1="6.61" x2="170.95" y2="5.05" stroke="#d9a900" stroke-width="1.2"/>
+<rect x="182" y="5" width="30" height="10" fill="#16181a" stroke="#f4f5f0" stroke-width="1.2"/>
+<rect x="212" y="8" width="2.5" height="4" fill="#f4f5f0"/>
+<rect x="184" y="7" width="23.66" height="6" fill="#2e9d4a"/>
+<text x="236" y="15" font-size="11" fill="#f4f5f0" text-anchor="end" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">91</text>
+<rect x="0" y="20" width="120" height="54.29" fill="#f4f5f0" stroke="#16181a" stroke-width="1"/>
+<text x="4" y="32" font-size="10" fill="#16181a" text-anchor="start" font-weight="400" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">Dist</text>
+<text x="116" y="32" font-size="10" fill="#16181a" text-anchor="end" font-weight="400" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">km</text>
+<text x="60" y="65.29" font-size="28" fill="#16181a" text-anchor="middle" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">18.2</text>
+<rect x="120" y="20" width="120" height="54.29" fill="#f4f5f0" stroke="#16181a" stroke-width="1"/>
+<text x="124" y="32" font-size="10" fill="#16181a" text-anchor="start" font-weight="400" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">Pot</text>
+<text x="236" y="32" font-size="10" fill="#16181a" text-anchor="end" font-weight="400" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">W</text>
+<text x="180" y="65.29" font-size="28" fill="#16181a" text-anchor="middle" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">222</text>
+<rect x="0" y="74.29" width="120" height="54.29" fill="#f4f5f0" stroke="#16181a" stroke-width="1"/>
+<text x="4" y="86.29" font-size="10" fill="#16181a" text-anchor="start" font-weight="400" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">Vel</text>
+<text x="116" y="86.29" font-size="10" fill="#16181a" text-anchor="end" font-weight="400" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">km/h</text>
+<text x="60" y="119.57" font-size="28" fill="#16181a" text-anchor="middle" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">20.0</text>
+<rect x="120" y="74.29" width="120" height="54.29" fill="#f4f5f0" stroke="#16181a" stroke-width="1"/>
+<text x="124" y="86.29" font-size="10" fill="#16181a" text-anchor="start" font-weight="400" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">Subida</text>
+<text x="236" y="86.29" font-size="10" fill="#16181a" text-anchor="end" font-weight="400" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">m</text>
+<text x="180" y="119.57" font-size="28" fill="#16181a" text-anchor="middle" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">575</text>
+<rect x="0" y="128.57" width="120" height="54.29" fill="#f4f5f0" stroke="#16181a" stroke-width="1"/>
+<text x="4" y="140.57" font-size="10" fill="#16181a" text-anchor="start" font-weight="400" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">Cad</text>
+<text x="116" y="140.57" font-size="10" fill="#16181a" text-anchor="end" font-weight="400" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">rpm</text>
+<text x="60" y="173.86" font-size="28" fill="#16181a" text-anchor="middle" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">88</text>
+<rect x="120" y="128.57" width="120" height="54.29" fill="#f4f5f0" stroke="#16181a" stroke-width="1"/>
+<text x="124" y="140.57" font-size="10" fill="#16181a" text-anchor="start" font-weight="400" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">FC</text>
+<text x="236" y="140.57" font-size="10" fill="#16181a" text-anchor="end" font-weight="400" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">bpm</text>
+<text x="180" y="173.86" font-size="28" fill="#16181a" text-anchor="middle" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">147</text>
+<rect x="0" y="182.86" width="120" height="54.29" fill="#f4f5f0" stroke="#16181a" stroke-width="1"/>
+<text x="4" y="194.86" font-size="10" fill="#16181a" text-anchor="start" font-weight="400" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">Incl</text>
+<text x="116" y="194.86" font-size="10" fill="#16181a" text-anchor="end" font-weight="400" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">%</text>
+<text x="60" y="228.14" font-size="28" fill="#16181a" text-anchor="middle" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">4</text>
+<rect x="120" y="182.86" width="120" height="54.29" fill="#f4f5f0" stroke="#16181a" stroke-width="1"/>
+<text x="124" y="194.86" font-size="10" fill="#16181a" text-anchor="start" font-weight="400" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">VA</text>
+<text x="236" y="194.86" font-size="10" fill="#16181a" text-anchor="end" font-weight="400" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">m/s</text>
+<text x="180" y="228.14" font-size="28" fill="#16181a" text-anchor="middle" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">0.21</text>
+<rect x="0" y="237.14" width="240" height="54.29" fill="#f4f5f0" stroke="#16181a" stroke-width="1"/>
+<text x="4" y="249.14" font-size="10" fill="#a83a95" text-anchor="start" font-weight="400" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">Próx. segmento</text>
+<text x="236" y="249.14" font-size="10" fill="#16181a" text-anchor="end" font-weight="400" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">m</text>
+<text x="120" y="282.43" font-size="32" fill="#16181a" text-anchor="middle" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">875</text>
+<rect x="0" y="291.43" width="120" height="54.29" fill="#f4f5f0" stroke="#16181a" stroke-width="1"/>
+<text x="4" y="303.43" font-size="10" fill="#16181a" text-anchor="start" font-weight="400" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">Média</text>
+<text x="116" y="303.43" font-size="10" fill="#16181a" text-anchor="end" font-weight="400" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">km/h</text>
+<text x="60" y="336.71" font-size="28" fill="#16181a" text-anchor="middle" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">23.4</text>
+<rect x="120" y="291.43" width="120" height="54.29" fill="#f4f5f0" stroke="#16181a" stroke-width="1"/>
+<text x="124" y="303.43" font-size="10" fill="#16181a" text-anchor="start" font-weight="400" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">Score</text>
+<text x="236" y="303.43" font-size="10" fill="#16181a" text-anchor="end" font-weight="400" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace"></text>
+<text x="180" y="336.71" font-size="28" fill="#16181a" text-anchor="middle" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">0.2</text>
+<rect x="0" y="345.71" width="120" height="54.29" fill="#f4f5f0" stroke="#16181a" stroke-width="1"/>
+<text x="4" y="357.71" font-size="10" fill="#16181a" text-anchor="start" font-weight="400" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">Solar</text>
+<text x="116" y="357.71" font-size="10" fill="#16181a" text-anchor="end" font-weight="400" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">mW</text>
+<text x="60" y="391" font-size="28" fill="#2e9d4a" text-anchor="middle" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">18</text>
+<rect x="120" y="345.71" width="120" height="54.29" fill="#f4f5f0" stroke="#16181a" stroke-width="1"/>
+<text x="124" y="357.71" font-size="10" fill="#16181a" text-anchor="start" font-weight="400" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">Bat</text>
+<text x="236" y="357.71" font-size="10" fill="#16181a" text-anchor="end" font-weight="400" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">%</text>
+<text x="180" y="391" font-size="28" fill="#16181a" text-anchor="middle" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">91</text>
+<rect x="0" y="20" width="240" height="54.29" fill="#16181a"/>
+<text x="8" y="37" font-size="11" fill="#d9a900" text-anchor="start" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">Segmento</text>
+<text x="8" y="60" font-size="15" fill="#f4f5f0" text-anchor="start" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">Serra do Mar</text>
+<text x="232" y="60" font-size="15" fill="#2e9d4a" text-anchor="end" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">+12.4 s</text>
+</g>
+<rect width="240" height="400" fill="none" stroke="#1d1d1f" stroke-width="2"/>
+</g>
+<text x="1032" y="38" font-size="16" fill="#1d1d1f" text-anchor="middle" font-weight="600" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">Energia (nova)</text>
+<g transform="translate(852,68) scale(1.5)">
+<clipPath id="clip-energia"><rect width="240" height="400"/></clipPath>
+<g clip-path="url(#clip-energia)">
+<rect x="0" y="0" width="240" height="400" fill="#f4f5f0"/>
+<rect x="0" y="0" width="240" height="20" fill="#16181a"/>
+<text x="4" y="15" font-size="13" fill="#f4f5f0" text-anchor="start" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">07:42</text>
+<text x="52" y="15" font-size="11" fill="#2e9d4a" text-anchor="start" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">GPS</text>
+<text x="80" y="15" font-size="11" fill="#2aa3b5" text-anchor="start" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">ANT+</text>
+<text x="114" y="15" font-size="11" fill="#2aa3b5" text-anchor="start" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">BLE</text>
+<circle cx="146" cy="10" r="4" fill="#c8323c"/>
+<circle cx="166" cy="10" r="3.2" fill="#d9a900"/>
+<line x1="170.8" y1="10" x2="173" y2="10" stroke="#d9a900" stroke-width="1.2"/>
+<line x1="169.39" y1="13.39" x2="170.95" y2="14.95" stroke="#d9a900" stroke-width="1.2"/>
+<line x1="166" y1="14.8" x2="166" y2="17" stroke="#d9a900" stroke-width="1.2"/>
+<line x1="162.61" y1="13.39" x2="161.05" y2="14.95" stroke="#d9a900" stroke-width="1.2"/>
+<line x1="161.2" y1="10" x2="159" y2="10" stroke="#d9a900" stroke-width="1.2"/>
+<line x1="162.61" y1="6.61" x2="161.05" y2="5.05" stroke="#d9a900" stroke-width="1.2"/>
+<line x1="166" y1="5.2" x2="166" y2="3" stroke="#d9a900" stroke-width="1.2"/>
+<line x1="169.39" y1="6.61" x2="170.95" y2="5.05" stroke="#d9a900" stroke-width="1.2"/>
+<rect x="182" y="5" width="30" height="10" fill="#16181a" stroke="#f4f5f0" stroke-width="1.2"/>
+<rect x="212" y="8" width="2.5" height="4" fill="#f4f5f0"/>
+<rect x="184" y="7" width="23.66" height="6" fill="#2e9d4a"/>
+<text x="236" y="15" font-size="11" fill="#f4f5f0" text-anchor="end" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">91</text>
+<rect x="0" y="20" width="240" height="28" fill="#2f5fb8"/>
+<text x="120" y="40" font-size="15" fill="#f4f5f0" text-anchor="middle" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">Energia</text>
+<text x="120" y="112" font-size="44" fill="#16181a" text-anchor="middle" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">91 %</text>
+<rect x="30" y="128" width="170" height="26" fill="#f4f5f0" stroke="#16181a" stroke-width="2"/>
+<rect x="200" y="135" width="6" height="12" fill="#16181a"/>
+<rect x="33" y="131" width="149.24" height="20" fill="#2e9d4a"/>
+<text x="10" y="188" font-size="12" fill="#16181a" text-anchor="start" font-weight="400" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">Tensão</text>
+<text x="230" y="188" font-size="12" fill="#16181a" text-anchor="end" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">3,92 V</text>
+<text x="10" y="218" font-size="12" fill="#16181a" text-anchor="start" font-weight="400" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">Corrente</text>
+<text x="230" y="218" font-size="12" fill="#16181a" text-anchor="end" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">-42 mA</text>
+<text x="10" y="248" font-size="12" fill="#16181a" text-anchor="start" font-weight="400" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">Fonte</text>
+<text x="230" y="248" font-size="12" fill="#2e9d4a" text-anchor="end" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">solar 18 mW</text>
+<text x="10" y="278" font-size="12" fill="#16181a" text-anchor="start" font-weight="400" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">Carga solar até</text>
+<text x="230" y="278" font-size="12" fill="#16181a" text-anchor="end" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">3,90 V</text>
+<text x="10" y="308" font-size="12" fill="#16181a" text-anchor="start" font-weight="400" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">Temperatura</text>
+<text x="230" y="308" font-size="12" fill="#16181a" text-anchor="end" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">31 °C</text>
+<text x="10" y="338" font-size="12" fill="#16181a" text-anchor="start" font-weight="400" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">Autonomia</text>
+<text x="230" y="338" font-size="12" fill="#2f5fb8" text-anchor="end" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">cerca de 290 h</text>
+</g>
+<rect width="240" height="400" fill="none" stroke="#1d1d1f" stroke-width="2"/>
+</g>
+<text x="1436" y="38" font-size="16" fill="#1d1d1f" text-anchor="middle" font-weight="600" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">Sensores (nova)</text>
+<g transform="translate(1256,68) scale(1.5)">
+<clipPath id="clip-sensores"><rect width="240" height="400"/></clipPath>
+<g clip-path="url(#clip-sensores)">
+<rect x="0" y="0" width="240" height="400" fill="#f4f5f0"/>
+<rect x="0" y="0" width="240" height="20" fill="#16181a"/>
+<text x="4" y="15" font-size="13" fill="#f4f5f0" text-anchor="start" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">07:42</text>
+<text x="52" y="15" font-size="11" fill="#2e9d4a" text-anchor="start" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">GPS</text>
+<text x="80" y="15" font-size="11" fill="#2aa3b5" text-anchor="start" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">ANT+</text>
+<text x="114" y="15" font-size="11" fill="#2aa3b5" text-anchor="start" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">BLE</text>
+<circle cx="146" cy="10" r="4" fill="#c8323c"/>
+<circle cx="166" cy="10" r="3.2" fill="#d9a900"/>
+<line x1="170.8" y1="10" x2="173" y2="10" stroke="#d9a900" stroke-width="1.2"/>
+<line x1="169.39" y1="13.39" x2="170.95" y2="14.95" stroke="#d9a900" stroke-width="1.2"/>
+<line x1="166" y1="14.8" x2="166" y2="17" stroke="#d9a900" stroke-width="1.2"/>
+<line x1="162.61" y1="13.39" x2="161.05" y2="14.95" stroke="#d9a900" stroke-width="1.2"/>
+<line x1="161.2" y1="10" x2="159" y2="10" stroke="#d9a900" stroke-width="1.2"/>
+<line x1="162.61" y1="6.61" x2="161.05" y2="5.05" stroke="#d9a900" stroke-width="1.2"/>
+<line x1="166" y1="5.2" x2="166" y2="3" stroke="#d9a900" stroke-width="1.2"/>
+<line x1="169.39" y1="6.61" x2="170.95" y2="5.05" stroke="#d9a900" stroke-width="1.2"/>
+<rect x="182" y="5" width="30" height="10" fill="#16181a" stroke="#f4f5f0" stroke-width="1.2"/>
+<rect x="212" y="8" width="2.5" height="4" fill="#f4f5f0"/>
+<rect x="184" y="7" width="23.66" height="6" fill="#2e9d4a"/>
+<text x="236" y="15" font-size="11" fill="#f4f5f0" text-anchor="end" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">91</text>
+<rect x="0" y="20" width="240" height="28" fill="#2f5fb8"/>
+<text x="120" y="40" font-size="15" fill="#f4f5f0" text-anchor="middle" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">Sensores</text>
+<circle cx="14" cy="74" r="6" fill="#2e9d4a" stroke="#16181a" stroke-width="1"/>
+<text x="28" y="72" font-size="13" fill="#16181a" text-anchor="start" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">FC</text>
+<text x="28" y="90" font-size="11" fill="#16181a" text-anchor="start" font-weight="400" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">ANT+ 17334</text>
+<text x="232" y="82" font-size="13" fill="#2e9d4a" text-anchor="end" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">147 bpm</text>
+<line x1="6" y1="98" x2="234" y2="98" stroke="#16181a" stroke-width="1" stroke-dasharray="2 3"/>
+<circle cx="14" cy="126" r="6" fill="#c8323c" stroke="#16181a" stroke-width="1"/>
+<text x="28" y="124" font-size="13" fill="#16181a" text-anchor="start" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">Vel./cad.</text>
+<text x="28" y="142" font-size="11" fill="#16181a" text-anchor="start" font-weight="400" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">ANT+ 15568</text>
+<text x="232" y="134" font-size="13" fill="#c8323c" text-anchor="end" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">perdido</text>
+<line x1="6" y1="150" x2="234" y2="150" stroke="#16181a" stroke-width="1" stroke-dasharray="2 3"/>
+<circle cx="14" cy="178" r="6" fill="#2e9d4a" stroke="#16181a" stroke-width="1"/>
+<text x="28" y="176" font-size="13" fill="#16181a" text-anchor="start" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">Potência</text>
+<text x="28" y="194" font-size="11" fill="#16181a" text-anchor="start" font-weight="400" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">BLE Assioma</text>
+<text x="232" y="186" font-size="13" fill="#2e9d4a" text-anchor="end" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">222 W</text>
+<line x1="6" y1="202" x2="234" y2="202" stroke="#16181a" stroke-width="1" stroke-dasharray="2 3"/>
+<circle cx="14" cy="230" r="6" fill="#16181a" stroke="#16181a" stroke-width="1"/>
+<text x="28" y="228" font-size="13" fill="#16181a" text-anchor="start" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">Rolo</text>
+<text x="28" y="246" font-size="11" fill="#16181a" text-anchor="start" font-weight="400" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">FE-C</text>
+<text x="232" y="238" font-size="13" fill="#16181a" text-anchor="end" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">sem par</text>
+<line x1="6" y1="254" x2="234" y2="254" stroke="#16181a" stroke-width="1" stroke-dasharray="2 3"/>
+<circle cx="14" cy="282" r="6" fill="#2e9d4a" stroke="#16181a" stroke-width="1"/>
+<text x="28" y="280" font-size="13" fill="#16181a" text-anchor="start" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">Radar</text>
+<text x="28" y="298" font-size="11" fill="#16181a" text-anchor="start" font-weight="400" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">ANT+ 3301</text>
+<text x="232" y="290" font-size="13" fill="#2e9d4a" text-anchor="end" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">livre</text>
+<line x1="6" y1="306" x2="234" y2="306" stroke="#16181a" stroke-width="1" stroke-dasharray="2 3"/>
+<circle cx="14" cy="334" r="6" fill="#2e9d4a" stroke="#16181a" stroke-width="1"/>
+<text x="28" y="332" font-size="13" fill="#16181a" text-anchor="start" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">Luz</text>
+<text x="28" y="350" font-size="11" fill="#16181a" text-anchor="start" font-weight="400" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">ANT+ 1204</text>
+<text x="232" y="342" font-size="13" fill="#2e9d4a" text-anchor="end" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">ligada</text>
+<line x1="6" y1="358" x2="234" y2="358" stroke="#16181a" stroke-width="1" stroke-dasharray="2 3"/>
+</g>
+<rect width="240" height="400" fill="none" stroke="#1d1d1f" stroke-width="2"/>
+</g>
+<text x="1840" y="38" font-size="16" fill="#1d1d1f" text-anchor="middle" font-weight="600" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">Modo USB (MSC)</text>
+<g transform="translate(1660,68) scale(1.5)">
+<clipPath id="clip-usb"><rect width="240" height="400"/></clipPath>
+<g clip-path="url(#clip-usb)">
+<rect x="0" y="0" width="240" height="400" fill="#f4f5f0"/>
+<rect x="0" y="0" width="240" height="20" fill="#16181a"/>
+<text x="4" y="15" font-size="13" fill="#f4f5f0" text-anchor="start" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">07:42</text>
+<text x="52" y="15" font-size="11" fill="#2e9d4a" text-anchor="start" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">GPS</text>
+<text x="80" y="15" font-size="11" fill="#2aa3b5" text-anchor="start" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">ANT+</text>
+<text x="114" y="15" font-size="11" fill="#2aa3b5" text-anchor="start" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">BLE</text>
+<rect x="158" y="7" width="12" height="6" fill="#d9a900"/>
+<rect x="170" y="8.5" width="3" height="3" fill="#d9a900"/>
+<rect x="182" y="5" width="30" height="10" fill="#16181a" stroke="#f4f5f0" stroke-width="1.2"/>
+<rect x="212" y="8" width="2.5" height="4" fill="#f4f5f0"/>
+<rect x="184" y="7" width="23.66" height="6" fill="#2e9d4a"/>
+<text x="236" y="15" font-size="11" fill="#f4f5f0" text-anchor="end" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">91</text>
+<rect x="80" y="110" width="80" height="60" fill="#f4f5f0" stroke="#16181a" stroke-width="4"/>
+<rect x="96" y="170" width="48" height="30" fill="#16181a"/>
+<text x="120" y="250" font-size="24" fill="#16181a" text-anchor="middle" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">Modo USB</text>
+<text x="120" y="280" font-size="12" fill="#16181a" text-anchor="middle" font-weight="400" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">arquivos no computador</text>
+<text x="120" y="330" font-size="16" fill="#c8323c" text-anchor="middle" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">Não desconecte</text>
+</g>
+<rect width="240" height="400" fill="none" stroke="#1d1d1f" stroke-width="2"/>
+</g>
+<text x="2244" y="38" font-size="16" fill="#1d1d1f" text-anchor="middle" font-weight="600" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif">Desligando</text>
+<g transform="translate(2064,68) scale(1.5)">
+<clipPath id="clip-desligando"><rect width="240" height="400"/></clipPath>
+<g clip-path="url(#clip-desligando)">
+<rect x="0" y="0" width="240" height="400" fill="#f4f5f0"/>
+<text x="120" y="180" font-size="22" fill="#16181a" text-anchor="middle" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">Salvando</text>
+<text x="120" y="208" font-size="22" fill="#16181a" text-anchor="middle" font-weight="700" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">atividade</text>
+<rect x="40" y="240" width="160" height="14" fill="#f4f5f0" stroke="#16181a" stroke-width="2"/>
+<rect x="43" y="243" width="110" height="8" fill="#2f5fb8"/>
+<text x="120" y="300" font-size="16" fill="#16181a" text-anchor="middle" font-weight="400" font-family="'DejaVu Sans Mono', Consolas, 'Courier New', monospace">Desligando</text>
+</g>
+<rect width="240" height="400" fill="none" stroke="#1d1d1f" stroke-width="2"/>
+</g>
+</svg>

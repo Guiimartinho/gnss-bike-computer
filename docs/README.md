@@ -21,5 +21,6 @@
 | 15 | [Avaliação dos componentes](15-avaliacao-componentes.md) | escolha de cada componente da placa nova: carga por USB-C e painel solar, GNSS, MCU, display, antena, sensores, armazenamento, USB, bateria; testes de bancada antes do layout |
 | 16 | [Arquitetura do firmware](16-arquitetura-firmware.md) | arquitetura-alvo para a placa nova: serviços, threads, eventos no zbus, máquinas de estado no SMF (sistema e energia, modo, gravação, GNSS, sensores, carga, interface, luz), partida e desligamento, energia por estado, atualização de firmware, migração do port |
 | 17 | [Dispositivos BLE e ANT+](17-dispositivos-ble-ant.md) | catálogo dos dispositivos externos (FC, velocidade e cadência, potência, rolo, radar, luzes, câmbio, e-bike, celular), perfis ANT+ e serviços BLE, o que o SDK já tem, prioridades, limites de canais e conexões, pareamento |
+| 18 | [Interface e telas](18-interface-telas.md) | interface da placa nova: LVGL sobre driver próprio do JDI, paleta de 8 cores, grade e barra de estado, fontes, todas as telas com maquetes, botões, atualização e luz, memória, diferenças para o legacy |
 
 Imagens da interface e fotos do aparelho ficam em [`img/`](img/). Os documentos de novembro de 2025, substituídos por estes, estão em [`historico/`](historico/).

@@ -26,7 +26,7 @@ Conferidos no NCS v3.3.0 local (`C:\ncs\v3.3.0`, Zephyr 4.3.99).
 | SMF | `zephyr/lib/smf`, `CONFIG_SMF` | estados hierárquicos com `CONFIG_SMF_ANCESTOR_SUPPORT`; ações de entrada, execução e saída; a execução devolve `SMF_EVENT_HANDLED` ou `SMF_EVENT_PROPAGATE` para o estado pai |
 | zbus | `zephyr/subsys/zbus`, `CONFIG_ZBUS` | listener (roda no contexto de quem publica), subscriber (fila, `zbus_sub_wait`), message subscriber (cópia da mensagem) e async listener (workqueue) |
 | Entrada | `gpio-keys`, `zephyr,input-longpress` | debounce por devicetree; o toque curto sai na soltura, o longo depois do tempo configurado |
-| LVGL | `modules/lib/gui/lvgl` (9.5 "dev", instantâneo do master) e `zephyr/modules/lvgl` | teclado pelo `zephyr,lvgl-keypad-input`; o driver de tela é que define o formato de pixel (ver o documento da interface) |
+| LVGL | `modules/lib/gui/lvgl` (9.5 "dev", instantâneo do master) e `zephyr/modules/lvgl` | teclado pelo `zephyr,lvgl-keypad-input`; o driver de tela é que define o formato de pixel ([18](18-interface-telas.md#framework)) |
 | USB | `device_next`: `CONFIG_USBD_CDC_ACM_CLASS`, `CONFIG_USBD_MSC_CLASS` | o USBHS do nRF54LM20 tem suporte (`nordic,nrf-usbhs-nrf54l`); as amostras `cdc_acm` e `mass` do NCS aceitam o nRF54LM20A |
 | Arquivos | FatFs R0.16, `zephyr,sdhc-spi-slot` com `zephyr,sdmmc-disk` | o mesmo caminho serve ao microSD e ao SD NAND; o LittleFS também existe |
 | Configurações | `CONFIG_ZMS` e `CONFIG_SETTINGS_ZMS` | a placa do DK não liga o ZMS por padrão; o port liga |
@@ -326,7 +326,7 @@ stateDiagram-v2
 
 - Botões e menu do legacy ([08](08-interface.md#botões)); nos primeiros 5 s depois da partida o menu não abre (`legacy/source/vue/Menuable.cpp:326`).
 - Notificações ficam por cima de qualquer estado: fila de até 10, a primeira por cerca de 6 s ([08](08-interface.md#notificações)).
-- As telas de cada estado partem das do legacy ([08](08-interface.md#telas-por-modo)).
+- As telas de cada estado, com maquetes, estão em [18](18-interface-telas.md#telas).
 
 ### Luz do display
 

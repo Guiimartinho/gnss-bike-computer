@@ -108,7 +108,7 @@ Orçamento de partida, a medir no DK:
 
 - **ANT+:** o sensor fica salvo pelo número do dispositivo, pelo tipo e pelo tipo de transmissão; a religação usa a busca de baixa prioridade, como o legacy ([07](07-radio-ant-ble.md#ant-no-legacy)).
 - **BLE:** o sensor fica salvo pelo endereço (`bt_addr_le_t`); a varredura filtra pelo UUID do serviço na busca e pelo endereço na religação.
-- **Uma lista só:** a tela de pareamento mostra ANT+ e BLE juntos, com ID e RSSI; os pareados ficam no ZMS.
+- **Uma lista só:** a tela de pareamento mostra ANT+ e BLE juntos, com ID e RSSI ([18](18-interface-telas.md#menus)); os pareados ficam no ZMS.
 - **Mesmo sensor nos dois rádios:** muitos sensores falam ANT+ e BLE ao mesmo tempo; o aparelho usa um rádio por sensor. **Proposta:** o ANT+ na frente quando os dois aparecem, porque um canal ANT não ocupa uma das conexões BLE.
 
 ## Decisões
