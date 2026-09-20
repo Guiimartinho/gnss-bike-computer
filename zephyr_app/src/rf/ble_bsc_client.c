@@ -58,6 +58,15 @@ static struct bt_gatt_discover_params discover_params;
 /** Subscribe parameters */
 static struct bt_gatt_subscribe_params subscribe_params;
 
+/**
+ * The host finds the CCC descriptor of the characteristic by itself
+ * (CONFIG_BT_GATT_AUTO_DISCOVER_CCC), but only when it is given a place to
+ * do it and where the service ends; without them bt_gatt_subscribe()
+ * dereferences a null pointer.
+ */
+static struct bt_gatt_discover_params ccc_disc_params;
+static uint16_t service_end_handle;
+
 /** CSC Measurement handle */
 static uint16_t csc_measurement_handle;
 
@@ -265,7 +274,9 @@ static app_err_t subscribe_to_csc(struct bt_conn *conn)
 
     subscribe_params.notify = notify_func;
     subscribe_params.value_handle = csc_measurement_handle;
-    subscribe_params.ccc_handle = 0U; /* Auto-discover CCC */
+    subscribe_params.ccc_handle = BT_GATT_AUTO_DISCOVER_CCC_HANDLE;
+    subscribe_params.end_handle = service_end_handle;
+    subscribe_params.disc_params = &ccc_disc_params;
     subscribe_params.value = BT_GATT_CCC_NOTIFY;
 
     err = bt_gatt_subscribe(conn, &subscribe_params);
@@ -305,10 +316,11 @@ static uint8_t discover_func(struct bt_conn *conn,
 
     if (params->type == BT_GATT_DISCOVER_PRIMARY) {
         /* Found CSC service, now discover characteristics */
-        struct bt_gatt_service_val *svc = attr->user_data;
+        const struct bt_gatt_service_val *svc = attr->user_data;
 
         params->uuid = &uuid_csc_measurement.uuid;
         params->start_handle = attr->handle + 1U;
+        service_end_handle = svc->end_handle;
         params->end_handle = svc->end_handle;
         params->type = BT_GATT_DISCOVER_CHARACTERISTIC;
 

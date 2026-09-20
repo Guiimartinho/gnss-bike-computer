@@ -152,6 +152,19 @@ static void radio_start(void)
     if (rf_dfu_init() != APP_OK) {
         LOG_ERR("DFU start failed");
     }
+
+    /*
+     * Nothing was looking for anything until here: the manager only
+     * registered its callbacks. The device announces itself so the phone
+     * app can reach it (SMP for the update, NUS for the commands) and looks
+     * for the sensors of the rider, as the legacy does when a mode starts.
+     */
+    if (ble_manager_start_advertising() != APP_OK) {
+        LOG_WRN("advertising did not start");
+    }
+    if (ble_manager_start_scan() != APP_OK) {
+        LOG_WRN("scan did not start");
+    }
 }
 
 static void radio_thread(void *p1, void *p2, void *p3)

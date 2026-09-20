@@ -97,8 +97,6 @@ Ordenados por gravidade. Linhas conferidas em 2026-09-18. Saíram com o código 
 
 | Gravidade | Onde | Defeito |
 |---|---|---|
-| crítico | `src/rf/ble_hrs_client.c:160`, `ble_bsc_client.c:268`, `ble_fec_client.c:270` | `bt_gatt_subscribe` com `ccc_handle=0` e `CONFIG_BT_GATT_AUTO_DISCOVER_CCC=y` sem `disc_params`: `memset(NULL)` no Zephyr 4.3 assim que o scan for ligado |
-| crítico | `src/rf/ble/ble_manager.c:218` | `bt_conn_le_create` sem `bt_conn_unref`: o pool de 4 conexões esgota |
 | alto | `src/model/udmatrix.c:64-67, 264-281` | `udmat_ones` gera identidade; `bound` com sinal zera covariâncias negativas: α0 nunca é estimado |
 | alto | `src/model/crash_recovery.c:104-118` | CRC inclui o próprio campo `crc`; a restauração falha em 255 de 256 casos |
 | alto | `src/rf/ble_fec_client.c:46-48, 166-168` | flags do FTMS erradas (cadência, tempo, energia): a potência sai do offset errado |

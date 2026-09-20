@@ -229,7 +229,7 @@ Nada disso foi testado em placa: não há hardware ainda.
 
 ## O que falta
 
-1. **Crítico:** iniciar o scan; inscrição com `disc_params` e `end_handle` (ou descoberta do CCC); `bt_conn_unref` depois do create; classificar conexões por papel; sensores com vários serviços.
+1. **Feito em 2026-09-20:** o serviço de rádio inicia o anúncio e a varredura; a inscrição leva `disc_params` e `end_handle` (descoberta automática do CCC); o `bt_conn_unref` depois do create. **Falta:** classificar conexões por papel e tratar sensores com vários serviços.
 2. **Crítico:** corrigir os parsers (velocidade CSC, flags do FTMS, vários RR) e levar os dados ao modelo (`boucle_update_hrm/bsc`, zonas, log).
 3. **Importante:** ANT+ pelo `sdk-ant` (HRM, BSC, FE-C, busca em background); pareamento com lista de sensores ANT+ e BLE e identificadores salvos (número do dispositivo ANT, `bt_addr_le_t`).
 4. **Importante:** canal de comandos (`$LOC`, `$DWN`, `$QRY`) por NUS e USB, com o papel NUS de volta a cliente ou com uma ponte nova no PC.
