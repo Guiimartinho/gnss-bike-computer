@@ -13,6 +13,7 @@
 #include <stdio.h>
 
 #include "model/segment.h"
+#include "model/segment_file.h"
 
 #include "model/locator.h"
 #include "model/vecteur.h"
@@ -25,8 +26,11 @@ LOG_MODULE_REGISTER(segment, CONFIG_LOG_DEFAULT_LEVEL);
  * Private Definitions
  * ========================================================================== */
 
-/** Segment files directory */
-#define SEG_DIR             "/SD:/segments"
+/** The segments of the legacy live in the root of the card */
+#define SEG_DIR             "/SD:"
+
+/** Longest line of a segment file: `lat ; lon ; rtime ; alt` */
+#define SEG_LINE_MAX        96U
 
 /** Maximum filename length */
 #define MAX_FILENAME_LEN    32U
@@ -72,6 +76,16 @@ static uint16_t segment_count;
 
 /** Segment headers (metadata) */
 static seg_header_t seg_headers[MAX_SEGMENTS];
+
+/**
+ * Start of each segment, taken from its name (`segment_file_position()`):
+ * this is what the allocator uses to decide whether to open the file, as
+ * the legacy does (`legacy/source/sd/sd_functions.cpp:547-556`).
+ */
+static struct {
+    float lat;
+    float lon;
+} seg_start_pos[MAX_SEGMENTS];
 
 /** Runtime data for segments */
 static seg_runtime_t seg_runtime[MAX_SEGMENTS];
@@ -238,9 +252,9 @@ static void update_progress(uint16_t seg_idx, const loc_data_t *loc,
     rt->cur_time = current_time - rt->start_time;
 
     /* Get reference time from segment first point */
-    const point_t *first_pt = liste_get_at(&rt->pts, 0);
-    if (first_pt != NULL) {
-        rt->advance = (rel_time - first_pt->rtime) - rt->cur_time;
+    const point_t *seg_start = liste_get_at(&rt->pts, 0);
+    if (seg_start != NULL) {
+        rt->advance = (rel_time - seg_start->rtime) - rt->cur_time;
     }
 
     /* Update progress percentage */
@@ -426,9 +440,12 @@ int segment_load_all(void)
             continue;
         }
 
-        /* Check for .seg extension */
-        size_t len = strlen(entry.name);
-        if ((len < 5U) || (strcmp(&entry.name[len - 4], ".seg") != 0)) {
+        /*
+         * The name says what the file is and where the segment starts
+         * (`sd_functions.cpp:279-333`): nothing is opened here, as in the
+         * legacy, so a card full of segments costs one directory pass.
+         */
+        if (!segment_file_name_is_valid(entry.name)) {
             continue;
         }
 
@@ -437,37 +454,31 @@ int segment_load_all(void)
             break;
         }
 
-        /* Load segment header */
-        char path[280];  /* SEG_DIR + "/" + max filename (255) */
-        (void)snprintf(path, sizeof(path), "%s/%s", SEG_DIR, entry.name);
+        float start_lat = 0.0f;
+        float start_lon = 0.0f;
 
-        struct fs_file_t file;
-        fs_file_t_init(&file);
+        if (segment_file_position(entry.name, &start_lat, &start_lon)) {
+            segment_t *seg = &segments[segment_count];
 
-        if (fs_open(&file, path, FS_O_READ) == 0) {
-            /* Read header */
-            ssize_t bytes = fs_read(&file, &seg_headers[segment_count],
-                                    sizeof(seg_header_t));
+            (void)strncpy(seg->name, entry.name, sizeof(seg->name) - 1U);
+            seg->name[sizeof(seg->name) - 1U] = '\0';
+            seg->num_points = 0U;   /* the points come with the allocator */
+            seg->total_time = 0.0f;
+            seg->total_elev = 0.0f;
+            seg->status = SEG_OFF;
+            seg->score = 0;
 
-            if (bytes == sizeof(seg_header_t)) {
-                /* Initialize segment state */
-                segment_t *seg = &segments[segment_count];
-                (void)strncpy(seg->name, seg_headers[segment_count].name,
-                             sizeof(seg->name) - 1U);
-                seg->num_points = seg_headers[segment_count].num_points;
-                seg->total_time = seg_headers[segment_count].total_time;
-                seg->total_elev = seg_headers[segment_count].total_elev;
-                seg->status = SEG_OFF;
-                seg->score = 0;
+            (void)memset(&seg_headers[segment_count], 0, sizeof(seg_header_t));
+            (void)strncpy(seg_headers[segment_count].name, entry.name,
+                          sizeof(seg_headers[segment_count].name) - 1U);
+            seg_start_pos[segment_count].lat = start_lat;
+            seg_start_pos[segment_count].lon = start_lon;
 
-                segment_count++;
-                count++;
+            segment_count++;
+            count++;
 
-                LOG_INF("Loaded segment: %s (%u points)",
-                        seg->name, seg->num_points);
-            }
-
-            (void)fs_close(&file);
+            LOG_DBG("Segment %s at %.5f %.5f", entry.name, (double)start_lat,
+                    (double)start_lon);
         }
     }
 
@@ -541,7 +552,7 @@ app_err_t segment_get_best(segment_t *seg)
     }
 
     /* Find active segment with highest score */
-    segment_t *best = NULL;
+    const segment_t *best = NULL;
     int8_t best_score = INT8_MIN;
 
     for (uint16_t i = 0U; i < segment_count; i++) {
@@ -607,7 +618,7 @@ uint8_t segment_get_nearby(segment_t *segs, uint8_t max_count, float lat, float 
         float dist;
     } seg_dist_t;
 
-    seg_dist_t seg_dists[MAX_SEGMENTS];
+    seg_dist_t seg_dists[MAX_SEGMENTS] = {0};
     uint8_t count = 0U;
 
     /* Calculate distance for all loaded segments */
@@ -773,11 +784,12 @@ static int load_segment_points(uint16_t seg_idx)
         return 0;  /* Already loaded */
     }
 
-    /* Build filename */
-    char path[64];
-    (void)snprintf(path, sizeof(path), "%s/%s.seg", SEG_DIR, seg->name);
+    char path[32];
+
+    (void)snprintf(path, sizeof(path), "%s/%s", SEG_DIR, seg->name);
 
     struct fs_file_t file;
+
     fs_file_t_init(&file);
 
     if (fs_open(&file, path, FS_O_READ) < 0) {
@@ -785,21 +797,58 @@ static int load_segment_points(uint16_t seg_idx)
         return -1;
     }
 
-    /* Skip header */
-    (void)fs_seek(&file, (off_t)sizeof(seg_header_t), FS_SEEK_SET);
-
-    /* Initialize point list */
     liste_init(&rt->pts, MAX_SEG_POINTS);
 
-    /* Read points */
-    seg_point_t pt;
+    /*
+     * Text of the legacy: a `<Name>` line and then `lat ; lon ; rtime ;
+     * alt`, with the time of each point taken from the first
+     * (`legacy/source/sd/sd_functions.cpp`, `load_segment`). The file is
+     * read in chunks and split into lines here, because fs_read() knows
+     * nothing about lines.
+     */
+    char chunk[128];
+    char line[SEG_LINE_MAX];
+    size_t line_len = 0U;
+    float first_time = 0.0f;
+    float first_alt = 0.0f;
+    float last_alt = 0.0f;
     int count = 0;
-    while (fs_read(&file, &pt, sizeof(seg_point_t)) == sizeof(seg_point_t)) {
-        liste_add_back(&rt->pts, pt.lat, pt.lon, pt.alt, pt.time);
-        count++;
+    ssize_t got;
 
+    while ((got = fs_read(&file, chunk, sizeof(chunk))) > 0) {
+        for (ssize_t i = 0; i < got; i++) {
+            char c = chunk[i];
+
+            if ((c != '\n') && (c != '\r')) {
+                if (line_len < (SEG_LINE_MAX - 1U)) {
+                    line[line_len] = c;
+                    line_len++;
+                }
+                continue;
+            }
+
+            line[line_len] = '\0';
+            line_len = 0U;
+
+            struct segment_file_point sp;
+
+            if (!segment_file_parse_line(line, &sp)) {
+                continue;
+            }
+            if (count == 0) {
+                first_time = sp.rtime;
+                first_alt = sp.alt;
+            }
+            liste_add_back(&rt->pts, sp.lat, sp.lon, sp.alt, sp.rtime - first_time);
+            last_alt = sp.alt;
+            count++;
+
+            if ((uint16_t)count >= MAX_SEG_POINTS) {
+                LOG_WRN("Segment %s truncated at %d points", seg->name, count);
+                break;
+            }
+        }
         if ((uint16_t)count >= MAX_SEG_POINTS) {
-            LOG_WRN("Segment %s truncated at %d points", seg->name, count);
             break;
         }
     }
@@ -807,10 +856,16 @@ static int load_segment_points(uint16_t seg_idx)
     (void)fs_close(&file);
 
     if (count > 0) {
+        const point_t *last = liste_get_at(&rt->pts, (uint16_t)(count - 1));
+
         rt->pts_loaded = true;
-        rt->elev_total = seg->total_elev;
+        rt->elev_total = last_alt - first_alt;
+        seg->num_points = (uint16_t)count;
+        seg->total_time = (last != NULL) ? last->rtime : 0.0f;
+        seg->total_elev = rt->elev_total;
 
         LOG_INF("Loaded %d points for segment %s", count, seg->name);
+
         return count;
     }
 
@@ -855,27 +910,25 @@ static float dist_to_seg_header(uint16_t seg_idx, float lat, float lon)
         return 9999.0f;
     }
 
-    /* Parse segment name for coordinates (format: LLLLL#LLL.seg)
-     * Where LLLLL is lat*100 and LLL is lon*100 */
-    seg_header_t *hdr = &seg_headers[seg_idx];
+    const seg_runtime_t *rt = &seg_runtime[seg_idx];
 
-    /* For now use a simplified approach - load first point if needed */
-    seg_runtime_t *rt = &seg_runtime[seg_idx];
-
+    /* Loaded: the distance to the first point, as the legacy measures it */
     if (rt->pts_loaded && (rt->pts.count > 0U)) {
         const point_t *seg_start = liste_get_at(&rt->pts, 0);
+
         if (seg_start != NULL) {
-            point_t cur = { .lat = lat, .lon = lon, .alt = 0.0f, .rtime = 0.0f };
+            point_t cur = {.lat = lat, .lon = lon, .alt = 0.0f, .rtime = 0.0f};
+
             return point_distance(&cur, seg_start);
         }
     }
 
-    /* If points not loaded, estimate from header name parsing */
-    /* This is a simplified implementation - full implementation would
-     * parse the segment filename for coordinates */
-    (void)hdr;  /* Avoid unused warning */
-
-    return 9999.0f;
+    /*
+     * Not loaded: the start comes from the name of the file, which is what
+     * lets the allocator work without opening anything
+     * (`legacy/source/sd/sd_functions.cpp:547-556`).
+     */
+    return distance_between(lat, lon, seg_start_pos[seg_idx].lat, seg_start_pos[seg_idx].lon);
 }
 
 float segment_allocator(uint16_t seg_idx, float lat, float lon)
