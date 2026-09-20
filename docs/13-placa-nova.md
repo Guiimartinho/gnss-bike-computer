@@ -10,7 +10,7 @@ Proposta de hardware da placa própria do GNSS Bike Computer, com o nRF54LM20A e
 |---|---|---|---|
 | MCU | nRF52840 no módulo BMD-340 | nRF54LM20A no módulo Fanstel BM20C | o chip em CSP98 com antena própria |
 | Display | Sharp LS027B7DH01, monocromático, 5 V | JDI LPM027M128C, MIP de 8 cores, 3,0 V, com luz; sem canal de compra, a [lista de compras](19-lista-de-compras.md#trocas) usa a Sharp LS027B7DH01A com luz frontal | LS027 no mesmo conector; TFT transflectivo com ST7789 |
-| GNSS | Antenova M10578-A3 (MediaTek MT3333), só L1 | u-blox MAX-M10N-10B (só L1) no footprint MAX, 13,7 mW em LEAP a 1,8 V ([15](15-avaliacao-componentes.md#gnss)) | MAX-F10S (L1 + L5) no mesmo footprint, 47 mW; Quectel LC76G(PA), com driver no NCS |
+| GNSS | Antenova M10578-A3 (MediaTek MT3333), só L1 | u-blox MAX-F10S (L1 + L5) no footprint MAX, 1 m de CEP, 46,8 mW a 1,8 V ([15](15-avaliacao-componentes.md#gnss)) | MAX-M10N-10B (só L1) no mesmo footprint, 13,7 mW em LEAP; Quectel LC76G(PA), com driver no NCS |
 | Antena GNSS | chip Antenova SR4G008 na borda | antena linear L1/L5 na borda de cima, como nos ciclocomputadores do mercado | patch cerâmica, com a caixa de 25 a 35 mm mais longa |
 | Carregador e reguladores | MCP73831, TPS63051, REG710 | Nordic nPM1300 | TI BQ25798 (carregador único com duas entradas) |
 | Medidor de carga e liga/desliga | STC3100 com latch | MAX17262 na célula; ship mode do nPM1300 | medidor do próprio nPM1300, sem enxergar o painel |
@@ -53,7 +53,7 @@ flowchart LR
         MCU["nRF54LM20A<br/>BLE e ANT+"]
     end
     subgraph GNSSB["GNSS"]
-        ANT["antena linear L1/L5<br/>na borda de cima"] --> GMOD["módulo MAX<br/>M10N-10B ou F10S<br/>SAW, LNA, SAW"]
+        ANT["antena linear L1/L5<br/>na borda de cima"] --> GMOD["módulo MAX<br/>F10S ou M10N-10B<br/>SAW, LNA, SAW"]
     end
     subgraph IHM["Interface"]
         LCD["JDI LPM027M128C<br/>2,7 pol, 8 cores"]
@@ -191,27 +191,29 @@ A V3 usa o Antenova M10578-A3 (MediaTek MT3333): GPS e GLONASS em L1, 28 mA a 3,
 | **u-blox MAX-F10S** (F10) | **L1 + L5**: GPS, Galileo, BeiDou, QZSS, NavIC; sem GLONASS | 47 mW a 1,8 V; 57 mW a 3,0 V | não tem | 1 m | o mesmo footprint | SAW → LNA → SAW | US$ 13,14 | não |
 | Quectel LC76G(PA) (Airoha AG3352) | L1: GPS, GLONASS, Galileo, BeiDou, QZSS | 33 mW (10 mA a 3,3 V) | ALP: 18 mW | 1,5 m | 10,1 × 9,7 × 2,4 mm; 3,3 V | LNA | US$ 9,72 | **sim**, `quectel,lc76g` |
 | Quectel LC79H(AL) (Airoha AG3335M) | **L1 + L5**, com GLONASS em L1 | 59 mW (33 mA a 1,8 V) | — | 1 m | 10,1 × 9,7 × 2,4 mm; 1,8 V | LNA e SAW | US$ 14,09 | não; os comandos PAIR do driver `lcx6g` existem nele (não testado) |
+| Quectel LC29H(AA) | **L1 + L5**, com GLONASS em L1 | 79 mW (24 mA a 3,3 V) | citado sem número | 1 m | 16,0 × 12,2 × 2,5 mm; 3,3 V | não levantada | não levantado | não; NMEA com comandos `PQTM` próprios |
 
-Energia só do GNSS numa pedalada de 10 h: 0,92 Wh no M10578-A3 da V3, 0,59 Wh no LC79H, 0,47 Wh no MAX-F10S, 0,27 Wh no MAX-M10S e 0,14 Wh no MAX-M10N em LEAP (1 Wh é cerca de 270 mAh de LiPo).
+Energia só do GNSS numa pedalada de 10 h: 0,92 Wh no M10578-A3 da V3, 0,79 Wh no LC29H, 0,59 Wh no LC79H, 0,47 Wh no MAX-F10S escolhido, 0,27 Wh no MAX-M10S e 0,14 Wh no MAX-M10N em LEAP (1 Wh é cerca de 270 mAh de LiPo).
 
 ### Recomendação: footprint MAX da u-blox
 
-O MAX-M10S, o MAX-M10N e o MAX-F10S têm o mesmo footprint e a mesma pinagem de UART, reset, EXTINT e TIMEPULSE (conferido nas tabelas de pinos; o M10N não tem I2C). A placa sai com esse footprint. A [avaliação](15-avaliacao-componentes.md#gnss) escolheu o M10N pelo consumo, e o F10S fica como variante no mesmo footprint:
+O MAX-M10S, o MAX-M10N e o MAX-F10S têm o mesmo footprint e a mesma pinagem de UART, reset, EXTINT e TIMEPULSE (conferido nas tabelas de pinos; o M10N não tem I2C). A placa sai com esse footprint, e o firmware aceita as duas peças pelo devicetree. A [avaliação](15-avaliacao-componentes.md#gnss) escolheu o F10S pela banda dupla, e o M10N fica como alternativa no mesmo footprint:
 
-- **Escolhido: MAX-M10N-10B.** 13,7 mW em LEAP a 1,8 V, um sétimo do módulo da V3, com 1,5 m de CEP, AssistNow Live Orbits incluso e firmware atualizável; entrada com SAW, LNA e SAW, que aguenta o BLE de +8 dBm do nRF54LM20A. Com ele, o aparelho gasta cerca de 21 mW e o painel cobre o consumo num pedal de sol. Contra: só L1, sem GLONASS, até 1 Hz em LEAP, e o LEAP perde sensibilidade de rastreio (−159 contra −167 dBm).
-- **Variante de banda dupla: MAX-F10S (L1 + L5).** A banda dupla ataca o multipercurso de prédios e árvores; 1 m de CEP; 47 mW a 1,8 V; AssistNow com TTFF de 1 a 4 s; 10.808 peças na DigiKey. Contra: sem GLONASS, sem modo só L1 (gasta sempre de 47 a 57 mW) e a antena de L5 numa caixa pequena é o ponto fraco.
-- **Se o critério for driver pronto e custo: Quectel LC76G(PA).** Único da lista com driver no NCS v3.3.0; footprint e tensão diferentes (família L76, 3,3 V). O caminho de banda dupla dessa família é o LC79H(AL), com o chip AG3335M que aparece no COROS DURA; a compatibilidade de pinos entre os dois não foi confirmada.
+- **Escolhido: MAX-F10S (L1 + L5).** 1 m de CEP contra 1,5 m, sensibilidade de rastreio de −167 dBm e o código do L5, dez vezes mais rápido, que ataca o multipercurso de prédio e de mata — o pior caso do legacy. Entrada com SAW, LNA e SAW, que aguenta o BLE de +8 dBm do nRF54LM20A; 46,8 mW a 1,8 V, o menor entre os multibanda; US$ 13,14. Contra: sem GLONASS, **sem modo econômico nenhum** (a firmware do F10 não tem o grupo `CFG-PM`), sem modo só L1, ROM em vez de flash, e a antena de L5 numa caixa pequena é o ponto fraco. Com ele o aparelho gasta cerca de 58 mW e o painel devolve de 23 a 46 min por hora de sol, em vez de cobrir o consumo.
+- **Alternativa econômica: MAX-M10N-10B (só L1).** 13,7 mW em LEAP a 1,8 V, um sétimo do módulo da V3, 1,5 m de CEP, AssistNow Live Orbits incluso e firmware atualizável. Com ele o aparelho gasta cerca de 21 mW e o painel cobre o consumo num pedal de sol. Contra: só L1, sem GLONASS, até 1 Hz em LEAP, e o LEAP perde sensibilidade de rastreio (−159 contra −167 dBm). É a peça do teste A/B e a saída se a autonomia pesar mais que o metro de precisão.
+- **Se o critério for driver pronto e custo: Quectel LC76G(PA).** Único da lista com driver no NCS v3.3.0; footprint e tensão diferentes (família L76, 3,3 V) e banda única. O caminho de banda dupla dessa família é o LC79H(AL), com o chip AG3335M que aparece no COROS DURA; a compatibilidade de pinos entre os dois não foi confirmada. O LC29H(AA), também de banda dupla e 1 m de CEP, gasta 79 mW a 3,3 V, mede 16,0 × 12,2 mm e fala NMEA com comandos `PQTM` próprios: pediria driver novo.
 
-Como confirmar: protótipos com o M10N e o F10S lado a lado, na caixa real, medindo o C/N0 por banda e o ruído na banda (`UBX-MON-SPAN`), e pedaladas na cidade e sob árvores contra uma referência. Com o módulo alimentado a 1,8 V (pino `VIO_SEL`), o M10N em LEAP gasta cerca de 18 % menos que a 3,0 V (13,7 contra 16,8 mW, na ficha do 10B) e o F10S cerca de 17 %; o MCU fica em 3,0 V por causa do display, então a UART e os sinais de controle do GNSS a 1,8 V passam por um tradutor de nível ([Energia](#energia)).
+Como confirmar: protótipos com o F10S e o M10N lado a lado, na caixa real, medindo o C/N0 por banda e o ruído na banda (`UBX-MON-SPAN`), e pedaladas na cidade e sob árvores contra uma referência. Com o módulo alimentado a 1,8 V (pino `VIO_SEL`), o F10S gasta cerca de 17 % menos que a 3,0 V (46,8 contra 57 mW) e o M10N em LEAP cerca de 18 % (13,7 contra 16,8 mW, na ficha do 10B); o MCU fica em 3,0 V por causa do display, então a UART e os sinais de controle do GNSS a 1,8 V passam por um tradutor de nível ([Energia](#energia)).
 
 A altitude continua vindo do barômetro: o GNSS erra mais na vertical (o LC79H declara 1 m na horizontal e 2 m na vertical) e só corrige a deriva do barômetro, como no legacy ([06](06-algoritmos.md#barômetro-e-drift)).
 
 ### Impacto no firmware
 
-- **Driver.** O NCS v3.3.0 tem drivers para LC26G, LC76G, LC86G, u-blox M8 e F9P, Air530Z e NMEA genérico, mas não para M10 nem F10. O antigo driver "M10" virou `u-blox,m8` no Zephyr 4.0 porque só servia ao M8 (`doc/releases/migration-guide-4.0.rst:221`): não use o `u-blox,m8` com um M10. Um driver `u-blox,m10` novo entrou no `main` do Zephyr em 2026-06-09 e sai no Zephyr 4.5, sem standby e sem AssistNow. Caminhos: trazer esse driver para fora da árvore até o NCS chegar lá (e acrescentar o F10, que usa a mesma interface de configuração), ou manter o parser do port e mandar os quadros UBX de configuração.
+- **Driver.** O NCS v3.3.0 tem drivers para LC26G, LC76G, LC86G, u-blox M8 e F9P, Air530Z e NMEA genérico, mas não para M10 nem F10. O antigo driver "M10" virou `u-blox,m8` no Zephyr 4.0 porque só servia ao M8 (`doc/releases/migration-guide-4.0.rst:221`): não use o `u-blox,m8` com um M10. Um driver `u-blox,m10` novo entrou no `main` do Zephyr em 2026-06-09 e sai no Zephyr 4.5, sem standby e sem AssistNow. O port tem o seu, em `zephyr_app/modules/gnss_drivers/drivers/gnss/`, com os dois compatíveis: `u-blox,max-f10` para a peça escolhida e `u-blox,max-m10` para a alternativa. A interface de configuração é a mesma; o F10 acrescenta os sinais de L5 e o NavIC no grupo `CFG-SIGNAL` e **não tem** o grupo `CFG-PM`.
 - **Comandos do legacy.** O legacy fala PMTK com o MediaTek (`legacy/source/sensors/GPSMGMT.cpp`): velocidade da UART (linha 32), intervalo de fix (`PMTK220`, linha 487), posição do celular (`PMTK741`, linha 458) e o EPO (máquina de estados das linhas 268 a 340). Na u-blox viram `CFG-UART1-BAUDRATE`, `CFG-RATE-MEAS`, `UBX-MGA-INI-POS_LLH` com `UBX-MGA-INI-TIME_UTC` e AssistNow Offline ou Autonomous; o standby por pino vira `UBX-RXM-PMREQ` ou EXTINT. Cada diferença vai para [06](06-algoritmos.md) e [10](10-status-do-port.md) quando for portada.
 - **Fim de época.** O `gps_mgmt.c` do port antigo disparava o callback de fix no RMC válido, supondo a ordem dos MediaTek (GGA antes do RMC). Com UBX, a mensagem `NAV-PVT` é uma por época e resolve isso; desde 2026-09-19 o port usa a API de GNSS do Zephyr ([05](05-arquitetura-zephyr.md#threads)).
 - **Modelo dinâmico.** No u-blox, o modelo `BIKE` é de motocicleta; para bicicleta vale o padrão `PORT`.
+- **Energia do receptor.** Com o M10N havia dois níveis de rastreio (LEAP e potência plena) e o standby; com o F10S só existe o standby por `UBX-RXM-PMREQ`, porque a firmware do F10 não tem o grupo `CFG-PM`. A máquina de `gnss_power.c` continua a mesma e recebe `has_leap = false` ([16](16-arquitetura-firmware.md#gnss)).
 
 ## Antena GNSS dentro da caixa
 
@@ -378,7 +380,7 @@ Estimativa, não medida. A base de cada linha está na coluna do meio.
 
 | Bloco | Base | Econômico | Típico | Pesado |
 |---|---|---|---|---|
-| GNSS a 1,8 V | econômico: MAX-M10N em LEAP; típico e pesado: MAX-F10S (seção [GNSS](#gnss)) | 14 mW | 47 mW | 47 mW |
+| GNSS a 1,8 V | típico e pesado: MAX-F10S, o escolhido; econômico: MAX-M10N em LEAP (seção [GNSS](#gnss)) | 14 mW | 47 mW | 47 mW |
 | nRF54LM20A com BLE e ANT+ | datasheet a 3,0 V (TX 5,0 mA, RX 3,3 mA, CPU 2,6 mA) com ciclo de trabalho estimado | 1,5 mW | 2,5 mW | 4 mW |
 | Display MIP sem luz | 30 µW a 1 quadro/s | 0,1 mW | 0,2 mW | 0,3 mW |
 | Luz do display (média) | 16 mA × 2,67 V ≈ 43 mW acesa; 25 % do tempo no pesado | 0 | 0 | 11 mW |
@@ -386,7 +388,7 @@ Estimativa, não medida. A base de cada linha está na coluna do meio.
 | PMIC, medidor e harvester | menos de 20 µA somados | < 0,1 mW | < 0,1 mW | < 0,1 mW |
 | **Na bateria** (reguladores a cerca de 90 %) | | cerca de 19 mW | cerca de 58 mW | cerca de 74 mW |
 
-As colunas "típico" e "pesado" usam o MAX-F10S. Com o MAX-M10N-10B em LEAP, que a [avaliação](15-avaliacao-componentes.md#efeito-no-aparelho) escolheu, o uso típico cai para cerca de 21 mW e a autonomia sem sol com 2000 mAh sobe para cerca de 310 h. Com a Sharp e o filme de luz da [lista de compras](19-lista-de-compras.md#display), a tela passa de cerca de 0,2 para 0,4 mW (175 µW a 1 quadro/s e os 65 µA do REG710), e a luz acesa tira cerca de 37 mW do VSYS (10 mA pelo LDO de 3,3 V), contra cerca de 59 mW do JDI no mesmo circuito.
+As colunas "típico" e "pesado" usam o MAX-F10S, que a [avaliação](15-avaliacao-componentes.md#efeito-no-aparelho) escolheu. Com o MAX-M10N-10B em LEAP, a alternativa no mesmo footprint, o uso típico cai para cerca de 21 mW e a autonomia sem sol com 2000 mAh sobe para cerca de 310 h. Com a Sharp e o filme de luz da [lista de compras](19-lista-de-compras.md#display), a tela passa de cerca de 0,2 para 0,4 mW (175 µW a 1 quadro/s e os 65 µA do REG710), e a luz acesa tira cerca de 37 mW do VSYS (10 mA pelo LDO de 3,3 V), contra cerca de 59 mW do JDI no mesmo circuito.
 
 Autonomia sem sol, com 90 % da energia nominal (3,7 V) utilizável. Para comparar: só o GNSS da V3 gasta 92 mW.
 
@@ -417,7 +419,10 @@ Minutos de autonomia devolvidos por hora de pedal, no consumo típico (cerca de 
 | Nublado | 4 a 9 min | 5 a 10 min | 8 a 15 min |
 | Chuva, mata fechada | 2 a 5 min | 2 a 5 min | 3 a 8 min |
 
-Com o arranjo do desenho, um pedal de sol devolve de 23 a 46 minutos por hora e um dia nublado estende a autonomia de 7 a 15 %; no modo econômico (cerca de 19 mW) o conjunto sustenta o aparelho sozinho no sol. Com 15 cm² de frente, um dia de sol ficaria perto do empate. É coerente com o COROS DURA: com 6,5 cm² de painel, o bikepacking.com mediu 6,2 % de carga ganha contra 9,7 % gasta num pedal de 9 h de sol.
+Com o arranjo do desenho, um pedal de sol devolve de 23 a 46 minutos por hora e um dia nublado estende a autonomia de 7 a 15 %; no modo econômico (cerca de 19 mW) o conjunto sustenta o aparelho sozinho no sol. Com 15 cm² de frente, um dia de sol ficaria perto do empate.
+
+> [!IMPORTANT]
+> **O painel não sustenta o aparelho no uso normal.** Com o MAX-F10S escolhido em 2026-09-20, o uso típico é de cerca de 58 mW, e a coluna de 23 a 46 min por hora é o que o painel devolve — um terço a dois terços do gasto, não o gasto inteiro. O painel só cobre o consumo no modo econômico, com o GNSS desligado ou parado. Com o MAX-M10N-10B em LEAP, a alternativa de banda única, o uso típico cairia para cerca de 21 mW e o painel passaria a sustentar o aparelho num pedal de sol. Essa é a troca que a [avaliação](15-avaliacao-componentes.md#escolha-max-f10s) registrou, e o que o A/B na bancada tem de decidir. Uma célula de 2500 mAh em vez de 2000 mAh daria cerca de 143 h em vez de 115 h sem sol, se couber na caixa. É coerente com o COROS DURA: com 6,5 cm² de painel, o bikepacking.com mediu 6,2 % de carga ganha contra 9,7 % gasta num pedal de 9 h de sol.
 
 Referências do mercado: o Garmin Edge 1040 Solar declara de 35 para 45 h no uso exigente com 75 mil lux contínuos (+20 min por hora), e o DC Rainmaker mediu cerca de 11 min por hora num pedal de sol; o COROS DURA (painel de 6,5 cm², bateria de 960 mAh, MIP de 2,7" e 400 × 240) declara até 2 h a mais por hora de sol direto.
 
@@ -427,7 +432,7 @@ Referências do mercado: o Garmin Edge 1040 Solar declara de 35 para 45 h no uso
 |---|---|---|
 | Compra do display | a principal revenda do JDI LPM027M128C encerrou as vendas; a JDI não lista MIP no site | amostras antes do layout; o conector de 10 vias aceita o LS027 como plano B |
 | Dois carregadores na célula | a Nordic não documenta um carregador externo no VBAT do nPM1300 | validar com o nPM1300 EK e a placa de avaliação do AEM10900 antes do esquemático; alternativa BQ25798 |
-| Antena GNSS dentro de uma caixa pequena | o LCD ocupa a face de cima, o plano de terra é pequeno e o BLE transmite até +8 dBm a centímetros da antena | antena linear L1/L5 na borda de cima, como no mercado; módulo com SAW antes do LNA; antenas de GNSS e de 2,4 GHz em cantos opostos; teste A/B do F10S e do M10N na caixa real, com C/N0 medido |
+| Antena GNSS dentro de uma caixa pequena | o LCD ocupa a face de cima, o plano de terra é pequeno e o BLE transmite até +8 dBm a centímetros da antena; com o F10S a banda L5 também precisa casar (56 % de eficiência contra 66 % em L1) | antena linear L1/L5 na borda de cima, como no mercado; módulo com SAW antes do LNA; antenas de GNSS e de 2,4 GHz em cantos opostos; teste A/B do F10S e do M10N na caixa real, com C/N0 medido por banda |
 | Calor ao sol | no verão a caixa passa de 45 °C, e o corte térmico da carga zera a colheita no sol forte | afastar a célula do painel; medir a temperatura interna; subir o limite só se o datasheet da célula permitir |
 | Estoque | LSM6DSV16X e LIS2MDL sem estoque na DigiKey em 2026-09-18; BM20C sem estoque até 12/11/2026 | a [lista de compras](19-lista-de-compras.md) troca o IMU e o magnetômetro e registra o prazo do BM20C |
 | Drivers | o `jdi,lpm013m126` precisa de mudanças para o 2,7"; o AEM10900 não tem driver; o BMP585 nunca rodou no driver do BMP581 | tudo testável no nRF54LM20 DK com as placas de avaliação, antes da placa própria |
@@ -469,7 +474,7 @@ Consultadas em 2026-09-18. Os arquivos do NCS são os de `C:\ncs\v3.3.0`.
 - NCS: `zephyr/drivers/display/display_lpm013m126.c`, `ls0xx.c`, `ssd16xx.c`, `uc81xx.c`
 
 **GNSS**
-- u-blox, [MAX-M10S Data sheet](https://content.u-blox.com/sites/default/files/MAX-M10S_DataSheet_UBX-20035208.pdf), [MAX-M10N-00B Data sheet](https://content.u-blox.com/sites/default/files/documents/MAX-M10N-00B_DataSheet_UBXDOC-963802114-13143.pdf), [MAX-F10S Data sheet](https://content.u-blox.com/sites/default/files/documents/MAX-F10S_DataSheet_UBXDOC-963802114-12732.pdf) (consumos, pinos, front-end das variantes) e [interface do M10](https://content.u-blox.com/sites/default/files/u-blox-M10-SPG-5.10_InterfaceDescription_UBX-21035062.pdf)
+- u-blox, [MAX-M10S Data sheet](https://content.u-blox.com/sites/default/files/MAX-M10S_DataSheet_UBX-20035208.pdf), [MAX-M10N-00B Data sheet](https://content.u-blox.com/sites/default/files/documents/MAX-M10N-00B_DataSheet_UBXDOC-963802114-13143.pdf), [MAX-F10S Data sheet](https://content.u-blox.com/sites/default/files/documents/MAX-F10S_DataSheet_UBXDOC-963802114-12732.pdf) (consumos, pinos, front-end das variantes), [interface do M10](https://content.u-blox.com/sites/default/files/u-blox-M10-SPG-5.10_InterfaceDescription_UBX-21035062.pdf) e [interface do F10 SPG 6.00](https://content.u-blox.com/sites/default/files/documents/u-blox-F10-SPG-6.00_InterfaceDescription_UBX-23002975.pdf) (grupos de configuração, chaves de `CFG-SIGNAL`, ausência do `CFG-PM`)
 - Quectel, [LC76G](https://quectel.com/content/uploads/2024/03/Quectel_LC76G_Series_GNSS_Specification_V1.1-1-1.pdf) e [LC79H](https://www.quectel.com/content/uploads/2024/03/Quectel_LC79H_Series_GNSS_Module_Specification_V1.4.pdf); Antenova, [M10578-A3](https://pdf.datasheet.live/d2484898/antenova.com/M10578-A3.pdf)
 - Zephyr: `zephyr/drivers/gnss/` e `zephyr/doc/releases/migration-guide-4.0.rst:221` do NCS; [driver `u-blox,m10` no `main`](https://raw.githubusercontent.com/zephyrproject-rtos/zephyr/main/drivers/gnss/u_blox/gnss_u_blox_m10.c)
 - Fotos internas do FCC: [Edge 840/540](https://fccid.io/IPH-04394/Internal-Photos/Internal-Photos-6356485), [COROS DURA](https://fccid.io/2BBGF-BY01/Internal-Photos/Internal-Photos-7458814), [Wahoo ELEMNT ACE](https://fccid.io/PADWF149/Internal-Photos/Internal-photos-7736106), [Wahoo BOLT v2](https://fccid.io/PADWF141/Internal-Photos/Internal-Photos-5303972), [Hammerhead Karoo 2](https://fccid.io/2ADMX-HK2/Internal-Photos/Int-Photos-4974717); chips GNSS dos Garmin pelos arquivos FIT: [logiqx](https://logiqx.github.io/gps-details/chipsets/airoha/devices.html)

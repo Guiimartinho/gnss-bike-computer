@@ -100,11 +100,16 @@
     pinctrl-1 = <&uart21_sleep>;
     pinctrl-names = "default", "sleep";
 
+    /*
+     * u-blox MAX-F10S, L1 and L5 at the same time (docs/15, GNSS): the same
+     * MAX footprint and the same UBX driver as the MAX-M10N it replaces, 1 m
+     * of CEP instead of 1,5 m, and no LEAP to ask for. NavIC stays off: it
+     * only covers India.
+     */
     gnss: gnss {
-        compatible = "u-blox,max-m10";
+        compatible = "u-blox,max-f10";
         fix-rate-ms = <1000>;
         dynamic-model = "portable";
-        power-mode = "leap";
         satellites-rate = <1>;
     };
 };

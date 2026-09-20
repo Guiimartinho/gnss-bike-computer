@@ -25,6 +25,8 @@
 
 #include "drivers/gnss/ubx_m10.h"
 
+#define ARRAY_LEN(a)    (sizeof(a) / sizeof((a)[0]))
+
 static const uint8_t valset_rate_meas[] = {
     0xB5U, 0x62U, 0x06U, 0x8AU, 0x0AU, 0x00U, 0x00U, 0x03U, 0x00U, 0x00U, 0x01U, 0x00U,
     0x21U, 0x30U, 0xE8U, 0x03U, 0xDAU, 0xD6U,
@@ -217,6 +219,91 @@ static void test_valset_refuses_an_unknown_key_or_layer(void)
                                                 0x08U));
 }
 
+/*
+ * The signals of the F10 go out as one message: every change in the
+ * CFG-SIGNAL group resets the GNSS subsystem, and the host must wait half a
+ * second after the ack before the next command (u-blox F10 SPG 6.00
+ * interface description UBX-23002975 R02, 4.9.20). One frame, one reset.
+ */
+
+static void test_valset_many_puts_every_pair_in_one_frame(void)
+{
+    /* the two signals of Galileo on the F10: E1 and E5a, one byte each */
+    static const struct ubx_m10_kv items[] = {
+        {UBX_M10_KEY_SIGNAL_GAL_E1_ENA, 1U},
+        {UBX_M10_KEY_SIGNAL_GAL_E5A_ENA, 1U},
+    };
+    static const uint8_t expected[] = {
+        0xB5U, 0x62U, 0x06U, 0x8AU, 0x0EU, 0x00U,   /* header, 14-byte payload */
+        0x00U, 0x03U, 0x00U, 0x00U,                 /* version 0, RAM and BBR */
+        0x07U, 0x00U, 0x31U, 0x10U, 0x01U,          /* 0x10310007 = 1 */
+        0x09U, 0x00U, 0x31U, 0x10U, 0x01U,          /* 0x10310009 = 1 */
+        0x35U, 0xC2U,                               /* 8-bit Fletcher (3.4) */
+    };
+    uint8_t buf[64];
+    size_t len = ubx_m10_valset_many(buf, sizeof(buf), items, ARRAY_LEN(items),
+                                     UBX_M10_LAYER_RAM | UBX_M10_LAYER_BBR);
+
+    TEST_ASSERT_EQUAL_size_t(sizeof(expected), len);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, buf, len);
+}
+
+static void test_valset_many_with_one_pair_is_the_same_as_valset(void)
+{
+    static const struct ubx_m10_kv one[] = {{UBX_M10_KEY_RATE_MEAS, 1000U}};
+    uint8_t batch[32];
+    uint8_t single[32];
+    size_t batch_len = ubx_m10_valset_many(batch, sizeof(batch), one, 1U,
+                                           UBX_M10_LAYER_RAM | UBX_M10_LAYER_BBR);
+    size_t single_len = ubx_m10_valset(single, sizeof(single), UBX_M10_KEY_RATE_MEAS, 1000U,
+                                       UBX_M10_LAYER_RAM | UBX_M10_LAYER_BBR);
+
+    TEST_ASSERT_EQUAL_size_t(single_len, batch_len);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(single, batch, batch_len);
+}
+
+static void test_valset_many_mixes_key_sizes(void)
+{
+    /* one byte, then two: the payload grows by the size of each key */
+    static const struct ubx_m10_kv items[] = {
+        {UBX_M10_KEY_SIGNAL_GPS_L5_ENA, 1U},
+        {UBX_M10_KEY_RATE_MEAS, 1000U},
+    };
+    uint8_t buf[64];
+    size_t len = ubx_m10_valset_many(buf, sizeof(buf), items, ARRAY_LEN(items),
+                                     UBX_M10_LAYER_RAM);
+
+    TEST_ASSERT_EQUAL_size_t(UBX_M10_FRAME_LEN(4U + (4U + 1U) + (4U + 2U)), len);
+    /* the two-byte value is little-endian, right after its key */
+    TEST_ASSERT_EQUAL_UINT8(0xE8U, buf[6U + 4U + 5U + 4U]);
+    TEST_ASSERT_EQUAL_UINT8(0x03U, buf[6U + 4U + 5U + 5U]);
+}
+
+static void test_valset_many_refuses_what_the_receiver_would_nak(void)
+{
+    static const struct ubx_m10_kv bad[] = {
+        {UBX_M10_KEY_RATE_MEAS, 1000U},
+        {0x00210001U, 1U},  /* size field 0: not a configuration key */
+    };
+    static const struct ubx_m10_kv good[] = {{UBX_M10_KEY_RATE_MEAS, 1000U}};
+    uint8_t buf[64];
+
+    /* an unknown key makes the receiver NAK the whole message and apply
+     * nothing (3.10.5): the frame is not built */
+    TEST_ASSERT_EQUAL_size_t(0U, ubx_m10_valset_many(buf, sizeof(buf), bad, ARRAY_LEN(bad),
+                                                     UBX_M10_LAYER_RAM));
+    TEST_ASSERT_EQUAL_size_t(0U, ubx_m10_valset_many(buf, sizeof(buf), good, 0U,
+                                                     UBX_M10_LAYER_RAM));
+    TEST_ASSERT_EQUAL_size_t(0U, ubx_m10_valset_many(buf, sizeof(buf), NULL, 1U,
+                                                     UBX_M10_LAYER_RAM));
+    TEST_ASSERT_EQUAL_size_t(0U, ubx_m10_valset_many(buf, sizeof(buf), good, 1U, 0U));
+    TEST_ASSERT_EQUAL_size_t(0U, ubx_m10_valset_many(buf, sizeof(buf), good,
+                                                     UBX_M10_VALSET_KEYS_MAX + 1U,
+                                                     UBX_M10_LAYER_RAM));
+    /* and a buffer that does not hold the frame */
+    TEST_ASSERT_EQUAL_size_t(0U, ubx_m10_valset_many(buf, 10U, good, 1U, UBX_M10_LAYER_RAM));
+}
+
 static void test_valget_polls_the_layer_in_use(void)
 {
     uint8_t buf[32];
@@ -385,6 +472,10 @@ int main(void)
     RUN_TEST(test_valset_of_a_one_byte_key_carries_one_byte);
     RUN_TEST(test_valset_of_the_baud_rate_goes_to_the_layer_asked);
     RUN_TEST(test_valset_refuses_an_unknown_key_or_layer);
+    RUN_TEST(test_valset_many_puts_every_pair_in_one_frame);
+    RUN_TEST(test_valset_many_with_one_pair_is_the_same_as_valset);
+    RUN_TEST(test_valset_many_mixes_key_sizes);
+    RUN_TEST(test_valset_many_refuses_what_the_receiver_would_nak);
     RUN_TEST(test_valget_polls_the_layer_in_use);
     RUN_TEST(test_valget_answer_gives_the_value_of_the_key_asked);
     RUN_TEST(test_pmreq_asks_for_backup_with_the_force_flag);

@@ -274,7 +274,9 @@ static void fill_settings(const struct model_ctx *ctx, ui_model_t *m)
 
     m->settings.ftp_w = user_settings_get_ftp(us);
     m->settings.weight_kg = (uint8_t)(user_settings_get_weight(us) / 10U);
-    m->settings.gnss_leap = true;
+    /* the MAX-F10S has no low power tracking mode: the menu shows what the
+     * receiver of the board actually does (docs/16, GNSS) */
+    m->settings.gnss_leap = (ctx->fix.mode == (uint8_t)APP_GNSS_MODE_LEAP);
     m->settings.light_auto = true;     /* the ui service puts its preference over it */
     m->settings.solar_limit_mv = ctx->power.solar_limit_mv;
 
