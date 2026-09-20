@@ -85,6 +85,9 @@ function(gnss_add_test name)
 endfunction()
 
 gnss_add_test(test_vecteur SOURCES model/vecteur.c)
+gnss_add_test(test_segment_file SOURCES model/segment_file.c)
+target_compile_definitions(test_segment_file PRIVATE
+    SEGMENT_DB_DIR="${APP_DIR}/../tools/TDD/DB")
 gnss_add_test(test_distance SOURCES model/distance.c model/vecteur.c)
 gnss_add_test(test_udmatrix SOURCES model/udmatrix.c)
 gnss_add_test(test_kalman_altitude SOURCES model/kalman_altitude.c model/udmatrix.c)

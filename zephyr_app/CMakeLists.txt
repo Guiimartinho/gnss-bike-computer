@@ -83,6 +83,7 @@ target_sources(app PRIVATE
     src/model/rr_zone.c
     src/model/sd_logger.c
     src/model/segment.c
+    src/model/segment_file.c
     src/model/suffer_score.c
     src/model/udmatrix.c
     src/model/user_settings.c
