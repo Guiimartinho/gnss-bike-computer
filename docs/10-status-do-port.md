@@ -114,7 +114,7 @@ flowchart TD
     F3["3 · armazenamento<br/>feito: formatos do legacy, log @DDMMYY,<br/>segmentos com pool e alocador por época<br/>falta: percursos .PAR, cartão de verdade"]:::partial --> F4
     F4["4 · rádio<br/>ANT+ pelo sdk-ant (HRM, BSC, FE-C) e BLE central,<br/>sensores no modelo, pareamento"]:::pending --> F5
     F5["5 · interface<br/>feito: telas LVGL, driver da tela, thread, teclas,<br/>luz, mapa e segmentos projetados pelo modelo<br/>falta: teste em painel"]:::partial --> F6
-    F6["6 · comandos e USB<br/>feito: atualização por BLE (MCUboot e mcumgr) com tela,<br/>comandos do legacy pelo NUS<br/>falta: $QRY (arquivos), USB device_next CDC e MSC"]:::partial --> F7
+    F6["6 · comandos e USB<br/>feito: atualização por BLE, comandos pelo NUS,<br/>USB device_next com serial (CDC) e disco (MSC)<br/>falta: $QRY (arquivos), teste com cabo"]:::partial --> F7
     F7["7 · extras<br/>Komoot, LNS, EPO e host aiding, WS2812, FRAM"]:::pending
     classDef done fill:#2e7d32,color:#ffffff
     classDef partial fill:#f9a825,color:#000000

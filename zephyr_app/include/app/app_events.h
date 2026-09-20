@@ -289,6 +289,7 @@ enum app_svc_id {
     APP_SVC_RADIO,
     APP_SVC_STORAGE,
     APP_SVC_UI,
+    APP_SVC_USB,
     APP_SVC_COUNT
 };
 

@@ -97,6 +97,7 @@ target_sources(app PRIVATE
 # Radio: BLE central and peripheral, sensor clients (docs/07)
 # =============================================================================
 target_sources(app PRIVATE
+    src/app/app_cmd.c
     src/rf/dfu.c
     src/rf/ble/ble_manager.c
     src/rf/ble/ble_nus.c
@@ -147,4 +148,11 @@ target_sources_ifdef(CONFIG_ANT app PRIVATE
 # =============================================================================
 if(CONFIG_MCUBOOT_BOOTUTIL_LIB)
     zephyr_link_libraries(MCUBOOT_BOOTUTIL)
+endif()
+
+# =============================================================================
+# USB service: only where the USB device stack is on (the nRF54LM20 target)
+# =============================================================================
+if(CONFIG_USB_DEVICE_STACK_NEXT)
+    target_sources(app PRIVATE src/svc/usb/usb_svc.c)
 endif()

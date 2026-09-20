@@ -320,6 +320,15 @@
     };
 };
 
+/*
+ * USB: the serial of the commands and the disk of the rider on the PC
+ * ([09](../../docs/09-armazenamento-usb.md)). The DK brings the USB-C of
+ * the nRF54LM20A out on its own connector.
+ */
+&usbhs {
+    status = "okay";
+};
+
 / {
     storage_disk0 {
         compatible = "zephyr,flash-disk";
@@ -327,6 +336,12 @@
         partition = <&storage_disk>;
         disk-name = "SD";
         cache-size = <4096>;
+    };
+};
+
+&zephyr_udc0 {
+    cdc_acm_uart0: cdc_acm_uart0 {
+        compatible = "zephyr,cdc-acm-uart";
     };
 };
 

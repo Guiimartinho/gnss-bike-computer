@@ -46,6 +46,9 @@ int main(void)
     model_svc_init();
 
     storage_svc_start();
+#if defined(CONFIG_USB_DEVICE_STACK_NEXT)
+    usb_svc_start();
+#endif
     power_svc_start();
     sensors_svc_start();
     gnss_svc_start();

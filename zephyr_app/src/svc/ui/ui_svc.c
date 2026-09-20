@@ -321,6 +321,10 @@ static void on_shutdown_ack(uint8_t svc)
 {
     uint32_t others = (uint32_t)APP_SVC_COUNT - 1U;
 
+#if !defined(CONFIG_USB_DEVICE_STACK_NEXT)
+    others--;   /* no USB service on this target */
+#endif
+
     if (!shutting_down || (svc >= (uint8_t)APP_SVC_COUNT) || (svc == (uint8_t)APP_SVC_UI)) {
         return;
     }
@@ -332,6 +336,11 @@ static void on_shutdown_ack(uint8_t svc)
 static void shutdown_finish_if_ready(uint32_t now)
 {
     uint32_t all = BIT_MASK(APP_SVC_COUNT) & ~BIT(APP_SVC_UI);
+
+#if !defined(CONFIG_USB_DEVICE_STACK_NEXT)
+    /* the USB service only exists where the stack is built in */
+    all &= ~BIT(APP_SVC_USB);
+#endif
     struct app_shutdown_ack ack = {.svc = APP_SVC_UI};
 
     if (!shutting_down || shutdown_done) {

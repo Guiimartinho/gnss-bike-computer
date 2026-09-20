@@ -81,4 +81,7 @@ int app_inbox_get(struct k_msgq *q, void *msg, int wdt_channel, uint32_t timeout
  */
 void app_inbox_put(struct k_msgq *q, const void *msg, const char *svc);
 
+/** @brief Start the USB service (serial of the commands and disk) */
+void usb_svc_start(void);
+
 #endif /* APP_SVC_H */
