@@ -12,6 +12,7 @@
 #include <math.h>
 
 #include "model/attitude.h"
+#include "model/distance.h"
 #include "model/power_estimate.h"
 #include "model/locator.h"
 #include "model/kalman_altitude.h"
@@ -77,6 +78,9 @@ static float accumulated_climb;
 
 /** Current speed in m/s */
 static float current_speed_ms;
+
+/** Distance ridden, with the rule of the legacy */
+static struct distance_acc ridden;
 
 /** Last Kalman update time */
 static uint32_t last_kalman_time;
@@ -285,6 +289,7 @@ app_err_t attitude_init(void)
 
     is_altitude_initialized = false;
     has_sea_level_ref = false;
+    distance_init(&ridden);
 
     /* Load rider weight from user settings (stored in hectograms) */
     user_settings_t *settings = user_settings_get_global();
@@ -305,6 +310,7 @@ app_err_t attitude_init(void)
                     (double)saved.dist, (double)saved.climb);
 
             current_att.dist = saved.dist;
+            distance_restore(&ridden, saved.dist);
             current_att.climb = accumulated_climb = saved.climb;
             current_att.nbpts = saved.nbpts;
             current_att.nbsec_act = saved.nbsec_act;
@@ -344,7 +350,15 @@ app_err_t attitude_update_gps(const loc_data_t *loc)
 
     /* Update current attitude */
     current_att.loc = *loc;
-    current_att.dist = locator_get_total_distance();
+    /*
+     * Distance as the legacy does it: between raw positions, whatever the
+     * speed, throwing the first 25 m away and saving the state for the
+     * crash recovery every 15 m (`Attitude::computeDistance`). The filtered
+     * distance of the locator stays for whoever wants it.
+     */
+    bool snapshot = distance_add(&ridden, loc->lat, loc->lon);
+
+    current_att.dist = distance_total(&ridden);
     current_att.nbpts++;
 
     /* Initialize sea level pressure if barometer ready and enough GPS points */
@@ -397,8 +411,10 @@ app_err_t attitude_update_gps(const loc_data_t *loc)
         }
 
         last_update = now;
+    }
 
-        /* Save state for crash recovery periodically */
+    /* the legacy saves the state every 15 m, not every second */
+    if (snapshot) {
         save_crash_recovery_state();
     }
 
@@ -593,6 +609,7 @@ void attitude_reset(void)
 
     is_altitude_initialized = false;
     has_sea_level_ref = false;
+    distance_init(&ridden);
 
     locator_reset();
     crash_recovery_clear();

@@ -85,6 +85,7 @@ function(gnss_add_test name)
 endfunction()
 
 gnss_add_test(test_vecteur SOURCES model/vecteur.c)
+gnss_add_test(test_distance SOURCES model/distance.c model/vecteur.c)
 gnss_add_test(test_power_estimate SOURCES model/power_estimate.c)
 gnss_add_test(test_power_zone SOURCES model/power_zone.c)
 gnss_add_test(test_suffer_score SOURCES model/suffer_score.c)

@@ -6,13 +6,15 @@ Os cálculos do stravaV10 original, com fórmulas, constantes e a origem no cód
 
 ## Distância
 
-| | Legacy (`libraries/utils/utils.h:36-48`) | Port (`zephyr_app/src/model/vecteur.c:72`) |
+| | Legacy (`libraries/utils/utils.h:36-48`) | Port (`zephyr_app/src/model/vecteur.c`, desde 2026-09-19) |
 |---|---|---|
-| Fórmula | equiretangular: `d = 2R·√((Δφ/2)² + ½(1 + cos(φ1+φ2))·(Δλ/2)²)` | haversine completa |
-| Raio | 6.371.008 m | 6.371.000 m |
-| Custo | 1 cosseno e 1 raiz | 4 senos/cossenos, 2 raízes e 1 `atan2f` |
+| Fórmula | equiretangular: `d = 2R·√((Δφ/2)² + ½(1 + cos(φ1+φ2))·(Δλ/2)²)` | a mesma |
+| Raio | 6.371.008 m | o mesmo |
+| Custo | 1 cosseno e 1 raiz | o mesmo |
 
-Em trechos de até 5 km a diferença fica abaixo de 0,5 % (`test_vecteur`). Latitude e longitude são `float` nos dois firmwares: cerca de 0,4 m de resolução em latitudes médias.
+O port usava haversine com 6.371.000 m até 2026-09-19 (diferença abaixo de 0,5 % em trechos de 5 km, mas 4 senos e cossenos, 2 raízes e um `atan2f`); o `locator_calc_distance()` agora chama a mesma função, e não há duas implementações. Latitude e longitude são `float` nos dois firmwares: cerca de 0,4 m de resolução em latitudes médias.
+
+**Acúmulo** (`legacy/source/model/Attitude.cpp:431-490`, port em `src/model/distance.c` com `test_distance`): soma a distância entre posições **brutas**, qualquer que seja a velocidade; enquanto não começou, o primeiro salto acima de 25 m joga o total fora (a posição anterior à primeira é (0, 0)) e liga a contagem; daí em diante, cada 15 m é um instantâneo, que salva o ponto e o estado para a recuperação de falha. Com épocas de 8 m (30 km/h a 1 Hz) o instantâneo sai a cada duas épocas, isto é, a cada 16 m: a regra pede **mais** de 15 m desde o último.
 
 ## Vetores e posição relativa
 
@@ -98,7 +100,7 @@ Estado `X = [h, α_bar, α0]`: elevação, pitch medido e offset de montagem do 
 ## Distância acumulada e log
 
 - Legacy (`Attitude::computeDistance`, `Attitude.cpp:431-490`): soma a distância entre posições brutas; descarta os primeiros 25 m; a cada 15 m guarda um snapshot e, com 5 snapshots, grava no SD e atualiza o estado salvo para FDIR (CRC-8).
-- Port: soma posições filtradas pelo Kalman 1D do `locator.c` só acima de 2 km/h, sem o descarte inicial; o `sd_logger` mantém 15 m e lotes de 5.
+- Port: igual ao legacy desde 2026-09-19 (`distance.c`): posições brutas, sem porta de velocidade, com o descarte dos primeiros 25 m e o instantâneo a cada 15 m, que agora é quem salva o estado da recuperação de falha (antes era a cada segundo). O `sd_logger` mantém os mesmos 15 m e lotes de 5 do legacy, e a distância filtrada do `locator.c` continua disponível para quem quiser.
 
 ## Zonas
 

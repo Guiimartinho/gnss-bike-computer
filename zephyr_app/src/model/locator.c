@@ -9,6 +9,7 @@
 #include <string.h>
 
 #include "model/locator.h"
+#include "model/vecteur.h"
 #include "model/kalman.h"
 
 LOG_MODULE_REGISTER(locator, CONFIG_LOG_DEFAULT_LEVEL);
@@ -305,17 +306,8 @@ float locator_get_vspeed(void)
 
 float locator_calc_distance(float lat1, float lon1, float lat2, float lon2)
 {
-    /* Haversine formula */
-    float dlat = deg_to_rad(lat2 - lat1);
-    float dlon = deg_to_rad(lon2 - lon1);
-
-    float a = sinf(dlat / 2.0f) * sinf(dlat / 2.0f) +
-              cosf(deg_to_rad(lat1)) * cosf(deg_to_rad(lat2)) *
-              sinf(dlon / 2.0f) * sinf(dlon / 2.0f);
-
-    float c = 2.0f * atan2f(sqrtf(a), sqrtf(1.0f - a));
-
-    return EARTH_RADIUS_M * c;
+    /* the formula of the legacy, in one place only (`vecteur.c`) */
+    return distance_between(lat1, lon1, lat2, lon2);
 }
 
 float locator_calc_bearing(float lat1, float lon1, float lat2, float lon2)

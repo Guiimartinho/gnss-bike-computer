@@ -16,7 +16,7 @@ LOG_MODULE_REGISTER(vecteur, CONFIG_LOG_DEFAULT_LEVEL);
  * ========================================================================== */
 
 /** Earth radius in meters */
-#define EARTH_RADIUS_M      6371000.0f
+#define EARTH_RADIUS_M      6371008.0f /* the radius of the legacy */
 
 /** Minimum norm to avoid division by zero */
 #define MIN_NORM            0.001f
@@ -71,20 +71,20 @@ bool point_is_valid(const point_t *pt)
 
 float distance_between(float lat1, float lon1, float lat2, float lon2)
 {
-    /* Haversine formula */
-    float dlat = DEG_TO_RAD(lat2 - lat1);
-    float dlon = DEG_TO_RAD(lon2 - lon1);
+    /*
+     * The equirectangular approximation of the legacy
+     * (`libraries/utils/utils.h:36-48`), with its radius of 6.371.008 m: one
+     * cosine and one square root, against four sines and cosines, two roots
+     * and one atan2f of the haversine that was here. Below 0,5 % of
+     * difference in stretches of up to 5 km (`test_vecteur`).
+     */
+    const float two_r = 2.0f * EARTH_RADIUS_M;
+    const float sdlat = DEG_TO_RAD(lat2 - lat1) / 2.0f;
+    const float sdlon = DEG_TO_RAD(lon2 - lon1) / 2.0f;
+    const float q = (sdlat * sdlat) +
+                    (0.5f * (1.0f + cosf(DEG_TO_RAD(lat1 + lat2))) * sdlon * sdlon);
 
-    float lat1_rad = DEG_TO_RAD(lat1);
-    float lat2_rad = DEG_TO_RAD(lat2);
-
-    float a = sinf(dlat / 2.0f) * sinf(dlat / 2.0f) +
-              cosf(lat1_rad) * cosf(lat2_rad) *
-              sinf(dlon / 2.0f) * sinf(dlon / 2.0f);
-
-    float c = 2.0f * atan2f(sqrtf(a), sqrtf(1.0f - a));
-
-    return EARTH_RADIUS_M * c;
+    return two_r * sqrtf(q);
 }
 
 float point_distance(const point_t *p1, const point_t *p2)
