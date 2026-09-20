@@ -22,7 +22,16 @@ extern "C" {
  * ========================================================================== */
 
 /** Maximum points per parcours */
+/*
+ * Points of a route held in memory (`CONFIG_GNSS_ROUTE_POINTS`). A longer
+ * file is halved as it loads, so the whole route fits with less
+ * resolution; the host tests, which have no Kconfig, take the default.
+ */
+#if defined(CONFIG_GNSS_ROUTE_POINTS)
+#define PARCOURS_MAX_POINTS     ((uint16_t)CONFIG_GNSS_ROUTE_POINTS)
+#else
 #define PARCOURS_MAX_POINTS     500U
+#endif
 
 /** Maximum name length */
 #define PARCOURS_NAME_LEN       32U
