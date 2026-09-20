@@ -47,7 +47,7 @@ flowchart TB
 | Sistema de arquivos | FatFs do Zephyr, montado em `/SD:` pelo serviço de armazenamento (`src/svc/storage/storage_svc.c`), com nomes longos num buffer estático | o legacy usa o FatFs do nRF5 SDK; não testado com cartão |
 | Nó do SD | `spi2` + `sdhc0` (`zephyr,sdhc-spi-slot`, disco "SD") no overlay, 8 MHz | legacy usava 4 MHz e pinos com alta corrente |
 | Segmentos | os arquivos do legacy, na raiz do cartão: a varredura só lê os nomes (posição em base 36) e o alocador abre o arquivo quando o ciclista chega a menos de 300 m, como no legacy | igual ao legacy na leitura; a escrita de segmentos pelo aparelho ainda não existe |
-| Percursos | `.CRS` com `lat;lon;alt`, até 500 pontos | legacy usa `.PAR` com espaço; loader para no primeiro CRLF |
+| Percursos | texto `lat lon [alt]` do legacy, `.PAR` e `.CRS`, até 500 pontos | desde 2026-09-20 é o formato do legacy, com CRLF, linhas `<meta>` e ponto sem altitude; um percurso maior que 500 pontos é dividido pela metade enquanto carrega (os dois reais, de 848 e 950 pontos, ficam em 424 e 475), o que o legacy não fazia por usar o heap |
 | Log | `@<data>.txt` na raiz, 19 campos com `;` e CRLF, como o legacy | igual desde 2026-09-19; o ponto leva os ângulos do filtro, a correção do barômetro, a velocidade vertical e as rugosidades do acelerômetro e do barômetro |
 | EPO | `/SD:/MTK14.EPO` | offset de cabeçalho e comandos errados (ver [10](10-status-do-port.md#defeitos-abertos)) |
 | USB | nada: os arquivos da pilha USB antiga saíram em 2026-09-19 | a USB `device_next` (CDC ACM e MSC) é o passo da USB |
@@ -56,7 +56,7 @@ Em 2026-09-18 o estouro do `sd_logger` com o cartão indisponível foi corrigido
 
 ## Estado do SD no port
 
-Desde 2026-09-19 o cartão é do serviço de armazenamento: ele monta o FatFs, carrega os segmentos, lista os percursos (`*.PAR` do legacy e `*.CRS` do port, na raiz) e grava o log com os pontos que o modelo publica, fora das outras threads. Falta: os formatos do legacy (segmentos em texto, `.PAR`, `@DDMMYY.txt`), a carga de segmentos e percursos por pedido do modelo, a formatação e o MSC. Nada disso foi testado com cartão.
+Desde 2026-09-19 o cartão é do serviço de armazenamento: ele monta o FatFs, carrega os segmentos, lista os percursos (`*.PAR` do legacy e `*.CRS` do port, na raiz) e grava o log com os pontos que o modelo publica, fora das outras threads. Os formatos do legacy estão lidos e escritos (segmentos em texto, `.PAR`, `@DDMMYY.txt`), e o modelo abre o percurso que a tela escolhe. Falta: a formatação do cartão e o MSC. Nada disso foi testado com cartão.
 
 ## RAM
 

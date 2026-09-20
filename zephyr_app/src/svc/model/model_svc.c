@@ -184,6 +184,35 @@ static void set_mode(int32_t mode)
  * Handlers
  * ========================================================================== */
 
+/**
+ * @brief Open the route the interface chose, as the legacy does in PRC
+ *
+ * The list comes from the storage service, with the name of the file as it
+ * is on the card (`legacy/source/sd/sd_functions.cpp:451`, `load_parcours`).
+ */
+static void load_selected_route(void)
+{
+    char path[48];
+
+    if ((ctx.route_sel < 0) || ((uint8_t)ctx.route_sel >= ctx.storage.nroutes)) {
+        return;
+    }
+
+    (void)snprintf(path, sizeof(path), "/SD:/%s", ctx.storage.route[ctx.route_sel]);
+
+    if (parcours_load(path) != APP_OK) {
+        LOG_WRN("route %s did not load", path);
+        app_notify("PRC", "Percurso nao abriu", NULL, false, 0U);
+        return;
+    }
+
+    LOG_INF("route %s loaded", path);
+    if (ctx.mode == APP_MODE_ID_PRC) {
+        (void)parcours_start();
+    }
+    publish_mode();
+}
+
 static void publish_state(void)
 {
     model_ui_fill(&ctx, &snapshot);
@@ -352,6 +381,7 @@ static void on_command(const struct app_system_cmd *cmd)
         break;
     case APP_CMD_ROUTE_SELECT:
         ctx.route_sel = (int8_t)cmd->arg;
+        load_selected_route();
         break;
     case APP_CMD_SET_FTP:
         user_settings_set_ftp(settings, (uint16_t)cmd->arg);

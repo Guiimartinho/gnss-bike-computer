@@ -39,7 +39,7 @@ Estados: **fiel** (mesmo comportamento), **diferente** (existe com regras ou con
 | Zonas de potência e suffer score | PowerZone, SufferScore | `power_zone.c`, `suffer_score.c`, alimentados como no legacy | diferente | zonas de potência com o rolo em FEC (`BoucleFEC.cpp:75`); o score a cada 1 s com a FC do momento (o legacy, a cada volta do laço, `Model.cpp:377`) |
 | Zonas RR | RRZone | `rr_zone.c`, a cada dado da cinta com RR | diferente | o legacy chama a cada volta do laço e repete o último RR ([06](06-algoritmos.md#zonas)) |
 | Segmentos Strava | carga por distância, ativação, desempenho, até 2 na tela | `segment.c`, `liste_points.c`, `vecteur.c`, com os arquivos do legacy lidos por `segment_file.c` | parcial | a varredura, a carga e o alocador são os do legacy (nome com a posição, 300 m para alocar, texto `lat ; lon ; rtime ; alt`, alocador a cada época no serviço do modelo), com os pontos num pool de 3 × 256 e decimação do que passa disso; `test_segment` (14 casos) e `test_segment_file` nos 138 arquivos reais; falta mostrar o segmento na tela e testar com cartão de verdade |
-| Parcours (GPX) | `.PAR` texto, seleção no menu | `parcours.c` com `.CRS` | não ligado | `parcours_load` sem chamador; loader quebra com CRLF |
+| Parcours | `.PAR` texto, seleção no menu | `parcours.c`, com o texto do legacy (`lat lon [alt]`, CRLF, linhas de metadados) | parcial | a tela escolhe e o modelo abre; percurso maior que 500 pontos perde resolução (decimação); `test_parcours` (10 casos, com os dois percursos reais); falta mostrar o percurso na tela e testar com cartão |
 | Log no SD | `@DDMMYY.txt`, 19 campos | o mesmo arquivo e os mesmos 19 campos (`sd_logger.c`), gravados de 15 em 15 m em lotes de 5 | fiel | `test_sd_logger`; não testado com cartão |
 | Configurações | FRAM 0x50, versão 0x0002 | NVS no nRF52840 e ZMS no nRF54LM20 (`user_settings.c`) | diferente | lidas e validadas no boot; FTP e peso gravados pelos comandos da interface |
 | Recuperação de falha (FDIR) | `.noinit` + CRC-8, restauração por data ao achar a referência do nível do mar, uma vez, com notificação | `crash_recovery.c` e `attitude.c` | fiel | corrigidos em 2026-09-19 o CRC (cobria o próprio campo), o `has_data` (exigia falha registrada) e o momento da restauração (era no `attitude_init`, antes de saber a data); `test_crash_recovery` |
@@ -101,7 +101,6 @@ Ordenados por gravidade. Linhas conferidas em 2026-09-18. Saíram com o código 
 | alto | `src/model/crash_recovery.c:104-118` | CRC inclui o próprio campo `crc`; a restauração falha em 255 de 256 casos |
 | alto | `src/rf/ble_fec_client.c:46-48, 166-168` | flags do FTMS erradas (cadência, tempo, energia): a potência sai do offset errado |
 | alto | `src/rf/ble_bsc_client.c:136-137` | velocidade CSC 3600 vezes menor |
-| alto | `src/model/parcours.c:216-218, 375-377` | loader para no CRLF; `OFF_ROUTE` não tem saída |
 
 ## Roteiro
 

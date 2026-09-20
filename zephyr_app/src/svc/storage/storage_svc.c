@@ -129,8 +129,9 @@ static void list_routes(void)
 
         if ((strcmp(ext, ".PAR") == 0) || (strcmp(ext, ".par") == 0) ||
             (strcmp(ext, ".CRS") == 0) || (strcmp(ext, ".crs") == 0)) {
+            /* the whole name, extension and all: it is what opens the file */
             (void)snprintf(info.route[info.nroutes], sizeof(info.route[0]), "%.*s",
-                           (int)(len - 4U), entry.name);
+                           (int)(sizeof(info.route[0]) - 1U), entry.name);
             info.nroutes++;
         }
     }

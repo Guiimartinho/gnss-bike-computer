@@ -8,6 +8,13 @@ Revisão completa de 2026-09-18: análise do legacy e do port, migração para o
 
 ### Corrigido
 
+- Percursos que nunca abriam (`src/model/parcours.c`, `svc/storage/storage_svc.c`, `svc/model/model_svc.c`, `test_parcours`), quatro defeitos:
+  - **formato errado**: o carregador esperava `lat;lon;alt` com ponto e vírgula, e os arquivos do legacy são `lat lon [alt]` separados por espaço (`legacy/source/parsers/file_parser.cpp:79-123`); nenhuma linha dos dois percursos reais de `tools/TDD/DB` seria aceita. As linhas de metadados (`<...>`) são puladas e um ponto sem altitude entra com zero, como no legacy.
+  - **o CRLF terminava o arquivo**: a leitura, feita byte a byte, tratava a linha vazia do fim de linha do legacy como fim do arquivo e parava no primeiro ponto. Agora a leitura é em blocos, com as linhas montadas no código, e a última linha sem quebra também conta.
+  - **`.PAR` não era aceito**: só a extensão `.CRS` entrava, e os arquivos do legacy são `.PAR`. Qualquer um dos dois abre; a lista do cartão passou a guardar o nome inteiro do arquivo, que é o que abre.
+  - **fora do percurso não havia volta**: o `parcours_update()` só rodava no estado ativo, então ao passar de 50 m da linha o estado ia para `OFF_ROUTE` e nunca mais era atualizado. O legacy chama `updatePosAuParcours()` toda época enquanto há percurso (`BoucleCRS.cpp:104-111`).
+  - E o percurso escolhido na tela agora é aberto de verdade: o modelo trata `APP_CMD_ROUTE_SELECT` abrindo o arquivo e, em PRC, começando a navegação. Um percurso maior que 500 pontos é dividido pela metade enquanto carrega, como os segmentos, em vez de ser cortado no meio. Não testado com cartão.
+
 - Rádio BLE que nunca acharia nem falaria com nada (`src/rf/ble/ble_manager.c`, `ble_hrs_client.c`, `ble_bsc_client.c`, `ble_fec_client.c`, `svc/radio/radio_svc.c`), três defeitos:
   - **nada começava**: o `ble_manager_init()` só registrava callbacks; ninguém chamava o anúncio nem a varredura, então nenhum sensor era encontrado e nenhum telefone conseguia conectar (inclusive para a atualização por BLE). O serviço de rádio agora inicia os dois depois de subir a pilha.
   - **a inscrição derrubaria o aparelho**: `bt_gatt_subscribe()` com `ccc_handle = 0` e `CONFIG_BT_GATT_AUTO_DISCOVER_CCC=y` exige `disc_params` e `end_handle`, e sem eles o host do Zephyr 4.3 escreve em ponteiro nulo assim que o primeiro sensor responder. Os três clientes passaram a guardar o fim do serviço na descoberta e a dar ao host onde procurar o descritor.

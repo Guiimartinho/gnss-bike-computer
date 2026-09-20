@@ -27,6 +27,9 @@ extern "C" {
 /** Maximum name length */
 #define PARCOURS_NAME_LEN       32U
 
+/** Longest line of a route file: `lat lon alt`, as the legacy writes it */
+#define PARCOURS_LINE_MAX       64U
+
 /** Off-route threshold in meters */
 #define PARCOURS_OFF_ROUTE_M    50.0f
 
