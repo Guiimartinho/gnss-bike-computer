@@ -58,7 +58,8 @@ static void storage_listener(const struct zbus_channel *chan)
     if (chan == &chan_system_cmd) {
         const struct app_system_cmd *cmd = zbus_chan_const_msg(chan);
 
-        if ((cmd->id != APP_CMD_FORMAT) && (cmd->id != APP_CMD_MSC)) {
+        if ((cmd->id != APP_CMD_FORMAT) && (cmd->id != APP_CMD_MSC) &&
+            (cmd->id != APP_CMD_STORAGE_RESCAN)) {
             return;
         }
     }
@@ -230,8 +231,25 @@ static void storage_thread(void *p1, void *p2, void *p3)
                 (void)app_publish(&chan_shutdown_ack, &ack);
             }
         } else if (msg.chan == &chan_system_cmd) {
-            /* format and USB mass storage: the USB step */
-            LOG_INF("storage command %u", msg.u.cmd.id);
+            if (msg.u.cmd.id == APP_CMD_STORAGE_RESCAN) {
+                /*
+                 * A route or a segment arrived over Bluetooth
+                 * (`rf/file_xfer.c`): list the storage again so the rider
+                 * finds it in the menu without a reset.
+                 */
+                if (info.mounted) {
+                    int n = segment_load_all();
+
+                    info.segments = (n > 0) ? (uint16_t)n : 0U;
+                    list_routes();
+                    (void)app_publish(&chan_storage_info, &info);
+                    LOG_INF("storage listed again: %u segments, %u routes",
+                            (unsigned int)info.segments, (unsigned int)info.nroutes);
+                }
+            } else {
+                /* format and USB mass storage: the USB step */
+                LOG_INF("storage command %u", msg.u.cmd.id);
+            }
         } else {
             /* nothing else reaches this inbox */
         }

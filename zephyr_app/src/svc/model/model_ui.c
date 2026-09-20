@@ -17,6 +17,7 @@
 #include "app_types.h"
 #include "model/attitude.h"
 #include "model/map_project.h"
+#include "model/route_profile.h"
 #include "model/parcours.h"
 #include "model/segment.h"
 #include "model/user_settings.h"
@@ -356,6 +357,41 @@ static void fill_segments(const struct model_ctx *ctx, ui_model_t *m)
 /**
  * @brief The route on the PRC screen, centred on the rider
  */
+/** Altitude of a point of the route, for the profile */
+static float route_alt(uint16_t index, void *user)
+{
+    const point_t *pt = parcours_get_point(index);
+
+    (void)user;
+
+    return (pt != NULL) ? pt->alt : 0.0f;
+}
+
+/**
+ * @brief The elevation profile of the route on the PRC screen
+ */
+static void fill_profile(const struct model_ctx *ctx, ui_model_t *m)
+{
+    struct route_profile prof;
+
+    (void)ctx;
+    if (!parcours_is_loaded()) {
+        return;
+    }
+    if (!route_profile_build(&prof, parcours_get_num_points(), parcours_get_current_index(),
+                             route_alt, NULL)) {
+        return;
+    }
+
+    m->profile.n = (prof.n < UI_PROFILE_PTS) ? prof.n : UI_PROFILE_PTS;
+    m->profile.here = prof.here;
+    (void)memcpy(m->profile.alt_m, prof.alt_m, (size_t)m->profile.n * sizeof(prof.alt_m[0]));
+    m->profile.min_m = prof.min_m;
+    m->profile.max_m = prof.max_m;
+    m->profile.climb_left_m = prof.climb_left_m;
+    m->profile.remain_km = m->route.remain_km;
+}
+
 static void fill_route(const struct model_ctx *ctx, ui_model_t *m)
 {
     uint16_t span = map_span_m(ctx->zoom);
@@ -416,4 +452,5 @@ void model_ui_fill(const struct model_ctx *ctx, ui_model_t *m)
     fill_settings(ctx, m);
     fill_segments(ctx, m);
     fill_route(ctx, m);
+    fill_profile(ctx, m);
 }

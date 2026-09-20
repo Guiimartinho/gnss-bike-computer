@@ -1,4 +1,4 @@
-# As 30 telas da interface
+# As 31 telas da interface
 
 Cada tela da interface da placa nova, nos dois temas: 8 cores, para o JDI LPM027M128C, e preto e branco, para a Sharp LS027B7DH01A da lista de compras. As imagens saem do código de verdade (`zephyr_app/src/ui`, LVGL 9.5), desenhado no PC pelo renderizador de host e reduzido às cores que o painel mostra; os números são dados de exemplo (`zephyr_app/tests/ui/ui_samples.c`). O projeto da interface, as regras e as diferenças para o legacy estão em [18-interface-telas.md](../18-interface-telas.md).
 
@@ -340,6 +340,15 @@ Em todas as listas: esquerda e direita mudam o item (dão a volta nas pontas, co
 
 - **Quando:** desligamento pelo menu, pelo centro longo, pela bateria no fim ou depois de 15 min parado.
 - **Mostra:** "Salvando atividade", a barra de progresso e "Desligando". Nova: o legacy desligava sem aviso.
+
+### 30 Perfil do percurso
+
+| 8 cores | Preto e branco |
+|---|---|
+| ![Perfil em 8 cores](30_perfil_cor.png) | ![Perfil em preto e branco](30_perfil_mono.png) |
+
+- **Quando:** no modo PRC, com toque longo na tecla direita; o mesmo toque volta para o mapa.
+- **Mostra:** o relevo do percurso inteiro, o trecho já pedalado em verde (no tema de uma cor, só o contorno), a posição do ciclista, a subida que falta, o que resta em quilômetros e as altitudes mínima e máxima. Nova: o legacy não tinha perfil.
 
 ### 28 Atualização
 

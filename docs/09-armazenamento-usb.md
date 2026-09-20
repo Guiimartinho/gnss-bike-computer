@@ -58,6 +58,23 @@ Em 2026-09-18 o estouro do `sd_logger` com o cartão indisponível foi corrigido
 
 **USB, desde 2026-09-20** (`src/svc/usb/usb_svc.c`, só no alvo com a pilha `device_next`): o serviço oitavo liga o barramento quando o cabo entra e mostra ao PC uma **porta serial** com os mesmos comandos do legacy (`$LOC`, `$DWN`, `$QRY`...), lidos pelo mesmo `cmd_parser`; a interrupção do CDC só enfileira bytes, e a thread lê. O **disco** só aparece no modo USB, que o menu ou um `$DWN,16` pedem: aí o serviço de armazenamento já desmontou o sistema de arquivos e o PC fica dono da mídia, e sair dele pede reset, como no legacy. Enquanto o ciclista pedala, o disco é do firmware e o PC só vê a serial. Identificadores: VID 0x1209 e PID 0x0001, os de teste do pid.codes — um número próprio precisa ser pedido lá antes de qualquer venda. Nada disso foi testado com cabo.
 
+### Arquivos pelo telefone
+
+O percurso entra no aparelho como num Garmin: o aplicativo manda o arquivo por Bluetooth, pelo **grupo de arquivos do mcumgr**, no mesmo enlace SMP da atualização ([07](07-radio-ant-ble.md#atualização-por-ble-dfu)). O aplicativo não é deste projeto; qualquer cliente SMP serve, e o nRF Connect Device Manager da Nordic é o de referência.
+
+O firmware não entrega o armazenamento inteiro. As regras estão em `src/model/file_policy.c`, com `test_file_policy`, e valem para cada pedido que chega:
+
+| Pedido | Resposta do aparelho |
+|---|---|
+| gravar `.PAR` ou `.CRS` (percurso) | aceita |
+| gravar um nome de segmento do legacy | aceita |
+| gravar `@DDMMYY.txt` (atividade) | **recusa**: quem escreve a atividade é o aparelho |
+| gravar qualquer outra coisa | **recusa**: o firmware não saberia ler |
+| ler, tamanho ou checksum de qualquer arquivo do cartão | aceita: é assim que o ciclista baixa o pedal |
+| qualquer caminho fora da raiz do armazenamento, com `/` ou `..` | **recusa** |
+
+Quando um arquivo chega, `src/rf/file_xfer.c` avisa na tela e pede ao serviço de armazenamento que liste o cartão de novo, então o percurso novo aparece no menu sem reiniciar. Não testado com telefone.
+
 ### Quanto cabe
 
 | O que | Tamanho | Na flash de 8 MB |

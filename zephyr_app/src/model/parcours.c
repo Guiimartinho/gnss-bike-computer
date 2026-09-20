@@ -38,6 +38,9 @@ static point_t points[PARCOURS_MAX_POINTS];
 /** One point of the file out of this many is kept (see add_point()) */
 static uint16_t route_stride = 1U;
 
+/** Points read from the file, kept or not */
+static uint32_t route_seen;
+
 /** Number of points loaded */
 static uint16_t num_points;
 
@@ -199,13 +202,25 @@ static bool parse_route_line(const char *line, float *lat, float *lon, float *al
  * @brief Take one more point of the route, halving it when the array fills
  *
  * The routes of the legacy go past what fits here (`tools/TDD/DB` holds one
- * of 950 points against the PARCOURS_MAX_POINTS of the port), and the legacy
- * kept them on the heap. Instead of cutting the route, which would leave the
- * rider without its end, the resolution drops: one point out of two stays
- * and the loading goes on, as the segments do (`model/segment.c`).
+ * of 950 points, and a course exported from Strava has ten thousand),
+ * and the legacy kept them on the heap. Instead of cutting the route, which
+ * would leave the rider without its end, the resolution drops by half and
+ * the loading goes on, as the segments do (`model/segment.c`).
+ *
+ * The step has to be applied to what comes **after** a halving too,
+ * otherwise the end of the file arrives at full resolution while the
+ * beginning has been halved over and over, and the route comes out with a
+ * sparse start and a dense finish.
  */
 static void add_point(float lat, float lon, float alt)
 {
+    bool keep = ((route_seen % route_stride) == 0U);
+
+    route_seen++;
+    if (!keep) {
+        return;
+    }
+
     if (num_points >= PARCOURS_MAX_POINTS) {
         uint16_t kept = 0U;
 
@@ -215,6 +230,11 @@ static void add_point(float lat, float lon, float alt)
         }
         num_points = kept;
         route_stride *= 2U;
+
+        /* with the step twice as long, this point may not belong any more */
+        if (((route_seen - 1U) % route_stride) != 0U) {
+            return;
+        }
     }
 
     points[num_points].lat = lat;
@@ -222,6 +242,29 @@ static void add_point(float lat, float lon, float alt)
     points[num_points].alt = alt;
     points[num_points].rtime = 0.0f;
     num_points++;
+}
+
+/** The end of the course is where the rider stops: it always stays */
+static void keep_last_point(float lat, float lon, float alt)
+{
+    if (num_points == 0U) {
+        return;
+    }
+
+    point_t *last = &points[num_points - 1U];
+
+    if ((last->lat == lat) && (last->lon == lon)) {
+        return;
+    }
+
+    if (num_points < PARCOURS_MAX_POINTS) {
+        num_points++;
+        last = &points[num_points - 1U];
+    }
+    last->lat = lat;
+    last->lon = lon;
+    last->alt = alt;
+    last->rtime = 0.0f;
 }
 
 static app_err_t load_route_file(const char *filename)
@@ -238,6 +281,7 @@ static app_err_t load_route_file(const char *filename)
 
     num_points = 0U;
     route_stride = 1U;
+    route_seen = 0U;
 
     /*
      * Read in chunks and split into lines here: fs_read() knows nothing
@@ -249,6 +293,10 @@ static app_err_t load_route_file(const char *filename)
     char line[PARCOURS_LINE_MAX];
     size_t line_len = 0U;
     ssize_t got;
+    float last_lat = 0.0f;
+    float last_lon = 0.0f;
+    float last_alt = 0.0f;
+    bool have_last = false;
 
     while ((got = fs_read(&file, chunk, sizeof(chunk))) > 0) {
         for (ssize_t i = 0; i < got; i++) {
@@ -273,6 +321,10 @@ static app_err_t load_route_file(const char *filename)
                 continue;
             }
             add_point(lat, lon, alt);
+            last_lat = lat;
+            last_lon = lon;
+            last_alt = alt;
+            have_last = true;
         }
     }
 
@@ -285,7 +337,16 @@ static app_err_t load_route_file(const char *filename)
         line[line_len] = '\0';
         if (parse_route_line(line, &lat, &lon, &alt)) {
             add_point(lat, lon, alt);
+            last_lat = lat;
+            last_lon = lon;
+            last_alt = alt;
+            have_last = true;
         }
+    }
+
+    /* the end of the course always stays, whatever the step dropped */
+    if (have_last) {
+        keep_last_point(last_lat, last_lon, last_alt);
     }
 
     (void)fs_close(&file);

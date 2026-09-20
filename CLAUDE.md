@@ -82,14 +82,14 @@ flowchart TB
 | Desbloquear chip | `bash tools/fw/fw.sh recover` |
 | Placas conectadas | `bash tools/fw/fw.sh devices` |
 | Memória e maiores símbolos | `bash tools/fw/fw.sh size` |
-| Testes de host | `bash tools/fw/host_tests.sh` (28 conjuntos, 319 casos) |
-| Telas da interface no PC (LVGL) | `python tools/ui/render_screens.py` (30 telas em 2 temas, gera `docs/img/telas-lvgl/` e `docs/telas/`) |
+| Testes de host | `bash tools/fw/host_tests.sh` (31 conjuntos, 341 casos) |
+| Telas da interface no PC (LVGL) | `python tools/ui/render_screens.py` (31 telas em 2 temas, gera `docs/img/telas-lvgl/` e `docs/telas/`) |
 | Diagramas e links da documentação | `python tools/docs/mermaid_check.py` e `python tools/docs/links_check.py` |
 | Ambiente do NCS no shell | `source tools/fw/ncs_env.sh` |
 
 Equivalentes no `cmd`: `build.bat [pristine]`, `flash.bat [keep]`, `recover.bat`, `serial.bat COMx`. Variáveis: `BUILD_DIR`, `NRF_SERIAL`, `NCS_VERSION`, `NCS_TOOLCHAIN`, `NOPAUSE`.
 
-Referência de 2026-09-20, com a interface, a energia, o GNSS, os segmentos, a atualização por BLE e o USB: nRF52840 DK (sem MCUboot nem USB) FLASH 484.988 B (46,3 %), RAM 213.888 B (81,6 %); nRF54LM20 DK FLASH 565.756 B de 921.456 B do slot (61,4 %), RAM 294.828 B (56,3 %), mais o MCUboot com 45.676 B de FLASH e 22.880 B de RAM; 0 avisos. Com `ANT=1`: 513.580 B / 218.496 B (nRF52840) e 595.708 B / 299.412 B (nRF54LM20), com um aviso esperado, de símbolo obsoleto.
+Referência de 2026-09-20, com a interface, a energia, o GNSS, os segmentos, a atualização por BLE, o USB, o percurso pelo telefone e o perfil: nRF52840 DK (sem MCUboot nem USB) FLASH 486.860 B (46,4 %), RAM 214.912 B (82,0 %); nRF54LM20 DK FLASH 572.360 B de 921.456 B do slot (62,1 %), RAM 376.708 B (72,0 %), mais o MCUboot com 45.676 B de FLASH e 22.880 B de RAM; 0 avisos.
 
 ## 5. Estado e próximos passos
 
@@ -190,7 +190,7 @@ flowchart LR
 | Arquitetura do firmware e máquinas de estado da placa nova | [docs/16-arquitetura-firmware.md](docs/16-arquitetura-firmware.md) |
 | Dispositivos BLE e ANT+ | [docs/17-dispositivos-ble-ant.md](docs/17-dispositivos-ble-ant.md) |
 | Interface e telas da placa nova | [docs/18-interface-telas.md](docs/18-interface-telas.md) |
-| As 30 telas, uma a uma | [docs/telas/README.md](docs/telas/README.md) |
+| As 31 telas, uma a uma | [docs/telas/README.md](docs/telas/README.md) |
 | Lista de compras da placa nova | [docs/19-lista-de-compras.md](docs/19-lista-de-compras.md) |
 | Build e ambiente | [docs/03-ambiente-build.md](docs/03-ambiente-build.md) |
 | Legacy | [docs/04-arquitetura-legacy.md](docs/04-arquitetura-legacy.md), [legacy/README.md](legacy/README.md) |

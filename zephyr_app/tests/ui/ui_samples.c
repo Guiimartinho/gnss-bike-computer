@@ -121,6 +121,20 @@ void ui_sample_ride(ui_model_t *m)
     m->route.scale_m = 250U;
     m->route.scale_pm = 200U;
 
+    /* elevation profile of the same route */
+    m->profile.n = 100U;
+    for (uint32_t i = 0U; i < m->profile.n; i++) {
+        float t = (float)i / (float)(m->profile.n - 1U);
+
+        m->profile.alt_m[i] = (int16_t)lroundf(320.0f + (180.0f * sinf(t * 3.4f)) +
+                                               (60.0f * sinf(t * 11.0f)));
+    }
+    m->profile.here = 38U;
+    m->profile.min_m = 318;
+    m->profile.max_m = 512;
+    m->profile.climb_left_m = 640U;
+    m->profile.remain_km = 31.5f;
+
     m->fec.time_s = (42U * 60U) + 17U;
     m->fec.score = 12.3f;
     m->fec.pwr_w = 245U;

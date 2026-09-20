@@ -251,7 +251,8 @@ enum app_cmd_id {
     APP_CMD_ZOOM,               /**< arg: +1 closer, -1 farther */
     APP_CMD_KEY,                /**< any key: feeds the backlight */
     APP_CMD_ROUTE_SELECT,       /**< arg: index in the route list */
-    APP_CMD_MSC                 /**< expose the card over USB */
+    APP_CMD_MSC,                /**< expose the card over USB */
+    APP_CMD_STORAGE_RESCAN      /**< a file arrived: list the storage again */
 };
 
 /** Channel system_cmd */

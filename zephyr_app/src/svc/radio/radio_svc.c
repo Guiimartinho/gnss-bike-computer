@@ -25,6 +25,7 @@
 #include "rf/ble_manager.h"
 #include "rf/ble_nus.h"
 #include "rf/dfu.h"
+#include "rf/file_xfer.h"
 #include "model/cmd_parser.h"
 
 LOG_MODULE_REGISTER(radio_svc, CONFIG_LOG_DEFAULT_LEVEL);
@@ -174,6 +175,8 @@ static void radio_start(void)
     if (rf_dfu_init() != APP_OK) {
         LOG_ERR("DFU start failed");
     }
+    /* routes and segments the phone sends, over the same SMP link */
+    (void)rf_file_xfer_init();
 
     /*
      * Nothing was looking for anything until here: the manager only

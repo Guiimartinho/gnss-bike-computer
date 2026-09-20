@@ -71,11 +71,13 @@ target_sources(app PRIVATE
     src/model/attitude.c
     src/model/cmd_parser.c
     src/model/crash_recovery.c
+    src/model/file_policy.c
     src/model/dfu_state.c
     src/model/kalman.c
     src/model/kalman_altitude.c
     src/model/liste_points.c
     src/model/map_project.c
+    src/model/route_profile.c
     src/model/loc_source.c
     src/model/locator.c
     src/model/parcours.c
@@ -99,6 +101,7 @@ target_sources(app PRIVATE
 target_sources(app PRIVATE
     src/app/app_cmd.c
     src/rf/dfu.c
+    src/rf/file_xfer.c
     src/rf/ble/ble_manager.c
     src/rf/ble/ble_nus.c
     src/rf/ble/ble_lns.c

@@ -96,6 +96,14 @@ static void prc_update(lv_obj_t *scr)
 static bool prc_key(ui_key_t key, ui_press_t press)
 {
     /* PRC: left and right change the zoom (docs/18, Botões) */
+    if (press == UI_PRESS_LONG) {
+        /* and a long press on the right opens the elevation profile */
+        if (key == UI_KEY_RIGHT) {
+            ui_go(UI_SCREEN_PROFILE);
+            return true;
+        }
+        return false;
+    }
     if (press != UI_PRESS_SHORT) {
         return false;
     }
@@ -539,3 +547,114 @@ static void dbg_update(lv_obj_t *scr)
 }
 
 const ui_screen_ops_t ui_scr_dbg = {dbg_create, dbg_update, NULL};
+
+/* ==========================================================================
+ * Elevation profile of the route (new: the legacy had no profile)
+ * ========================================================================== */
+
+static lv_obj_t *prof_plot;
+
+static void profile_draw(lv_event_t *e)
+{
+    lv_layer_t *layer = lv_event_get_layer(e);
+    const lv_obj_t *obj = lv_event_get_target_obj(e);
+    const ui_profile_t *p = &ui_ctx.m.profile;
+    lv_color_t fg = ui_col(UI_C_FG);
+    lv_area_t a;
+
+    lv_obj_get_coords(obj, &a);
+    if (p->n < 2U) {
+        ui_draw_text(layer, (a.x1 + a.x2) / 2, ((a.y1 + a.y2) / 2) - 10, ui_txt(T_NO_PROFILE),
+                     UI_FONT_TITLE, fg, LV_TEXT_ALIGN_CENTER);
+        return;
+    }
+
+    int32_t w = lv_area_get_width(&a);
+    int32_t h = lv_area_get_height(&a);
+    int32_t range = (int32_t)p->max_m - (int32_t)p->min_m;
+
+    if (range < 10) {
+        range = 10; /* a flat route still draws a line in the middle */
+    }
+
+    /* the ground of the profile, column by column */
+    for (uint32_t i = 0U; i < p->n; i++) {
+        int32_t x = a.x1 + (int32_t)((i * (uint32_t)w) / p->n);
+        int32_t next = a.x1 + (int32_t)(((i + 1U) * (uint32_t)w) / p->n);
+        int32_t top = a.y2 - (((int32_t)p->alt_m[i] - (int32_t)p->min_m) * (h - 6)) / range;
+        bool done = (i <= p->here);
+
+        int32_t cw = (next > x) ? (next - x) : 1;
+
+        if (done && (ui_ctx.theme == UI_THEME_MONO)) {
+            /* without colour the ridden part is only its outline */
+            ui_draw_fill(layer, x, top, cw, 3, ui_col(UI_C_FG));
+        } else {
+            ui_draw_fill(layer, x, top, cw, a.y2 - top, ui_col(done ? UI_C_GOOD : UI_C_NAV));
+        }
+    }
+
+    /* where the rider is */
+    int32_t rx = a.x1 + (int32_t)((p->here * (uint32_t)w) / p->n);
+
+    ui_draw_line(layer, rx, a.y1, rx, a.y2, fg, 2);
+    ui_draw_disc(layer, rx, a.y2 - (((int32_t)p->alt_m[p->here] - (int32_t)p->min_m) * (h - 6)) /
+                                      range, 4, fg);
+}
+
+static void profile_update(lv_obj_t *scr);
+
+static ui_field_t prof_climb;
+static ui_field_t prof_remain;
+static ui_field_t prof_min;
+static ui_field_t prof_max;
+
+static void profile_create(lv_obj_t *scr)
+{
+    lv_obj_t *band;
+    lv_obj_t *l;
+
+    ui_statusbar_create(scr);
+
+    band = ui_band(scr, 0, 1);
+    l = ui_label(band, UI_FONT_TITLE, ui_col(UI_C_FG), ui_txt(T_PROFILE));
+    lv_obj_align(l, LV_ALIGN_LEFT_MID, 4, 0);
+
+    prof_plot = ui_plot(scr, 0, ui_row_y(1), UI_WIDTH, ui_rows_h(1, 3) - 1, profile_draw, NULL);
+
+    ui_field_create(&prof_climb, scr, 0, 4, 1, ui_txt(T_CLIMB_LEFT), "m", UI_C_FG);
+    ui_field_create(&prof_remain, scr, 1, 4, 1, ui_txt(T_REMAIN), "km", UI_C_FG);
+    ui_field_create(&prof_min, scr, 0, 5, 1, "MIN", "m", UI_C_FG);
+    ui_field_create(&prof_max, scr, 1, 5, 1, "MAX", "m", UI_C_FG);
+
+    /* the screen may come up with a route already loaded */
+    profile_update(scr);
+}
+
+static void profile_update(lv_obj_t *scr)
+{
+    const ui_profile_t *p = &ui_ctx.m.profile;
+    char v[12];
+
+    (void)scr;
+    ui_statusbar_update();
+
+    ui_field_set(&prof_climb, ui_fmt_int(v, sizeof(v), (int32_t)p->climb_left_m), UI_C_FG);
+    ui_field_set(&prof_remain, ui_fmt_float(v, sizeof(v), p->remain_km, 1U), UI_C_FG);
+    ui_field_set(&prof_min, ui_fmt_int(v, sizeof(v), (int32_t)p->min_m), UI_C_FG);
+    ui_field_set(&prof_max, ui_fmt_int(v, sizeof(v), (int32_t)p->max_m), UI_C_FG);
+
+    lv_obj_invalidate(prof_plot);
+}
+
+static bool profile_key(ui_key_t key, ui_press_t press)
+{
+    /* a long press on the right goes back to the map (docs/telas, Botões) */
+    if ((key == UI_KEY_RIGHT) && (press == UI_PRESS_LONG)) {
+        ui_go(UI_SCREEN_PRC);
+        return true;
+    }
+    return false;
+}
+
+const ui_screen_ops_t ui_scr_profile = {profile_create, profile_update, profile_key};

@@ -18,8 +18,8 @@
 
 #include "host_fs.h"
 
-#define HOST_FS_FILES       12U
-#define HOST_FS_FILE_SIZE   65536U
+#define HOST_FS_FILES       8U
+#define HOST_FS_FILE_SIZE   400000U
 
 struct host_file {
     char name[MAX_FILE_NAME + 1U];
