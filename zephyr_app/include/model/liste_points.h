@@ -36,7 +36,8 @@ extern "C" {
  * @brief Point list structure (circular buffer)
  */
 typedef struct {
-    point_t points[LISTE_MAX_HISTORY];
+    point_t *points;        /**< Storage in use: `own` or the array given */
+    point_t own[LISTE_MAX_HISTORY]; /**< Storage of a list of its own */
     uint16_t head;          /**< Index of newest point */
     uint16_t count;         /**< Number of points in list */
     uint16_t capacity;      /**< Maximum capacity */
@@ -86,10 +87,36 @@ typedef struct {
 void liste_init(liste_points_t *liste, uint16_t capacity);
 
 /**
+ * @brief Initialize a list over an array given by the caller
+ *
+ * A segment holds far more points than the history of the rider, so its
+ * points live in a pool of the caller (`segment.c`) instead of inside the
+ * list. Everything else behaves as with liste_init().
+ *
+ * @param liste Pointer to list
+ * @param storage Array of at least @p capacity points, owned by the caller
+ * @param capacity Number of points of @p storage
+ */
+void liste_init_static(liste_points_t *liste, point_t *storage, uint16_t capacity);
+
+/**
  * @brief Clear all points
  * @param liste Pointer to list
  */
 void liste_clear(liste_points_t *liste);
+
+/**
+ * @brief Keep one point out of two, halving the list
+ *
+ * How a segment longer than its slot of the pool is loaded: the resolution
+ * drops by two and the loading goes on. The first point is always kept.
+ * Works on a list filled from the back that has not wrapped yet; any other
+ * list comes back untouched.
+ *
+ * @param liste Pointer to list
+ * @return Number of points left
+ */
+uint16_t liste_decimate(liste_points_t *liste);
 
 /**
  * @brief Add point to front (newest)

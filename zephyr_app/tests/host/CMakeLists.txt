@@ -86,6 +86,9 @@ endfunction()
 
 gnss_add_test(test_vecteur SOURCES model/vecteur.c)
 gnss_add_test(test_liste_points SOURCES model/liste_points.c model/vecteur.c)
+gnss_add_test(test_segment
+    SOURCES model/segment.c model/liste_points.c model/vecteur.c model/segment_file.c
+    SUPPORT host_kernel.c host_fs.c)
 gnss_add_test(test_segment_file SOURCES model/segment_file.c)
 target_compile_definitions(test_segment_file PRIVATE
     SEGMENT_DB_DIR="${APP_DIR}/../tools/TDD/DB")

@@ -180,7 +180,7 @@ Medidas com `CONFIG_STACK_USAGE=y` (arquivos `.su` do GCC) em 2026-09-19, no bui
 
 | Thread | Cadeia mais funda | Total | Pilha | Folga |
 |---|---|---|---|---|
-| `model` | `model_thread` 344 + `attitude_update_baro` 104 + **`measurement_update` 1672** + `udmat_invert` 352 | ~2,8 KB | 4096 B | ~1,3 KB |
+| `model` | `model_thread` 392 + `attitude_update_baro` 104 + **`measurement_update` 1672** + `udmat_invert` 352; o alocador de segmentos, que abre o arquivo do cartão na mesma thread, é mais raso: `segment_run_allocator` 32 + `segment_allocator` 616 (com o `load_segment_points` embutido) + FatFs e SD por SPI ~0,7 KB | ~2,9 KB | 4096 B | ~1,2 KB |
 | `storage` | `storage_thread` 416 + `segment_load_all` 656 + FatFs (`f_open` 96, `follow_path` 56, `dir_find` 64) + SD por SPI (`sdhc_spi_request` 136, `sdhc_spi_send_cmd` 56, `spi_nrfx_transceive` 128) | ~2,2 KB | 3584 B | ~1,4 KB |
 | `radio` | `bt_enable` 24 + `bt_init` 168 + `bt_hci_cmd_send_sync` 96 + `settings_zms_load` 144 e o ZMS | ~1,5 KB | 3072 B | ~1,5 KB |
 | `sensors` | `sensors_thread` 168 + leitura I2C (`i2c_nrfx_twim_msg_transfer` 56) + publicação no zbus (`zbus_chan_pub` 56, `_zbus_vded_exec` 104, listener até 80, `k_msgq_put`) | ~0,9 KB | 2048 B | ~1,1 KB |

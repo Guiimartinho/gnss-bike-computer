@@ -25,4 +25,13 @@ const char *host_fs_content(void);
 /** Number of fs_open() calls, successful or not. */
 unsigned int host_fs_open_count(void);
 
+/** Put a file with this content in the fake card; true on success. */
+bool host_fs_add_file(const char *path, const char *content);
+
+/** Content of a file, or NULL when it is not there. */
+const char *host_fs_file_content(const char *path);
+
+/** How many files the fake card holds. */
+unsigned int host_fs_file_count(void);
+
 #endif /* HOST_FS_H */

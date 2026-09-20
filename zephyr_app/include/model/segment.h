@@ -21,17 +21,17 @@ extern "C" {
  * Constants
  * ========================================================================== */
 
-/** Segment activation distance in meters */
+/** DIST_ACT of `legacy/source/routes/Segment.h:23` */
 #define SEG_ACTIVATE_DIST       50.0f
 
-/** Segment deactivation distance in meters */
-#define SEG_DEACTIVATE_DIST     100.0f
+/** DIST_ACT x MARGE_ACT, the margin the legacy gives the end of a segment */
+#define SEG_DEACTIVATE_DIST     75.0f
 
-/** Distance for dynamic segment allocation (from legacy) */
-#define SEG_ALLOC_DIST          3000.0f
+/** DIST_ALLOC of the legacy: the file is opened at 300 m, not at 3 km */
+#define SEG_ALLOC_DIST          300.0f
 
-/** Deallocation margin factor (from legacy) */
-#define SEG_MARGE_DESACT        1.5f
+/** MARGE_DESACT of the legacy: unload at twice the allocation distance */
+#define SEG_MARGE_DESACT        2.0f
 
 /** Maximum segment name length */
 #define SEG_NAME_MAX_LEN        13U

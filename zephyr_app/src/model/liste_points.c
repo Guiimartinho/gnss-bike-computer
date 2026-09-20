@@ -125,6 +125,25 @@ void liste_init(liste_points_t *liste, uint16_t capacity)
         capacity = LISTE_MAX_HISTORY;
     }
 
+    liste->points = liste->own;
+    liste->capacity = capacity;
+}
+
+void liste_init_static(liste_points_t *liste, point_t *storage, uint16_t capacity)
+{
+    if (liste == NULL) {
+        return;
+    }
+
+    (void)memset(liste, 0, sizeof(liste_points_t));
+
+    if ((storage == NULL) || (capacity == 0U)) {
+        liste->points = liste->own;
+        liste->capacity = LISTE_MAX_HISTORY;
+        return;
+    }
+
+    liste->points = storage;
     liste->capacity = capacity;
 }
 
@@ -135,7 +154,10 @@ void liste_clear(liste_points_t *liste)
     }
 
     uint16_t cap = liste->capacity;
+    point_t *pts = liste->points;
+
     (void)memset(liste, 0, sizeof(liste_points_t));
+    liste->points = (pts != NULL) ? pts : liste->own;
     liste->capacity = cap;
 }
 
@@ -200,10 +222,51 @@ void liste_add_iso(liste_points_t *liste, float lat, float lon, float alt, float
     /* Add to front */
     liste_add_front(liste, lat, lon, alt, rtime);
 
-    /* Trim to max size */
+    /*
+     * Trim to max size. The legacy drops the oldest point
+     * (`ListePoints::ajouteFinIso()`, `push_front` then `pop_back`), so the
+     * window moves with the rider; lowering the count alone would drop the
+     * point just added and freeze the list at its maximum.
+     */
     if ((max_size > 0U) && (liste->count > max_size)) {
+        uint16_t newest = (liste->head + liste->capacity - liste->count) % liste->capacity;
+
         liste->count = max_size;
+        liste->head = (newest + max_size) % liste->capacity;
     }
+}
+
+uint16_t liste_decimate(liste_points_t *liste)
+{
+    if ((liste == NULL) || (liste->points == NULL) || (liste->capacity == 0U)) {
+        return 0U;
+    }
+    if (liste->count < 2U) {
+        return liste->count;
+    }
+
+    uint16_t oldest = (liste->head + liste->capacity - liste->count) % liste->capacity;
+
+    /*
+     * Only a list filled from the back and still in the order of its array
+     * can be halved in place; a wrapped ring would overwrite points it has
+     * not copied yet. A segment being loaded is always of the first kind.
+     */
+    if (oldest != 0U) {
+        return liste->count;
+    }
+
+    uint16_t kept = 0U;
+
+    for (uint16_t i = 0U; i < liste->count; i += 2U) {
+        liste->points[kept] = liste->points[i];
+        kept++;
+    }
+
+    liste->count = kept;
+    liste->head = kept % liste->capacity;
+
+    return kept;
 }
 
 uint16_t liste_size(const liste_points_t *liste)

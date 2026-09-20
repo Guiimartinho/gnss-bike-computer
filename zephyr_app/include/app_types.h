@@ -41,8 +41,8 @@ extern "C" {
 /** Maximum number of parcours (routes) */
 #define MAX_PARCOURS         10U
 
-/** GPS history size for position calculations */
-#define HISTO_POINT_SIZE     15U
+/** GPS history size for position calculations (`legacy/source/parameters.h:21`) */
+#define HISTO_POINT_SIZE     20U
 
 /** Attitude buffer size for logging */
 #define ATT_BUFFER_NB_ELEM   20U

@@ -81,6 +81,72 @@ static void test_the_history_is_trimmed_to_its_maximum(void)
     TEST_ASSERT_EQUAL_UINT16(20U, liste_size(&liste));
     /* the newest point stayed at the front */
     TEST_ASSERT_EQUAL_FLOAT(239.0f, liste_get_at(&liste, 0)->alt);
+    /*
+     * The window moves with the rider: the legacy drops the oldest point
+     * (`ListePoints::ajouteFinIso()`, `pop_back`), so the twenty newest are
+     * the ones left, in order.
+     */
+    TEST_ASSERT_EQUAL_FLOAT(238.0f, liste_get_at(&liste, 1)->alt);
+    TEST_ASSERT_EQUAL_FLOAT(220.0f, liste_get_last(&liste)->alt);
+}
+
+static void test_a_full_history_keeps_following_the_rider(void)
+{
+    /* the maximum of the rider history, `HISTO_POINT_SIZE` of app_types.h */
+    for (unsigned int i = 0U; i < 60U; i++) {
+        liste_add_iso(&liste, BASE_LAT + DEG_LAT((float)i), BASE_LON, 200.0f + (float)i,
+                      (float)i, 15U);
+
+        const point_t *newest = liste_get_at(&liste, 0);
+
+        /* every single epoch, the current position is the one just added */
+        TEST_ASSERT_NOT_NULL(newest);
+        TEST_ASSERT_EQUAL_FLOAT(200.0f + (float)i, newest->alt);
+    }
+
+    TEST_ASSERT_EQUAL_UINT16(15U, liste_size(&liste));
+    TEST_ASSERT_EQUAL_FLOAT(245.0f, liste_get_last(&liste)->alt);
+}
+
+static void test_halving_a_list_keeps_one_point_out_of_two(void)
+{
+    for (unsigned int i = 0U; i < 9U; i++) {
+        add_back_at(10.0f * (float)i, 0.0f, 200.0f + (float)i, (float)i);
+    }
+
+    TEST_ASSERT_EQUAL_UINT16(5U, liste_decimate(&liste));
+    TEST_ASSERT_EQUAL_UINT16(5U, liste_size(&liste));
+    /* the first one stays, and the order with it */
+    TEST_ASSERT_EQUAL_FLOAT(200.0f, liste_get_at(&liste, 0)->alt);
+    TEST_ASSERT_EQUAL_FLOAT(202.0f, liste_get_at(&liste, 1)->alt);
+    TEST_ASSERT_EQUAL_FLOAT(208.0f, liste_get_last(&liste)->alt);
+
+    /* nothing to halve in a list of one point, and none in an empty one */
+    liste_clear(&liste);
+    TEST_ASSERT_EQUAL_UINT16(0U, liste_decimate(&liste));
+    TEST_ASSERT_EQUAL_UINT16(0U, liste_decimate(NULL));
+}
+
+static void test_a_list_can_live_on_an_array_of_the_caller(void)
+{
+    static point_t storage[300];
+    liste_points_t big;
+
+    liste_init_static(&big, storage, 300U);
+    for (unsigned int i = 0U; i < 300U; i++) {
+        liste_add_back(&big, BASE_LAT, BASE_LON, (float)i, (float)i);
+    }
+
+    /* over the LISTE_MAX_HISTORY of a list of its own */
+    TEST_ASSERT_EQUAL_UINT16(300U, liste_size(&big));
+    TEST_ASSERT_EQUAL_FLOAT(0.0f, liste_get_first(&big)->alt);
+    TEST_ASSERT_EQUAL_FLOAT(299.0f, liste_get_last(&big)->alt);
+
+    /* without an array it falls back to its own storage */
+    liste_init_static(&big, NULL, 300U);
+    TEST_ASSERT_EQUAL_UINT16(0U, liste_size(&big));
+    liste_add_back(&big, BASE_LAT, BASE_LON, 1.0f, 0.0f);
+    TEST_ASSERT_EQUAL_FLOAT(1.0f, liste_get_first(&big)->alt);
 }
 
 static void test_clearing_leaves_nothing(void)
@@ -228,6 +294,9 @@ int main(void)
     RUN_TEST(test_points_added_at_the_back_keep_their_order);
     RUN_TEST(test_points_added_at_the_front_come_out_newest_first);
     RUN_TEST(test_the_history_is_trimmed_to_its_maximum);
+    RUN_TEST(test_a_full_history_keeps_following_the_rider);
+    RUN_TEST(test_halving_a_list_keeps_one_point_out_of_two);
+    RUN_TEST(test_a_list_can_live_on_an_array_of_the_caller);
     RUN_TEST(test_clearing_leaves_nothing);
     RUN_TEST(test_an_index_outside_the_list_gives_nothing);
     RUN_TEST(test_the_distance_to_the_list_is_the_nearest_point);

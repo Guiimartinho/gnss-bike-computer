@@ -228,6 +228,12 @@ static void on_fix(const struct app_gnss_fix *f)
     fix_to_loc(f, &loc);
     (void)attitude_update_gps(&loc);
     if (ctx.storage.segments > 0U) {
+        /*
+         * The allocator first, as the legacy does in its own loop
+         * (`legacy/source/model/BoucleCRS.cpp:121`): it opens the file of a
+         * segment the rider is coming to and drops the ones left behind.
+         */
+        (void)segment_run_allocator(loc.lat, loc.lon);
         (void)segment_update(&loc);
     }
     if ((ctx.mode == APP_MODE_ID_PRC) && parcours_is_active()) {

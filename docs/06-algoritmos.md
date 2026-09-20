@@ -53,12 +53,17 @@ stateDiagram-v2
 | Item | Legacy | Port |
 |---|---|---|
 | fórmulas de ativação, término e posição relativa | — | fiéis (`vecteur.c`) |
-| ordem do histórico | índice 0 = mais recente | índice 0 = mais antigo (**defeito**) |
-| pontos do segmento | limitados pelo heap, ordem do arquivo | 20, ordem invertida (**defeito**) |
-| `DIST_ALLOC` / `MARGE_DESACT` | 300 m / 2,0 sobre a polilinha | 3000 m / 1,5 sobre o 1º ponto |
-| `HISTO_POINT_SIZE` | 20 | 15 |
+| ordem do histórico | índice 0 = mais recente | igual desde 2026-09-19 |
+| janela do histórico | `push_front` e `pop_back` em `ajouteFinIso` | igual desde 2026-09-19 (antes a lista congelava ao chegar ao máximo) |
+| pontos do segmento | limitados pelo heap, ordem do arquivo | pool de 3 × 256 pontos, ordem do arquivo |
+| segmento maior que o slot | carrega inteiro até a memória acabar | dividido pela metade a cada vez que o slot enche (`liste_decimate()`), início e fim preservados |
+| segmentos carregados ao mesmo tempo | quantos couberem no heap | 3; o quarto espera um slot livre |
+| `DIST_ALLOC` / `MARGE_DESACT` | 300 m / 2,0 sobre a polilinha | 300 m / 2,0 sobre o 1º ponto |
+| `HISTO_POINT_SIZE` | 20 | 20 desde 2026-09-19 (era 15) |
 | FIN | 5 ciclos, mostrado na tela | 16 ciclos, `segment_get_best` ignora FIN |
 | `pct_elev` | `(z_interp − alt_atual)/Δalt` | `(z_interp − alt_inicial)/ganho` |
+
+A distância ao segmento mais próximo (`segment_get_nearest_distance()`) e a lista de segmentos vizinhos (`segment_get_nearby()`) saem da posição codificada no **nome** do arquivo, então valem para os segmentos que ainda não foram abertos — é o que o legacy faz no alocador (`sd_functions.cpp:547-556`).
 
 ## Altitude: Kalman de 3 estados
 

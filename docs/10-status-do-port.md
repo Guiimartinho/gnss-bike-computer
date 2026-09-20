@@ -38,7 +38,7 @@ Estados: **fiel** (mesmo comportamento), **diferente** (existe com regras ou con
 | Potência estimada | `1.025·(9.81·W·vz + 0.004·9.81·W·v + 0.204·v³)` | a mesma fórmula em `power_estimate.c`, com a velocidade da posição anterior e o peso só do ciclista | fiel | `test_power_estimate` contra a transcrição do legacy; satura em vez de dar a volta no `int16_t` |
 | Zonas de potência e suffer score | PowerZone, SufferScore | `power_zone.c`, `suffer_score.c`, alimentados como no legacy | diferente | zonas de potência com o rolo em FEC (`BoucleFEC.cpp:75`); o score a cada 1 s com a FC do momento (o legacy, a cada volta do laço, `Model.cpp:377`) |
 | Zonas RR | RRZone | `rr_zone.c`, a cada dado da cinta com RR | diferente | o legacy chama a cada volta do laço e repete o último RR ([06](06-algoritmos.md#zonas)) |
-| Segmentos Strava | carga por distância, ativação, desempenho, até 2 na tela | `segment.c`, `liste_points.c`, `vecteur.c`, com os arquivos do legacy lidos por `segment_file.c` | parcial | a varredura e a carga são as do legacy (nome com a posição, 300 m para alocar, texto `lat ; lon ; rtime ; alt`), com `test_segment_file` nos 138 arquivos reais; falta ligar o alocador ao modelo a cada época e mostrar o segmento na tela |
+| Segmentos Strava | carga por distância, ativação, desempenho, até 2 na tela | `segment.c`, `liste_points.c`, `vecteur.c`, com os arquivos do legacy lidos por `segment_file.c` | parcial | a varredura, a carga e o alocador são os do legacy (nome com a posição, 300 m para alocar, texto `lat ; lon ; rtime ; alt`, alocador a cada época no serviço do modelo), com os pontos num pool de 3 × 256 e decimação do que passa disso; `test_segment` (14 casos) e `test_segment_file` nos 138 arquivos reais; falta mostrar o segmento na tela e testar com cartão de verdade |
 | Parcours (GPX) | `.PAR` texto, seleção no menu | `parcours.c` com `.CRS` | não ligado | `parcours_load` sem chamador; loader quebra com CRLF |
 | Log no SD | `@DDMMYY.txt`, 19 campos | o mesmo arquivo e os mesmos 19 campos (`sd_logger.c`), gravados de 15 em 15 m em lotes de 5 | fiel | `test_sd_logger`; não testado com cartão |
 | Configurações | FRAM 0x50, versão 0x0002 | NVS no nRF52840 e ZMS no nRF54LM20 (`user_settings.c`) | diferente | lidas e validadas no boot; FTP e peso gravados pelos comandos da interface |
@@ -98,8 +98,6 @@ Ordenados por gravidade. Linhas conferidas em 2026-09-18. Saíram com o código 
 |---|---|---|
 | crítico | `src/rf/ble_hrs_client.c:160`, `ble_bsc_client.c:268`, `ble_fec_client.c:270` | `bt_gatt_subscribe` com `ccc_handle=0` e `CONFIG_BT_GATT_AUTO_DISCOVER_CCC=y` sem `disc_params`: `memset(NULL)` no Zephyr 4.3 assim que o scan for ligado |
 | crítico | `src/rf/ble/ble_manager.c:218` | `bt_conn_le_create` sem `bt_conn_unref`: o pool de 4 conexões esgota |
-| crítico | `src/model/liste_points.c:47-48, 124-126` | índice 0 é o ponto mais antigo (o legacy usa o mais recente), capacidade de 20 pontos e segmentos invertidos |
-| crítico | `src/model/segment.c:852-879` | `dist_to_seg_header` retorna 9999; allocator sem chamador: nenhum segmento carrega |
 | alto | `src/model/udmatrix.c:64-67, 264-281` | `udmat_ones` gera identidade; `bound` com sinal zera covariâncias negativas: α0 nunca é estimado |
 | alto | `src/model/crash_recovery.c:104-118` | CRC inclui o próprio campo `crc`; a restauração falha em 255 de 256 casos |
 | alto | `src/rf/ble_fec_client.c:46-48, 166-168` | flags do FTMS erradas (cadência, tempo, energia): a potência sai do offset errado |
