@@ -12,6 +12,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "app_types.h"
+#include "model/vecteur.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -132,6 +133,36 @@ uint8_t segment_get_active(segment_t *segs, uint8_t max_count);
  * @return Number of segments returned
  */
 uint8_t segment_get_nearby(segment_t *segs, uint8_t max_count, float lat, float lon);
+
+/**
+ * @brief Segments the screen should show, best first
+ *
+ * The ones that are running come first, by score, and then the nearest of
+ * the loaded ones, as `Vue::afficheSegment()` of the legacy picks them.
+ *
+ * @param index Array for the indexes of the segments
+ * @param max Size of @p index
+ * @param lat Current latitude
+ * @param lon Current longitude
+ * @return Number of indexes written
+ */
+uint8_t segment_get_screen_list(uint8_t *index, uint8_t max, float lat, float lon);
+
+/**
+ * @brief Points a loaded segment holds, or 0 when it has none
+ * @param index Segment index
+ */
+uint16_t segment_point_count(uint8_t index);
+
+/**
+ * @brief One point of a loaded segment
+ *
+ * @param index Segment index
+ * @param i Point, from 0 to segment_point_count() - 1
+ * @param out Where to copy the point
+ * @return true when the point exists
+ */
+bool segment_point_at(uint8_t index, uint16_t i, point_t *out);
 
 /**
  * @brief Register callback for segment status changes

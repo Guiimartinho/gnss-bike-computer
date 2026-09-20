@@ -744,6 +744,111 @@ uint8_t segment_get_nearby(segment_t *segs, uint8_t max_count, float lat, float 
     return result_count;
 }
 
+uint8_t segment_get_screen_list(uint8_t *index, uint8_t max, float lat, float lon)
+{
+    if (!is_initialized || (index == NULL) || (max == 0U)) {
+        return 0U;
+    }
+
+    uint8_t count = 0U;
+
+    /* the ones running, best score first (legacy getScore) */
+    while (count < max) {
+        int16_t best = -1;
+        int8_t best_score = INT8_MIN;
+
+        for (uint16_t i = 0U; i < segment_count; i++) {
+            bool taken = false;
+
+            if (segments[i].status == SEG_OFF) {
+                continue;
+            }
+            for (uint8_t k = 0U; k < count; k++) {
+                if (index[k] == (uint8_t)i) {
+                    taken = true;
+                    break;
+                }
+            }
+            if (taken) {
+                continue;
+            }
+            if (segments[i].score > best_score) {
+                best_score = segments[i].score;
+                best = (int16_t)i;
+            }
+        }
+
+        if (best < 0) {
+            break;
+        }
+        index[count] = (uint8_t)best;
+        count++;
+    }
+
+    /* then the nearest of the loaded ones, which is what the rider comes to */
+    while (count < max) {
+        int16_t best = -1;
+        float best_dist = 9999.0f;
+
+        for (uint16_t i = 0U; i < segment_count; i++) {
+            bool taken = false;
+
+            if (slot_of(i) == NULL) {
+                continue;
+            }
+            for (uint8_t k = 0U; k < count; k++) {
+                if (index[k] == (uint8_t)i) {
+                    taken = true;
+                    break;
+                }
+            }
+            if (taken) {
+                continue;
+            }
+
+            float dist = dist_to_seg_header(i, lat, lon);
+
+            if (dist < best_dist) {
+                best_dist = dist;
+                best = (int16_t)i;
+            }
+        }
+
+        if (best < 0) {
+            break;
+        }
+        index[count] = (uint8_t)best;
+        count++;
+    }
+
+    return count;
+}
+
+uint16_t segment_point_count(uint8_t index)
+{
+    const seg_runtime_t *rt = slot_of(index);
+
+    return (rt != NULL) ? rt->pts.count : 0U;
+}
+
+bool segment_point_at(uint8_t index, uint16_t i, point_t *out)
+{
+    const seg_runtime_t *rt = slot_of(index);
+
+    if ((rt == NULL) || (out == NULL) || (i >= rt->pts.count)) {
+        return false;
+    }
+
+    const point_t *p = liste_get_at(&rt->pts, (int16_t)i);
+
+    if (p == NULL) {
+        return false;
+    }
+    *out = *p;
+
+    return true;
+}
+
 app_err_t segment_register_callback(seg_status_callback_t callback)
 {
     if (!is_initialized) {

@@ -2,7 +2,7 @@
 
 Os cálculos do stravaV10 original, com fórmulas, constantes e a origem no código, lado a lado com o que o port faz hoje. Diferença não documentada aqui é defeito: corrija o código ou registre a decisão nesta página. Testes de fidelidade ficam em `zephyr_app/tests/host/` (skill `fw-testes`).
 
-**Nesta página:** [Distância](#distância) · [Vetores e posição relativa](#vetores-e-posição-relativa) · [Segmentos](#segmentos) · [Altitude: Kalman de 3 estados](#altitude-kalman-de-3-estados) · [Barômetro e drift](#barômetro-e-drift) · [Potência estimada](#potência-estimada) · [Distância acumulada e log](#distância-acumulada-e-log) · [Zonas](#zonas) · [Fontes de posição](#fontes-de-posição) · [Bateria](#bateria)
+**Nesta página:** [Distância](#distância) · [Vetores e posição relativa](#vetores-e-posição-relativa) · [Segmentos](#segmentos) · [Mapa e zoom](#mapa-e-zoom) · [Altitude: Kalman de 3 estados](#altitude-kalman-de-3-estados) · [Barômetro e drift](#barômetro-e-drift) · [Potência estimada](#potência-estimada) · [Distância acumulada e log](#distância-acumulada-e-log) · [Zonas](#zonas) · [Fontes de posição](#fontes-de-posição) · [Bateria](#bateria)
 
 ## Distância
 
@@ -64,6 +64,18 @@ stateDiagram-v2
 | `pct_elev` | `(z_interp − alt_atual)/Δalt` | `(z_interp − alt_inicial)/ganho` |
 
 A distância ao segmento mais próximo (`segment_get_nearest_distance()`) e a lista de segmentos vizinhos (`segment_get_nearby()`) saem da posição codificada no **nome** do arquivo, então valem para os segmentos que ainda não foram abertos — é o que o legacy faz no alocador (`sd_functions.cpp:547-556`).
+
+## Mapa e zoom
+
+O que a tela desenha do percurso e dos segmentos sai do modelo já projetado, em **por mil da janela**, com o ciclista no meio (500, 500). O módulo puro `src/model/map_project.c` faz a conta, com `test_map_project` (8 casos).
+
+| Item | Legacy (`display/Zoom.cpp`) | Port |
+|---|---|---|
+| meia-janela | `nível² × 250 / 10²` m, com 100 níveis e o padrão no nível 10 (250 m) | cinco passos: 100, 250, 500, 1.000 e 2.500 m; o nível 2 é o padrão do legacy |
+| vertical | `h_zoom × altura / largura` da janela | igual: a projeção recebe a forma da janela (240 × 107, 2.243 ‰) e mantém o metro do mesmo tamanho nos dois eixos |
+| distância | equiretangular de `utils.h` | igual (`distance_between()`) |
+| pontos na tela | todos | no máximo 160 do percurso e 64 do segmento, percorridos com passo (`map_stride()`) |
+| barra de escala | não tinha | número redondo que ocupa no máximo metade da largura |
 
 ## Altitude: Kalman de 3 estados
 

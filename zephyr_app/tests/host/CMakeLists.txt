@@ -90,6 +90,7 @@ gnss_add_test(test_segment
     SOURCES model/segment.c model/liste_points.c model/vecteur.c model/segment_file.c
     SUPPORT host_kernel.c host_fs.c)
 gnss_add_test(test_dfu_state SOURCES model/dfu_state.c)
+gnss_add_test(test_map_project SOURCES model/map_project.c model/vecteur.c)
 gnss_add_test(test_parcours
     SOURCES model/parcours.c model/vecteur.c
     SUPPORT host_kernel.c host_fs.c)

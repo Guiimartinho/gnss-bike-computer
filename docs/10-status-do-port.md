@@ -113,7 +113,7 @@ flowchart TD
     F2["2 · fidelidade dos algoritmos<br/>Kalman (ones, bound, taxa), potência, distância,<br/>zonas, FDIR, testes diferenciais contra o legacy"]:::pending --> F3
     F3["3 · armazenamento<br/>feito: formatos do legacy, log @DDMMYY,<br/>segmentos com pool e alocador por época<br/>falta: percursos .PAR, cartão de verdade"]:::partial --> F4
     F4["4 · rádio<br/>ANT+ pelo sdk-ant (HRM, BSC, FE-C) e BLE central,<br/>sensores no modelo, pareamento"]:::pending --> F5
-    F5["5 · interface<br/>feito: telas LVGL testadas no PC, driver da tela,<br/>thread, teclas e luz no firmware<br/>falta: mapa e segmentos na tela, teste em painel"]:::partial --> F6
+    F5["5 · interface<br/>feito: telas LVGL, driver da tela, thread, teclas,<br/>luz, mapa e segmentos projetados pelo modelo<br/>falta: teste em painel"]:::partial --> F6
     F6["6 · comandos e USB<br/>feito: atualização por BLE (MCUboot e mcumgr) com tela<br/>falta: VParser $LOC/$DWN/$QRY, USB device_next CDC e MSC,<br/>stravaAP e tools/zpm"]:::partial --> F7
     F7["7 · extras<br/>Komoot, LNS, EPO e host aiding, WS2812, FRAM"]:::pending
     classDef done fill:#2e7d32,color:#ffffff
@@ -143,7 +143,7 @@ Tamanhos estimados pelos relatórios de análise: fase 1 M, fase 2 M, fase 3 G, 
 | Driver da tela | feito em 2026-09-19, no build: JDI LPM027M128B e C em 3 bits e Sharp LS027B7DH01 em 1 bit, retrato, a quantização do renderizador, só as linhas que mudaram, COM pelo EXTCOMIN ou pelo SPI, sequência de partida e de desligamento das fichas ([05](05-arquitetura-zephyr.md#tela)); `test_memlcd` (19 casos), mutação 14 de 14 mortas; não testado em painel | `modules/gnss_drivers/` |
 | Thread da tela, teclas e ligação ao modelo | feito em 2026-09-19, no build: thread `ui` com o LVGL (6 KB de pilha, ~4,7 KB medidos), o retrato do modelo, notificações, telas de USB e de desligamento com o progresso dos serviços, teclas com toque longo, tema e luz guardados em `ui/prefs`; não testado na placa | `src/svc/ui/` |
 | Luz da tela | feito em 2026-09-19: a máquina de [16](16-arquitetura-firmware.md#luz-do-display), com PWM pelo alias `backlight` e o COM a 120 Hz no JDI com a luz acesa; `test_backlight` (11 casos), mutação 8 de 8 mortas; limites a acertar na bancada | `src/svc/ui/backlight.c` |
-| Mapa e segmentos na tela | a fazer: projetar o percurso e os segmentos no retrato (`afficheSegment`, `Zoom.cpp`); hoje `nseg` e `route.n` vão em 0 | `src/svc/model/model_ui.c` |
+| Mapa e segmentos na tela | feito em 2026-09-20: o modelo projeta o percurso e até dois segmentos em por mil da janela, com o zoom do legacy em cinco passos e a barra de escala (`model/map_project.c`, `test_map_project`); não visto em painel | `src/svc/model/model_ui.c`, `src/model/map_project.c` |
 
 ## Decisões do dono
 

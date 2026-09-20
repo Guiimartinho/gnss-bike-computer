@@ -16,6 +16,9 @@
 
 #include "app_types.h"
 #include "model/attitude.h"
+#include "model/map_project.h"
+#include "model/parcours.h"
+#include "model/segment.h"
 #include "model/user_settings.h"
 #include "model_internal.h"
 
@@ -270,6 +273,136 @@ static void fill_settings(const struct model_ctx *ctx, ui_model_t *m)
                    (unsigned int)APP_VERSION_PATCH);
 }
 
+/**
+ * The map windows of the screens are 240 by 107 pixels (`ui_row_y()` gives
+ * two rows of the seven under the status bar): the projection needs the
+ * shape to keep a metre the same length on both axes.
+ */
+#define UI_MAP_ASPECT_PM    2243U
+
+/** Where the rider is, or NULL while there is no position */
+static bool rider_position(const struct model_ctx *ctx, float *lat, float *lon)
+{
+    if (!ctx->have_fix_msg || !ctx->fix.fix) {
+        return false;
+    }
+    *lat = (float)((double)ctx->fix.lat_e7 * 1e-7);
+    *lon = (float)((double)ctx->fix.lon_e7 * 1e-7);
+
+    return true;
+}
+
+static ui_pt_t to_ui(struct map_point p)
+{
+    ui_pt_t out = {.x = p.x, .y = p.y};
+
+    return out;
+}
+
+/**
+ * @brief The segments of the screen, with their mini-map
+ *
+ * The legacy draws the segments the rider is on or coming to
+ * (`Vue::afficheSegment()`), each in its own window centred on the rider.
+ */
+static void fill_segments(const struct model_ctx *ctx, ui_model_t *m)
+{
+    float lat;
+    float lon;
+
+    m->nseg = 0U;
+    if (!rider_position(ctx, &lat, &lon)) {
+        return;
+    }
+
+    uint8_t index[UI_SEG_MAX];
+    uint8_t n = segment_get_screen_list(index, UI_SEG_MAX, lat, lon);
+    uint16_t span = map_span_m(ctx->zoom);
+
+    for (uint8_t k = 0U; k < n; k++) {
+        segment_t seg;
+
+        if (segment_get(index[k], &seg) != APP_OK) {
+            continue;
+        }
+
+        ui_segment_t *out = &m->seg[m->nseg];
+
+        out->on = (seg.status == SEG_START) || (seg.status == SEG_ON);
+        out->done = (seg.status == SEG_FIN);
+        out->pct = (uint8_t)((seg.pct_dist * 100.0f) + 0.5f);
+        out->advance_s = seg.advance;
+        out->cur_s = seg.cur_time;
+        (void)snprintf(out->name, sizeof(out->name), "%s", seg.name);
+
+        uint16_t count = segment_point_count(index[k]);
+        uint16_t stride = map_stride(count, UI_SEG_PTS_MAX);
+
+        out->npts = 0U;
+        for (uint16_t i = 0U; (i < count) && (out->npts < UI_SEG_PTS_MAX); i += stride) {
+            point_t pt;
+
+            if (segment_point_at(index[k], i, &pt)) {
+                out->pts[out->npts] = to_ui(map_project(pt.lat, pt.lon, lat, lon, span,
+                                                        UI_MAP_ASPECT_PM));
+                out->npts++;
+            }
+        }
+
+        out->rider.x = 500;
+        out->rider.y = 500;
+        out->course_deg = ctx->fix.fix ? (int16_t)(ctx->fix.course_mdeg / 1000) : UI_ANGLE_UNKNOWN;
+        m->nseg++;
+    }
+}
+
+/**
+ * @brief The route on the PRC screen, centred on the rider
+ */
+static void fill_route(const struct model_ctx *ctx, ui_model_t *m)
+{
+    uint16_t span = map_span_m(ctx->zoom);
+    uint16_t bar_pm = 0U;
+
+    m->route.n = 0U;
+    m->route.scale_m = map_scale_bar(span, &bar_pm);
+    m->route.scale_pm = bar_pm;
+
+    float lat;
+    float lon;
+
+    if (!parcours_is_loaded() || !rider_position(ctx, &lat, &lon)) {
+        return;
+    }
+
+    uint16_t count = parcours_get_num_points();
+    uint16_t stride = map_stride(count, UI_ROUTE_PTS_MAX);
+    uint16_t here = parcours_get_current_index();
+
+    for (uint16_t i = 0U; (i < count) && (m->route.n < UI_ROUTE_PTS_MAX); i += stride) {
+        const point_t *pt = parcours_get_point(i);
+
+        if (pt == NULL) {
+            continue;
+        }
+        m->route.pts[m->route.n] = to_ui(map_project(pt->lat, pt->lon, lat, lon, span,
+                                                     UI_MAP_ASPECT_PM));
+        if (i <= here) {
+            m->route.done = m->route.n;
+        }
+        m->route.n++;
+    }
+
+    nav_info_t nav;
+
+    if (parcours_get_nav_info(&nav) == APP_OK) {
+        m->route.remain_km = nav.dist_remaining / 1000.0f;
+    }
+    m->route.rider.x = 500;
+    m->route.rider.y = 500;
+    m->route.course_deg = (int16_t)(ctx->fix.course_mdeg / 1000);
+}
+
 void model_ui_fill(const struct model_ctx *ctx, ui_model_t *m)
 {
     uint32_t now = k_uptime_get_32();
@@ -284,8 +417,6 @@ void model_ui_fill(const struct model_ctx *ctx, ui_model_t *m)
     fill_sensors(ctx, m);
     fill_nav(ctx, m);
     fill_settings(ctx, m);
-    /* segment mini-maps and the route map: the projection of the interface step */
-    m->nseg = 0U;
-    m->route.n = 0U;
-    m->route.scale_m = (uint16_t)(ctx->zoom * ctx->zoom * 250U / 100U);
+    fill_segments(ctx, m);
+    fill_route(ctx, m);
 }
