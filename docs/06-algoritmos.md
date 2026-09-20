@@ -134,6 +134,18 @@ Legacy (`legacy/source/model/Locator.cpp:111-134`): a simulada (`$LOC`) vence e 
 - A hora só sai do receptor quando `valid` traz data **e** hora (bits 0 e 1); sem isso o campo de hora vai zerado e o modelo não usa.
 - O fix vale quando `gnssFixOK` está ligado, `invalidLlh` desligado e o tipo é 2D ou 3D; morto por estimativa (`dead reckoning`) vira "fix estimado" e não conta como posição válida no serviço.
 
+## Recuperação de falha (FDIR)
+
+`legacy/source/model/Attitude.cpp:393-417` e `:480-481`; port em `crash_recovery.c` e `attitude.c` (`test_crash_recovery`).
+
+| Passo | Legacy | Port |
+|---|---|---|
+| Gravar | a cada 15 m, copia `att` inteira e calcula CRC-8 | igual (o instantâneo da distância manda), com posição, data, distância, subida, pontos, segundos ativos e recorde |
+| Restaurar | ao inicializar a referência do nível do mar (depois de 15 pontos), se o CRC bate **e** a data é a mesma | igual |
+| Uma vez | zera o CRC depois de restaurar | zera o bloco e marca 0xFF no CRC (o CRC-8 de um bloco de zeros é zero) |
+| Avisar | notificação "FDIR / Attitude restored" | `app_notify("FDIR", "Atitude restaurada", ...)` pelo serviço do modelo |
+| Causa do reset | `RESETREAS` lido uma vez | `hwinfo` lido e guardado no boot: a leitura limpa o registrador, então o valor fica latcheado |
+
 ## Bateria
 
 - Legacy (`libraries/utils/utils.c:290-312`, `percentageBatt`): compensa a queda na resistência interna (0,273 Ω) e usa um polinômio cúbico entre 3,78 e 4,2 V e `10^−11,4·V^22,315` entre 3,2 e 3,78 V.

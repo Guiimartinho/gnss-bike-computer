@@ -234,6 +234,11 @@ static void on_fix(const struct app_gnss_fix *f)
         parcours_update(loc.lat, loc.lon, loc.alt);
     }
 
+    if (attitude_take_fdir_notice()) {
+        /* the legacy shows "FDIR / Attitude restored" (`Attitude.cpp:410`) */
+        app_notify("FDIR", "Atitude restaurada", NULL, true, 0U);
+    }
+
     /* one log point per epoch; the storage keeps one per 15 m (sd_logger) */
     attitude_t att;
 

@@ -166,6 +166,15 @@ void attitude_reset(void);
  */
 void attitude_compute(void);
 
+/**
+ * @brief Did the FDIR pick a ride up again?
+ *
+ * True once after `restore_from_crash()` takes the block of the previous
+ * session; the model service turns it into the notification the legacy
+ * shows ("FDIR", `legacy/source/model/Attitude.cpp:410`).
+ */
+bool attitude_take_fdir_notice(void);
+
 #ifdef __cplusplus
 }
 #endif

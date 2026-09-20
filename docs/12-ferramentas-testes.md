@@ -28,6 +28,7 @@ bash tools/fw/host_tests.sh -R tilt     # um conjunto
 | Conjunto | Código testado | Casos | O que garante |
 |---|---|---|---|
 | `test_vecteur` | `model/vecteur.c` | 9 | distância dentro de 0,5 % da fórmula do legacy, sinais dos eixos, produto escalar, normalização |
+| `test_crash_recovery` | `model/crash_recovery.c` | 6 | a partida limpa não restaura nada, o bloco volta inteiro (com o recorde), não depende de falha registrada, um byte trocado quebra o CRC, o bloco limpo não é aceito e a segunda gravação vale |
 | `test_kalman_altitude` | `model/kalman_altitude.c`, `udmatrix.c` | 6 | a elevação acompanha a subida pelo pitch, a rampa e a velocidade vertical saem do filtro, o offset de montagem é estimado, parado não atualiza e a descida dá velocidade vertical negativa |
 | `test_udmatrix` | `model/udmatrix.c` | 8 | `ones` preenche tudo (P0 = 900), `bound` compara valor absoluto e mantém covariância negativa, e soma e subtração com o destino igual a uma das entradas |
 | `test_distance` | `model/distance.c` | 9 | descarte dos primeiros 25 m, instantâneo a cada 15 m (e um só quando a época traz 100 m), parado não soma, total igual ao do legacy em 300 m e a volta do total pela recuperação de falha |

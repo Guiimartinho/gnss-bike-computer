@@ -261,6 +261,42 @@ static void filter_altitude_correction(float gps_alt, float baro_alt)
             (double)gps_alt, (double)baro_alt, (double)altitude_correction);
 }
 
+/** A ride was picked up again, for the service to say it on the screen */
+static bool fdir_restored;
+
+/**
+ * Take the state of the ride back, as the legacy does when the sea level
+ * reference appears (`legacy/source/model/Attitude.cpp:393-417`): the block
+ * has to pass its CRC and carry today's date, and it is used once.
+ */
+static void restore_from_crash(void)
+{
+    saved_data_t saved;
+
+    if (!crash_recovery_has_data() || !crash_recovery_get_saved_state(&saved)) {
+        return;
+    }
+
+    if (saved.date.date != current_att.date.date) {
+        LOG_WRN("FDIR block is from another day (%u)", (unsigned int)saved.date.date);
+        crash_recovery_clear_saved_state();
+        return;
+    }
+
+    LOG_WRN("FDIR: ride restored, %.1f m and %.1f m of climb", (double)saved.dist,
+            (double)saved.climb);
+
+    current_att.dist = saved.dist;
+    distance_restore(&ridden, saved.dist);
+    current_att.climb = saved.climb;
+    accumulated_climb = saved.climb;
+    current_att.nbsec_act = saved.nbsec_act;
+    current_att.pr = saved.pr;
+
+    crash_recovery_clear_saved_state();
+    fdir_restored = true;
+}
+
 /**
  * @brief Save current state for crash recovery
  */
@@ -271,12 +307,22 @@ static void save_crash_recovery_state(void)
                               current_att.dist,
                               current_att.climb,
                               current_att.nbpts,
-                              current_att.nbsec_act);
+                              current_att.nbsec_act,
+                              current_att.pr);
 }
 
 /* ==========================================================================
  * Public Functions
  * ========================================================================== */
+
+bool attitude_take_fdir_notice(void)
+{
+    bool notice = fdir_restored;
+
+    fdir_restored = false;
+
+    return notice;
+}
 
 app_err_t attitude_init(void)
 {
@@ -330,23 +376,13 @@ app_err_t attitude_init(void)
     }
     LOG_INF("Rider weight: %.1f kg", (double)rider_weight_kg);
 
-    /* Check for crash recovery data */
-    if (crash_recovery_has_data()) {
-        saved_data_t saved;
-        if (crash_recovery_get_saved_state(&saved)) {
-            LOG_WRN("Restoring data from crash recovery");
-            LOG_WRN("Distance: %.1f m, Climb: %.1f m",
-                    (double)saved.dist, (double)saved.climb);
-
-            current_att.dist = saved.dist;
-            distance_restore(&ridden, saved.dist);
-            current_att.climb = accumulated_climb = saved.climb;
-            current_att.nbpts = saved.nbpts;
-            current_att.nbsec_act = saved.nbsec_act;
-
-            crash_recovery_clear();
-        }
-    }
+    /*
+     * The state of a ride is not restored here: the legacy waits for the
+     * sea level reference, when it already knows the date, and only takes
+     * the block if it is from today (`Attitude.cpp:393-417`). See
+     * restore_from_crash() below.
+     */
+    fdir_restored = false;
 
     is_initialized = true;
     LOG_INF("Attitude manager initialized");
@@ -409,6 +445,9 @@ app_err_t attitude_update_gps(const loc_data_t *loc)
 
             LOG_INF("Sea level pressure initialized: %.1f Pa (GPS alt: %.1f m)",
                     (double)sea_level_pressure, (double)alt);
+
+            /* the moment the legacy picks a ride up again */
+            restore_from_crash();
         }
     }
 
