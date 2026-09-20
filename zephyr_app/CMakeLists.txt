@@ -77,6 +77,7 @@ target_sources(app PRIVATE
     src/model/locator.c
     src/model/parcours.c
     src/model/power_scheduler.c
+    src/model/power_estimate.c
     src/model/power_zone.c
     src/model/rr_zone.c
     src/model/sd_logger.c

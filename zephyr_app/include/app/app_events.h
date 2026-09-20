@@ -308,7 +308,7 @@ struct app_notif {
 struct app_log_point {
     loc_data_t loc;
     date_data_t date;
-    uint16_t power_w;
+    int16_t power_w;
     uint8_t hr_bpm;
     uint8_t cadence_rpm;
     float baro_alt;

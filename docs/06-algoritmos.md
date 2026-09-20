@@ -84,15 +84,16 @@ Estado `X = [h, α_bar, α0]`: elevação, pitch medido e offset de montagem do 
 
 ## Potência estimada
 
-| | Legacy (`Attitude.cpp:556-575`) | Port (`attitude.c:260-287`) |
+| | Legacy (`Attitude.cpp:556-575`) | Port (`power_estimate.c`, desde 2026-09-19) |
 |---|---|---|
-| Fórmula | `P = 1,025·[9,81·W·v_z + 0,004·9,81·W·v + 0,204·v³]` | `0,005·(W+10)·9,81·v + 0,091875·v³ + (W+10)·9,81·(slope/100)·v` |
-| Massa | só o ciclista (padrão 79 kg) | ciclista + 10 kg (padrão 75 kg) |
-| Negativo | permitido (int16) | limitado a 0; zero abaixo de 0,5 km/h |
-| 30 km/h no plano | ≈ 147 W | ≈ 88 W |
-| 12 km/h a 5 % | ≈ 151 W | ≈ 156 W |
+| Fórmula | `P = 1,025·[9,81·W·v_z + 0,004·9,81·W·v + 0,204·v³]` | a mesma |
+| Massa | só o ciclista (padrão 79 kg) | a mesma (`DEFAULT_WEIGHT` passou a 790, 79,0 kg) |
+| Negativo | permitido (`SAtt.pwr` é `int16_t`) | permitido; satura em ±32.767 em vez de dar a volta |
+| Velocidade usada | a da posição **anterior**: o legacy chama `computePower()` antes de atualizar `m_speed_ms` (`Attitude.cpp:509-524`) | a mesma, e o filtro de altitude também recebe a anterior |
+| 30 km/h no plano | ≈ 147 W | ≈ 147 W |
+| 12 km/h a 5 % | ≈ 151 W | ≈ 151 W |
 
-`0,204·v³` equivale a CdA ≈ 0,333 m² com ρ = 1,225. A troca para a fórmula do legacy está na fase 2 do roteiro.
+`0,204·v³` equivale a CdA ≈ 0,333 m² com ρ = 1,225. O oráculo do `test_power_estimate` é a transcrição da função do legacy em `tests/host/support/legacy_ref.h`; a fórmula antiga do port (rolamento 0,005, CdA 0,15, massa com 10 kg de bicicleta) dava 88 W a 30 km/h no plano e saiu em 2026-09-19.
 
 ## Distância acumulada e log
 

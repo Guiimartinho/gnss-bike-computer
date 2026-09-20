@@ -12,6 +12,7 @@
 #include <math.h>
 
 #include "model/attitude.h"
+#include "model/power_estimate.h"
 #include "model/locator.h"
 #include "model/kalman_altitude.h"
 #include "model/crash_recovery.h"
@@ -30,12 +31,7 @@ LOG_MODULE_REGISTER(attitude, CONFIG_LOG_DEFAULT_LEVEL);
 #define MIN_SPEED_FOR_KALMAN    1.5f
 
 /** Power estimation constants */
-#define DEFAULT_RIDER_WEIGHT_KG 75.0f
-#define BIKE_WEIGHT_KG          10.0f
-#define ROLLING_RESISTANCE      0.005f
-#define AIR_DENSITY             1.225f
-#define DRAG_COEFF              0.3f
-#define FRONTAL_AREA            0.5f
+#define DEFAULT_RIDER_WEIGHT_KG 79.0f /* USER_WEIGHT of the legacy */
 
 /** Climb calculation hysteresis (meters) - from original */
 #define CLIMB_ELEVATION_HYSTERESIS_M    2.0f
@@ -247,45 +243,6 @@ static void save_crash_recovery_state(void)
                               current_att.nbsec_act);
 }
 
-/**
- * @brief Estimate cycling power using physics model
- *
- * Uses rider weight from user settings combined with bike weight
- * to calculate power from rolling resistance, air drag, and gradient.
- *
- * @param speed_kmh Current speed in km/h
- * @param slope Current gradient in percent
- * @return Estimated power in watts
- */
-static uint16_t estimate_power(float speed_kmh, int8_t slope)
-{
-    if (speed_kmh < 0.5f) {
-        return 0U;
-    }
-
-    float speed_ms = speed_kmh / 3.6f;
-    float total_mass = rider_weight_kg + BIKE_WEIGHT_KG;
-
-    /* Rolling resistance power: P = Crr * m * g * v */
-    float p_roll = ROLLING_RESISTANCE * total_mass * 9.81f * speed_ms;
-
-    /* Air resistance power: P = 0.5 * rho * CdA * v^3 */
-    float p_air = 0.5f * AIR_DENSITY * DRAG_COEFF * FRONTAL_AREA *
-                  speed_ms * speed_ms * speed_ms;
-
-    /* Gravity power (climbing/descending): P = m * g * grade * v */
-    float grade = (float)slope / 100.0f;
-    float p_gravity = total_mass * 9.81f * grade * speed_ms;
-
-    /* Total power (minimum 0) */
-    float power = p_roll + p_air + p_gravity;
-    if (power < 0.0f) {
-        power = 0.0f;
-    }
-
-    return (uint16_t)power;
-}
-
 /* ==========================================================================
  * Public Functions
  * ========================================================================== */
@@ -372,8 +329,12 @@ app_err_t attitude_update_gps(const loc_data_t *loc)
         return APP_ERR_INVALID_PARAM;
     }
 
-    /* Update speed (m/s) */
-    current_speed_ms = loc->speed / 3.6f;
+    /*
+     * The speed only changes at the end of the epoch: the legacy feeds the
+     * altitude filter and the power with the speed of the previous location
+     * and updates m_speed_ms afterwards
+     * (`legacy/source/model/Attitude.cpp:509-524`).
+     */
 
     /* Add to locator for distance calculation */
     app_err_t err = locator_add_point(loc);
@@ -447,8 +408,13 @@ app_err_t attitude_update_gps(const loc_data_t *loc)
         speed_count++;
     }
 
-    /* Estimate power */
-    current_att.pwr = estimate_power(loc->speed, current_att.slope);
+    /*
+     * Power with the speed of the previous epoch, as the legacy does: it
+     * calls computePower() before updating m_speed_ms
+     * (`legacy/source/model/Attitude.cpp:516-524`).
+     */
+    current_att.pwr = power_estimate_w(rider_weight_kg, current_speed_ms, current_att.vit_asc);
+    current_speed_ms = loc->speed / 3.6f;
 
     return APP_OK;
 }

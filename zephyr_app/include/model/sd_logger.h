@@ -44,7 +44,7 @@ extern "C" {
  * @brief Sensor snapshot data
  */
 typedef struct {
-    uint16_t power;         /**< Instantaneous power (W) */
+    int16_t power;          /**< Instantaneous power (W), negative going down */
     uint8_t bpm;            /**< Heart rate (bpm) */
     uint8_t cadence;        /**< Cadence (rpm) */
     uint16_t speed;         /**< Speed (0.01 km/h) */
@@ -180,7 +180,7 @@ const char *sd_logger_get_filename(const sd_logger_t *logger);
 void sd_logger_build_entry(sd_log_entry_t *entry,
                            const loc_data_t *loc,
                            const date_data_t *date,
-                           uint16_t power,
+                           int16_t power,
                            uint8_t bpm,
                            uint8_t cadence,
                            uint16_t speed,

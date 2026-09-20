@@ -144,7 +144,7 @@ typedef struct {
     float alt_m;
     float va_ms;            /**< vertical speed */
     float score;            /**< suffer score */
-    uint16_t pwr_w;
+    int16_t pwr_w;          /**< estimated power, negative going down */
     uint16_t next_seg_m;    /**< distance to the next segment */
     uint16_t solar_mw;      /**< power from the panels */
     uint8_t cad_rpm;

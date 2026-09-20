@@ -107,7 +107,7 @@ typedef struct {
     float climb;            /**< Total climb in meters */
     float vit_asc;          /**< Vertical speed in m/s */
     int8_t slope;           /**< Current slope in percent */
-    uint16_t pwr;           /**< Estimated power in watts */
+    int16_t pwr;            /**< Estimated power in watts, negative going down */
     uint16_t next;          /**< Distance to next segment in meters */
     uint16_t nbpts;         /**< Number of GPS points received */
     uint16_t nbsec_act;     /**< Active seconds (speed > threshold) */

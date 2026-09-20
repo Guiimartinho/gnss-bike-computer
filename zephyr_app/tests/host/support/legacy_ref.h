@@ -101,4 +101,21 @@ static inline float legacy_distance_between(float lat1, float lon1, float lat2, 
     return two_r * sqrtf(q);
 }
 
+/**
+ * legacy/source/model/Attitude.cpp:556-575 (`Attitude::computePower`), with
+ * the weight of the rider, the vertical speed of the filter and the speed in
+ * m/s. The legacy stores the result in an int16_t (`SAtt.pwr`).
+ */
+static inline float legacy_compute_power(float weight, float vit_asc, float speed_ms)
+{
+    float power = 0.0f;
+
+    power += 9.81f * weight * vit_asc;
+    power += 0.004f * 9.81f * weight * speed_ms;
+    power += 0.204f * speed_ms * speed_ms * speed_ms;
+    power *= 1.025f;
+
+    return power;
+}
+
 #endif /* LEGACY_REF_H */

@@ -98,7 +98,7 @@ static app_err_t write_buffer_to_file(sd_logger_t *logger)
         const sd_log_entry_t *e = &logger->buffer[i];
 
         int len = snprintf(line, sizeof(line),
-                           "%u,%.6f,%.6f,%.1f,%.1f,%.1f,%.2f,%u,%u,%u,%d,%.1f,%.1f\r\n",
+                           "%u,%.6f,%.6f,%.1f,%.1f,%.1f,%.2f,%d,%u,%u,%d,%.1f,%.1f\r\n",
                            (unsigned)e->timestamp,
                            (double)e->loc.lat,
                            (double)e->loc.lon,
@@ -106,7 +106,7 @@ static app_err_t write_buffer_to_file(sd_logger_t *logger)
                            (double)e->alti.baro_alt,
                            (double)e->alti.filt_alt,
                            (double)e->sensors.speed / 100.0,
-                           (unsigned)e->sensors.power,
+                           (int)e->sensors.power,
                            (unsigned)e->sensors.bpm,
                            (unsigned)e->sensors.cadence,
                            (int)e->alti.slope,
@@ -294,7 +294,7 @@ const char *sd_logger_get_filename(const sd_logger_t *logger)
 void sd_logger_build_entry(sd_log_entry_t *entry,
                            const loc_data_t *loc,
                            const date_data_t *date,
-                           uint16_t power,
+                           int16_t power,
                            uint8_t bpm,
                            uint8_t cadence,
                            uint16_t speed,
