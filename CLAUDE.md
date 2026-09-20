@@ -89,7 +89,7 @@ flowchart TB
 
 Equivalentes no `cmd`: `build.bat [pristine]`, `flash.bat [keep]`, `recover.bat`, `serial.bat COMx`. Variáveis: `BUILD_DIR`, `NRF_SERIAL`, `NCS_VERSION`, `NCS_TOOLCHAIN`, `NOPAUSE`.
 
-Referência de 2026-09-19, com a interface, a energia e o GNSS: nRF52840 DK FLASH 474.268 B (45,2 %), RAM 220.672 B (84,2 %); nRF54LM20 DK FLASH 498.256 B, RAM 250.336 B; 0 avisos. Com `ANT=1`: 502.860 B / 225.152 B (nRF52840) e 528.172 B / 254.928 B (nRF54LM20), com um aviso esperado, de símbolo obsoleto.
+Referência de 2026-09-19, com a interface, a energia, o GNSS e os segmentos: nRF52840 DK FLASH 478.568 B (45,6 %), RAM 213.504 B (81,5 %); nRF54LM20 DK FLASH 502.564 B, RAM 243.152 B; 0 avisos. Com `ANT=1`: 507.160 B / 217.984 B (nRF52840) e 532.500 B / 247.744 B (nRF54LM20), com um aviso esperado, de símbolo obsoleto.
 
 ## 5. Estado e próximos passos
 
