@@ -13,7 +13,7 @@
  *
  *   GNSS UART (uart21)    TX P1.04, RX P1.05
  *   Sensor I2C (i2c23)    SDA P1.29, SCL P1.03; IMU INT1 P3.04
- *   SD SPI (spi00)        SCK P2.01, MOSI P2.02, MISO P2.04, CS P2.03
+ *   Storage SPI (spi00)   SCK P2.01, MOSI P2.02, MISO P2.04, CS P2.05 (NOR flash)
  *   Display SPI (spi22)   SCK P3.03, MOSI P3.00, CS P3.02; DISP P3.05,
  *                         EXTCOMIN P3.06
  *   Energy I2C (i2c24)    SDA P1.11, SCL P1.14; nPM1300 0x6B with its GPIO3
@@ -289,25 +289,44 @@
 };
 
 /*
- * microSD on spi00, the fast SPI of port P2. The DK's MX25R64 flash sits on
- * the same bus (CS P2.05, disabled in the board files); its node goes away
- * so that the SD slot can take unit address 0.
+ * Storage on spi00, the fast SPI of port P2.
+ *
+ * The card socket left the new board in 2026-09-20 (decision of the owner:
+ * the soldered SD NAND costs more than the whole storage is worth), and a
+ * soldered SPI NOR takes its place. The DK carries an MX25R6435F of 8 MB on
+ * this same bus, which is what this overlay uses, so the path of the
+ * production board is the one that gets built and run here: FatFs over a
+ * flash disk, mounted on /SD: as before, and the same disk goes to the PC
+ * over USB when the mass storage comes.
  */
-/delete-node/ &mx25r64;
-
 &spi00 {
     status = "okay";
-    cs-gpios = <&gpio2 3 GPIO_ACTIVE_LOW>;
+    cs-gpios = <&gpio2 5 GPIO_ACTIVE_LOW>;
+};
 
-    sdhc0: sdhc@0 {
-        compatible = "zephyr,sdhc-spi-slot";
-        reg = <0>;
-        spi-max-frequency = <8000000>;
-        mmc {
-            compatible = "zephyr,sdmmc-disk";
-            status = "okay";
-            disk-name = "SD";
+&mx25r64 {
+    status = "okay";
+
+    partitions {
+        compatible = "fixed-partitions";
+        #address-cells = <1>;
+        #size-cells = <1>;
+
+        /* the whole part: activities, segments and routes of the rider */
+        storage_disk: partition@0 {
+            label = "storage_disk";
+            reg = <0x0 DT_SIZE_M(8)>;
         };
+    };
+};
+
+/ {
+    storage_disk0 {
+        compatible = "zephyr,flash-disk";
+        status = "okay";
+        partition = <&storage_disk>;
+        disk-name = "SD";
+        cache-size = <4096>;
     };
 };
 

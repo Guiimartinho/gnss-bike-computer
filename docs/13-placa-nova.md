@@ -19,7 +19,7 @@ Proposta de hardware da placa própria do GNSS Bike Computer, com o nRF54LM20A e
 | Barômetro | Bosch BME280 | Bosch BMP585 | ST LPS28DFW; BMP581 com membrana |
 | Movimento | NXP FXOS8700CQ (fora de produção) | ST LSM6DSV16X e LIS2MDL; sem estoque, a [lista de compras](19-lista-de-compras.md#trocas) usa o Bosch BMI270 e o Memsic MMC5633NJL | ST LIS2DW12 e Memsic MMC5603NJ |
 | Luz ambiente | não tem | TI OPT3001 | Lite-On LTR-329ALS-01 |
-| Armazenamento | microSD por SPI | SD NAND soldado no `spi00` (microSD e SD NAND no protótipo), com chave de alimentação ([15](15-avaliacao-componentes.md#armazenamento)) | microSD em soquete com tampa; NOR soldada de 32 a 64 MB |
+| Armazenamento | microSD por SPI | **flash NOR soldada** no `spi00`, com chave de alimentação (decisão do dono em 2026-09-20: o SD NAND custa mais que o armazenamento inteiro vale) ([15](15-avaliacao-componentes.md#armazenamento)) | microSD em soquete com tampa, só no protótipo; SD NAND se um dia precisar de 1 Gbyte |
 | Configurações | FRAM FM24CL16B | ZMS no RRAM do MCU | — |
 | USB | micro-USB B | USB-C IPX8, sem tampa, com proteção ESD ([15](15-avaliacao-componentes.md#usb-c-e-proteção)) | USB-C comum com tampa de borracha |
 | LED e som | WS2812B; sem buzzer | LED RGB por PWM e buzzer piezo | WS2812B pelo driver SPI; buzzer magnético |

@@ -25,7 +25,7 @@ Avaliação de engenharia, bloco a bloco, dos componentes principais da placa no
 | Barômetro | Bosch BMP585 | robusto a água e produtos químicos (15 bar sem efeito, pela ficha), 1,3 µA a 1 Hz, ±0,5 Pa/K | ST LPS28DFW |
 | IMU e magnetômetro | Bosch BMI270 e Memsic MMC5633NJL | em estoque, com driver no NCS v3.3.0 e despertar por movimento; o footprint do IMU aceita o ST LSM6DSV16X | ST LSM6DSV16X e LIS2MDL, quando voltarem ao estoque |
 | Luz ambiente | TI OPT3001 | resposta do olho humano, 1,8 µA | Vishay VEML7700 |
-| Armazenamento | microSD e SD NAND no protótipo; SD NAND XTX de 1 Gbyte no produto | o mesmo protocolo e o mesmo driver, sem fenda na caixa | microSD em soquete com tampa |
+| Armazenamento | **flash NOR SPI soldada** (microSD só no protótipo) | preço: o SD NAND de 1 Gbyte sai por mais que o resto do armazenamento vale, e o aparelho usa dezenas de megabytes, não gigabytes | SD NAND XTX; microSD em soquete com tampa |
 | USB-C | receptáculo IPX8 Molex 2036150003 | dispensa a tampa de borracha; o desenho confirma o anel de vedação | Amphenol 12402484E512A, depois do desenho; GCT USB4105-GF-A com tampa |
 | Proteção do USB | TI ESD761 no VBUS, TI TPD4E05U06 no D+, D−, CC1 e CC2 | o TVS do VBUS não conduz até 24 V e preserva os 22 V do nPM1300 | TI TVS2200 no VBUS |
 | Bateria | LiPo de 1 célula, 2000 mAh, com PCM e 2 NTC | 60 × 36 × 7 mm; o PCM é obrigatório (o nPM1300 não tem UVLO) | 2500 mAh se a caixa crescer |
@@ -333,8 +333,10 @@ O legacy grava segmentos, percursos, logs e EPO em FatFs sobre SD (V3) ou flash 
 
 Escolha:
 
-- **Protótipo:** os dois no mesmo `spi00`, com chip select separado. O microSD serve ao desenvolvimento, e o SD NAND valida o modo SPI, o FatFs e o MSC.
-- **Produto:** SD NAND soldado. Um aparelho de guidão apanha chuva e vibração, e a fenda do cartão é a maior abertura da caixa depois do USB. Com o log de 19 campos do legacy, perto de 150 bytes por segundo (estimativa), 1 Gbyte guarda cerca de 180 pedais de 10 h.
+- **Decisão do dono em 2026-09-20:** sai o SD NAND, entra **flash NOR SPI soldada**. O SD NAND de 1 Gbyte custa mais que todo o armazenamento do aparelho vale, e o aparelho não precisa de 1 Gbyte: o log do port grava um ponto a cada 15 m (`sd_logger`), cerca de 70 bytes por segundo a 25 km/h, ou **2,4 MB num pedal de 10 h**; os 138 segmentos de exemplo somam cerca de 7 MB e os percursos, quilobytes.
+- **Escolha:** 32 MB (256 Mbit) dá treze pedais longos além dos segmentos; 16 MB é o mínimo aceitável. Candidatas, as duas em SOIC-8 ou WSON-8 de 8 pinos, com o mesmo `jedec,spi-nor` do Zephyr: **Winbond W25Q256JV** (32 MB) ou **W25Q128JV** (16 MB), as mais comuns e as mais baratas, e **Macronix MX25R6435F** (8 MB), a peça que a Nordic põe nos DKs, de consumo menor parado. **A confirmar antes do layout:** preço e estoque no canal de compra, tensão de operação da versão escolhida (a placa alimenta o armazenamento em 3,0 V), corrente parada em deep power-down e a ficha de cada uma.
+- **Protótipo:** a flash soldada e o soquete microSD no mesmo `spi00`, com chip select separado; o cartão serve ao desenvolvimento e sai no produto.
+- **Firmware:** a pilha muda de SD para flash: FatFs sobre um `zephyr,flash-disk` na partição da NOR, com o mesmo ponto de montagem `/SD:` e o mesmo disco indo ao PC pelo USB. Compila e roda a mesma configuração no nRF54LM20 DK, que traz um MX25R6435F de 8 MB no `spi00` ([09](09-armazenamento-usb.md)).
 
 ## USB-C e proteção
 

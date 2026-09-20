@@ -56,6 +56,8 @@ Em 2026-09-18 o estouro do `sd_logger` com o cartão indisponível foi corrigido
 
 ## Estado do SD no port
 
+Desde 2026-09-20 o alvo nRF54LM20 não usa cartão: a placa nova leva **flash NOR soldada** (decisão do dono, [15](15-avaliacao-componentes.md#armazenamento)), e o firmware monta o FatFs sobre um `zephyr,flash-disk` na partição dela, com o mesmo ponto de montagem `/SD:`, o mesmo código de arquivos e o mesmo disco indo ao PC quando o USB chegar. O build usa o MX25R6435F de 8 MB que o nRF54LM20 DK traz no `spi00`; uma parte em branco é formatada na primeira montagem (`CONFIG_FS_FATFS_MKFS`). O alvo nRF52840 DK, que representa a placa V3, continua com o cartão pelo `zephyr,sdhc-spi-slot`.
+
 Desde 2026-09-19 o cartão é do serviço de armazenamento: ele monta o FatFs, carrega os segmentos, lista os percursos (`*.PAR` do legacy e `*.CRS` do port, na raiz) e grava o log com os pontos que o modelo publica, fora das outras threads. Os formatos do legacy estão lidos e escritos (segmentos em texto, `.PAR`, `@DDMMYY.txt`), e o modelo abre o percurso que a tela escolhe. Falta: a formatação do cartão e o MSC. Nada disso foi testado com cartão.
 
 ## RAM

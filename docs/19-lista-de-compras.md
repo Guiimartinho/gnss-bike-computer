@@ -33,12 +33,12 @@ flowchart LR
 | GNSS | 6 | — | V_IO travado em 1,8 V, limite de RF fora da banda |
 | Sensores | 5 | IMU, magnetômetro | pinos comuns do IMU, CSB do barômetro, nada de varredura no I2C |
 | Display | 7 | tela, conectores, REG710 | tela monocromática com luz frontal, 5 V com EN |
-| Armazenamento | 2 | — | SD NAND de capacidade padrão, pull-ups, pinos com o trilho desligado |
+| Armazenamento | 2 | a peça soldada ainda não foi escolhida | flash NOR de 32 MB, pull-ups de WP e HOLD, pinos com o trilho desligado |
 | USB | 4 | TVS do VBUS, receptáculo | placa de 0,8 mm |
 | Interface | 4 | botões sem vedação | LEDs no VSYS, buzzer em alta corrente |
 | Passivos | 18 | três capacitores sem estoque ou obsoletos | capacitância efetiva pelo DC bias |
 
-Todas as peças passam na integração, com as ressalvas de cada linha. Na compra ficam duas pendências: o BM20C, sem estoque hoje, com 1.000 previstos para 12/11/2026 na DigiKey e venda direta pela Fanstel, prazo que cabe no tempo do layout, com o plano B na linha dele; e o AEM10900, que a DigiKey não vende e que só a Mouser, não conferida, ou a e-peas fornecem. Quatro compras saem da DigiKey: o AEM10900, o SD NAND, a bateria e a ferramenta da Tag-Connect ([Compras fora da DigiKey](#compras-fora-da-digikey)).
+Todas as peças passam na integração, com as ressalvas de cada linha. Na compra ficam duas pendências: o BM20C, sem estoque hoje, com 1.000 previstos para 12/11/2026 na DigiKey e venda direta pela Fanstel, prazo que cabe no tempo do layout, com o plano B na linha dele; e o AEM10900, que a DigiKey não vende e que só a Mouser, não conferida, ou a e-peas fornecem. Quatro compras saem da DigiKey: o AEM10900, a flash NOR, a bateria e a ferramenta da Tag-Connect ([Compras fora da DigiKey](#compras-fora-da-digikey)).
 
 ## Trocas
 
@@ -151,7 +151,7 @@ Plano B, se o BM20C atrasar: MinewSemi ME54BS13-1Y20TI (6024-ME54BS13-1Y20TITR-N
 
 | Função | Peça | DigiKey | Estoque | US$ 1 / 10 | Por placa | Compra | Situação |
 |---|---|---|---|---|---|---|---|
-| SD NAND | XTX XTSDG08GWSIGA (8 Gbit, WSON8) | não vende | 115 na LCSC (C25836657) | 40,43 na LCSC | 1 | 6 | aprovada; o protótipo pode usar as versões de 1, 2 ou 4 Gbit (C7429710, C7429712, C7429714), com a mesma pinagem |
+| Flash NOR soldada | **a escolher**: flash SPI de 32 MB (`jedec,spi-nor`), candidatas em [15](15-avaliacao-componentes.md#armazenamento) | — | — | — | 1 | 6 | **pendente**: o dono tirou o SD NAND em 2026-09-20 por preço (US$ 40,43 na LCSC contra poucos dólares de uma NOR); falta escolher a peça e conferir preço, estoque, tensão e consumo |
 | Soquete microSD, só no protótipo | Hirose DM3AT-SF-PEJM5 | HR1964CT-ND | 27.897 | 3,55 / 3,02 | 1 | 6 | aprovada; 1,68 mm, push-push |
 
 ### USB

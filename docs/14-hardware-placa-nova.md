@@ -19,7 +19,7 @@ Especificação técnica preliminar da placa própria do GNSS Bike Computer: dec
 | Carga e medição | nPM1300 (USB e reguladores), AEM10900 (solar), MAX17262 (medidor na célula); o USB bloqueia o solar no hardware | recomendado ([15](15-avaliacao-componentes.md#carga-usb-c-e-painel-solar)) | bancada com as placas de avaliação do nPM1300 e do AEM10900 e o MAX17262 na mesma célula |
 | Bateria | LiPo de 1 célula, 2000 mAh, 60 × 36 × 7 mm, com proteção (PCM) e dois NTC de 10 kΩ | recomendado | especificação com o fornecedor do pack (dois NTC, UN38.3) |
 | Sensores | BMP585, BMI270, MMC5633NJL, OPT3001 | validado para compra ([19](19-lista-de-compras.md#sensores)); o LSM6DSV16X e o LIS2MDL saíram por falta de estoque | o footprint do IMU aceita o LSM6DSV16X quando ele voltar |
-| Armazenamento | microSD (Hirose DM3AT-SF-PEJM5) e SD NAND XTX no `spi00` no protótipo; só o SD NAND no produto | validado ([19](19-lista-de-compras.md#armazenamento)); o SD NAND só sai na LCSC | validar o modo SPI, o FatFs e o MSC no SD NAND |
+| Armazenamento | microSD (Hirose DM3AT-SF-PEJM5) e **flash NOR SPI soldada** no `spi00` no protótipo; só a NOR no produto | decisão do dono em 2026-09-20: o SD NAND custa demais para dezenas de megabytes ([15](15-avaliacao-componentes.md#armazenamento)) | escolher a peça (32 MB, `jedec,spi-nor`) e validar preço, tensão e consumo parado; o FatFs sobre flash já compila e roda no DK |
 | USB | USB-C IPX8 Molex 2036150003 (o Amphenol 12402484E512A fica de alternativa até o desenho), ESD761 no VBUS e TPD4E05U06 nos dados e no CC, USB High Speed | validado ([19](19-lista-de-compras.md#usb)) | placa de 0,8 mm, anel e furo na parede pelo desenho da Molex |
 
 O display é um LCD de memória refletivo (MIP), legível ao sol como o e-paper, e não e-paper: o e-paper colorido leva de 11 a 20 s por quadro em cor e gasta cerca de 144 mJ por atualização, contra menos de 0,2 s e cerca de 30 µJ do MIP, e o aparelho redesenha dados a cada segundo ([13](13-placa-nova.md#display)).
@@ -56,7 +56,7 @@ flowchart LR
         IMU["BMI270"]
         MAG["MMC5633NJL"]
     end
-    SD["microSD e SD NAND"]
+    SD["microSD e flash NOR"]
     XLAT ---|"uart21"| MCU
     LCD ---|"spi22"| MCU
     SD ---|"spi00"| MCU
@@ -94,7 +94,7 @@ flowchart TD
     PMIC -->|"BUCK2 3,0 V"| R3V0["3V0: BM20C, display, sensores,<br/>buzzer, lado A do TXU0204"]
     PMIC -->|"BUCK1 1,8 V"| R1V8["1V8: GNSS VCC e V_IO,<br/>lado B do TXU0204"]
     R3V0 --> LSW["chave LDSW1 do nPM1300"]
-    LSW --> RSD["SD3V0: microSD e SD NAND"]
+    LSW --> RSD["SD3V0: microSD e flash NOR"]
     PMIC -->|"VSYS"| LDO2["LDSW2 do nPM1300<br/>como LDO de 3,3 V"]
     LDO2 --> RBL["3V3BL: luz do display<br/>39 Ω e N-MOSFET com PWM"]
     PMIC -->|"VSYS"| RLED["anodos do LED RGB<br/>e do LED de carga"]
@@ -108,7 +108,7 @@ flowchart TD
 | VSYS | saída do power path do nPM1300 | VBAT; com USB, a tensão do VBUS, até 5,5 V (o limitador de entrada não regula o VSYS) | limite de entrada do VBUS | BUCK1, BUCK2, LDSW2, anodos do LED RGB e do LED de carga | nenhuma fonte externa no VSYS: o datasheet proíbe |
 | 3V0 | BUCK2 do nPM1300 | 3,0 V | 200 mA | BM20C, display (VDD e VDDA), sensores, buzzer, I2C_VDD do AEM10900, lado A do TXU0204, entrada da LDSW1 | tensão de partida pelo RVSET2 de 150 kΩ (tolerância de 5 % no máximo): a tabela do VSET1 não tem 3,0 V, a do VSET2 tem (tabelas 18 e 19 do datasheet); o MCU depende dele para ligar |
 | 1V8 | BUCK1 do nPM1300 | 1,8 V | 200 mA | VCC e V_IO do módulo GNSS, lado B do TXU0204 | filtro LC (ferrite e 10 µF) junto do módulo; ripple abaixo de 50 mV; partida pelo RVSET1 de 47 kΩ; o devicetree trava o BUCK1 em 1,8 V, porque o V_IO do módulo tem máximo absoluto de 1,98 V e o registrador aceitaria até 3,3 V; a rampa do V_IO fica entre 25 e 35.000 µs/V; o firmware manda `UBX-RXM-PMREQ` antes de desligar o trilho |
-| SD3V0 | chave LDSW1 do nPM1300, a partir do 3V0 | 3,0 V | 100 mA | microSD e SD NAND | 22 µF junto do soquete; o SD NAND gasta até 75 mA gravando e 130 µA parado, por isso fica atrás da chave; se os picos medidos passarem de 100 mA, chave dedicada |
+| SD3V0 | chave LDSW1 do nPM1300, a partir do 3V0 | 3,0 V | 100 mA | microSD e flash NOR | 22 µF junto do soquete; a NOR gasta dezenas de miliampères apagando e microampères em deep power-down, e fica atrás da chave junto do cartão |
 | 3V3BL | LDSW2 do nPM1300 como LDO, a partir do VSYS | 3,3 V | 50 mA | luz do display: 10 mA no filme da Sharp, 16 mA no JDI | ligado só com a luz acesa; entrada de 2,6 V ao VSYS; com o VBAT abaixo de cerca de 3,4 V o LDO sai de regulação e a luz enfraquece; a corrente depende da tensão do LED, medida na amostra |
 | VBCKP | TPS7A02, a partir do VBAT | 1,8 V | 200 mA, 25 nA de consumo próprio | V_BCKP do GNSS (28 a 34 µA em backup de hardware) | mantém efemérides e relógio do GNSS em ship mode, para partidas a quente |
 | 5V0 | TI REG710NA-5/3K, a partir do 3V0, com o EN num pino do MCU | 5,0 V | 30 mA | VDD e VDDA da Sharp LS027B7DH01A | montado com a Sharp, a tela da lista de compras; o EN corta os 65 µA do REG710 com a tela desligada; o JDI tem máximo absoluto de 3,6 V e queima com 5 V ([15](15-avaliacao-componentes.md#display)) |
@@ -159,7 +159,7 @@ Pico estimado no 3V0: rádio a +8 dBm (10,9 mA), CPU (2,6 mA), sensores (cerca d
 | Magnetômetro | Memsic MMC5633NJL | WLP de 0,85 × 0,85 × 0,4 mm | I2C em 0x30 e I3C; o endereço 0x7E no barramento o põe em I3C até faltar energia | `memsic,mmc56x3` (o ID 0x10 do registrador 0x39 confere) | validado; montagem por estêncil e forno, como o MAX17262 |
 | Luz ambiente | TI OPT3001 | USON de 2,0 × 2,0 × 0,65 mm | 0,01 a 83 mil lux, 1,8 µA, 1,6 a 3,6 V | `ti,opt3001` | recomendado |
 | microSD (protótipo) | Hirose DM3AT-SF-PEJM5 | soquete de 1,68 mm de altura | push-push com detecção de cartão; o DM3CS-SF, com tampa e dobradiça, se a vibração pedir | `zephyr,sdhc-spi-slot` | validado para o protótipo |
-| Armazenamento soldado | XTX XTSDG08GWSIGA (SD NAND SLC de 1 Gbyte) | WSON8 de 8 × 6 × 0,8 mm | SD 2.0 de capacidade padrão (CSD 1.0) com modo SPI, 2,7 a 3,6 V, 32 mA gravando (75 mA no máximo), 130 µA parado (2,5 mA no máximo) | `zephyr,sdhc-spi-slot`; a pilha SD do Zephyr trata a capacidade padrão (não testado) | validado; compra na LCSC |
+| Armazenamento soldado | **flash NOR SPI de 32 MB**, peça a escolher (candidatas em [15](15-avaliacao-componentes.md#armazenamento)) | SOIC-8 ou WSON-8 de 8 pinos | a confirmar na ficha da peça escolhida: tensão (a placa dá 3,0 V), clock do SPI, corrente apagando e parada | `jedec,spi-nor` com `zephyr,flash-disk` e FatFs, a mesma pilha que roda no DK | **a escolher**: o SD NAND saiu por preço em 2026-09-20 |
 | USB-C | Molex 2036150003 (alternativa Amphenol 12402484E512A) | receptáculo IPX8, SMT, 16 pinos | USB 2.0; anel de vedação de silicone incluso, que passa da borda da placa (a borda fica 2,73 mm atrás da frente do conector); furo de 9,54 × 3,76 mm em parede de pelo menos 1,2 mm; placa recomendada de 0,8 mm | — | validado |
 | ESD | TI ESD761DPYR no VBUS e TPD4E05U06DQAR nos dados e no CC | X1SON de 1,0 × 0,6 mm e USON-10 de 2,5 × 1,0 mm | VBUS: não conduz até ±24 V, 1,1 pF; dados e CC: 0,5 pF e ±12 kV | — | validado; o ESD751, da mesma família em SOD-523, está sem estoque até 27/11/2026 |
 | Buzzer | Same Sky CPT-1117-83-SMT-TR | 11 × 9 × 1,7 mm | piezo de 4,1 kHz, 83 dB a 10 cm com 5 Vpp; em ponte por dois PWM em alta corrente (6 Vpp) | PWM | validado |
@@ -187,7 +187,7 @@ Pico estimado no 3V0: rádio a +8 dBm (10,9 mA), CPU (2,6 mA), sensores (cerca d
 |---|---|---|---|---|---|
 | I2C dos sensores | `i2c23` | 400 kHz | 3,0 V, pull-ups de 4,7 kΩ | BMP585 0x47 (SDO no VDDIO; 0x46 com SDO em GND), BMI270 0x68 (SDO em GND; um LSM6DSV16X no mesmo footprint responde em 0x6A), MMC5633NJL 0x30 (fixo), OPT3001 0x44 (ADDR em GND) | sem conflito; o firmware nunca varre o barramento, porque o endereço 0x7E põe o MMC5633NJL em I3C |
 | I2C de energia | `i2c30` | até 400 kHz | 3,0 V | nPM1300 0x6B (fixo), MAX17262 0x36 (fixo), AEM10900 0x41 (I2C_ADDR em I2C_VDD; 0x40 em GND) | sem conflito; com o keep-alive, a configuração por I2C do AEM10900 continua valendo com o 3V0 desligado, e o firmware volta aos pinos antes do ship mode |
-| SPI do armazenamento | `spi00` | 16 MHz | 3,0 V | microSD e SD NAND, com chip select separado | 16 MHz fica fora do lóbulo de L1 e dentro dos 25 MHz do modo SPI do cartão |
+| SPI do armazenamento | `spi00` | 16 MHz | 3,0 V | microSD e flash NOR, com chip select separado | 16 MHz fica fora do lóbulo de L1 e dentro do que cartão e NOR aceitam; confirmar o máximo da peça escolhida |
 | SPI do display | `spi22` | 2 MHz (máximo do display) | 3,0 V | Sharp LS027B7DH01A ou JDI LPM027M128C | CS ativo alto |
 | UART do GNSS | `uart21` | 38400 baud, o valor de fábrica do M10 (`CFG-UART1-BAUDRATE`, seção 5.9.29 da descrição de protocolo): a 1 Hz são cerca de 360 B/s de `UBX-NAV-PVT` e `UBX-NAV-SAT` contra 3.840 B/s | 3,0 V no MCU, 1,8 V no módulo | u-blox MAX | pelo TXU0204 |
 | USB | USBHS | 480 Mbit/s | par diferencial de 90 Ω | USB-C | VBUS do nRF pela VBUSOUT do nPM1300 |
@@ -233,12 +233,12 @@ Pinos de configuração e ligações que a validação ([19](19-lista-de-compras
 | MMC5633NJL | VDD | 4,7 µF junto do pino | a ficha pede pelo menos 2,2 µF |
 | OPT3001 | ADDR | GND | endereço 0x44 |
 | OPT3001 | INT | pull-up de 10 kΩ, para o MCU | dreno aberto |
-| SD NAND e microSD | DAT1 e DAT2 | pull-up de 47 kΩ ao SD3V0 | reservados no modo SPI |
+| microSD | DAT1 e DAT2 | pull-up de 47 kΩ ao SD3V0 | reservados no modo SPI; a flash NOR usa WP e HOLD, que vão ao SD3V0 pelos mesmos resistores |
 | Sharp ou JDI | EXTMODE | VDD da tela | VCOM pelo EXTCOMIN |
 | REG710 | EN | pino do MCU | sequência de ligar da Sharp e corte dos 65 µA |
 | BM20C | G6, G7 e H7 | D−, D+ e VBUSOUT | USB High Speed |
 
-Com o SD3V0 desligado, os pinos do `spi00` ficam em nível baixo ou em alta impedância, para não alimentar o cartão e o SD NAND pelos pinos.
+Com o SD3V0 desligado, os pinos do `spi00` ficam em nível baixo ou em alta impedância, para não alimentar o cartão e a flash pelos pinos.
 
 ## Alocação de pinos
 
@@ -246,7 +246,7 @@ Provisória. Os blocos seriais seguem os domínios de pinos do nRF54LM20A (`spi0
 
 | Função | Sinais | Periférico | Porta | Pino no DK (referência) |
 |---|---|---|---|---|
-| Armazenamento | SCK, MOSI, MISO, CS do microSD, CS do SD NAND, detecção de cartão | `spi00` e GPIO | P2 | SCK P2.01, MOSI P2.02, MISO P2.04, CS P2.03 |
+| Armazenamento | SCK, MOSI, MISO, CS do microSD, CS da flash NOR, detecção de cartão | `spi00` e GPIO | P2 | SCK P2.01, MOSI P2.02, MISO P2.04, CS do cartão P2.03, CS da flash P2.05 |
 | Display | SCK, MOSI, CS, DISP, EN do REG710 | `spi22` e GPIO | P3 | SCK P3.03, MOSI P3.00, CS P3.02, DISP P3.05 |
 | Display | EXTCOMIN (1 Hz sem luz; cerca de 120 Hz com a luz acesa, para o COM perto dos 60 Hz que a ficha pede) e luz | `pwm20` | P1 | EXTCOMIN P3.06 por GPIO e timer; a luz no LED 1 (`pwm20`) |
 | GNSS | TXD, RXD, RESET_N, EXTINT, TIMEPULSE (o OE do tradutor fica fixo no VCCA) | `uart21` e GPIO | P1 | TX P1.04, RX P1.05, RESET P1.06, EXTINT P1.07, TIMEPULSE P1.13 |
@@ -258,7 +258,7 @@ Provisória. Os blocos seriais seguem os domínios de pinos do nRF54LM20A (`spi0
 | Console | TX, RX em pads de teste | `uart30` | P0 | — |
 | Dedicados | USB (D+, D−, VBUS), SWD, cristais internos do módulo | — | — | — |
 
-Total: 37 GPIO no protótipo, com o microSD e o SD NAND, e 35 no produto, só com o SD NAND, dos 64 do módulo (o chip tem 66; o cristal de 32,768 kHz ocupa P1.20 e P1.21).
+Total: 37 GPIO no protótipo, com o microSD e a flash NOR, e 35 no produto, só com a flash, dos 64 do módulo (o chip tem 66; o cristal de 32,768 kHz ocupa P1.20 e P1.21).
 
 Duas regras de pino do nRF54LM20A (ficha 4539_001 v1.0) mandam no mapa:
 
@@ -290,7 +290,7 @@ As espessuras de dielétrico saem com o fabricante para 90 Ω diferencial no USB
 | FPC do display | 3,7 a 7,1 | 29,5 a 39,5 | Hirose FH28 na borda esquerda | longe das antenas |
 | Buzzer | 10,5 a 21,5 | 46,5 a 55,5 | piezo, com saída de som na caixa | — |
 | Energia | 16 a 38 | 67 a 90 | nPM1300, AEM10900, MAX17262, indutores, conectores da bateria e dos painéis | cobre largo nos caminhos de corrente |
-| Armazenamento | 0 a 14 | 67 a 83 | soquete do microSD com a boca na borda esquerda (só no protótipo) e o SD NAND | — |
+| Armazenamento | 0 a 14 | 67 a 83 | soquete do microSD com a boca na borda esquerda (só no protótipo) e a flash NOR | — |
 | Barômetro | 4,5 a 8 | 83 a 86,5 | BMP585 na face de trás, junto do respiro | fora da sombra da bateria |
 | BM20C | 45 a 55 | 71,5 a 91 | módulo de 10,0 × 16,2 mm na borda direita; os últimos 5,5 mm são a área da antena (y 82 a 88), com área livre até y 91 | ficha da Fanstel (p. 17): a área da antena fica fora da placa ou numa região sem terra e sem trilhas em todas as camadas, com cerca de 5 mm livres para o lado; o módulo nunca no meio da placa; metal externo a pelo menos 30 mm para o melhor alcance, o que a bateria, o botão da direita e o parafuso de baixo não cumprem: medir o alcance no protótipo |
 | Botões | 8 a 47 | 88 a 95 | 3 chaves táteis (centros em x 12,5, 27,5 e 42,5, y 91,5) | — |
