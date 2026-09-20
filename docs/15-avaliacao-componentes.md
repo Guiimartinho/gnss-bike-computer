@@ -333,10 +333,42 @@ O legacy grava segmentos, percursos, logs e EPO em FatFs sobre SD (V3) ou flash 
 
 Escolha:
 
-- **Decisão do dono em 2026-09-20:** sai o SD NAND, entra **flash NOR SPI soldada**. O SD NAND de 1 Gbyte custa mais que todo o armazenamento do aparelho vale, e o aparelho não precisa de 1 Gbyte: o log do port grava um ponto a cada 15 m (`sd_logger`), cerca de 70 bytes por segundo a 25 km/h, ou **2,4 MB num pedal de 10 h**; os 138 segmentos de exemplo somam cerca de 7 MB e os percursos, quilobytes.
-- **Escolha:** 32 MB (256 Mbit) dá treze pedais longos além dos segmentos; 16 MB é o mínimo aceitável. Candidatas, as duas em SOIC-8 ou WSON-8 de 8 pinos, com o mesmo `jedec,spi-nor` do Zephyr: **Winbond W25Q256JV** (32 MB) ou **W25Q128JV** (16 MB), as mais comuns e as mais baratas, e **Macronix MX25R6435F** (8 MB), a peça que a Nordic põe nos DKs, de consumo menor parado. **A confirmar antes do layout:** preço e estoque no canal de compra, tensão de operação da versão escolhida (a placa alimenta o armazenamento em 3,0 V), corrente parada em deep power-down e a ficha de cada uma.
+- **Decisão do dono em 2026-09-20:** sai o SD NAND, entra **flash NOR SPI soldada**. O SD NAND de 1 Gbyte custa mais que todo o armazenamento do aparelho vale, e o aparelho não precisa de 1 Gbyte.
+
+#### Quanto o aparelho guarda, medido
+
+| O que | Tamanho | De onde vem o número |
+|---|---|---|
+| 138 segmentos reais | **0,44 MB** (maior: 52 KB) | os arquivos de `tools/TDD/DB`, medidos |
+| 2 percursos reais | 0,05 MB | idem |
+| Log de um pedal de 10 h | **1,9 MB** | `sd_logger` grava uma linha de ~120 B a cada 15 m; a 25 km/h dá 56 B/s |
+
+Ou seja, **8 MB dão os segmentos, os percursos e cerca de 35 pedais de 10 h**; 16 MB, o dobro. A estimativa anterior de 7 MB só de segmentos estava errada por 16 vezes.
+
+#### As duas candidatas, pelas fichas
+
+| | **Macronix MX25R6435F** (rev. 1.6, 2022-08-08) | **Winbond W25Q128JV** (rev. I, 2021-08-23) |
+|---|---|---|
+| Capacidade | 64 Mbit = **8 MB** | 128 Mbit = **16 MB** |
+| VCC | **1,65 a 3,6 V** | 2,7 a 3,6 V (3,0 a 3,6 V acima de 104 MHz) |
+| Parado (standby) | 5 µA típico, 24 µA máx. | 10 µA típico, 60 µA máx. |
+| **Deep power-down** | **0,007 µA típico, 0,35 µA máx.** | 1 µA típico, 20 µA máx. |
+| Leitura | 2,2 mA a 33 MHz | 8 mA a 50 MHz |
+| Gravar página | 3,5 mA típico, 6 máx. | 20 mA típico, 25 máx. |
+| Apagar setor de 4 KB | 3,1 mA, 58 ms típico (240 ms máx.) | 20 mA, 45 ms típico (400 ms máx.) |
+| **Energia por setor apagado** | **0,18 mA·s** | 0,90 mA·s (5 vezes mais) |
+| Parado um ano | 0,06 mAh típico, 3,1 mAh no pior caso | 8,8 mAh típico, 175 mAh no pior caso |
+| Ciclos e organização | 100 mil ciclos, setor de 4 KB, blocos de 32 e 64 KB | 100 mil ciclos, setor de 4 KB, blocos de 32 e 64 KB |
+| Temperatura | industrial −40 a 85 °C | industrial −40 a 85 °C (há versão até 105 °C) |
+| Encapsulamento | 8-SOP 200 mil, **8-WSON**, 8-USON 4 × 4 e 4 × 3, WLCSP | 8-SOP 208 mil, **8-WSON 6 × 5 e 8 × 6**, SOIC-16, TFBGA, WLCSP |
+| Endereço | 3 bytes | 3 bytes |
+| Firmware | `jedec,spi-nor` **com suporte próprio**: `mxicy,mx25r-power-mode` (modo de baixo consumo) e a saída do deep power-down por pulsos de CS | `jedec,spi-nor` comum |
+
+- **Escolhida: Macronix MX25R6435F, 8 MB.** Os 8 MB cobrem o uso medido com folga; gasta **cinco vezes menos energia por setor apagado** e fica em nanoampères desligada, o que importa num aparelho a bateria; aceita de 1,65 a 3,6 V, então serve ao trilho de 3,0 V da placa e sobreviveria a um trilho menor; e é **a mesma peça que o nRF54LM20 DK traz**, de modo que o que se depura na bancada é o que vai na placa. O Zephyr ainda tem tratamento específico para ela.
+- **Alternativa pino a pino: Winbond W25Q128JV, 16 MB**, no mesmo SOIC-8 ou WSON-8. Se um dia o log passar a gravar por segundo, ou se a peça da Macronix sumir, a placa aceita as duas sem mudar nada além do `jedec-id` no devicetree. O preço é a favor dela; o consumo, contra.
+- **A confirmar antes da compra:** preço e estoque das duas no canal escolhido (não deu para conferir hoje: o orçamento de buscas da sessão acabou) e o pico de corrente do apagamento contra os 100 mA da chave LDSW1 — as duas ficam bem abaixo disso.
 - **Protótipo:** a flash soldada e o soquete microSD no mesmo `spi00`, com chip select separado; o cartão serve ao desenvolvimento e sai no produto.
-- **Firmware:** a pilha muda de SD para flash: FatFs sobre um `zephyr,flash-disk` na partição da NOR, com o mesmo ponto de montagem `/SD:` e o mesmo disco indo ao PC pelo USB. Compila e roda a mesma configuração no nRF54LM20 DK, que traz um MX25R6435F de 8 MB no `spi00` ([09](09-armazenamento-usb.md)).
+- **Firmware:** a pilha muda de SD para flash: FatFs sobre um `zephyr,flash-disk` na partição da NOR, com o mesmo ponto de montagem `/SD:` e o mesmo disco indo ao PC pelo USB. Compila e roda com o MX25R6435F do DK ([09](09-armazenamento-usb.md)). Uma peça acima de 16 MB precisaria de endereço de 4 bytes, que o driver resolve pelo SFDP (`CONFIG_SPI_NOR_SFDP_RUNTIME`, já ligado) — nenhuma das duas escolhidas precisa.
 
 ## USB-C e proteção
 
@@ -415,6 +447,7 @@ Conferidos para esta avaliação (seções e tabelas citadas no texto):
 - TI: TPD1E10B06 (SLLSEB1G), TVS2200 (SLVSED5C), ESD751 e ESD761 (SLVSH10C) e TPDxE05U06 (SLVSBO7O); páginas do TPD1S514 e do TPD4S311.
 - Amphenol, folheto "Waterproof USB Type C"; GCT, desenho do USB4105 (rev. B4); DigiKey, fichas dos receptáculos da Molex e da Amphenol e do MAX17262REWL+T.
 - XTX, ficha do SD NAND (rev. 1.0, 2026-03-25) e a lista de produtos; páginas da Longsto (CS) e da MK sobre SD NAND.
+- Macronix, ficha do **MX25R6435F** (P/N PM2138, rev. 1.6, 2022-08-08) e Winbond, ficha do **W25Q128JV** (rev. I, 2021-08-23), lidas para a tabela do armazenamento.
 - Hirose, catálogo da série DM3; GCT, desenhos do MEM2067, MEM2075 e MEM2052.
 - Fanstel, página do BM20C (nRF54LM20A e nRF54LM20B).
 - Código do legacy citado em [Sensores](#sensores), e o NCS v3.3.0 local: amostra `nrf/samples/pmic/native/npm13xx_one_button` e binding `zephyr/dts/bindings/sensor/maxim,max17262.yaml`.

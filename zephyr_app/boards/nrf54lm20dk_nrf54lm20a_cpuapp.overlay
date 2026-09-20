@@ -307,6 +307,15 @@
 &mx25r64 {
     status = "okay";
 
+    /*
+     * The part of the new board is this same MX25R6435F (chosen in
+     * 2026-09-20, docs/15): its ultra low power mode spends 3.1 mA to erase
+     * a sector against the 20 mA of the usual parts, and 7 nA in deep power
+     * down. The mode is the default of the part; saying it here keeps it
+     * that way if a batch ever comes with the other one set.
+     */
+    mxicy,mx25r-power-mode = "low-power";
+
     partitions {
         compatible = "fixed-partitions";
         #address-cells = <1>;

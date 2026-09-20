@@ -33,7 +33,7 @@ flowchart LR
 | GNSS | 6 | — | V_IO travado em 1,8 V, limite de RF fora da banda |
 | Sensores | 5 | IMU, magnetômetro | pinos comuns do IMU, CSB do barômetro, nada de varredura no I2C |
 | Display | 7 | tela, conectores, REG710 | tela monocromática com luz frontal, 5 V com EN |
-| Armazenamento | 2 | a peça soldada ainda não foi escolhida | flash NOR de 32 MB, pull-ups de WP e HOLD, pinos com o trilho desligado |
+| Armazenamento | 2 | preço e estoque da NOR ainda não conferidos | MX25R6435F de 8 MB, pull-ups de WP e HOLD, pinos com o trilho desligado |
 | USB | 4 | TVS do VBUS, receptáculo | placa de 0,8 mm |
 | Interface | 4 | botões sem vedação | LEDs no VSYS, buzzer em alta corrente |
 | Passivos | 18 | três capacitores sem estoque ou obsoletos | capacitância efetiva pelo DC bias |
@@ -151,7 +151,7 @@ Plano B, se o BM20C atrasar: MinewSemi ME54BS13-1Y20TI (6024-ME54BS13-1Y20TITR-N
 
 | Função | Peça | DigiKey | Estoque | US$ 1 / 10 | Por placa | Compra | Situação |
 |---|---|---|---|---|---|---|---|
-| Flash NOR soldada | **a escolher**: flash SPI de 32 MB (`jedec,spi-nor`), candidatas em [15](15-avaliacao-componentes.md#armazenamento) | — | — | — | 1 | 6 | **pendente**: o dono tirou o SD NAND em 2026-09-20 por preço (US$ 40,43 na LCSC contra poucos dólares de uma NOR); falta escolher a peça e conferir preço, estoque, tensão e consumo |
+| Flash NOR soldada | **Macronix MX25R6435F** (64 Mbit, 8-WSON ou 8-SOP); alternativa pino a pino: Winbond W25Q128JV (128 Mbit) | a confirmar | a confirmar | a confirmar | 1 | 6 | peça escolhida em 2026-09-20 pela ficha (consumo, tensão de 1,65 a 3,6 V, mesma peça do nRF54LM20 DK); **falta conferir preço e estoque** |
 | Soquete microSD, só no protótipo | Hirose DM3AT-SF-PEJM5 | HR1964CT-ND | 27.897 | 3,55 / 3,02 | 1 | 6 | aprovada; 1,68 mm, push-push |
 
 ### USB
