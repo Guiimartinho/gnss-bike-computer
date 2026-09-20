@@ -79,6 +79,17 @@ sequenceDiagram
 
 Sem autenticação: qualquer periférico chamado "stravaAP" pode formatar a memória. O `LNS.js` depende do tráfego do Zwift, criptografado desde 2022.
 
+**No port, desde 2026-09-20** (`src/model/cmd_parser.c`, com `test_cmd_parser`, e `src/svc/radio/radio_svc.c`): o leitor das sentenças é um módulo puro que recebe os caracteres do NUS e entrega o comando pronto. O que cada um faz:
+
+| Sentença | No port |
+|---|---|
+| `$LOC` | publica a posição como **simulada**; o modelo a prefere ao receptor por 6 s, que é a prioridade SIM > GPS do legacy |
+| `$HRM`, `$CAD` | entram como um sensor externo, iguais aos do BLE |
+| `$BTN` | aperta uma tecla, para testar a interface do PC |
+| `$ANCS`, `$DBG` | viram notificação na tela |
+| `$DWN` | **só 16 (modo USB) e 18 (calibrar a bússola)**; formatar (13), `mkfs` (15), o teste de hardfault (12) e o de memória (14) são recusados e avisados na tela: esses só saem do menu, onde o ciclista confirma |
+| `$QRY` | ainda não responde: listar e enviar arquivos em blocos falta |
+
 ## Komoot
 
 - O celular com o app Komoot é periférico; o aparelho conecta, recebe notificação e lê a característica de navegação (`503DD605-9BCB-4F6E-B235-270A57483026`, segundo a documentação do Komoot BLE Connect).

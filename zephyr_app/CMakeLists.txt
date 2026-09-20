@@ -69,6 +69,7 @@ target_sources(app PRIVATE
 # =============================================================================
 target_sources(app PRIVATE
     src/model/attitude.c
+    src/model/cmd_parser.c
     src/model/crash_recovery.c
     src/model/dfu_state.c
     src/model/kalman.c

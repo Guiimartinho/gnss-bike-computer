@@ -22,9 +22,6 @@
 #include "model/user_settings.h"
 #include "model_internal.h"
 
-/** A position older than this shows the GNSS screen (legacy LOCATOR_MAX_DATA_AGE_MS) */
-#define POS_MAX_AGE_MS  6000U
-
 uint32_t model_time_of_day(const struct model_ctx *ctx)
 {
     if (!ctx->have_fix_msg || !ctx->fix.time_valid) {

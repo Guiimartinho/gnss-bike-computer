@@ -22,6 +22,9 @@
 #include "ui/ui_model.h"
 
 /** What the model keeps between events */
+/** A position older than this shows the GNSS screen (legacy LOCATOR_MAX_DATA_AGE_MS) */
+#define POS_MAX_AGE_MS  6000U
+
 struct model_ctx {
     struct smf_ctx smf;             /**< first member: mode machine */
     uint8_t mode;                   /**< enum app_mode in force */
@@ -33,6 +36,7 @@ struct model_ctx {
     struct app_gnss_fix fix;
     bool have_fix_msg;
     uint32_t fix_uptime_ms;         /**< uptime of the last valid position */
+    uint32_t sim_uptime_ms;         /**< uptime of the last simulated position ($LOC) */
     struct app_gnss_sky sky;
     struct app_power_status power;
     struct app_phone_nav nav;

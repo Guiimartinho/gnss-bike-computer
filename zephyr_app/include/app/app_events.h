@@ -35,6 +35,7 @@ enum app_gnss_mode {
 struct app_gnss_fix {
     uint32_t uptime_ms;         /**< when the epoch reached the service */
     bool fix;                   /**< position valid */
+    bool sim;                   /**< position given by a PC ($LOC), which wins over the receiver */
     uint8_t mode;               /**< enum app_gnss_mode */
     uint8_t nsat;               /**< satellites used */
     int32_t lat_e7;             /**< latitude, 1e-7 degree */

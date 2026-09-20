@@ -242,6 +242,21 @@ static void fix_to_loc(const struct app_gnss_fix *f, loc_data_t *loc)
 
 static void on_fix(const struct app_gnss_fix *f)
 {
+    uint32_t now = k_uptime_get_32();
+
+    /*
+     * A position given by a PC wins over the receiver while it keeps
+     * coming, which is the SIM source of the legacy
+     * (`legacy/source/model/Locator.cpp`, eLocationSourceSIM first).
+     */
+    if (f->sim) {
+        ctx.sim_uptime_ms = now;
+    } else if ((ctx.sim_uptime_ms != 0U) && ((now - ctx.sim_uptime_ms) < POS_MAX_AGE_MS)) {
+        return;
+    } else {
+        ctx.sim_uptime_ms = 0U;
+    }
+
     ctx.fix = *f;
     ctx.have_fix_msg = true;
 
