@@ -19,7 +19,16 @@
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/sys/ring_buffer.h>
+/*
+ * usbd_msg.h, which usbd.h pulls in, has a static inline that compares an
+ * enum with zero (`type >= 0`, NCS v3.3.0, line 107); with the -Wextra of
+ * this firmware that is a warning of the SDK, not of the port, and the SDK
+ * is not ours to change.
+ */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
 #include <zephyr/usb/usbd.h>
+#pragma GCC diagnostic pop
 #include <zephyr/usb/class/usbd_msc.h>
 #include <zephyr/zbus/zbus.h>
 
