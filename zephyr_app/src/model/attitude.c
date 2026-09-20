@@ -113,6 +113,14 @@ static float baro_ring[BARO_FILTER_NB];
 static uint8_t baro_ring_count;
 static uint8_t baro_ring_head;
 
+/**
+ * Mean absolute deviation of the ring, the roughness the legacy logs
+ * (`AltiBaro::getRoughness()`, `libraries/AltiBaro/AltiBaro.cpp:90-112`).
+ * The legacy multiplies by 100 because its buffer is in hPa; the ring here
+ * is in Pa, so the value comes out in Pa already.
+ */
+static float baro_roughness(void);
+
 /** Average of the ring, or 0 while it is not full */
 static float baro_pressure_avg(void)
 {
@@ -124,6 +132,23 @@ static float baro_pressure_avg(void)
 
     for (uint8_t i = 0U; i < BARO_FILTER_NB; i++) {
         sum += baro_ring[i];
+    }
+
+    return sum / (float)BARO_FILTER_NB;
+}
+
+static float baro_roughness(void)
+{
+    float avg = baro_pressure_avg();
+
+    if (avg <= 0.0f) {
+        return 0.0f;
+    }
+
+    float sum = 0.0f;
+
+    for (uint8_t i = 0U; i < BARO_FILTER_NB; i++) {
+        sum += fabsf(baro_ring[i] - avg);
     }
 
     return sum / (float)BARO_FILTER_NB;
@@ -200,6 +225,8 @@ static void compute_altitude_fusion(void)
     if (updated) {
         /* Get filtered values */
         current_elevation = output.elevation;
+        current_ext.alpha_bar = output.pitch;
+        current_ext.alpha_zero = output.alpha_zero;
 
         /* Update slope and vertical speed after enough data points */
         if (current_att.nbpts > MIN_PTS_FOR_SLOPE) {
@@ -467,6 +494,8 @@ app_err_t attitude_update_gps(const loc_data_t *loc)
 
     /* Update extended data */
     current_ext.base = current_att;
+    current_ext.baro_correction = altitude_correction;
+    current_ext.baro_roughness = baro_roughness();
 
     /* Track moving time */
     uint32_t now = k_uptime_get_32();
@@ -630,6 +659,11 @@ float attitude_get_distance(void)
 float attitude_get_climb(void)
 {
     return current_att.climb;
+}
+
+float attitude_get_elevation(void)
+{
+    return current_elevation;
 }
 
 uint32_t attitude_get_elapsed_time(void)

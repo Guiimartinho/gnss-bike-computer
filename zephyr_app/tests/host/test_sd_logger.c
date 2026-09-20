@@ -28,8 +28,20 @@ static sd_log_entry_t make_entry(float distance)
                        .speed = 25.0f, .course = 90.0f, .timestamp = 1000U };
     date_data_t date = { .date = 180926U, .secj = 43200U, .timestamp = 1000U };
 
-    sd_logger_build_entry(&entry, &loc, &date, 180U, 140U, 85U, 2500U,
-                          212.0f, 211.0f, 3, distance, 12.0f);
+    sd_log_altitude_t alti = {
+        .baro_alt = 212.0f,
+        .baro_corr = -1.5f,
+        .filt_alt = 211.0f,
+        .gps_alt = 210.0f,
+        .alpha_bar = 0.0123f,
+        .alpha_zero = -0.0456f,
+        .vit_asc = 0.75f,
+        .rough = {12.0f, 34.0f, 56.0f},
+        .b_rough = 7.25f,
+        .slope = 3,
+    };
+
+    sd_logger_build_entry(&entry, &loc, &date, 180, 140U, 85U, 2500U, &alti, distance, 12.0f);
     return entry;
 }
 
@@ -68,7 +80,7 @@ static void test_entries_closer_than_15_m_are_skipped(void)
     TEST_ASSERT_EQUAL_UINT8(0U, box.logger.buffer_count);
 }
 
-static void test_five_entries_15_m_apart_are_written_with_a_csv_header(void)
+static void test_five_entries_15_m_apart_are_written_in_the_format_of_the_legacy(void)
 {
     for (int i = 1; i <= 5; i++) {
         float d = 15.0f * (float)i;
@@ -79,8 +91,9 @@ static void test_five_entries_15_m_apart_are_written_with_a_csv_header(void)
 
     TEST_ASSERT_EQUAL_UINT8(0U, box.logger.buffer_count);
     TEST_ASSERT_EQUAL_UINT32(5U, sd_logger_get_count(&box.logger));
-    TEST_ASSERT_EQUAL_STRING_LEN("timestamp,lat,lon,", host_fs_content(), 18);
-    TEST_ASSERT_EQUAL_UINT(6U, count_lines(host_fs_content()));   /* header + 5 */
+    /* the legacy writes only points, without a header line */
+    TEST_ASSERT_EQUAL_STRING_LEN("48.692101;6.184400", host_fs_content(), 18);
+    TEST_ASSERT_EQUAL_UINT(5U, count_lines(host_fs_content()));
 }
 
 static void test_a_missing_card_never_writes_past_the_buffer(void)
@@ -116,11 +129,62 @@ static void test_logging_resumes_when_the_card_comes_back(void)
     TEST_ASSERT_EQUAL_UINT8(0U, box.logger.buffer_count);
 }
 
+static void test_the_line_has_the_nineteen_fields_of_the_legacy(void)
+{
+    sd_log_entry_t entry = make_entry(100.0f);
+    char line[256];
+    int len = sd_logger_format_line(line, sizeof(line), &entry);
+
+    TEST_ASSERT_GREATER_THAN_INT(0, len);
+
+    unsigned int fields = 0U;
+
+    for (int i = 0; i < len; i++) {
+        if (line[i] == ';') {
+            fields++;
+        }
+    }
+    TEST_ASSERT_EQUAL_UINT(19U, fields);
+
+    /* ends with CRLF, as the legacy writes */
+    TEST_ASSERT_EQUAL_CHAR(13, line[len - 2]); /* CR */
+    TEST_ASSERT_EQUAL_CHAR(10, line[len - 1]); /* LF */
+
+    /* position with six decimals, altitude with two, seconds of the day */
+    TEST_ASSERT_EQUAL_STRING_LEN("48.692101;6.184400;210.00;43200;", line, 32);
+}
+
+static void test_the_line_carries_the_angles_and_the_roughness(void)
+{
+    sd_log_entry_t entry = make_entry(100.0f);
+    char line[256];
+
+    (void)sd_logger_format_line(line, sizeof(line), &entry);
+
+    TEST_ASSERT_NOT_NULL(strstr(line, ";0.012;-0.046;212.000;-1.50;"));
+    TEST_ASSERT_NOT_NULL(strstr(line, ";12;34;56;7.2;"));
+}
+
+static void test_the_name_is_the_one_of_the_legacy(void)
+{
+    char name[64];
+
+    /* 5 September 2025 is 50925, without a leading zero on the day */
+    sd_logger_filename(name, sizeof(name), 50925U);
+    TEST_ASSERT_EQUAL_STRING("/SD:/@50925.txt", name);
+
+    sd_logger_filename(name, sizeof(name), 180926U);
+    TEST_ASSERT_EQUAL_STRING("/SD:/@180926.txt", name);
+}
+
 int main(void)
 {
     UNITY_BEGIN();
+    RUN_TEST(test_the_line_has_the_nineteen_fields_of_the_legacy);
+    RUN_TEST(test_the_line_carries_the_angles_and_the_roughness);
+    RUN_TEST(test_the_name_is_the_one_of_the_legacy);
     RUN_TEST(test_entries_closer_than_15_m_are_skipped);
-    RUN_TEST(test_five_entries_15_m_apart_are_written_with_a_csv_header);
+    RUN_TEST(test_five_entries_15_m_apart_are_written_in_the_format_of_the_legacy);
     RUN_TEST(test_a_missing_card_never_writes_past_the_buffer);
     RUN_TEST(test_logging_resumes_when_the_card_comes_back);
     return UNITY_END();

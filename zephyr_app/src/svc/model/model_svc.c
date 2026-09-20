@@ -250,13 +250,24 @@ static void on_fix(const struct app_gnss_fix *f)
             .power_w = att.pwr,
             .hr_bpm = ctx.ext[APP_EXT_HR].hr_bpm,
             .cadence_rpm = ctx.ext[APP_EXT_BSC].cadence_rpm,
-            .filt_alt = att.loc.alt,
+            .filt_alt = attitude_get_elevation(),
+            .vit_asc = att.vit_asc,
             .slope_pct = att.slope,
             .dist_m = att.dist,
             .climb_m = att.climb,
         };
 
-        p.baro_alt = (attitude_get_ext(&ext) == APP_OK) ? ext.baro_altitude : loc.alt;
+        (void)memcpy(p.rough, ctx.rough, sizeof(p.rough));
+
+        if (attitude_get_ext(&ext) == APP_OK) {
+            p.baro_alt = ext.baro_altitude;
+            p.alpha_bar = ext.alpha_bar;
+            p.alpha_zero = ext.alpha_zero;
+            p.baro_corr = ext.baro_correction;
+            p.b_rough = ext.baro_roughness;
+        } else {
+            p.baro_alt = loc.alt;
+        }
         (void)app_publish(&chan_log_point, &p);
     }
 }

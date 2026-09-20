@@ -1,17 +1,24 @@
 /**
  * @file sd_logger.h
- * @brief SD Card position and sensor logging
+ * @brief Activity log on the card, in the format of the legacy
  *
- * Implements buffered logging of position and sensor data to SD card.
- * Based on original Attitude.cpp sd_save_pos_buffer() implementation.
+ * `legacy/source/sd/sd_functions.cpp:605-644` (`sd_save_pos_buffer`): one
+ * file per day in the root of the card, named `@<date>.txt` with the date
+ * as the legacy keeps it (DDMMYY without a leading zero on the day, so
+ * 5 September 2025 is `@50925.txt`), opened to append, with one line per
+ * point, nineteen fields separated by `;` and ended by CRLF:
  *
- * Data is buffered in RAM and written to SD when buffer is full or
- * at periodic intervals to minimize SD card wear and power consumption.
+ *     lat;lon;alt;secj;pwr;bpm;cadence;alpha_bar;alpha_zero;baro_ele;
+ *     baro_corr;climb;filt_ele;gps_ele;vit_asc;rough0;rough1;rough2;b_rough;
+ *
+ * The points come in a buffer of five, written every 15 m of distance
+ * (`Attitude::computeDistance`), which is what the model publishes.
  */
 
 #ifndef MODEL_SD_LOGGER_H
 #define MODEL_SD_LOGGER_H
 
+#include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include "app_types.h"
@@ -33,8 +40,11 @@ extern "C" {
 /** Maximum log file size before rotation (bytes) */
 #define SD_LOG_MAX_FILE_SIZE    (10U * 1024U * 1024U)  /* 10MB */
 
-/** Log file directory */
-#define SD_LOG_DIRECTORY        "/SD:/logs"
+/** The legacy keeps the logs in the root of the card */
+#define SD_LOG_DIRECTORY        "/SD:"
+
+/** First character of the name, HISTO_MARKER_CHAR of the legacy */
+#define SD_LOG_MARKER           '@'
 
 /* ==========================================================================
  * Type Definitions
@@ -54,10 +64,16 @@ typedef struct {
  * @brief Altitude data snapshot
  */
 typedef struct {
-    float baro_alt;         /**< Raw barometer altitude (m) */
-    float filt_alt;         /**< Filtered altitude (m) */
-    float gps_alt;          /**< GPS altitude (m) */
-    int8_t slope;           /**< Slope (%) */
+    float baro_alt;         /**< barometer altitude, baro_ele */
+    float baro_corr;        /**< GPS/barometer drift correction, baro_corr */
+    float filt_alt;         /**< filtered altitude, filt_ele */
+    float gps_alt;          /**< GPS altitude, gps_ele */
+    float alpha_bar;        /**< pitch of the filter (rad) */
+    float alpha_zero;       /**< mounting offset of the accelerometer (rad) */
+    float vit_asc;          /**< vertical speed (m/s) */
+    float rough[3];         /**< roughness of the accelerometer, legacy counts */
+    float b_rough;          /**< roughness of the barometer (Pa) */
+    int8_t slope;           /**< slope (%), not in the log of the legacy */
 } sd_log_altitude_t;
 
 /**
@@ -184,11 +200,31 @@ void sd_logger_build_entry(sd_log_entry_t *entry,
                            uint8_t bpm,
                            uint8_t cadence,
                            uint16_t speed,
-                           float baro_alt,
-                           float filt_alt,
-                           int8_t slope,
+                           const sd_log_altitude_t *alti,
                            float distance,
                            float climb);
+
+/**
+ * @brief Name of the file of a date, as the legacy builds it
+ *
+ * `@<date>.txt` in the root, with the date as `DDMMYY` without a leading
+ * zero on the day (`legacy/source/sd/sd_functions.cpp:607-609`).
+ *
+ * @param out buffer for the name
+ * @param size size of @p out
+ * @param date date of the point, 0 for a log without a date
+ */
+void sd_logger_filename(char *out, size_t size, uint32_t date);
+
+/**
+ * @brief Write one point in the line of the legacy
+ *
+ * @param out buffer for the line
+ * @param size size of @p out
+ * @param e point to write
+ * @return length written, or negative on error
+ */
+int sd_logger_format_line(char *out, size_t size, const sd_log_entry_t *e);
 
 #ifdef __cplusplus
 }

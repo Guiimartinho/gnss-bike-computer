@@ -35,7 +35,7 @@ bash tools/fw/host_tests.sh -R tilt     # um conjunto
 | `test_power_estimate` | `model/power_estimate.c` | 7 | a fórmula do legacy em 64 pontos de velocidade e rampa contra a transcrição em `legacy_ref.h`, os 147 W a 30 km/h no plano, os 151 W a 12 km/h em 5 %, potência negativa na descida e a saturação do `int16_t` |
 | `test_power_zone` | `model/power_zone.c` | 6 | limites das 7 zonas pelo FTP, janela de 50 a 1950 W, acumulação |
 | `test_suffer_score` | `model/suffer_score.c` | 5 | zonas de FC e pontos por hora do legacy |
-| `test_sd_logger` | `model/sd_logger.c` | 4 | intervalo de 15 m, lote de 5 com cabeçalho CSV, **nenhuma escrita fora do buffer sem cartão** |
+| `test_sd_logger` | `model/sd_logger.c` | 7 | intervalo de 15 m, lote de 5 com cabeçalho CSV, **nenhuma escrita fora do buffer sem cartão** |
 | `test_ui_fmt` | `ui/ui_fmt.c` | 10 | números como o `_fmkstr` do legacy numa varredura, truncamento em `float` (0,21 vira `0.20`), negativos, limite de 100000, NaN, buffer pequeno, horas e hora desconhecida, larguras do `cadran` e do `cadranH`, valores com sinal |
 | `test_tilt` | `svc/sensors/tilt.c` | 8 | inclinação, rolagem e rumo contra leituras construídas por rotação (aerospacial, norte-leste-baixo), janela de 50 amostras, rugosidade contra o laço de `fxos.cpp:761-766` |
 | `test_backlight` | `svc/ui/backlight.c` | 11 | luz por 10 s depois de uma tecla, nova tecla reinicia, automática com pouca luz até a luz voltar, histerese entre 20 e 50 lux, desligada pelo menu, volta do contador de 32 bits |

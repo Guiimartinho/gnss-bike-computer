@@ -165,9 +165,22 @@ static void on_point(const struct app_log_point *p)
     if (!sd_logger_is_active(&logger)) {
         (void)sd_logger_start(&logger, &p->date);
     }
+    sd_log_altitude_t alti = {
+        .baro_alt = p->baro_alt,
+        .baro_corr = p->baro_corr,
+        .filt_alt = p->filt_alt,
+        .gps_alt = p->loc.alt,
+        .alpha_bar = p->alpha_bar,
+        .alpha_zero = p->alpha_zero,
+        .vit_asc = p->vit_asc,
+        .b_rough = p->b_rough,
+        .slope = p->slope_pct,
+    };
+
+    (void)memcpy(alti.rough, p->rough, sizeof(alti.rough));
+
     sd_logger_build_entry(&entry, &p->loc, &p->date, p->power_w, p->hr_bpm, p->cadence_rpm,
-                          (uint16_t)(p->loc.speed * 100.0f), p->baro_alt, p->filt_alt,
-                          p->slope_pct, p->dist_m, p->climb_m);
+                          (uint16_t)(p->loc.speed * 100.0f), &alti, p->dist_m, p->climb_m);
     (void)sd_logger_add_entry(&logger, &entry, p->dist_m);
 }
 

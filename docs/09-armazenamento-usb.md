@@ -48,7 +48,7 @@ flowchart TB
 | Nó do SD | `spi2` + `sdhc0` (`zephyr,sdhc-spi-slot`, disco "SD") no overlay, 8 MHz | legacy usava 4 MHz e pinos com alta corrente |
 | Segmentos | binário em `/SD:/segments/*.seg` (`seg_header_t` 32 B + `seg_point_t` 20 B), nome `<header.name>.seg` | incompatível com o texto do legacy e sem ferramenta que gere o binário |
 | Percursos | `.CRS` com `lat;lon;alt`, até 500 pontos | legacy usa `.PAR` com espaço; loader para no primeiro CRLF |
-| Log | `/SD:/logs/AAMMDD_HHMMSS.csv`, 13 colunas | legacy `@DDMMYY.txt`, 19 campos; `baro_alt` e `filt_alt` recebem a altitude do GPS |
+| Log | `@<data>.txt` na raiz, 19 campos com `;` e CRLF, como o legacy | igual desde 2026-09-19; o ponto leva os ângulos do filtro, a correção do barômetro, a velocidade vertical e as rugosidades do acelerômetro e do barômetro |
 | EPO | `/SD:/MTK14.EPO` | offset de cabeçalho e comandos errados (ver [10](10-status-do-port.md#defeitos-abertos)) |
 | USB | nada: os arquivos da pilha USB antiga saíram em 2026-09-19 | a USB `device_next` (CDC ACM e MSC) é o passo da USB |
 

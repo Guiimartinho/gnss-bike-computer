@@ -305,14 +305,24 @@ struct app_notif {
 };
 
 /** Channel log_point: one model snapshot for the activity log, per epoch */
+/**
+ * Channel log_point: one point per epoch, with the nineteen fields the
+ * legacy writes in `@DDMMYY.txt` (`legacy/source/sd/sd_functions.cpp:605-644`).
+ */
 struct app_log_point {
     loc_data_t loc;
     date_data_t date;
     int16_t power_w;
     uint8_t hr_bpm;
     uint8_t cadence_rpm;
-    float baro_alt;
-    float filt_alt;
+    float alpha_bar;            /**< pitch of the filter, rad */
+    float alpha_zero;           /**< mounting offset of the accelerometer, rad */
+    float baro_alt;             /**< barometer altitude */
+    float baro_corr;            /**< GPS/barometer drift correction */
+    float filt_alt;             /**< filtered altitude */
+    float vit_asc;              /**< vertical speed, m/s */
+    float rough[3];             /**< roughness of the accelerometer, legacy counts */
+    float b_rough;              /**< roughness of the barometer, Pa */
     int8_t slope_pct;
     float dist_m;
     float climb_m;
