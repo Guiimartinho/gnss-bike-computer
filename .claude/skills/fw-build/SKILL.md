@@ -54,16 +54,16 @@ flowchart LR
 
 ## Conferir o resultado
 
-Números de referência (build de 2026-09-18, NCS v3.3.0):
+Números de referência (build de 2026-09-19, NCS v3.3.0, nRF52840 DK; o nRF54LM20 DK e o `ANT=1` estão em `docs/03-ambiente-build.md#resultado-de-referência`):
 
 | Região | Uso | Limite |
 |---|---|---|
-| FLASH | 296.320 B (28,3 %) | 1 MB |
-| RAM | 116.928 B (44,6 %) | 256 KB |
+| FLASH | 473.952 B (45,2 %) | 1 MB |
+| RAM | 220.352 B (84,1 %) | 256 KB |
 
-- **Avisos esperados: 7**, todos `defined but not used` em `src/vue/vue.c` (zoom, `course_to`, histogramas, zona RR portados e ainda não ligados). Qualquer aviso novo é defeito seu: corrija.
-- Maiores consumidores de RAM: `seg_runtime` (22 KB), heap do sistema (16 KB, `CONFIG_HEAP_MEM_POOL_SIZE`), framebuffer `spi_buffer` (12,5 KB), `points` (8 KB). Confira com `bash tools/fw/fw.sh size` depois de mexer em buffers estáticos.
-- Reporte números exatos ("FLASH 296.320 B, 7 avisos"), nunca "compilou".
+- **Avisos esperados: 0** (com `ANT=1`, só o do símbolo obsoleto do `sdk-ant`). Qualquer aviso é defeito seu: corrija.
+- Maiores consumidores de RAM: heap do LVGL (32 KB, `CONFIG_LV_Z_MEM_POOL_SIZE`), `seg_runtime` (22 KB), buffer de desenho do LVGL (19,2 KB), heap do sistema (16 KB, `CONFIG_HEAP_MEM_POOL_SIZE`), quadro da tela (12,5 KB da Sharp; 36,5 KB do JDI no nRF54LM20), `points` (8 KB), as pilhas das threads de serviço e quatro cópias do retrato da tela (2,4 KB cada). Confira com `bash tools/fw/fw.sh size` depois de mexer em buffers estáticos.
+- Reporte números exatos ("FLASH 473.952 B, 0 avisos"), nunca "compilou".
 
 ## Gravar e ver o log
 

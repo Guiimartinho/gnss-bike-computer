@@ -1,0 +1,4 @@
+# A interface também compila no PC (zephyr_app/tests/ui): o clangd usa a base
+# de compilação de build/ui, criada por python tools/ui/render_screens.py.
+CompileFlags:
+  CompilationDatabase: ../../../build/ui

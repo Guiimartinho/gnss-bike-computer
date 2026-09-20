@@ -34,3 +34,12 @@ int32_t k_msleep(int32_t ms)
     s_uptime_ms += ms;
     return 0;
 }
+
+/* Reboots asked for by the code under test (shim/zephyr/sys/reboot.h) */
+unsigned int host_reboot_count;
+
+void sys_reboot(int type)
+{
+    (void)type;
+    host_reboot_count++;
+}

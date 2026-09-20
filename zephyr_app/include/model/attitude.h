@@ -33,6 +33,10 @@ typedef struct {
     float battery_voltage;      /**< Battery voltage (mV) */
     uint8_t hrm_bpm;            /**< Heart rate (bpm) */
     bool hrm_connected;         /**< HRM connection status */
+    float alpha_bar;            /**< pitch of the filter (rad), alpha_bar of the legacy */
+    float alpha_zero;           /**< mounting offset of the accelerometer (rad) */
+    float baro_correction;      /**< GPS/barometer drift correction (m) */
+    float baro_roughness;       /**< mean absolute deviation of the last ten pressures (Pa) */
 } attitude_ext_t;
 
 /* ==========================================================================
@@ -123,6 +127,13 @@ float attitude_get_distance(void);
 float attitude_get_climb(void);
 
 /**
+ * @brief Filtered elevation of the altitude filter (m)
+ *
+ * `filt_ele` of the log of the legacy; the GPS altitude is in `loc.alt`.
+ */
+float attitude_get_elevation(void);
+
+/**
  * @brief Get elapsed time
  * @return Active time in seconds
  */
@@ -165,6 +176,15 @@ void attitude_reset(void);
  * @brief Compute derived values (call periodically)
  */
 void attitude_compute(void);
+
+/**
+ * @brief Did the FDIR pick a ride up again?
+ *
+ * True once after `restore_from_crash()` takes the block of the previous
+ * session; the model service turns it into the notification the legacy
+ * shows ("FDIR", `legacy/source/model/Attitude.cpp:410`).
+ */
+bool attitude_take_fdir_notice(void);
 
 #ifdef __cplusplus
 }

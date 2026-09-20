@@ -2,7 +2,7 @@
 
 Onde e como o stravaV10 guarda segmentos, percursos, logs e EPO, a pilha FatFs sobre SD ou flash NOR, a USB composta (CDC + MSC) e o estado disso no port, onde o sistema de arquivos ainda está em stub.
 
-**Nesta página:** [Arquivos do legacy](#arquivos-do-legacy) · [Pilha de armazenamento](#pilha-de-armazenamento) · [USB](#usb) · [Armazenamento no port](#armazenamento-no-port) · [Para ligar o SD](#para-ligar-o-sd) · [RAM](#ram)
+**Nesta página:** [Arquivos do legacy](#arquivos-do-legacy) · [Pilha de armazenamento](#pilha-de-armazenamento) · [USB](#usb) · [Armazenamento no port](#armazenamento-no-port) · [Estado do SD no port](#estado-do-sd-no-port) · [RAM](#ram)
 
 ## Arquivos do legacy
 
@@ -44,23 +44,23 @@ flowchart TB
 
 | Item | Port | Diferença |
 |---|---|---|
-| Sistema de arquivos | `src/utils/fs_stubs.c`: todo `fs_*` retorna `-ENOTSUP` | `CONFIG_FILE_SYSTEM` comentado no `prj.conf` |
+| Sistema de arquivos | FatFs do Zephyr, montado em `/SD:` pelo serviço de armazenamento (`src/svc/storage/storage_svc.c`), com nomes longos num buffer estático | o legacy usa o FatFs do nRF5 SDK; não testado com cartão |
 | Nó do SD | `spi2` + `sdhc0` (`zephyr,sdhc-spi-slot`, disco "SD") no overlay, 8 MHz | legacy usava 4 MHz e pinos com alta corrente |
-| Segmentos | binário em `/SD:/segments/*.seg` (`seg_header_t` 32 B + `seg_point_t` 20 B), nome `<header.name>.seg` | incompatível com o texto do legacy e sem ferramenta que gere o binário |
-| Percursos | `.CRS` com `lat;lon;alt`, até 500 pontos | legacy usa `.PAR` com espaço; loader para no primeiro CRLF |
-| Log | `/SD:/logs/AAMMDD_HHMMSS.csv`, 13 colunas | legacy `@DDMMYY.txt`, 19 campos; `baro_alt` e `filt_alt` recebem a altitude do GPS |
+| Segmentos | os arquivos do legacy, na raiz do cartão: a varredura só lê os nomes (posição em base 36) e o alocador abre o arquivo quando o ciclista chega a menos de 300 m, como no legacy | igual ao legacy na leitura; a escrita de segmentos pelo aparelho ainda não existe |
+| Percursos | texto `lat lon [alt]` do legacy, `.PAR` e `.CRS`, até 500 pontos | desde 2026-09-20 é o formato do legacy, com CRLF, linhas `<meta>` e ponto sem altitude; um percurso maior que 500 pontos é dividido pela metade enquanto carrega (os dois reais, de 848 e 950 pontos, ficam em 424 e 475), o que o legacy não fazia por usar o heap |
+| Log | `@<data>.txt` na raiz, 19 campos com `;` e CRLF, como o legacy | igual desde 2026-09-19; o ponto leva os ângulos do filtro, a correção do barômetro, a velocidade vertical e as rugosidades do acelerômetro e do barômetro |
 | EPO | `/SD:/MTK14.EPO` | offset de cabeçalho e comandos errados (ver [10](10-status-do-port.md#defeitos-abertos)) |
-| USB | `src/usb/usb_cdc.c` e `usb_msc.c` fora do `CMakeLists.txt` | usam o stack USB antigo, depreciado no Zephyr 4.3; `CONFIG_USB_DEVICE_MSC` não existe |
+| USB | nada: os arquivos da pilha USB antiga saíram em 2026-09-19 | a USB `device_next` (CDC ACM e MSC) é o passo da USB |
 
 Em 2026-09-18 o estouro do `sd_logger` com o cartão indisponível foi corrigido (`test_sd_logger`).
 
-## Para ligar o SD
+## Estado do SD no port
 
-1. Kconfig: `CONFIG_FILE_SYSTEM`, `CONFIG_FAT_FILESYSTEM_ELM`, `CONFIG_DISK_ACCESS`, `CONFIG_SDHC`, `CONFIG_SPI_SDHC` (LFN só se os nomes longos forem mantidos) e tirar `fs_stubs.c` do build.
-2. Montagem: `fs_mount()` de `/SD:` no boot ou um nó `zephyr,fstab,fatfs` com `automount`; tratar cartão ausente.
-3. Tirar `hal_spi` do SPI2 (ele também configura o CS do SD, sem uso).
-4. Escrever em arquivo só fora de ISR (já garantido depois da correção de 2026-09-18) e decidir os formatos (legacy ou novos, ver [decisões](10-status-do-port.md#decisões-do-dono)).
-5. USB: migrar para o `usb device_next` (`CONFIG_USB_DEVICE_STACK_NEXT`, `CONFIG_USBD_CDC_ACM_CLASS`, `CONFIG_USBD_MSC_CLASS` com `USBD_DEFINE_MSC_LUN`), com `fs_unmount` real antes de expor o cartão.
+**USB, desde 2026-09-20** (`src/svc/usb/usb_svc.c`, só no alvo com a pilha `device_next`): o serviço oitavo liga o barramento quando o cabo entra e mostra ao PC uma **porta serial** com os mesmos comandos do legacy (`$LOC`, `$DWN`, `$QRY`...), lidos pelo mesmo `cmd_parser`; a interrupção do CDC só enfileira bytes, e a thread lê. O **disco** só aparece no modo USB, que o menu ou um `$DWN,16` pedem: aí o serviço de armazenamento já desmontou o sistema de arquivos e o PC fica dono da mídia, e sair dele pede reset, como no legacy. Enquanto o ciclista pedala, o disco é do firmware e o PC só vê a serial. Identificadores: VID 0x1209 e PID 0x0001, os de teste do pid.codes — um número próprio precisa ser pedido lá antes de qualquer venda. Nada disso foi testado com cabo.
+
+Desde 2026-09-20 o alvo nRF54LM20 não usa cartão: a placa nova leva **flash NOR soldada** (decisão do dono, [15](15-avaliacao-componentes.md#armazenamento)), e o firmware monta o FatFs sobre um `zephyr,flash-disk` na partição dela, com o mesmo ponto de montagem `/SD:`, o mesmo código de arquivos e o mesmo disco indo ao PC quando o USB chegar. O build usa o MX25R6435F de 8 MB que o nRF54LM20 DK traz no `spi00`; uma parte em branco é formatada na primeira montagem (`CONFIG_FS_FATFS_MKFS`). O alvo nRF52840 DK, que representa a placa V3, continua com o cartão pelo `zephyr,sdhc-spi-slot`.
+
+Desde 2026-09-19 o cartão é do serviço de armazenamento: ele monta o FatFs, carrega os segmentos, lista os percursos (`*.PAR` do legacy e `*.CRS` do port, na raiz) e grava o log com os pontos que o modelo publica, fora das outras threads. Os formatos do legacy estão lidos e escritos (segmentos em texto, `.PAR`, `@DDMMYY.txt`), e o modelo abre o percurso que a tela escolhe. Falta: a formatação do cartão e o MSC. Nada disso foi testado com cartão.
 
 ## RAM
 

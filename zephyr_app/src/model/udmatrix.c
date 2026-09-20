@@ -63,7 +63,20 @@ void udmat_identity(udmatrix_t *mat, float factor)
 
 void udmat_ones(udmatrix_t *mat, float factor)
 {
-    udmat_identity(mat, factor);
+    /*
+     * The `UDMatrix::ones()` of the legacy fills every element
+     * (`libraries/kalman/UDMatrix.cpp:270-280`), which is what the P0 of
+     * 900 of `Attitude.cpp:152` expects. This used to call udmat_identity()
+     * and left the cross covariances at zero.
+     */
+    if (mat == NULL) {
+        return;
+    }
+    for (uint8_t i = 0U; i < mat->rows; i++) {
+        for (uint8_t j = 0U; j < mat->cols; j++) {
+            mat->data[i][j] = factor;
+        }
+    }
 }
 
 /* ==========================================================================
@@ -102,13 +115,23 @@ bool udmat_add(const udmatrix_t *a, const udmatrix_t *b, udmatrix_t *result)
         return false;
     }
 
-    udmat_init(result, a->rows, a->cols);
+    /*
+     * A temporary, as udmat_mul() uses, because the result may be one of
+     * the inputs: the altitude filter does P = P + Q, and udmat_init()
+     * zeroes the data before the sum reads it. Without this, the predicted
+     * covariance was always Q and the filter barely moved.
+     */
+    udmatrix_t temp;
+
+    udmat_init(&temp, a->rows, a->cols);
 
     for (uint8_t i = 0U; i < a->rows; i++) {
         for (uint8_t j = 0U; j < a->cols; j++) {
-            result->data[i][j] = a->data[i][j] + b->data[i][j];
+            temp.data[i][j] = a->data[i][j] + b->data[i][j];
         }
     }
+
+    udmat_copy(&temp, result);
 
     return true;
 }
@@ -123,13 +146,18 @@ bool udmat_sub(const udmatrix_t *a, const udmatrix_t *b, udmatrix_t *result)
         return false;
     }
 
-    udmat_init(result, a->rows, a->cols);
+    /* the same temporary as udmat_add(): the result may be one of the inputs */
+    udmatrix_t temp;
+
+    udmat_init(&temp, a->rows, a->cols);
 
     for (uint8_t i = 0U; i < a->rows; i++) {
         for (uint8_t j = 0U; j < a->cols; j++) {
-            result->data[i][j] = a->data[i][j] - b->data[i][j];
+            temp.data[i][j] = a->data[i][j] - b->data[i][j];
         }
     }
+
+    udmat_copy(&temp, result);
 
     return true;
 }
@@ -267,14 +295,24 @@ void udmat_bound(udmatrix_t *mat, float min, float max)
         return;
     }
 
+    /*
+     * `UDMatrix::bound()` of the legacy compares the absolute value
+     * (`libraries/kalman/UDMatrix.cpp:296-309`): a covariance of -500 stays
+     * as it is. Comparing the signed value, as this did, turned every
+     * negative into +1e-15 and killed the cross covariances, so alpha zero
+     * was never estimated. Out of range the legacy keeps the positive
+     * bound, sign and all, and so does this.
+     */
     for (uint8_t i = 0U; i < mat->rows; i++) {
         for (uint8_t j = 0U; j < mat->cols; j++) {
-            if (mat->data[i][j] < min) {
+            float value = fabsf(mat->data[i][j]);
+
+            if (value < min) {
                 mat->data[i][j] = min;
-            } else if (mat->data[i][j] > max) {
+            } else if (value > max) {
                 mat->data[i][j] = max;
             } else {
-                /* Value is within bounds */
+                /* inside the bounds: keep it, sign and all */
             }
         }
     }

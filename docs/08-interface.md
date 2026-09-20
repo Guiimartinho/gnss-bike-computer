@@ -1,8 +1,8 @@
 # Interface: telas, menus, botões e notificações
 
-Como o stravaV10 original desenha as telas no Sharp Memory LCD, como os três botões navegam pelos modos e menus, e em que pé está a interface do port Zephyr. A interface do port **não é uma tradução** da original: é uma interface nova, em paisagem, com várias partes ainda desligadas.
+Como o stravaV10 original desenha as telas no Sharp Memory LCD, como os três botões navegam pelos modos e menus, e em que pé está a interface do port Zephyr. A interface em paisagem que o port teve até 2026-09-19 não traduzia a original e saiu. A interface da placa nova (LVGL, retrato, 8 cores ou preto e branco, com os arranjos do legacy), com todas as telas desenhadas e testadas no PC, está em [18-interface-telas.md](18-interface-telas.md).
 
-**Nesta página:** [Display](#display) · [Interface original](#interface-original) · [Imagens](#imagens) · [Interface do port](#interface-do-port) · [Comparação](#comparação) · [Defeitos conhecidos](#defeitos-conhecidos) · [O que falta](#o-que-falta)
+**Nesta página:** [Display](#display) · [Interface original](#interface-original) · [Imagens](#imagens) · [Interface do port](#interface-do-port) · [Comparação](#comparação) · [O que falta](#o-que-falta)
 
 ## Display
 
@@ -12,10 +12,10 @@ Como o stravaV10 original desenha as telas no Sharp Memory LCD, como os três bo
 | Montagem no aparelho | **retrato**: 240 de largura × 400 de altura (foto `img/front1.png`) |
 | Interface | SPI a 2 MHz, LSB primeiro, CS ativo em nível alto |
 | Buffer | 12.482 B: `[comando][endereço][50 B de pixels][dummy] × 240 linhas + [dummy]`; bit menos significativo = pixel da esquerda |
-| VCOM | precisa alternar: o legacy alterna pelo bit M1 a cada envio; o port envia o comando VCOM a cada 1 s |
-| Refresh | legacy: por evento, cerca de 1 Hz; port: fixo a cada 250 ms (4 Hz, ~50 ms de SPI por quadro) |
+| VCOM | precisa alternar: o legacy alterna pelo bit M1 a cada envio; na V3, EXTMODE e EXTCOMIN vão ao GND por 10 kΩ (R13, R16) e o DISP ao VCC por 10 kΩ e 0,1 µF (R17, C43); a placa nova usa o EXTCOMIN ([18](18-interface-telas.md#atualização-e-luz)) |
+| Refresh | legacy: por evento, cerca de 1 Hz; placa nova: a cada época do GNSS ou botão, só as linhas que mudaram |
 
-O buffer tem o mesmo layout nos dois firmwares (`legacy/drivers/lcd/ls027.c:22-24`, `zephyr_app/src/drivers/lcd/ls027.c:22,45`).
+O layout do buffer é o de `legacy/drivers/lcd/ls027.c:22-24`; o driver do port antigo, removido em 2026-09-19, usava o mesmo, e o driver novo (`memlcd`, [05](05-arquitetura-zephyr.md#tela)) guarda o quadro da Sharp nos mesmos 12.482 B.
 
 ## Interface original
 
@@ -144,97 +144,32 @@ As capturas vêm de versões anteriores do firmware original, provavelmente do s
 
 ## Interface do port
 
-### Arquivos
-
-| Arquivo | Estado |
-|---|---|
-| `src/vue/vue.c` (1747 linhas) | ligado: primitivas, cabeçalho, 9 páginas e notificação num arquivo só |
-| `src/vue/menu.c` | implementado, **nunca inicializado nem aberto** |
-| `src/vue/vue_fec.c` | 3 páginas de trainer, **nunca chamadas**; a página de zonas usa dados de exemplo fixos |
-| `src/vue/vue_crs.c` | placeholder vazio |
-| `include/vue/font_5x7.h` | fonte 5×7 de 256 glifos (`static` no header: uma cópia por arquivo que a inclui) |
-| `include/vue/gfxfont.h` | tipos compatíveis com a Adafruit GFX, sem renderizador nem fonte |
-| `src/drivers/lcd/ls027.c` | driver próprio; o nó `sharp,ls0xx` do devicetree fica sem uso porque `CONFIG_DISPLAY` está desligado |
-
-### Como é ligado
-
-```mermaid
-flowchart LR
-    MAIN["main.c"] -->|vue_init| VUE["vue.c"]
-    DISP["thread display<br/>pilha 2048 B, prioridade 7"] -->|"vue_update a cada 250 ms"| VUE
-    DISP -->|"ls027_toggle_vcom a cada 1 s"| LCD["ls027.c"]
-    VUE -->|"primitivas + ls027_update"| LCD
-    LOOP["thread main_loop<br/>a cada 100 ms"] -->|hal_gpio_btn_process| GPIO["hal_gpio.c"]
-    GPIO -->|callback| BTN["vue_handle_button<br/>boucle_handle_button"]
-    MENU["menu.c"]:::missing
-    FEC["vue_fec.c"]:::missing
-    NOTIF["vue_show_notification"]:::missing
-    classDef missing fill:#c62828,color:#ffffff
-```
-
-Em vermelho, o que existe no código mas ninguém chama (o linker descarta).
-
-### Telas
-
-Todas em **paisagem 400 × 240**, com cabeçalho de 24 px (texto "GPS" fixo, hora e contorno de bateria sem nível) e fonte 5×7 escalada (1, 2 ou 3). Esquerda e direita percorrem as páginas:
-
-| Página | Conteúdo |
-|---|---|
-| `VUE_PAGE_MAIN` | velocidade, distância, subida, inclinação, potência, tempo |
-| `VUE_PAGE_SEGMENT` | melhor segmento: nome, % percorrido, diferença para o PR, barra de progresso |
-| `VUE_PAGE_PARCOURS` | percurso: progresso, distância restante, fora da rota; sempre "No route loaded" (sem sistema de arquivos) |
-| `VUE_PAGE_MAP` | mapa com rota, ciclista e rumo; o rodapé promete zoom, que não existe |
-| `VUE_PAGE_STATS` | distância, subida, velocidade máxima e média, tempo em movimento (não existe no legacy) |
-| `VUE_PAGE_SENSORS` | seis caixas de sensores com estado de conexão |
-| `VUE_PAGE_GPS` | estado do fix, satélites, HDOP, posição |
-| `VUE_PAGE_DEBUG` | uptime, heap, "BLE: Active" fixo, estado do boucle, versão |
-| `VUE_PAGE_MENU` | renderizador do menu; mostra "Menu not available" |
-
-### Botões no port
-
-`hal_gpio_btn_process()` lê os botões por polling na thread `main_loop` a cada 100 ms: pressão longa com 1 s ou mais, curta na liberação. Esquerda e direita trocam de página; **centro** inicia, pausa ou retoma a atividade; **centro longo** para e grava a atividade (`zephyr_app/src/model/boucle.c:452-486`). É um mapa diferente do legacy, onde o centro abre o menu.
+A interface em paisagem do port (`src/vue`: 9 páginas em fonte 5×7, com o driver `ls027.c`) saiu em 2026-09-19, na migração para os serviços ([05](05-arquitetura-zephyr.md)); a descrição dela e dos seus defeitos fica no histórico do git. A interface nova, em LVGL e em retrato, com os arranjos do legacy, está em `zephyr_app/src/ui` e em [18-interface-telas.md](18-interface-telas.md). Desde 2026-09-19 ela roda no firmware: a thread `ui` recebe o retrato do modelo e as teclas, o driver próprio (`zephyr_app/modules/gnss_drivers`) desenha no JDI LPM027M128B ou na Sharp LS027B7DH01 em retrato, e as ações viram comandos ([05](05-arquitetura-zephyr.md#tela)). Build verificado; nada visto em tela de verdade.
 
 ## Comparação
 
-| Legacy | Port | Estado |
+| Legacy | Interface nova (`src/ui`) | Estado |
 |---|---|---|
-| retrato 240 × 400, `Org_01`, grade de cadrans | paisagem 400 × 240, fonte 5×7, listas de texto | diferente |
-| splash | — | ausente |
-| CRS página 1 (14 cadrans, 3 variantes por número de segmentos) | `VUE_PAGE_MAIN` (6 valores) e `VUE_PAGE_SEGMENT` (texto e barra) | simplificado |
-| CRS páginas 2 (Komoot, RR) e 3 (pitch, bússola) | — | ausente |
-| troca automática para a tela GPS sem posição | página GPS manual | simplificado |
-| PRC com mapa, zoom e segmentos | `VUE_PAGE_PARCOURS` e `VUE_PAGE_MAP` sem zoom | simplificado |
-| FEC | `vue_fec.c` não ligado | não ligado |
-| menu com modos, pareamento, FTP, peso, calibração, formatação, desligar | `menu.c` com controle de atividade e FTP/peso, não ligado | não ligado |
-| fila de 10 notificações e produtores | um slot, sem produtores | não ligado |
-| LED (pulsos e pisca de segmento) | `neopixel.c` sem alias `led-strip` no overlay | ausente |
+| retrato 240 × 400, `Org_01`, grade de cadrans | retrato, DejaVu Sans de 1 bit, a mesma grade com barra de estado | diferente ([18](18-interface-telas.md#diferenças-para-o-legacy)) |
+| splash | partida com a bicicleta desenhada em linhas | diferente |
+| CRS página 1, com os arranjos de 0, 1 e 2 segmentos | os mesmos arranjos | igual no PC |
+| CRS páginas 2 (Komoot, RR) e 3 (pitch, bússola) | as mesmas, com seta desenhada, rua, rumo em graus e rugosidade com nome | diferente |
+| troca automática para a tela GPS sem posição | igual, com posição mais velha que 6 s | igual no PC |
+| PRC com mapa, zoom e segmentos | igual; a projeção do mapa pelo modelo ainda não foi portada | parcial |
+| FEC | igual, na grade de 7 linhas | diferente |
+| menu com modos, percursos, pareamento, FTP, peso, calibração, formatação, desligar | igual, com Sensores, Tela e luz e confirmação da formatação | diferente |
+| fila de 10 notificações e produtores | a fila; os produtores chegam com cada serviço | parcial |
+| LED (pulsos e pisca de segmento) | LED RGB por `pwm-leds` na placa nova | ausente |
 
-## Defeitos conhecidos
-
-| Gravidade | Onde | Defeito |
-|---|---|---|
-| crítico | `src/drivers/lcd/ls027.c:179-189` | as transformações de retrato estão erradas (usam largura no lugar de altura e vice-versa); a interface é desenhada em paisagem num aparelho montado em retrato |
-| alto | `src/vue/vue.c:1421-1456` | item selecionado do menu em texto preto sobre barra preta: ilegível (falta XOR ou texto branco) |
-| alto | `src/vue/vue_fec.c:481-486` | `suffer_score_t ss` local e não inicializado; a pontuação (float) é comparada com `APP_OK` e o valor real, guardado em `boucle.c`, nunca aparece |
-
-Corrigidos em 2026-09-18: a leitura dos botões invertida duas vezes em `src/hal/hal_gpio.c` (em repouso os botões pareciam pressionados e, 1 s depois, saía um `LONG_CENTER` que parava e gravava a atividade) e a pilha de 1024 B da thread de display, agora com 2048 B.
-| médio | `src/drivers/lcd/ls027.c:306-403` | primitivas de desenho sem mutex; seguro só enquanto a thread de display for a única a desenhar |
-| médio | `src/vue/vue.c:673-682, 803, 915` | conversão float → `int16_t` sem saturação no mapa e barras de progresso sem limite |
-| baixo | `src/vue/vue.c:1274, 898, 1504` | textos que prometem funções inexistentes ("L/R: Zoom", "Press START", "BLE: Active" fixo) |
-
-Nada disso foi testado na placa.
+A interface está no firmware desde 2026-09-19, testada no PC e no build, não na placa.
 
 ## O que falta
 
 Em ordem de prioridade (P = até 1 dia, M = 2 a 5 dias, G = mais de uma semana):
 
-1. **P** · fechar o mapa de eventos dos botões (centro abre o menu, como no legacy, ou controla a atividade) e usar o `BTN_DEBOUNCE_MS`, hoje sem uso.
-2. **M** · retrato 240 × 400 (decisão do dono em 2026-09-18: a tela fica no formato do legacy, em retrato): corrigir `transform_coords` e fazer a vue usar `ls027_get_width/height`.
-3. **M** · ligar o menu com troca de modo (`boucle_set_mode` + `vue_set_mode`), destaque em XOR e roteamento dos botões.
-4. **M** · cadrans e renderizador da fonte `Org_01` (portar `Org_01.h` sobre `gfxfont.h`).
-5. **G** · CRS página 1 completa com mini-mapa de segmento e `partner`.
-6. **M** · troca automática para a tela GPS quando a posição tem mais de 6 s.
-7. **M** · fila de notificações e produtores.
-8. **P** · display como dono único do framebuffer (a pilha já tem 2 KB).
-9. **M** · PRC com zoom, FEC com dados reais, CRS página 2 com ícones Komoot, menus de configuração do legacy.
-10. **P** · refresh por evento (≈1 Hz) em vez de 4 Hz fixos, splash, limpeza do código morto.
+Feitos em 2026-09-19, no build: o driver próprio da tela (JDI em 3 bits e Sharp em 1 bit, retrato, quantização da interface, só as linhas que mudaram, EXTCOMIN ou VCOM serial), o LVGL na thread `ui` com as ações publicadas como comandos, as teclas pelo subsistema de entrada (`gpio-keys` e `zephyr,input-longpress`) e a máquina da luz. Falta:
+
+1. **M** · mini-mapas dos segmentos e mapa do PRC projetados pelo modelo, como `afficheSegment` e `Zoom.cpp`.
+2. **M** · notificações dos serviços (boot, GPS, pareamento, FDIR).
+3. **M** · na placa nova, o centro pelo SHPHLD e pelo GPIO3 do nPM1300, e a luz de verdade (o LPM027M128B não tem luz própria).
+4. **P** · ver tudo num painel: SPI, COM, cores, tempos e legibilidade ao sol.

@@ -1,0 +1,100 @@
+/**
+ * @file lv_conf.h
+ * @brief LVGL configuration of the host renderer (tests/ui)
+ *
+ * Mirrors what the firmware sets through Kconfig: RGB565, no OS, the software
+ * renderer, no built-in fonts and no theme (the interface styles every
+ * object). Asserts stay on so that a bad style or a NULL pointer stops the
+ * renderer instead of drawing garbage.
+ */
+
+#ifndef LV_CONF_H
+#define LV_CONF_H
+
+#define LV_COLOR_DEPTH              16
+
+#define LV_USE_STDLIB_MALLOC        LV_STDLIB_BUILTIN
+#define LV_USE_STDLIB_STRING        LV_STDLIB_BUILTIN
+#define LV_USE_STDLIB_SPRINTF       LV_STDLIB_BUILTIN
+#define LV_MEM_SIZE                 (96U * 1024U)
+
+#define LV_DEF_REFR_PERIOD          33
+#define LV_DPI_DEF                  173
+
+#define LV_USE_OS                   LV_OS_NONE
+
+#define LV_DRAW_BUF_STRIDE_ALIGN    1
+#define LV_DRAW_BUF_ALIGN           4
+#define LV_USE_DRAW_SW              1
+#define LV_DRAW_SW_COMPLEX          1
+/* RGB565 is the only picture format; A8 stays for the masks of the letters */
+#define LV_DRAW_SW_SUPPORT_RGB565   1
+#define LV_DRAW_SW_SUPPORT_RGB565_SWAPPED       0
+#define LV_DRAW_SW_SUPPORT_RGB565A8             0
+#define LV_DRAW_SW_SUPPORT_RGB888               0
+#define LV_DRAW_SW_SUPPORT_XRGB8888             0
+#define LV_DRAW_SW_SUPPORT_ARGB8888             0
+#define LV_DRAW_SW_SUPPORT_ARGB8888_PREMULTIPLIED 0
+#define LV_DRAW_SW_SUPPORT_L8                   0
+#define LV_DRAW_SW_SUPPORT_AL88                 0
+#define LV_DRAW_SW_SUPPORT_A8                   1
+#define LV_DRAW_SW_SUPPORT_I1                   0
+
+#define LV_USE_LOG                  1
+#define LV_LOG_LEVEL                LV_LOG_LEVEL_WARN
+#define LV_LOG_PRINTF               1
+
+#define LV_USE_ASSERT_NULL          1
+#define LV_USE_ASSERT_MALLOC        1
+#define LV_USE_ASSERT_STYLE         1
+#define LV_USE_ASSERT_OBJ           1
+
+/* The interface brings its own 1-bpp fonts and sets one on every label; the
+ * default is the smallest built-in font, as CONFIG_LV_FONT_DEFAULT_UNSCII_8
+ * in the firmware (a label without its font would show it) */
+#define LV_FONT_MONTSERRAT_14       0
+#define LV_FONT_UNSCII_8            1
+#define LV_FONT_DEFAULT             &lv_font_unscii_8
+
+#define LV_USE_THEME_DEFAULT        0
+#define LV_USE_THEME_SIMPLE         0
+#define LV_USE_THEME_MONO           0
+
+/* Widgets the interface uses; the rest stay off to build faster */
+#define LV_USE_LABEL                1
+#define LV_USE_ANIMIMG              0
+#define LV_USE_ARC                  0
+#define LV_USE_BAR                  0
+#define LV_USE_BUTTON               0
+#define LV_USE_BUTTONMATRIX         0
+#define LV_USE_CALENDAR             0
+#define LV_USE_CANVAS               0
+#define LV_USE_CHART                0
+#define LV_USE_CHECKBOX             0
+#define LV_USE_DROPDOWN             0
+#define LV_USE_IMAGEBUTTON          0
+#define LV_USE_KEYBOARD             0
+#define LV_USE_LED                  0
+#define LV_USE_LINE                 0
+#define LV_USE_LIST                 0
+#define LV_USE_LOTTIE               0
+#define LV_USE_MENU                 0
+#define LV_USE_MSGBOX               0
+#define LV_USE_ROLLER               0
+#define LV_USE_SCALE                0
+#define LV_USE_SLIDER               0
+#define LV_USE_SPAN                 0
+#define LV_USE_SPINBOX              0
+#define LV_USE_SPINNER              0
+#define LV_USE_SWITCH               0
+#define LV_USE_TEXTAREA             0
+#define LV_USE_TABLE                0
+#define LV_USE_TABVIEW              0
+#define LV_USE_TILEVIEW             0
+#define LV_USE_WIN                  0
+#define LV_USE_ARCLABEL             0
+
+#define LV_BUILD_EXAMPLES           0
+#define LV_BUILD_DEMOS              0
+
+#endif /* LV_CONF_H */

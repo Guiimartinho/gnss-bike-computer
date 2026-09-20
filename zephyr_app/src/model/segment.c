@@ -13,6 +13,7 @@
 #include <stdio.h>
 
 #include "model/segment.h"
+#include "model/segment_file.h"
 
 #include "model/locator.h"
 #include "model/vecteur.h"
@@ -25,8 +26,11 @@ LOG_MODULE_REGISTER(segment, CONFIG_LOG_DEFAULT_LEVEL);
  * Private Definitions
  * ========================================================================== */
 
-/** Segment files directory */
-#define SEG_DIR             "/SD:/segments"
+/** The segments of the legacy live in the root of the card */
+#define SEG_DIR             "/SD:"
+
+/** Longest line of a segment file: `lat ; lon ; rtime ; alt` */
+#define SEG_LINE_MAX        96U
 
 /** Maximum filename length */
 #define MAX_FILENAME_LEN    32U
@@ -40,17 +44,33 @@ LOG_MODULE_REGISTER(segment, CONFIG_LOG_DEFAULT_LEVEL);
 /** Margin factor for deactivation (from original Segment.h line 22) */
 #define MARGE_ACT           1.5f
 
-/** Maximum number of segment points to cache */
-#define MAX_SEG_POINTS      500U
+/**
+ * Segments near the rider hold their points in a pool of slots. The legacy
+ * puts them on the heap and frees them when the rider goes away
+ * (`legacy/source/sd/sd_functions.cpp:518-596`, `Segment::init()`); the
+ * port allocates nothing after boot, so the number of segments that can be
+ * loaded at the same time and the points each one holds are fixed here.
+ *
+ * The files of the legacy go up to about 1300 points (`tools/TDD/DB`); a
+ * longer one is halved while it loads (`liste_decimate()`), which keeps the
+ * start, the end and the shape of the segment, and only loses resolution.
+ */
+#define SEG_SLOTS           3U
+#define SEG_SLOT_POINTS     256U
+
+/** No segment holds the slot */
+#define SEG_NO_OWNER        UINT16_MAX
 
 /* ==========================================================================
  * Private Types
  * ========================================================================== */
 
 /**
- * @brief Extended segment data (runtime state)
+ * @brief Points and running state of a loaded segment
  */
 typedef struct {
+    uint16_t owner;         /**< Segment holding the slot, or SEG_NO_OWNER */
+    uint16_t stride;        /**< One point of the file kept out of this many */
     float start_time;       /**< Time when segment was activated */
     float cur_time;         /**< Current time on segment */
     float advance;          /**< Time advance/behind reference */
@@ -58,8 +78,8 @@ typedef struct {
     float elev_total;       /**< Total elevation of segment */
     float pct_dist;         /**< Progress percentage by distance */
     float pct_elev;         /**< Progress percentage by elevation */
-    liste_points_t pts;     /**< Segment points list */
-    bool pts_loaded;        /**< True if points are loaded */
+    liste_points_t pts;     /**< Segment points list, over `storage` */
+    point_t storage[SEG_SLOT_POINTS]; /**< Points of the segment */
 } seg_runtime_t;
 
 /* ==========================================================================
@@ -73,8 +93,21 @@ static uint16_t segment_count;
 /** Segment headers (metadata) */
 static seg_header_t seg_headers[MAX_SEGMENTS];
 
-/** Runtime data for segments */
-static seg_runtime_t seg_runtime[MAX_SEGMENTS];
+/**
+ * Start of each segment, taken from its name (`segment_file_position()`):
+ * this is what the allocator uses to decide whether to open the file, as
+ * the legacy does (`legacy/source/sd/sd_functions.cpp:547-556`).
+ */
+static struct {
+    float lat;
+    float lon;
+} seg_start_pos[MAX_SEGMENTS];
+
+/** Points and running state of the segments that are loaded */
+static seg_runtime_t seg_slots[SEG_SLOTS];
+
+/** Distance to the nearest segment, as the last allocator run measured it */
+static float nearest_dist = -1.0f;
 
 /** User's GPS position history */
 static liste_points_t user_history;
@@ -98,6 +131,65 @@ static float dist_to_seg_header(uint16_t seg_idx, float lat, float lon);
  * ========================================================================== */
 
 /**
+ * @brief Slot holding the points of a segment, or NULL when it has none
+ */
+static seg_runtime_t *slot_of(uint16_t seg_idx)
+{
+    for (uint8_t i = 0U; i < SEG_SLOTS; i++) {
+        if (seg_slots[i].owner == seg_idx) {
+            return &seg_slots[i];
+        }
+    }
+
+    return NULL;
+}
+
+/**
+ * @brief Give a free slot to a segment, empty and ready to be filled
+ * @return The slot, or NULL when every slot is taken
+ */
+static seg_runtime_t *slot_take(uint16_t seg_idx)
+{
+    for (uint8_t i = 0U; i < SEG_SLOTS; i++) {
+        if (seg_slots[i].owner != SEG_NO_OWNER) {
+            continue;
+        }
+
+        seg_runtime_t *rt = &seg_slots[i];
+
+        rt->owner = seg_idx;
+        rt->stride = 1U;
+        rt->start_time = 0.0f;
+        rt->cur_time = 0.0f;
+        rt->advance = 0.0f;
+        rt->elev_start = 0.0f;
+        rt->elev_total = 0.0f;
+        rt->pct_dist = 0.0f;
+        rt->pct_elev = 0.0f;
+        liste_init_static(&rt->pts, rt->storage, SEG_SLOT_POINTS);
+
+        return rt;
+    }
+
+    return NULL;
+}
+
+/**
+ * @brief Take the points of a segment back into the pool
+ */
+static void slot_give(uint16_t seg_idx)
+{
+    seg_runtime_t *rt = slot_of(seg_idx);
+
+    if (rt == NULL) {
+        return;
+    }
+
+    liste_clear(&rt->pts);
+    rt->owner = SEG_NO_OWNER;
+}
+
+/**
  * @brief Test segment activation using vector math
  *
  * Uses scalar product of movement vector and segment direction,
@@ -108,10 +200,10 @@ static float dist_to_seg_header(uint16_t seg_idx, float lat, float lon);
  */
 static bool test_activation(uint16_t seg_idx)
 {
-    seg_runtime_t *rt = &seg_runtime[seg_idx];
+    const seg_runtime_t *rt = slot_of(seg_idx);
 
     /* Need at least 2 points in both lists */
-    if ((rt->pts.count < 2U) || (user_history.count < 2U)) {
+    if ((rt == NULL) || (rt->pts.count < 2U) || (user_history.count < 2U)) {
         return false;
     }
 
@@ -145,10 +237,10 @@ static bool test_activation(uint16_t seg_idx)
  */
 static bool test_deactivation(uint16_t seg_idx)
 {
-    seg_runtime_t *rt = &seg_runtime[seg_idx];
+    const seg_runtime_t *rt = slot_of(seg_idx);
 
     /* Need points in segment */
-    if (rt->pts.count < 3U) {
+    if ((rt == NULL) || (rt->pts.count < 3U)) {
         return false;
     }
 
@@ -175,9 +267,9 @@ static bool test_deactivation(uint16_t seg_idx)
  */
 static float dist_to_start(uint16_t seg_idx, const loc_data_t *loc)
 {
-    seg_runtime_t *rt = &seg_runtime[seg_idx];
+    const seg_runtime_t *rt = slot_of(seg_idx);
 
-    if ((rt->pts.count == 0U) || (loc == NULL)) {
+    if ((rt == NULL) || (rt->pts.count == 0U) || (loc == NULL)) {
         return 9999.0f;
     }
 
@@ -205,10 +297,10 @@ static float dist_to_start(uint16_t seg_idx, const loc_data_t *loc)
 static void update_progress(uint16_t seg_idx, const loc_data_t *loc,
                            float current_time)
 {
-    seg_runtime_t *rt = &seg_runtime[seg_idx];
+    seg_runtime_t *rt = slot_of(seg_idx);
     segment_t *seg = &segments[seg_idx];
 
-    if (rt->pts.count == 0U) {
+    if ((rt == NULL) || (rt->pts.count == 0U)) {
         return;
     }
 
@@ -238,9 +330,9 @@ static void update_progress(uint16_t seg_idx, const loc_data_t *loc,
     rt->cur_time = current_time - rt->start_time;
 
     /* Get reference time from segment first point */
-    const point_t *first_pt = liste_get_at(&rt->pts, 0);
-    if (first_pt != NULL) {
-        rt->advance = (rel_time - first_pt->rtime) - rt->cur_time;
+    const point_t *seg_start = liste_get_at(&rt->pts, 0);
+    if (seg_start != NULL) {
+        rt->advance = (rel_time - seg_start->rtime) - rt->cur_time;
     }
 
     /* Update progress percentage */
@@ -275,10 +367,10 @@ static void add_user_position(const loc_data_t *loc, float current_time)
 static void update_segment(uint16_t idx, const loc_data_t *loc, float current_time)
 {
     segment_t *seg = &segments[idx];
-    seg_runtime_t *rt = &seg_runtime[idx];
+    seg_runtime_t *rt = slot_of(idx);
 
     /* Skip if no points loaded */
-    if (!rt->pts_loaded || (rt->pts.count < 3U)) {
+    if ((rt == NULL) || (rt->pts.count < 3U)) {
         return;
     }
 
@@ -391,8 +483,15 @@ app_err_t segment_init(void)
     /* Clear segments */
     (void)memset(segments, 0, sizeof(segments));
     (void)memset(seg_headers, 0, sizeof(seg_headers));
-    (void)memset(seg_runtime, 0, sizeof(seg_runtime));
+    (void)memset(seg_start_pos, 0, sizeof(seg_start_pos));
     segment_count = 0U;
+    nearest_dist = -1.0f;
+
+    /* Every slot of the pool is free and points at its own storage */
+    for (uint8_t i = 0U; i < SEG_SLOTS; i++) {
+        seg_slots[i].owner = SEG_NO_OWNER;
+        liste_init_static(&seg_slots[i].pts, seg_slots[i].storage, SEG_SLOT_POINTS);
+    }
 
     /* Initialize user position history */
     liste_init(&user_history, LISTE_MAX_HISTORY);
@@ -426,9 +525,12 @@ int segment_load_all(void)
             continue;
         }
 
-        /* Check for .seg extension */
-        size_t len = strlen(entry.name);
-        if ((len < 5U) || (strcmp(&entry.name[len - 4], ".seg") != 0)) {
+        /*
+         * The name says what the file is and where the segment starts
+         * (`sd_functions.cpp:279-333`): nothing is opened here, as in the
+         * legacy, so a card full of segments costs one directory pass.
+         */
+        if (!segment_file_name_is_valid(entry.name)) {
             continue;
         }
 
@@ -437,37 +539,31 @@ int segment_load_all(void)
             break;
         }
 
-        /* Load segment header */
-        char path[280];  /* SEG_DIR + "/" + max filename (255) */
-        (void)snprintf(path, sizeof(path), "%s/%s", SEG_DIR, entry.name);
+        float start_lat = 0.0f;
+        float start_lon = 0.0f;
 
-        struct fs_file_t file;
-        fs_file_t_init(&file);
+        if (segment_file_position(entry.name, &start_lat, &start_lon)) {
+            segment_t *seg = &segments[segment_count];
 
-        if (fs_open(&file, path, FS_O_READ) == 0) {
-            /* Read header */
-            ssize_t bytes = fs_read(&file, &seg_headers[segment_count],
-                                    sizeof(seg_header_t));
+            (void)strncpy(seg->name, entry.name, sizeof(seg->name) - 1U);
+            seg->name[sizeof(seg->name) - 1U] = '\0';
+            seg->num_points = 0U;   /* the points come with the allocator */
+            seg->total_time = 0.0f;
+            seg->total_elev = 0.0f;
+            seg->status = SEG_OFF;
+            seg->score = 0;
 
-            if (bytes == sizeof(seg_header_t)) {
-                /* Initialize segment state */
-                segment_t *seg = &segments[segment_count];
-                (void)strncpy(seg->name, seg_headers[segment_count].name,
-                             sizeof(seg->name) - 1U);
-                seg->num_points = seg_headers[segment_count].num_points;
-                seg->total_time = seg_headers[segment_count].total_time;
-                seg->total_elev = seg_headers[segment_count].total_elev;
-                seg->status = SEG_OFF;
-                seg->score = 0;
+            (void)memset(&seg_headers[segment_count], 0, sizeof(seg_header_t));
+            (void)strncpy(seg_headers[segment_count].name, entry.name,
+                          sizeof(seg_headers[segment_count].name) - 1U);
+            seg_start_pos[segment_count].lat = start_lat;
+            seg_start_pos[segment_count].lon = start_lon;
 
-                segment_count++;
-                count++;
+            segment_count++;
+            count++;
 
-                LOG_INF("Loaded segment: %s (%u points)",
-                        seg->name, seg->num_points);
-            }
-
-            (void)fs_close(&file);
+            LOG_DBG("Segment %s at %.5f %.5f", entry.name, (double)start_lat,
+                    (double)start_lon);
         }
     }
 
@@ -541,7 +637,7 @@ app_err_t segment_get_best(segment_t *seg)
     }
 
     /* Find active segment with highest score */
-    segment_t *best = NULL;
+    const segment_t *best = NULL;
     int8_t best_score = INT8_MIN;
 
     for (uint16_t i = 0U; i < segment_count; i++) {
@@ -607,26 +703,16 @@ uint8_t segment_get_nearby(segment_t *segs, uint8_t max_count, float lat, float 
         float dist;
     } seg_dist_t;
 
-    seg_dist_t seg_dists[MAX_SEGMENTS];
+    seg_dist_t seg_dists[MAX_SEGMENTS] = {0};
     uint8_t count = 0U;
 
-    /* Calculate distance for all loaded segments */
+    /*
+     * Every segment of the card counts, loaded or not: the start of each
+     * one comes from its name, which is what lets the list be shown before
+     * anything is read from the card.
+     */
     for (uint16_t i = 0U; i < segment_count; i++) {
-        seg_runtime_t *rt = &seg_runtime[i];
-
-        /* Only include segments with loaded points */
-        if (!rt->pts_loaded || (rt->pts.count == 0U)) {
-            continue;
-        }
-
-        /* Get distance to first point */
-        const point_t *seg_start = liste_get_at(&rt->pts, 0);
-        if (seg_start == NULL) {
-            continue;
-        }
-
-        point_t cur = { .lat = lat, .lon = lon, .alt = 0.0f, .rtime = 0.0f };
-        float dist = point_distance(&cur, seg_start);
+        float dist = dist_to_seg_header(i, lat, lon);
 
         seg_dists[count].idx = i;
         seg_dists[count].dist = dist;
@@ -658,6 +744,111 @@ uint8_t segment_get_nearby(segment_t *segs, uint8_t max_count, float lat, float 
     return result_count;
 }
 
+uint8_t segment_get_screen_list(uint8_t *index, uint8_t max, float lat, float lon)
+{
+    if (!is_initialized || (index == NULL) || (max == 0U)) {
+        return 0U;
+    }
+
+    uint8_t count = 0U;
+
+    /* the ones running, best score first (legacy getScore) */
+    while (count < max) {
+        int16_t best = -1;
+        int8_t best_score = INT8_MIN;
+
+        for (uint16_t i = 0U; i < segment_count; i++) {
+            bool taken = false;
+
+            if (segments[i].status == SEG_OFF) {
+                continue;
+            }
+            for (uint8_t k = 0U; k < count; k++) {
+                if (index[k] == (uint8_t)i) {
+                    taken = true;
+                    break;
+                }
+            }
+            if (taken) {
+                continue;
+            }
+            if (segments[i].score > best_score) {
+                best_score = segments[i].score;
+                best = (int16_t)i;
+            }
+        }
+
+        if (best < 0) {
+            break;
+        }
+        index[count] = (uint8_t)best;
+        count++;
+    }
+
+    /* then the nearest of the loaded ones, which is what the rider comes to */
+    while (count < max) {
+        int16_t best = -1;
+        float best_dist = 9999.0f;
+
+        for (uint16_t i = 0U; i < segment_count; i++) {
+            bool taken = false;
+
+            if (slot_of(i) == NULL) {
+                continue;
+            }
+            for (uint8_t k = 0U; k < count; k++) {
+                if (index[k] == (uint8_t)i) {
+                    taken = true;
+                    break;
+                }
+            }
+            if (taken) {
+                continue;
+            }
+
+            float dist = dist_to_seg_header(i, lat, lon);
+
+            if (dist < best_dist) {
+                best_dist = dist;
+                best = (int16_t)i;
+            }
+        }
+
+        if (best < 0) {
+            break;
+        }
+        index[count] = (uint8_t)best;
+        count++;
+    }
+
+    return count;
+}
+
+uint16_t segment_point_count(uint8_t index)
+{
+    const seg_runtime_t *rt = slot_of(index);
+
+    return (rt != NULL) ? rt->pts.count : 0U;
+}
+
+bool segment_point_at(uint8_t index, uint16_t i, point_t *out)
+{
+    const seg_runtime_t *rt = slot_of(index);
+
+    if ((rt == NULL) || (out == NULL) || (i >= rt->pts.count)) {
+        return false;
+    }
+
+    const point_t *p = liste_get_at(&rt->pts, (int16_t)i);
+
+    if (p == NULL) {
+        return false;
+    }
+    *out = *p;
+
+    return true;
+}
+
 app_err_t segment_register_callback(seg_status_callback_t callback)
 {
     if (!is_initialized) {
@@ -674,29 +865,27 @@ float segment_get_nearest_distance(void)
         return -1.0f;
     }
 
+    /*
+     * What the last allocator run measured. The allocator sees every
+     * segment of the card, so this answer does not depend on which ones
+     * have their points in the pool.
+     */
+    if (nearest_dist >= 0.0f) {
+        return nearest_dist;
+    }
+
+    /* No allocator run yet: measure from the position of the rider */
+    const point_t *cur_pos = liste_get_at(&user_history, 0);
+
+    if (cur_pos == NULL) {
+        return -1.0f;
+    }
+
     float nearest = 9999.0f;
 
     for (uint16_t i = 0U; i < segment_count; i++) {
-        seg_runtime_t *rt = &seg_runtime[i];
+        float dist = dist_to_seg_header(i, cur_pos->lat, cur_pos->lon);
 
-        /* Skip if points not loaded */
-        if (!rt->pts_loaded || (rt->pts.count == 0U)) {
-            continue;
-        }
-
-        /* Get distance to first point of segment */
-        const point_t *seg_start = liste_get_at(&rt->pts, 0);
-        if (seg_start == NULL) {
-            continue;
-        }
-
-        /* Get current position from user history */
-        const point_t *cur_pos = liste_get_at(&user_history, 0);
-        if (cur_pos == NULL) {
-            continue;
-        }
-
-        float dist = point_distance(cur_pos, seg_start);
         if (dist < nearest) {
             nearest = dist;
         }
@@ -726,11 +915,15 @@ void segment_reset_all(void)
         segments[i].score = 0;
 
         /* Reset runtime state but keep points loaded */
-        seg_runtime[i].start_time = 0.0f;
-        seg_runtime[i].cur_time = 0.0f;
-        seg_runtime[i].advance = 0.0f;
-        seg_runtime[i].pct_dist = 0.0f;
-        seg_runtime[i].pct_elev = 0.0f;
+        seg_runtime_t *rt = slot_of(i);
+
+        if (rt != NULL) {
+            rt->start_time = 0.0f;
+            rt->cur_time = 0.0f;
+            rt->advance = 0.0f;
+            rt->pct_dist = 0.0f;
+            rt->pct_elev = 0.0f;
+        }
     }
 
     /* Clear user position history */
@@ -741,15 +934,17 @@ void segment_reset_all(void)
 
 void segment_unload_all(void)
 {
-    /* Clear runtime data including point lists */
-    for (uint16_t i = 0U; i < segment_count; i++) {
-        liste_clear(&seg_runtime[i].pts);
+    /* Give every slot of the pool back */
+    for (uint8_t i = 0U; i < SEG_SLOTS; i++) {
+        seg_slots[i].owner = SEG_NO_OWNER;
+        liste_init_static(&seg_slots[i].pts, seg_slots[i].storage, SEG_SLOT_POINTS);
     }
 
     (void)memset(segments, 0, sizeof(segments));
     (void)memset(seg_headers, 0, sizeof(seg_headers));
-    (void)memset(seg_runtime, 0, sizeof(seg_runtime));
+    (void)memset(seg_start_pos, 0, sizeof(seg_start_pos));
     segment_count = 0U;
+    nearest_dist = -1.0f;
 
     /* Clear user position history */
     liste_clear(&user_history);
@@ -766,53 +961,128 @@ static int load_segment_points(uint16_t seg_idx)
         return -1;
     }
 
-    seg_runtime_t *rt = &seg_runtime[seg_idx];
     segment_t *seg = &segments[seg_idx];
 
-    if (rt->pts_loaded) {
+    if (slot_of(seg_idx) != NULL) {
         return 0;  /* Already loaded */
     }
 
-    /* Build filename */
-    char path[64];
-    (void)snprintf(path, sizeof(path), "%s/%s.seg", SEG_DIR, seg->name);
+    char path[32];
+
+    (void)snprintf(path, sizeof(path), "%s/%s", SEG_DIR, seg->name);
+
+    seg_runtime_t *rt = slot_take(seg_idx);
+
+    if (rt == NULL) {
+        LOG_WRN("No free slot for segment %s", seg->name);
+        return -1;
+    }
 
     struct fs_file_t file;
+
     fs_file_t_init(&file);
 
     if (fs_open(&file, path, FS_O_READ) < 0) {
         LOG_WRN("Cannot open segment file: %s", path);
+        slot_give(seg_idx);
         return -1;
     }
 
-    /* Skip header */
-    (void)fs_seek(&file, (off_t)sizeof(seg_header_t), FS_SEEK_SET);
+    /*
+     * Text of the legacy: a `<Name>` line and then `lat ; lon ; rtime ;
+     * alt`, with the time of each point taken from the first
+     * (`legacy/source/sd/sd_functions.cpp`, `load_segment`). The file is
+     * read in chunks and split into lines here, because fs_read() knows
+     * nothing about lines.
+     */
+    char chunk[128];
+    char line[SEG_LINE_MAX];
+    size_t line_len = 0U;
+    float first_time = 0.0f;
+    float first_alt = 0.0f;
+    struct segment_file_point last_sp = {0};
+    uint32_t read_points = 0U;   /* points of the file, kept or not */
+    bool last_kept = false;
+    bool truncated = false;
+    ssize_t got;
 
-    /* Initialize point list */
-    liste_init(&rt->pts, MAX_SEG_POINTS);
+    while (!truncated && ((got = fs_read(&file, chunk, sizeof(chunk))) > 0)) {
+        for (ssize_t i = 0; i < got; i++) {
+            char c = chunk[i];
 
-    /* Read points */
-    seg_point_t pt;
-    int count = 0;
-    while (fs_read(&file, &pt, sizeof(seg_point_t)) == sizeof(seg_point_t)) {
-        liste_add_back(&rt->pts, pt.lat, pt.lon, pt.alt, pt.time);
-        count++;
+            if ((c != '\n') && (c != '\r')) {
+                if (line_len < (SEG_LINE_MAX - 1U)) {
+                    line[line_len] = c;
+                    line_len++;
+                }
+                continue;
+            }
 
-        if ((uint16_t)count >= MAX_SEG_POINTS) {
-            LOG_WRN("Segment %s truncated at %d points", seg->name, count);
-            break;
+            line[line_len] = '\0';
+            line_len = 0U;
+
+            struct segment_file_point sp;
+
+            if (!segment_file_parse_line(line, &sp)) {
+                continue;
+            }
+            if (read_points == 0U) {
+                first_time = sp.rtime;
+                first_alt = sp.alt;
+            }
+            last_sp = sp;
+
+            /* The slot is full: halve what is there and go on, as the
+             * comment on SEG_SLOTS explains. */
+            if (rt->pts.count >= SEG_SLOT_POINTS) {
+                if (liste_decimate(&rt->pts) >= SEG_SLOT_POINTS) {
+                    LOG_WRN("Segment %s truncated at %u points", seg->name,
+                            (unsigned int)rt->pts.count);
+                    truncated = true;
+                    break;
+                }
+                rt->stride *= 2U;
+            }
+
+            last_kept = ((read_points % rt->stride) == 0U);
+            if (last_kept) {
+                liste_add_back(&rt->pts, sp.lat, sp.lon, sp.alt, sp.rtime - first_time);
+            }
+            read_points++;
         }
     }
 
     (void)fs_close(&file);
 
-    if (count > 0) {
-        rt->pts_loaded = true;
-        rt->elev_total = seg->total_elev;
-
-        LOG_INF("Loaded %d points for segment %s", count, seg->name);
-        return count;
+    /*
+     * The end of the segment decides when it is finished and how long it
+     * took, so the last point of the file always goes in, even when
+     * decimation had dropped it.
+     */
+    if ((read_points > 0U) && !last_kept) {
+        if (rt->pts.count >= SEG_SLOT_POINTS) {
+            (void)liste_decimate(&rt->pts);
+            rt->stride *= 2U;
+        }
+        liste_add_back(&rt->pts, last_sp.lat, last_sp.lon, last_sp.alt,
+                       last_sp.rtime - first_time);
     }
+
+    if (rt->pts.count > 0U) {
+        const point_t *last = liste_get_last(&rt->pts);
+
+        rt->elev_total = last_sp.alt - first_alt;
+        seg->num_points = rt->pts.count;
+        seg->total_time = (last != NULL) ? last->rtime : 0.0f;
+        seg->total_elev = rt->elev_total;
+
+        LOG_INF("Loaded %u of %u points for segment %s", (unsigned int)rt->pts.count,
+                (unsigned int)read_points, seg->name);
+
+        return (int)rt->pts.count;
+    }
+
+    slot_give(seg_idx);
 
     return -1;
 }
@@ -826,22 +1096,24 @@ static void unload_segment_points(uint16_t seg_idx)
         return;
     }
 
-    seg_runtime_t *rt = &seg_runtime[seg_idx];
     segment_t *seg = &segments[seg_idx];
 
-    if (!rt->pts_loaded) {
+    if (slot_of(seg_idx) == NULL) {
         return;
     }
 
-    liste_clear(&rt->pts);
-    rt->pts_loaded = false;
+    slot_give(seg_idx);
 
-    /* Reset segment state */
+    /* Reset segment state: nothing of the file is left in memory */
     seg->status = SEG_OFF;
     seg->cur_time = 0.0f;
     seg->advance = 0.0f;
     seg->pct_dist = 0.0f;
+    seg->pct_elev = 0.0f;
     seg->score = 0;
+    seg->num_points = 0U;
+    seg->total_time = 0.0f;
+    seg->total_elev = 0.0f;
 
     LOG_INF("Unloaded segment %s", seg->name);
 }
@@ -855,27 +1127,25 @@ static float dist_to_seg_header(uint16_t seg_idx, float lat, float lon)
         return 9999.0f;
     }
 
-    /* Parse segment name for coordinates (format: LLLLL#LLL.seg)
-     * Where LLLLL is lat*100 and LLL is lon*100 */
-    seg_header_t *hdr = &seg_headers[seg_idx];
+    const seg_runtime_t *rt = slot_of(seg_idx);
 
-    /* For now use a simplified approach - load first point if needed */
-    seg_runtime_t *rt = &seg_runtime[seg_idx];
-
-    if (rt->pts_loaded && (rt->pts.count > 0U)) {
+    /* Loaded: the distance to the first point, as the legacy measures it */
+    if ((rt != NULL) && (rt->pts.count > 0U)) {
         const point_t *seg_start = liste_get_at(&rt->pts, 0);
+
         if (seg_start != NULL) {
-            point_t cur = { .lat = lat, .lon = lon, .alt = 0.0f, .rtime = 0.0f };
+            point_t cur = {.lat = lat, .lon = lon, .alt = 0.0f, .rtime = 0.0f};
+
             return point_distance(&cur, seg_start);
         }
     }
 
-    /* If points not loaded, estimate from header name parsing */
-    /* This is a simplified implementation - full implementation would
-     * parse the segment filename for coordinates */
-    (void)hdr;  /* Avoid unused warning */
-
-    return 9999.0f;
+    /*
+     * Not loaded: the start comes from the name of the file, which is what
+     * lets the allocator work without opening anything
+     * (`legacy/source/sd/sd_functions.cpp:547-556`).
+     */
+    return distance_between(lat, lon, seg_start_pos[seg_idx].lat, seg_start_pos[seg_idx].lon);
 }
 
 float segment_allocator(uint16_t seg_idx, float lat, float lon)
@@ -884,12 +1154,12 @@ float segment_allocator(uint16_t seg_idx, float lat, float lon)
         return -1.0f;
     }
 
-    seg_runtime_t *rt = &seg_runtime[seg_idx];
+    const seg_runtime_t *rt = slot_of(seg_idx);
     segment_t *seg = &segments[seg_idx];
     float dist_to_seg = 9999.0f;
 
     /* Segment is loaded with points */
-    if (rt->pts_loaded && (rt->pts.count > 0U)) {
+    if ((rt != NULL) && (rt->pts.count > 0U)) {
         /* Get distance to first point */
         const point_t *seg_start = liste_get_at(&rt->pts, 0);
         if (seg_start != NULL) {
@@ -938,5 +1208,7 @@ float segment_run_allocator(float lat, float lon)
         }
     }
 
-    return (nearest < 9000.0f) ? nearest : -1.0f;
+    nearest_dist = (nearest < 9000.0f) ? nearest : -1.0f;
+
+    return nearest_dist;
 }

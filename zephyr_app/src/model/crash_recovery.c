@@ -6,6 +6,7 @@
  * warm resets. Integrates with nRF reset reason registers.
  */
 
+#include <stddef.h>
 #include <string.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -27,6 +28,9 @@ LOG_MODULE_REGISTER(crash_recovery, CONFIG_LOG_DEFAULT_LEVEL);
  * This data persists across warm resets but not power cycles
  */
 static __noinit crash_descriptor_t g_crash_desc;
+
+/** Reset cause read at start-up; hwinfo only gives it once */
+static reset_reason_t latched_reason = RESET_REASON_UNKNOWN;
 
 /* ==========================================================================
  * Private Definitions
@@ -80,7 +84,7 @@ static const char *cfsr_messages[] = {
 /**
  * @brief Calculate CRC-8 of data array
  */
-static uint8_t calculate_crc8(const uint8_t *data, size_t len)
+uint8_t crash_recovery_crc8(const uint8_t *data, size_t len)
 {
     uint8_t crc = 0U;
 
@@ -107,8 +111,12 @@ static uint8_t calculate_crc8(const uint8_t *data, size_t len)
  */
 static void update_saved_crc(saved_data_t *data)
 {
-    data->crc = calculate_crc8((const uint8_t *)data,
-                               sizeof(saved_data_t) - sizeof(uint8_t));
+    /*
+     * Up to the crc field, never including it: `sizeof(saved_data_t) - 1`
+     * covered the crc itself, because the padding after it belongs to the
+     * structure, and the check never matched what it protected.
+     */
+    data->crc = crash_recovery_crc8((const uint8_t *)data, offsetof(saved_data_t, crc));
 }
 
 /**
@@ -116,8 +124,8 @@ static void update_saved_crc(saved_data_t *data)
  */
 static bool verify_saved_crc(const saved_data_t *data)
 {
-    uint8_t calc = calculate_crc8((const uint8_t *)data,
-                                  sizeof(saved_data_t) - sizeof(uint8_t));
+    uint8_t calc = crash_recovery_crc8((const uint8_t *)data, offsetof(saved_data_t, crc));
+
     return (calc == data->crc);
 }
 
@@ -126,7 +134,7 @@ static bool verify_saved_crc(const saved_data_t *data)
  */
 static void update_hardfault_crc(hardfault_desc_t *desc)
 {
-    desc->crc = calculate_crc8((const uint8_t *)&desc->stack,
+    desc->crc = crash_recovery_crc8((const uint8_t *)&desc->stack,
                                sizeof(hardfault_stack_t));
 }
 
@@ -135,7 +143,7 @@ static void update_hardfault_crc(hardfault_desc_t *desc)
  */
 static bool verify_hardfault_crc(const hardfault_desc_t *desc)
 {
-    uint8_t calc = calculate_crc8((const uint8_t *)&desc->stack,
+    uint8_t calc = crash_recovery_crc8((const uint8_t *)&desc->stack,
                                   sizeof(hardfault_stack_t));
     return (calc == desc->crc);
 }
@@ -181,7 +189,11 @@ static reset_reason_t read_hw_reset_reason(void)
 
 app_err_t crash_recovery_init(void)
 {
-    reset_reason_t reason = read_hw_reset_reason();
+    /*
+     * hwinfo_clear_reset_cause() runs inside the reader, so the cause is
+     * only there once: it is latched here and the getter answers with it.
+     */
+    latched_reason = read_hw_reset_reason();
 
     /* Check if we have valid crash data from previous session */
     if (g_crash_desc.magic == CRASH_MAGIC) {
@@ -206,7 +218,7 @@ app_err_t crash_recovery_init(void)
         LOG_INF("Crash recovery initialized (fresh start)");
     }
 
-    LOG_INF("Reset reason: %d", (int)reason);
+    LOG_INF("Reset reason: %d", (int)latched_reason);
 
     return APP_OK;
 }
@@ -217,7 +229,13 @@ bool crash_recovery_has_data(void)
         return false;
     }
 
-    return (g_crash_desc.fault_type != 0U);
+    /*
+     * The legacy restores whenever the CRC of the block matches
+     * (`legacy/source/model/Attitude.cpp:393`), not only after a fault: a
+     * reset by the watchdog or a flat battery also leaves a ride to pick
+     * up. Asking for fault_type here meant the state was never restored.
+     */
+    return verify_saved_crc(&g_crash_desc.saved);
 }
 
 const crash_descriptor_t *crash_recovery_get_descriptor(void)
@@ -231,7 +249,7 @@ const crash_descriptor_t *crash_recovery_get_descriptor(void)
 
 reset_reason_t crash_recovery_get_reset_reason(void)
 {
-    return read_hw_reset_reason();
+    return latched_reason;
 }
 
 uint32_t crash_recovery_get_reset_count(void)
@@ -248,7 +266,8 @@ void crash_recovery_save_state(const loc_data_t *loc,
                                float dist,
                                float climb,
                                uint16_t nbpts,
-                               uint16_t nbsec_act)
+                               uint16_t nbsec_act,
+                               uint8_t pr)
 {
     if (g_crash_desc.magic != CRASH_MAGIC) {
         return;
@@ -266,6 +285,7 @@ void crash_recovery_save_state(const loc_data_t *loc,
     g_crash_desc.saved.climb = climb;
     g_crash_desc.saved.nbpts = nbpts;
     g_crash_desc.saved.nbsec_act = nbsec_act;
+    g_crash_desc.saved.pr = pr;
 
     update_saved_crc(&g_crash_desc.saved);
 }
@@ -309,7 +329,7 @@ void crash_recovery_log_error(uint32_t error_id, uint32_t pc,
     va_end(args);
 
     /* Calculate CRC */
-    g_crash_desc.error.crc = calculate_crc8(
+    g_crash_desc.error.crc = crash_recovery_crc8(
         (const uint8_t *)&g_crash_desc.error,
         sizeof(error_desc_t) - sizeof(uint8_t)
     );
@@ -331,6 +351,14 @@ void crash_recovery_clear(void)
 void crash_recovery_clear_saved_state(void)
 {
     (void)memset(&g_crash_desc.saved, 0, sizeof(g_crash_desc.saved));
+
+    /*
+     * The CRC-8 of a block of zeros is zero, so a cleared block would still
+     * check out. The legacy writes 0x00 over a CRC that was never zero
+     * (`Attitude.cpp:417`); here the sentinel is 0xFF, which no block of
+     * zeros produces.
+     */
+    g_crash_desc.saved.crc = 0xFFU;
 }
 
 void crash_recovery_hardfault_handler(const hardfault_stack_t *stack)

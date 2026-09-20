@@ -9,7 +9,7 @@
 ![RTOS](https://img.shields.io/badge/Zephyr-4.3.99-7929D2)
 ![Rádio](https://img.shields.io/badge/r%C3%A1dio-BLE%20%2B%20ANT%2B-0082FC)
 ![Linguagem](https://img.shields.io/badge/C-C11-A8B9CC?logo=c&logoColor=white)
-![Testes](https://img.shields.io/badge/testes%20de%20host-50%20casos-2E7D32)
+![Testes](https://img.shields.io/badge/testes%20de%20host-65%20casos-2E7D32)
 ![CI](https://img.shields.io/badge/CI-desligado-lightgrey)
 ![Estado](https://img.shields.io/badge/estado-port%20em%20andamento-EF6C00)
 ![Licença](https://img.shields.io/badge/licen%C3%A7a-a%20definir-lightgrey)
@@ -54,23 +54,23 @@ flowchart LR
 
 ![Proposta do aparelho: frente, lateral direita, traseira e arranjo interno](docs/img/placa-nova-caixa.svg)
 
-Conceito em escala, a partir da caixa da V3: 62 × 104 × 19 mm, PCB de 55 × 97 mm em 4 camadas, 6 módulos solares na frente inclinada e nos chanfros laterais. A escolha de cada componente, com os números dos datasheets, está em [docs/15-avaliacao-componentes.md](docs/15-avaliacao-componentes.md).
+Conceito em escala, a partir da caixa da V3: 62 × 104 × 19 mm, PCB de 55 × 97 mm em 4 camadas, 6 módulos solares na frente inclinada e nos chanfros laterais. A escolha de cada componente, com os números dos datasheets, está em [docs/15-avaliacao-componentes.md](docs/15-avaliacao-componentes.md); a lista de compras, validada peça a peça, em [docs/19-lista-de-compras.md](docs/19-lista-de-compras.md).
 
 ```mermaid
 flowchart LR
     MCU["Fanstel BM20C<br/>nRF54LM20A, BLE e ANT+"]
-    GNSS2["u-blox MAX-M10N-10B<br/>13,5 mW em LEAP"] -->|UART| MCU
-    LCD2["JDI LPM027M128C<br/>MIP de 8 cores"] ---|SPI| MCU
+    GNSS2["u-blox MAX-M10N-10B<br/>13,7 mW em LEAP"] -->|UART| MCU
+    LCD2["JDI LPM027M128B de 8 cores<br/>ou Sharp LS027B7DH01A com luz"] ---|SPI| MCU
     PWR["nPM1300, AEM10900, MAX17262<br/>USB-C e painel solar"] -.->|I2C| MCU
-    SENS2["BMP585, LSM6DSV16X,<br/>LIS2MDL, OPT3001"] -->|I2C| MCU
+    SENS2["BMP585, BMI270,<br/>MMC5633NJL, OPT3001"] -->|I2C| MCU
     MEM["SD NAND"] ---|SPI| MCU
 ```
 
 | Bloco | Escolha | Por quê |
 |---|---|---|
 | Carga | nPM1300 no USB-C, AEM10900 no painel, MAX17262 na célula | o painel carrega com o aparelho desligado e corte térmico próprio; o USB bloqueia a carga solar no hardware |
-| GNSS | u-blox MAX-M10N-10B, com o MAX-F10S (L1 + L5) no mesmo footprint | o aparelho gasta cerca de 21 mW contra 58 mW com o F10S: cerca de 320 h sem sol, e o painel cobre o consumo num pedal de sol (estimativa) |
-| Tela | JDI LPM027M128C, com o Sharp LS027B7DH01 previsto no mesmo conector | cor e 30 µW a 1 quadro/s; o Sharp cobre o risco de compra do JDI |
+| GNSS | u-blox MAX-M10N-10B, com o MAX-F10S (L1 + L5) no mesmo footprint | o aparelho gasta cerca de 21 mW contra 58 mW com o F10S: cerca de 310 h sem sol, e o painel cobre o consumo num pedal de sol (estimativa) |
+| Tela | JDI LPM027M128B de 8 cores, sem luz própria (escolha do dono em 2026-09-19, no AliExpress); a Sharp LS027B7DH01A com luz frontal no mesmo conector, de reserva | o firmware atende as duas pelo mesmo driver, em retrato, com um tema para cada |
 | USB e armazenamento | USB-C IPX8 e SD NAND soldado | caixa sem tampas e sem cartão solto na vibração |
 
 ## Funcionalidades
@@ -86,6 +86,7 @@ flowchart LR
 | Zonas de potência, suffer score, variabilidade da FC | sim | portados e testados, sem dados reais |
 | Log no microSD e download pelo PC | sim | log em stub |
 | USB serial e mass storage | sim | fora do build |
+| Telas em retrato, menu, notificações, botões | sim | LVGL no firmware com driver próprio da tela, 30 telas testadas no PC; nunca vistas num painel |
 
 ## Início rápido
 
@@ -99,7 +100,8 @@ bash tools/fw/fw.sh build          # compila o zephyr_app (sysbuild) para o nRF5
 bash tools/fw/fw.sh flash          # grava no DK pelo J-Link
 BOARD=nrf54lm20dk/nrf54lm20a/cpuapp BUILD_DIR=zephyr_app/build_54 bash tools/fw/fw.sh build
 ANT=1 bash tools/fw/fw.sh build pristine   # com a pilha ANT do sdk-ant
-bash tools/fw/host_tests.sh        # 7 conjuntos de testes de host
+bash tools/fw/host_tests.sh        # 16 conjuntos de testes de host
+python tools/ui/render_screens.py  # desenha as 30 telas no PC (docs/telas)
 python tools/docs/mermaid_check.py # valida os diagramas da documentação
 ```
 
@@ -141,13 +143,18 @@ flowchart TB
 | [13 · Placa nova](docs/13-placa-nova.md) | proposta de hardware da placa própria |
 | [14 · Hardware da placa nova](docs/14-hardware-placa-nova.md) | especificação técnica: alimentação, lista de materiais, pinos, PCB |
 | [15 · Avaliação dos componentes](docs/15-avaliacao-componentes.md) | escolha de cada componente da placa nova, com números de datasheet |
+| [16 · Arquitetura do firmware](docs/16-arquitetura-firmware.md) | arquitetura-alvo e máquinas de estado para a placa nova |
+| [17 · Dispositivos BLE e ANT+](docs/17-dispositivos-ble-ant.md) | catálogo de sensores e acessórios, prioridades e limites do rádio |
+| [18 · Interface e telas](docs/18-interface-telas.md) | interface LVGL da placa nova: todas as telas, desenhadas e testadas no PC, em 8 cores e em preto e branco |
+| [19 · Lista de compras](docs/19-lista-de-compras.md) | peças validadas em duas passagens, trocas, correções de integração e códigos da DigiKey |
 | [CHANGELOG](CHANGELOG.md) | histórico de mudanças |
 
 ## Estado e próximos passos
 
 - **Feito em 2026-09-18:** build no NCS v3.3.0 com sysbuild; correção de 13 defeitos críticos (estouro de pilha no Kalman, GPS e modelo dentro de ISR, corrupção de memória no log, botões e pinos do GPS invertidos, conflitos de pinos com o DK); testes de host; documentação e contexto para assistentes de IA.
-- **Fase 1 do roteiro:** a `main_loop` é a única escritora do modelo e a tela lê com trava, watchdog por thread e desligamento automático pelo STC3100 depois de 15 min parado.
+- **Fase 1 do roteiro:** a base da arquitetura nova (serviços com thread própria, eventos no zbus, máquinas de sistema e de modo no SMF, watchdog por serviço, desligamento automático do legacy), feita em 2026-09-19.
 - **Novos alvos e rádio:** o port compila para o nRF54LM20 DK, e a pilha ANT do add-on `sdk-ant` v2.1.1 compila sobre o NCS v3.3.0 nos dois DKs (`ANT=1`); nada disso foi testado em placa.
+- **Interface:** as 29 telas em LVGL, testadas no PC, rodam no firmware desde 2026-09-19 com um driver próprio da tela (JDI LPM027M128B em 8 cores ou Sharp em preto e branco, em retrato), teclas com toque longo e a máquina da luz; nunca vistas num painel.
 - **Placa nova:** desenho do aparelho, especificação ([14](docs/14-hardware-placa-nova.md)) e avaliação dos componentes ([15](docs/15-avaliacao-componentes.md)). O esquemático é do dono; antes do layout vêm os testes de bancada da carga dupla, do GNSS, da coexistência dos rádios e do display.
 - **Decidido:** ANT+ e BLE juntos (os equipamentos externos falam ANT+) e placa própria com o nRF54LM20A. Decisões e pendências em [docs/10-status-do-port.md](docs/10-status-do-port.md#decisões-do-dono).
 - **Próximo:** bancada e esquemático da placa nova, depois fidelidade dos algoritmos, armazenamento, rádio e interface. Roteiro em [docs/10-status-do-port.md](docs/10-status-do-port.md#roteiro).

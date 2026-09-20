@@ -1,0 +1,11 @@
+# Drivers of the GNSS bike computer that the Zephyr of the NCS does not have,
+# or has with defects: the memory-in-pixel display in portrait (JDI
+# LPM027M128B and LPM027M128C, Sharp LS027B7DH01), the MAX17262 fuel gauge,
+# the AEM10900 solar charger and the u-blox M10 GNSS receiver. Added by zephyr_app/CMakeLists.txt to every
+# build.
+name: gnss_drivers
+build:
+  cmake: .
+  kconfig: Kconfig
+  settings:
+    dts_root: .

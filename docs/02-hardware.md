@@ -19,7 +19,7 @@ A placa myStravaB V3 de Vincent Gollé (`hardware/`), seus componentes, a pinage
 | IC2 | Rigado BMD-340-A-R (nRF52840) | MCU, BLE e ANT+ | SWD, USB |
 | U$5 | Antenova M10578-A3 (MediaTek MT3333) | GNSS GPS/GLONASS/Galileo/BeiDou | UART 9600, reset (HW_R) e standby (HW_S) ativos baixos, FIX alto com fix; PPS não ligado |
 | U$4 | Antenova SR4G008 | antena GNSS em chip | — |
-| U$16 | Sharp LS027B7DH01 (conector FPC) | LCD de memória 400 × 240, 5 V | SPI; EXTMODE em GND (VCOM por software) |
+| U$16 | Sharp LS027B7DH01 (conector FPC) | LCD de memória 400 × 240, 5 V | SPI; EXTMODE e EXTCOMIN em GND por 10 kΩ (R13, R16), DISP no VCC por 10 kΩ e 0,1 µF (R17, C43): VCOM por software, tela sempre acesa |
 | IC3 | Bosch BME280 | pressão e temperatura | I2C 0x76 |
 | U1 | NXP FXOS8700CQ | acelerômetro e magnetômetro | I2C 0x1E; INT1; RST ativo alto sem resistor |
 | U$6 | ST STC3100 | medidor de bateria e **latch de energia** (IO0) | I2C 0x70; shunt R15 |
@@ -84,8 +84,8 @@ Sequência de liga e desliga:
 
 1. **Desligado:** IO0 do STC3100 solto, SWON em VBAT pelo R3, M2 cortado, POW_EN em 0; só o STC3100 e o backup do GPS consomem.
 2. **Botão central:** SWON vai a zero pelo D1, M2 conduz, os reguladores ligam e o nRF inicia.
-3. **Latch:** o firmware escreve `REG_CONTROL = 0x02` no STC3100 (IO0 em 0), mantendo SWON baixo; o botão pode ser solto. No port, isso acontece em `stc3100_init()`.
-4. **Desligar:** `REG_MODE = 0` e `REG_CONTROL = 0x01` soltam o IO0 e a placa apaga. No port, `stc3100_shutdown()`, chamado pelo `power_scheduler` depois de 15 minutos sem posição processada (modos CRS e PRC) ou pelo item "Power Off" do menu. Na USB a placa continua ligada, com o medidor parado, e o desligamento é tentado de novo 15 minutos depois. Não testado na placa.
+3. **Latch:** o firmware escreve `REG_CONTROL = 0x02` no STC3100 (IO0 em 0), mantendo SWON baixo; o botão pode ser solto. O port fazia isso em `stc3100_init()`, que saiu em 2026-09-19 com os drivers da V3 (a placa nova liga pelo nPM1300).
+4. **Desligar:** `REG_MODE = 0` e `REG_CONTROL = 0x01` soltam o IO0 e a placa apaga. O port fazia isso em `stc3100_shutdown()` até 2026-09-19; hoje o desligamento é da máquina de sistema do serviço de energia ([05](05-arquitetura-zephyr.md#máquinas-de-estado)), com o ship mode do nPM1300 da placa nova.
 
 Não há enable separado para o GPS ou o LCD, nem medição de bateria pelo ADC: só pelo STC3100.
 
@@ -135,7 +135,7 @@ A proposta de componentes da placa nova (display, GNSS e antena, energia com pai
 | Risco | Detalhe |
 |---|---|
 | Shunt do STC3100 | o esquema mostra R15 = 0,02 Ω; o firmware usa 100 mΩ: confira a placa montada |
-| Latch frágil | se o `stc3100_init()` falhar, a placa desliga ao soltar o botão |
+| Latch frágil | se a escrita no STC3100 falhar na partida, a placa desliga ao soltar o botão |
 | 5 V do REG710 | 30 mA (REG710-5) ou 60 mA (REG71050); o WS2812B em branco pleno chega perto disso e divide o trilho com o LCD |
 | Conversor do WS2812B | pull-ups de 47 kΩ deixam a borda lenta para o T0H de ~0,4 µs; 4,7 a 10 kΩ seria mais seguro |
 | Porta de debug J1 | é um soquete microSD: não confunda com o slot de cartão; o 3,3 V é chaveado, então para gravar é preciso segurar o botão central ou alimentar o trilho |

@@ -1,0 +1,18 @@
+# Sysbuild Kconfig of the zephyr_app (NCS v3.3.0).
+#
+# MCUboot goes in on the board that has room for two images. The
+# nRF54LM20A leaves 920 KB per slot
+# (zephyr/dts/vendor/nordic/nrf54lm20_a_b_cpuapp_partition.dtsi) against the
+# ~520 KB of this firmware, while the nRF52840 leaves 481 KB per slot
+# (nrf52840_partition.dtsi) against 479 KB plus the header, the trailer and
+# the SMP transport: no update would ever fit there.
+#
+# The default below comes before the source line on purpose: in a choice the
+# first default that applies wins, and the one of Zephyr (BOOTLOADER_NONE)
+# would win otherwise.
+
+choice BOOTLOADER
+	default BOOTLOADER_MCUBOOT if BOARD_NRF54LM20DK
+endchoice
+
+source "share/sysbuild/Kconfig"

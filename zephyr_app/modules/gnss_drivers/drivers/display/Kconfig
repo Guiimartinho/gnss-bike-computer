@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: Apache-2.0
+
+config MEMLCD
+	bool "Memory-in-pixel displays (JDI LPM027M128B/C, Sharp LS027B7DH01)"
+	default y
+	depends on DT_HAS_JDI_LPM027M128B_ENABLED || DT_HAS_JDI_LPM027M128C_ENABLED || \
+		   DT_HAS_SHARP_LS027B7DH01_ENABLED
+	depends on DISPLAY
+	select SPI
+	select GPIO
+	help
+	  Driver of the 2.7" memory-in-pixel panels of the GNSS bike computer:
+	  the JDI LPM027M128B and LPM027M128C in 3 bits (8 colours) and the
+	  Sharp LS027B7DH01 in 1 bit, with rotation to portrait, RGB565 input
+	  quantised to the panel colours, only the changed lines sent at the
+	  end of each frame, and COM inversion by the EXTCOMIN pin or by the
+	  serial VCOM bit.
+
+if MEMLCD
+
+module = MEMLCD
+module-str = memlcd
+source "subsys/logging/Kconfig.template.log_config"
+
+endif

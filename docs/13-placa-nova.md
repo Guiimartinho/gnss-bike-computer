@@ -9,17 +9,17 @@ Proposta de hardware da placa própria do GNSS Bike Computer, com o nRF54LM20A e
 | Bloco | V3 | Proposta | Alternativa |
 |---|---|---|---|
 | MCU | nRF52840 no módulo BMD-340 | nRF54LM20A no módulo Fanstel BM20C | o chip em CSP98 com antena própria |
-| Display | Sharp LS027B7DH01, monocromático, 5 V | JDI LPM027M128C, MIP de 8 cores, 3,0 V, com luz | LS027 no mesmo conector; TFT transflectivo com ST7789 |
-| GNSS | Antenova M10578-A3 (MediaTek MT3333), só L1 | u-blox MAX-M10N-10B (só L1) no footprint MAX, 13,5 mW em LEAP a 1,8 V ([15](15-avaliacao-componentes.md#gnss)) | MAX-F10S (L1 + L5) no mesmo footprint, 47 mW; Quectel LC76G(PA), com driver no NCS |
+| Display | Sharp LS027B7DH01, monocromático, 5 V | JDI LPM027M128C, MIP de 8 cores, 3,0 V, com luz; sem canal de compra, a [lista de compras](19-lista-de-compras.md#trocas) usa a Sharp LS027B7DH01A com luz frontal | LS027 no mesmo conector; TFT transflectivo com ST7789 |
+| GNSS | Antenova M10578-A3 (MediaTek MT3333), só L1 | u-blox MAX-M10N-10B (só L1) no footprint MAX, 13,7 mW em LEAP a 1,8 V ([15](15-avaliacao-componentes.md#gnss)) | MAX-F10S (L1 + L5) no mesmo footprint, 47 mW; Quectel LC76G(PA), com driver no NCS |
 | Antena GNSS | chip Antenova SR4G008 na borda | antena linear L1/L5 na borda de cima, como nos ciclocomputadores do mercado | patch cerâmica, com a caixa de 25 a 35 mm mais longa |
 | Carregador e reguladores | MCP73831, TPS63051, REG710 | Nordic nPM1300 | TI BQ25798 (carregador único com duas entradas) |
 | Medidor de carga e liga/desliga | STC3100 com latch | MAX17262 na célula; ship mode do nPM1300 | medidor do próprio nPM1300, sem enxergar o painel |
 | Solar | não tem | e-peas AEM10900 com 6 módulos de silício monocristalino na frente inclinada e nos chanfros laterais (11 cm²) | a entrada solar do BQ25798 |
 | Bateria | Li-ion de 1 célula | LiPo de 1 célula, 2000 a 2500 mAh, com proteção e NTC | — |
 | Barômetro | Bosch BME280 | Bosch BMP585 | ST LPS28DFW; BMP581 com membrana |
-| Movimento | NXP FXOS8700CQ (fora de produção) | ST LSM6DSV16X e LIS2MDL | ST LIS2DW12 e Memsic MMC5603NJ |
+| Movimento | NXP FXOS8700CQ (fora de produção) | ST LSM6DSV16X e LIS2MDL; sem estoque, a [lista de compras](19-lista-de-compras.md#trocas) usa o Bosch BMI270 e o Memsic MMC5633NJL | ST LIS2DW12 e Memsic MMC5603NJ |
 | Luz ambiente | não tem | TI OPT3001 | Lite-On LTR-329ALS-01 |
-| Armazenamento | microSD por SPI | SD NAND soldado no `spi00` (microSD e SD NAND no protótipo), com chave de alimentação ([15](15-avaliacao-componentes.md#armazenamento)) | microSD em soquete com tampa; NOR soldada de 32 a 64 MB |
+| Armazenamento | microSD por SPI | **flash NOR soldada** no `spi00`, com chave de alimentação (decisão do dono em 2026-09-20: o SD NAND custa mais que o armazenamento inteiro vale) ([15](15-avaliacao-componentes.md#armazenamento)) | microSD em soquete com tampa, só no protótipo; SD NAND se um dia precisar de 1 Gbyte |
 | Configurações | FRAM FM24CL16B | ZMS no RRAM do MCU | — |
 | USB | micro-USB B | USB-C IPX8, sem tampa, com proteção ESD ([15](15-avaliacao-componentes.md#usb-c-e-proteção)) | USB-C comum com tampa de borracha |
 | LED e som | WS2812B; sem buzzer | LED RGB por PWM e buzzer piezo | WS2812B pelo driver SPI; buzzer magnético |
@@ -93,7 +93,7 @@ flowchart LR
 Conceito em escala a partir da caixa impressa da V3 ([foto](img/front1.png)), gerado por `tools/docs/case_drawing.py`; não há projeto mecânico nem layout ainda.
 
 - **Caixa:** 62 × 104 × 19 mm, mais 3 mm do engate de quarto de volta; a V3 tem cerca de 60 × 85 mm. A frente mantém a moldura elevada, os três botões e o furo de luz da V3.
-- **Tela:** JDI LPM027M128C com a interface em 8 cores; a janela é a mesma do LS027.
+- **Tela:** JDI LPM027M128C com a interface em 8 cores; a janela é a mesma do LS027. A [lista de compras](19-lista-de-compras.md#display) usa a Sharp LS027B7DH01A com luz frontal, no mesmo conector e na mesma janela.
 - **Painéis:** 6 módulos de 3 células de 23 × 8 mm, 2 numa face inclinada abaixo da tela e 2 em cada chanfro de 45° das bordas longas ([painel solar](#painel-solar)).
 - **Antenas:** GNSS L1 e L5 na parede de cima, longe dos painéis; o módulo BM20C (BLE e ANT+) no canto de baixo à direita, com a antena fora da área dos painéis.
 - **Conectores:** USB-C IPX8 na base, sem tampa; microSD com tampa na lateral esquerda só no protótipo, porque o produto usa SD NAND soldado ([15](15-avaliacao-componentes.md#armazenamento)); respiro do barômetro com membrana na traseira.
@@ -116,11 +116,11 @@ Para a primeira placa, a proposta é usar um **módulo certificado** em vez do c
 
 | Módulo | Tamanho | Antena de 2,4 GHz | Preço unitário (1.000 peças) |
 |---|---|---|---|
-| Fanstel BM20C | 10,0 × 14,8 × 2 mm | chip | US$ 6,50 (US$ 5,94) |
+| Fanstel BM20C | 10,0 × 16,2 × 2 mm (a página diz 14,8 mm) | chip | US$ 6,50 (US$ 5,94) |
 | Fanstel BM20M | 10,0 × 14,0 × 2 mm | trilha na placa | US$ 6,00 (US$ 5,12) |
 | Fanstel BM20E | 10,0 × 15,0 × 2 mm | u.FL para antena externa | US$ 6,00 (US$ 5,57) |
 
-Os três usam o nRF54LM20A (as versões com B no nome trazem o nRF54LM20B), expõem 66 GPIO, embutem os cristais de 32 MHz e de 32,768 kHz (o de 32,768 kHz é obrigatório para o ANT, que pede no máximo ±50 ppm: confira a tolerância no datasheet do módulo) e têm certificação FCC, ISED, europeia e TELEC; a Fanstel prevê produção em 09/2026. A página não detalha os pinos de USB e de NFC: confira no datasheet do módulo antes do esquemático.
+Os três usam o nRF54LM20A (as versões com B no nome trazem o nRF54LM20B), expõem 64 GPIO (o chip tem 66; o cristal de 32,768 kHz do módulo ocupa P1.20 e P1.21), embutem os cristais de 32 MHz e de 32,768 kHz (o de 32,768 kHz é obrigatório para o ANT, que pede no máximo ±50 ppm: confira a tolerância no datasheet do módulo) e têm certificação FCC, ISED, europeia e TELEC; a Fanstel prevê produção em 09/2026. A página não detalha os pinos de USB e de NFC: confira no datasheet do módulo antes do esquemático.
 
 Alternativa: o nRF54LM20A solto, no CSP98 (66 GPIO), com antena própria: mais barato em volume, mas com projeto de RF, casamento de antena e certificação por nossa conta. O QFN52, mais fácil de soldar, tem só 32 GPIO e não comporta o [orçamento de pinos](#orçamento-de-pinos).
 
@@ -137,6 +137,9 @@ O legacy mostra velocidade, tempo, frequência cardíaca, potência e segmentos 
 **E-paper colorido fica de fora.** Os painéis coloridos de 2,7" a 3" levam de 11 a 20 s por atualização a 25 °C, não fazem atualização parcial em cor e operam de 0 a 40 °C; o E Ink Spectra 6 só existe a partir de 4" e mira vitrines e sinalização. A pesquisa não achou ciclocomputador com e-paper colorido. Os de maior autonomia usam MIP: o Garmin Edge 540/840 (colorido, 2,6") e o COROS DURA (2,7", 400 × 240, a mesma grade do LS027), que declara 120 h. O Garmin Edge 850 trocou o MIP por LCD transmissivo de 1.000 nits e declara 12 h (36 h no modo de economia).
 
 ### Recomendação: JDI LPM027M128C
+
+> [!NOTE]
+> A validação da [lista de compras](19-lista-de-compras.md#trocas) confirmou o risco de compra: nenhum canal autorizado vende o JDI. A lista usa o plano B, a Sharp LS027B7DH01A, com o filme de luz frontal da Azumo e o REG710; a placa continua aceitando o JDI no mesmo conector, o Hirose FH28-10S-0.5SH(05), que as fichas das duas telas citam.
 
 LCD de memória refletivo de 8 cores, com backlight; o LPM027M128B é a mesma tela sem backlight. Os números abaixo foram conferidos nos dois datasheets (JDI LPM027M128B Ver.01 e Sharp LS027B7DH01).
 
@@ -195,11 +198,11 @@ Energia só do GNSS numa pedalada de 10 h: 0,92 Wh no M10578-A3 da V3, 0,59 Wh n
 
 O MAX-M10S, o MAX-M10N e o MAX-F10S têm o mesmo footprint e a mesma pinagem de UART, reset, EXTINT e TIMEPULSE (conferido nas tabelas de pinos; o M10N não tem I2C). A placa sai com esse footprint. A [avaliação](15-avaliacao-componentes.md#gnss) escolheu o M10N pelo consumo, e o F10S fica como variante no mesmo footprint:
 
-- **Escolhido: MAX-M10N-10B.** 13,5 mW em LEAP a 1,8 V, um sétimo do módulo da V3, com 1,5 m de CEP, AssistNow Live Orbits incluso e firmware atualizável; entrada com SAW, LNA e SAW, que aguenta o BLE de +8 dBm do nRF54LM20A. Com ele, o aparelho gasta cerca de 21 mW e o painel cobre o consumo num pedal de sol. Contra: só L1, sem GLONASS, até 1 Hz em LEAP, e o LEAP perde sensibilidade de rastreio (−159 contra −167 dBm).
+- **Escolhido: MAX-M10N-10B.** 13,7 mW em LEAP a 1,8 V, um sétimo do módulo da V3, com 1,5 m de CEP, AssistNow Live Orbits incluso e firmware atualizável; entrada com SAW, LNA e SAW, que aguenta o BLE de +8 dBm do nRF54LM20A. Com ele, o aparelho gasta cerca de 21 mW e o painel cobre o consumo num pedal de sol. Contra: só L1, sem GLONASS, até 1 Hz em LEAP, e o LEAP perde sensibilidade de rastreio (−159 contra −167 dBm).
 - **Variante de banda dupla: MAX-F10S (L1 + L5).** A banda dupla ataca o multipercurso de prédios e árvores; 1 m de CEP; 47 mW a 1,8 V; AssistNow com TTFF de 1 a 4 s; 10.808 peças na DigiKey. Contra: sem GLONASS, sem modo só L1 (gasta sempre de 47 a 57 mW) e a antena de L5 numa caixa pequena é o ponto fraco.
 - **Se o critério for driver pronto e custo: Quectel LC76G(PA).** Único da lista com driver no NCS v3.3.0; footprint e tensão diferentes (família L76, 3,3 V). O caminho de banda dupla dessa família é o LC79H(AL), com o chip AG3335M que aparece no COROS DURA; a compatibilidade de pinos entre os dois não foi confirmada.
 
-Como confirmar: protótipos com o M10N e o F10S lado a lado, na caixa real, medindo o C/N0 por banda e o ruído na banda (`UBX-MON-SPAN`), e pedaladas na cidade e sob árvores contra uma referência. Com o módulo alimentado a 1,8 V (pino `VIO_SEL`), o M10N em LEAP gasta cerca de 18 % menos que a 3,0 V (13,5 contra 16,5 mW) e o F10S cerca de 17 %; o MCU fica em 3,0 V por causa do display, então a UART e os sinais de controle do GNSS a 1,8 V passam por um tradutor de nível ([Energia](#energia)).
+Como confirmar: protótipos com o M10N e o F10S lado a lado, na caixa real, medindo o C/N0 por banda e o ruído na banda (`UBX-MON-SPAN`), e pedaladas na cidade e sob árvores contra uma referência. Com o módulo alimentado a 1,8 V (pino `VIO_SEL`), o M10N em LEAP gasta cerca de 18 % menos que a 3,0 V (13,7 contra 16,8 mW, na ficha do 10B) e o F10S cerca de 17 %; o MCU fica em 3,0 V por causa do display, então a UART e os sinais de controle do GNSS a 1,8 V passam por um tradutor de nível ([Energia](#energia)).
 
 A altitude continua vindo do barômetro: o GNSS erra mais na vertical (o LC79H declara 1 m na horizontal e 2 m na vertical) e só corrige a deriva do barômetro, como no legacy ([06](06-algoritmos.md#barômetro-e-drift)).
 
@@ -207,7 +210,7 @@ A altitude continua vindo do barômetro: o GNSS erra mais na vertical (o LC79H d
 
 - **Driver.** O NCS v3.3.0 tem drivers para LC26G, LC76G, LC86G, u-blox M8 e F9P, Air530Z e NMEA genérico, mas não para M10 nem F10. O antigo driver "M10" virou `u-blox,m8` no Zephyr 4.0 porque só servia ao M8 (`doc/releases/migration-guide-4.0.rst:221`): não use o `u-blox,m8` com um M10. Um driver `u-blox,m10` novo entrou no `main` do Zephyr em 2026-06-09 e sai no Zephyr 4.5, sem standby e sem AssistNow. Caminhos: trazer esse driver para fora da árvore até o NCS chegar lá (e acrescentar o F10, que usa a mesma interface de configuração), ou manter o parser do port e mandar os quadros UBX de configuração.
 - **Comandos do legacy.** O legacy fala PMTK com o MediaTek (`legacy/source/sensors/GPSMGMT.cpp`): velocidade da UART (linha 32), intervalo de fix (`PMTK220`, linha 487), posição do celular (`PMTK741`, linha 458) e o EPO (máquina de estados das linhas 268 a 340). Na u-blox viram `CFG-UART1-BAUDRATE`, `CFG-RATE-MEAS`, `UBX-MGA-INI-POS_LLH` com `UBX-MGA-INI-TIME_UTC` e AssistNow Offline ou Autonomous; o standby por pino vira `UBX-RXM-PMREQ` ou EXTINT. Cada diferença vai para [06](06-algoritmos.md) e [10](10-status-do-port.md) quando for portada.
-- **Fim de época.** O `gps_mgmt.c` dispara o callback de fix no RMC válido, supondo a ordem dos MediaTek (GGA antes do RMC). Com UBX, a mensagem `NAV-PVT` é uma por época e resolve isso.
+- **Fim de época.** O `gps_mgmt.c` do port antigo disparava o callback de fix no RMC válido, supondo a ordem dos MediaTek (GGA antes do RMC). Com UBX, a mensagem `NAV-PVT` é uma por época e resolve isso; desde 2026-09-19 o port usa a API de GNSS do Zephyr ([05](05-arquitetura-zephyr.md#threads)).
 - **Modelo dinâmico.** No u-blox, o modelo `BIKE` é de motocicleta; para bicicleta vale o padrão `PORT`.
 
 ## Antena GNSS dentro da caixa
@@ -255,7 +258,7 @@ Debaixo do LCD não: a u-blox cita o LCD entre as peças que deformam o diagrama
 2. **Longe de metal:** bateria (a bolsa é metálica), soquete microSD, parafusos e o painel solar não ficam entre a antena e o céu; componentes altos a pelo menos 10 mm e a caixa a pelo menos 3 a 5 mm.
 3. **Filtro SAW antes do módulo.** O BLE do nRF54LM20A transmite até +8 dBm (`RADIO_TXPOWER_TXPOWER_MaxdBm` no MDK do NCS), e a isolação entre duas antenas num aparelho pequeno fica entre 6 e 20 dB: chegam de −12 a +2 dBm à entrada do GNSS, acima da imunidade de módulos como o MIA-M10Q (−18 dBm em 2440 MHz). Um módulo com SAW, LNA e SAW internos resolve; um módulo só com LNA na frente precisa do SAW externo. Ajuda também pôr as duas antenas em pontas opostas da placa e limitar a potência do BLE.
 4. **Clocks fora das bandas.** Harmônicos de 1, 2, 4, 8 e 25 MHz caem a menos de 0,6 MHz do centro de L1 (1575,42 MHz); 16, 21,33 e 32 MHz ficam fora do lóbulo principal. Em L5, larga demais, nenhuma frequência escapa: sobra borda lenta, trilha curta e blindagem. O microSD roda a 16 ou 21,33 MHz no `spi00` (em modo SPI o cartão vai até 25 MHz), nunca a 8 ou 25 MHz; linhas do LCD e do USB em camada interna entre planos de terra.
-5. **Fonte limpa para o GNSS:** ripple abaixo de 50 mV (a u-blox sugere LDO junto do módulo; na proposta, o BUCK2 com filtro LC, a medir), DC-DC e cristais no lado oposto e na diagonal da antena; blindagem sobre o DC-DC, o MCU e os cristais se o ruído aparecer.
+5. **Fonte limpa para o GNSS:** ripple abaixo de 50 mV (a u-blox sugere LDO junto do módulo; na proposta, o BUCK1 com filtro LC, a medir), DC-DC e cristais no lado oposto e na diagonal da antena; blindagem sobre o DC-DC, o MCU e os cristais se o ruído aparecer.
 6. **Placa de 4 camadas**, com planos sólidos e moldura de terra com vias.
 7. **Validar desde o primeiro protótipo:** C/N0 dos satélites mais fortes perto de 50 dB-Hz (45 é aceitável, abaixo de 40 é problema), partida a frio de 30 a 40 s, a placa girada 180°, o espectro na banda (UBX-MON-SPAN nos u-blox) com o BLE transmitindo, e o S11 da antena dentro da caixa final para ajustar a rede em π.
 
@@ -280,8 +283,8 @@ flowchart LR
     AEM -->|STO| NODE
     NODE --> FG["MAX17262<br/>sensor interno de 7 mΩ"]
     FG --> CELL["LiPo 1S 2000 a 2500 mAh<br/>proteção e NTC de 10 k"]
-    NPM -->|"BUCK1 3,0 V"| MCU["nRF54LM20A, display,<br/>sensores, microSD"]
-    NPM -->|"BUCK2 1,8 V"| GNSSR["GNSS<br/>(tradutor de nível na UART)"]
+    NPM -->|"BUCK2 3,0 V"| MCU["nRF54LM20A, display,<br/>sensores, microSD"]
+    NPM -->|"BUCK1 1,8 V"| GNSSR["GNSS<br/>(tradutor de nível na UART)"]
     MCU -.-|I2C| NPM
     MCU -.-|I2C| AEM
     MCU -.-|I2C| FG
@@ -295,7 +298,7 @@ flowchart LR
 | Carregador solar | não tem | **e-peas AEM10900** (QFN28 de 4 × 4 mm) | boost com MPPT de 120 mV a 2,73 V, partida a frio com 250 mV, até 175,5 mA de entrada, limiares da bateria por pino ou por I2C, monitor de temperatura próprio que corta a carga fora de 0 a 45 °C mesmo com o MCU desligado, medidor de energia e pino para bloquear a carga; sem driver no Zephyr (poucos registradores por I2C) |
 | Bateria | Li-ion de 1 célula; o port supõe 1500 mAh (`zephyr_app/src/main.c`) | **LiPo de 1 célula com proteção (PCM) e NTC de 10 k**, de 2000 mAh (60 × 36 × 7 mm) a 2500 mAh (50 × 60 × 7,3 mm) | carga de 0 a 45 °C, descarga de −20 a 60 °C; pack sob encomenda (as células de catálogo não trazem NTC); UN38.3 para transporte |
 
-Trilhos (proposta a validar): o BUCK1, em 3,0 V, alimenta o MCU, o display (que pede as entradas no nível do seu VDD), os sensores e o microSD por uma chave de carga; o BUCK2, em 1,8 V, alimenta só o GNSS, que a 1,8 V gasta cerca de 17 % menos que a 3,0 V, com filtro LC para o ripple ficar abaixo de 50 mV e tradutor de nível nos sinais com o MCU. Os dois bucks dão 200 mA cada. Os drivers de LED do nPM1300 dão só 5 mA: a luz do display (16 mA) vai por um transistor.
+Trilhos: o BUCK2, em 3,0 V, alimenta o MCU, o display (que pede as entradas no nível do seu VDD), os sensores e o microSD por uma chave de carga; o BUCK1, em 1,8 V, alimenta só o GNSS (a proposta inicial invertia os dois, mas o resistor do VSET1 não escolhe 3,0 V: ver [19](19-lista-de-compras.md#correções-de-integração)), que a 1,8 V gasta cerca de 17 % menos que a 3,0 V, com filtro LC para o ripple ficar abaixo de 50 mV e tradutor de nível nos sinais com o MCU. Os dois bucks dão 200 mA cada. Os drivers de LED do nPM1300 dão só 5 mA: a luz do display (16 mA) vai por um transistor, alimentada pela LDSW2 como LDO de 3,3 V.
 
 O nPM1304 não serve: o binding do NCS limita a carga a 4 a 100 mA e a descarga a 125 mA fixos. O medidor interno do nPM1300 (nRF Fuel Gauge) também não: ele só enxerga a corrente que passa pelo próprio PMIC, então não vê a carga solar, e não mede nada em ship mode.
 
@@ -327,14 +330,14 @@ Alternativa sem dois carregadores: o **TI BQ25798**, carregador buck-boost com d
 | Função | V3 | Proposta | Alternativa | Driver no Zephyr |
 |---|---|---|---|---|
 | Barômetro (altimetria) | Bosch BME280 | **Bosch BMP585** | ST LPS28DFW (10 ATM, o dobro do preço); BMP581 se a caixa tiver membrana de ePTFE | `bosch,bmp581` |
-| Acelerômetro e giroscópio (inclinação) | NXP FXOS8700CQ | **ST LSM6DSV16X** | ST LIS2DW12, só acelerômetro, como no legacy | `st,lsm6dsv16x` / `st,lis2dw12` |
-| Magnetômetro (rumo parado) | NXP FXOS8700CQ | **ST LIS2MDL** | Memsic MMC5603NJ | `st,lis2mdl` / `memsic,mmc56x3` |
+| Acelerômetro e giroscópio (inclinação) | NXP FXOS8700CQ | **ST LSM6DSV16X** (sem estoque na compra: a [lista de compras](19-lista-de-compras.md#trocas) usa o Bosch BMI270 no mesmo footprint) | ST LIS2DW12, só acelerômetro, como no legacy | `st,lsm6dsv16x` / `st,lis2dw12` |
+| Magnetômetro (rumo parado) | NXP FXOS8700CQ | **ST LIS2MDL** (sem estoque na compra: a lista usa o Memsic MMC5633NJL) | Memsic MMC5603NJ | `st,lis2mdl` / `memsic,mmc56x3` |
 | Luz ambiente (luz do display) | não tem | **TI OPT3001** | Lite-On LTR-329ALS-01 | `ti,opt3001` / `liteon,ltr329` |
 
 - **Barômetro.** O BMP585 tem ruído abaixo de 0,1 Pa RMS sem filtro (menos de 1 cm de altura), deriva de ±0,5 Pa/K, precisão relativa de ±6 Pa, 1,3 µA a 1 Hz em baixo consumo e encapsulamento LGA de 3,25 × 3,25 mm com tampa metálica, feito para contato com o meio: nenhum efeito depois de armazenado a 15 bar, e resiste a cloro, vinagre, acetona e repelente. O driver `bosch,bmp581` aceita os chip IDs 0x50 e 0x51 da família BMP5 (`drivers/sensor/bosch/bmp581/bmp581.h`), e o registrador CHIP_ID do BMP585 vale 0x51; o par nunca foi testado. Seja qual for o sensor, a porta de pressão da caixa precisa de membrana e pouco volume morto.
 - **Inclinação.** O legacy mede o pitch com o acelerômetro (média de 50 amostras) e o funde com a altitude do barômetro num Kalman de 3 estados ([06](06-algoritmos.md#altitude-kalman-de-3-estados)). O LSM6DSV16X soma o giroscópio e uma fusão interna (SFLP) que entrega o vetor de gravidade, menos sensível à vibração da estrada; gasta 0,65 mA com os dois sensores em alto desempenho, pouco perto do GNSS, e acorda o MCU por movimento. O LIS2DW12 fica como alternativa fiel ao legacy: 0,38 µA em vigília, triggers de movimento, inatividade e queda livre no driver, US$ 1,90 e com estoque.
 - **FXOS8700CQ.** A NXP marca a peça como "No Longer Manufactured" (aviso 202009030DN, de 2020): a placa nova precisa de outro sensor de qualquer jeito.
-- **Estoque.** Em 2026-09-18 a DigiKey mostrava LSM6DSV16X e LIS2MDL sem estoque, e o BMP585 com mais de 11 mil peças. Confira antes de fechar a lista de materiais.
+- **Estoque.** Em 2026-09-18 a DigiKey mostrava LSM6DSV16X e LIS2MDL sem estoque, e o BMP585 com mais de 11 mil peças; a [lista de compras](19-lista-de-compras.md#sensores) trocou os dois primeiros.
 - Sem I3C: o nRF54LM20A não tem esse periférico (nenhum nó `i3c` no `nrf54lm20_a_b.dtsi`), então os sensores ficam no I2C.
 
 ## Periféricos
@@ -344,7 +347,7 @@ Alternativa sem dois carregadores: o **TI BQ25798**, carregador buck-boost com d
 | Armazenamento | microSD por SPI, sem detecção de cartão | **microSD no `spi00`** (o único SPI de 32 MHz; os outros vão até 8 MHz), soquete Hirose DM3AT-SF-PEJM5 com detecção de cartão e chave de alimentação; a [avaliação](15-avaliacao-componentes.md#armazenamento) troca o cartão por SD NAND soldado no produto | pilha upstream de ponta a ponta (`zephyr,sdhc-spi-slot` com `cd-gpios` e `pwr-gpios`, FAT, `usbd_msc`); o fluxo do USB mass storage fica igual ao do legacy; o push-push pode soltar o cartão na vibração: avaliar soquete com trava |
 | Alternativa ao microSD | — | flash NOR soldada de 32 a 64 MB (W25Q256JV, W25Q512JV) | mais robusta a água e vibração, como nas V1 e V2; FAT sobre NOR não nivela desgaste |
 | Configurações | FRAM FM24CL16B | **ZMS no RRAM do MCU** | a FRAM sai; o port já usa ZMS no nRF54LM20 DK |
-| USB | micro-USB B | **USB-C** GCT USB4105-GF-A, CC1 e CC2 direto nos pinos do nPM1300 (que têm o Rd interno), TI TPD4E05U06 nas linhas de dados e TPD1E10B06 no VBUS; a [avaliação](15-avaliacao-componentes.md#usb-c-e-proteção) troca por um receptáculo IPX8 e pelo ESD751 no VBUS | USB High Speed do nRF54LM20A; D+ e D− como par diferencial de 90 Ω; o USB4105 não é vedado |
+| USB | micro-USB B | **USB-C** GCT USB4105-GF-A, CC1 e CC2 direto nos pinos do nPM1300 (que têm o Rd interno), TI TPD4E05U06 nas linhas de dados e TPD1E10B06 no VBUS; a [avaliação](15-avaliacao-componentes.md#usb-c-e-proteção) troca por um receptáculo IPX8 e pelo ESD751 no VBUS, e a [lista de compras](19-lista-de-compras.md#trocas), pelo Molex 2036150003 e pelo ESD761 | USB High Speed do nRF54LM20A; D+ e D− como par diferencial de 90 Ω; o USB4105 não é vedado |
 | LED | WS2812B com conversor de nível e 5 V | **LED RGB discreto em 3 canais PWM** (`pwm-leds`) | sem 5 V e sem protocolo de tempo crítico; o driver `ws2812-gpio` do Zephyr não roda no nRF54L (o Kconfig só aceita nRF51, 52, 53 e 91); se o dono quiser o WS2812B, ele vai pelo driver SPI |
 | Buzzer | não tem | **piezo** Same Sky CPT-1117-83-SMT-TR, em ponte por dois PWM em contrafase | sem ímã perto do magnetômetro; o volume cai se o I/O rodar abaixo de 3 V |
 | Vibração | não tem | não usar | no guidão ela não se sente e gasta dezenas de mA; se o dono quiser, TI DRV2605L com atuador LRA (`ti,drv2605`) |
@@ -367,7 +370,7 @@ Alternativa sem dois carregadores: o **TI BQ25798**, carregador buck-boost com d
 | Console | TX, RX em pads de teste | `uart30` | P0 |
 | USB, NFC, SWD, cristais | pinos dedicados | — | — |
 
-Somam de 33 a 39 GPIO, conforme o I2C dos sensores seja dividido com o da energia e o número de botões. Cabem no módulo (66 GPIO) com folga; **não cabem no QFN52** (32 GPIO), o que reforça a escolha do módulo ou do CSP. Os blocos seriais seguem os domínios de pinos do nRF54L ([05](05-arquitetura-zephyr.md#nrf54lm20-dk)).
+Somam de 33 a 39 GPIO, conforme o I2C dos sensores seja dividido com o da energia e o número de botões. Cabem no módulo (64 GPIO) com folga; **não cabem no QFN52** (32 GPIO), o que reforça a escolha do módulo ou do CSP. Os blocos seriais seguem os domínios de pinos do nRF54L ([05](05-arquitetura-zephyr.md#devicetree-e-alvos)).
 
 ## Orçamento de energia
 
@@ -383,7 +386,7 @@ Estimativa, não medida. A base de cada linha está na coluna do meio.
 | PMIC, medidor e harvester | menos de 20 µA somados | < 0,1 mW | < 0,1 mW | < 0,1 mW |
 | **Na bateria** (reguladores a cerca de 90 %) | | cerca de 19 mW | cerca de 58 mW | cerca de 74 mW |
 
-As colunas "típico" e "pesado" usam o MAX-F10S. Com o MAX-M10N-10B em LEAP, que a [avaliação](15-avaliacao-componentes.md#efeito-no-aparelho) escolheu, o uso típico cai para cerca de 21 mW e a autonomia sem sol com 2000 mAh sobe para cerca de 320 h.
+As colunas "típico" e "pesado" usam o MAX-F10S. Com o MAX-M10N-10B em LEAP, que a [avaliação](15-avaliacao-componentes.md#efeito-no-aparelho) escolheu, o uso típico cai para cerca de 21 mW e a autonomia sem sol com 2000 mAh sobe para cerca de 310 h. Com a Sharp e o filme de luz da [lista de compras](19-lista-de-compras.md#display), a tela passa de cerca de 0,2 para 0,4 mW (175 µW a 1 quadro/s e os 65 µA do REG710), e a luz acesa tira cerca de 37 mW do VSYS (10 mA pelo LDO de 3,3 V), contra cerca de 59 mW do JDI no mesmo circuito.
 
 Autonomia sem sol, com 90 % da energia nominal (3,7 V) utilizável. Para comparar: só o GNSS da V3 gasta 92 mW.
 
@@ -426,7 +429,7 @@ Referências do mercado: o Garmin Edge 1040 Solar declara de 35 para 45 h no uso
 | Dois carregadores na célula | a Nordic não documenta um carregador externo no VBAT do nPM1300 | validar com o nPM1300 EK e a placa de avaliação do AEM10900 antes do esquemático; alternativa BQ25798 |
 | Antena GNSS dentro de uma caixa pequena | o LCD ocupa a face de cima, o plano de terra é pequeno e o BLE transmite até +8 dBm a centímetros da antena | antena linear L1/L5 na borda de cima, como no mercado; módulo com SAW antes do LNA; antenas de GNSS e de 2,4 GHz em cantos opostos; teste A/B do F10S e do M10N na caixa real, com C/N0 medido |
 | Calor ao sol | no verão a caixa passa de 45 °C, e o corte térmico da carga zera a colheita no sol forte | afastar a célula do painel; medir a temperatura interna; subir o limite só se o datasheet da célula permitir |
-| Estoque | LSM6DSV16X e LIS2MDL sem estoque na DigiKey em 2026-09-18; módulos BM20 com produção prevista para 09/2026 | alternativas da tabela; conferir antes de fechar a lista de materiais |
+| Estoque | LSM6DSV16X e LIS2MDL sem estoque na DigiKey em 2026-09-18; BM20C sem estoque até 12/11/2026 | a [lista de compras](19-lista-de-compras.md) troca o IMU e o magnetômetro e registra o prazo do BM20C |
 | Drivers | o `jdi,lpm013m126` precisa de mudanças para o 2,7"; o AEM10900 não tem driver; o BMP585 nunca rodou no driver do BMP581 | tudo testável no nRF54LM20 DK com as placas de avaliação, antes da placa própria |
 
 ## Próximos passos
@@ -441,7 +444,7 @@ flowchart LR
 ```
 
 1. **Aprovação** de cada bloco pelo dono (tabela do [resumo](#resumo)).
-2. **Compra:** nRF54LM20 DK; 3 a 5 amostras do JDI LPM027M128C; placas de avaliação do nPM1300 (nPM1300 EK), do AEM10900 e do módulo GNSS; plaquinhas com BMP585, LSM6DSV16X, LIS2MDL e OPT3001; células ANYSOLAR; um PPK2 para medir consumo, se ainda não houver.
+2. **Compra:** nRF54LM20 DK; 3 a 5 amostras do JDI LPM027M128C; placas de avaliação do nPM1300 (nPM1300 EK), do AEM10900 e do módulo GNSS; plaquinhas com BMP585, BMI270, MMC5633NJL e OPT3001 ([lista de compras](19-lista-de-compras.md#placas-de-avaliação-e-ferramentas)); células ANYSOLAR; um PPK2 para medir consumo, se ainda não houver.
 3. **Bancada:** o display no DK pelo driver do Zephyr modificado; a carga dupla na mesma célula com as duas placas de avaliação; o C/N0 por banda e o ruído na banda do GNSS com a antena dentro de uma caixa de teste, com o BLE transmitindo.
 4. **Firmware no DK:** drivers novos, a troca do STC3100 pelo nPM1300 e pelo MAX17262 no `power_scheduler`, e o consumo real de cada bloco no PPK2, que substitui as estimativas deste documento.
 5. **Mecânica:** tamanho da caixa (a antena decide entre manter o tamanho da V3 ou alongar a caixa), janela do painel, porta do barômetro com membrana, vedação do USB-C e do microSD.

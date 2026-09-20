@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: Apache-2.0
+
+config GNSS_UBLOX_M10
+	bool "u-blox M10 GNSS receiver by UBX (u-blox,max-m10)"
+	default y
+	depends on DT_HAS_U_BLOX_MAX_M10_ENABLED
+	depends on GNSS
+	select MODEM_MODULES
+	select MODEM_UBX
+	select MODEM_BACKEND_UART
+	select MODEM_DEDICATED_WORKQUEUE
+	select UART_INTERRUPT_DRIVEN if !UART_ASYNC_API
+	help
+	  u-blox MAX-M10N and the other M10 receivers on a UART, with the
+	  configuration interface (UBX-CFG-VALSET), one UBX-NAV-PVT per epoch,
+	  UBX-NAV-SAT for the sky plot, the LEAP power mode and the software
+	  standby by UBX-RXM-PMREQ. The Zephyr of the NCS has no M10 driver:
+	  the M8 one speaks the legacy UBX-CFG messages, which the M10 does
+	  not accept.
+
+if GNSS_UBLOX_M10
+
+config GNSS_UBLOX_M10_SATELLITES
+	int "Satellites of the sky plot"
+	default 32
+	range 1 64
+	depends on GNSS_SATELLITES
+	help
+	  How many satellites of a UBX-NAV-SAT message the driver keeps. Each
+	  one takes 8 bytes in the published array and 8 more while parsing.
+
+module = GNSS_UBLOX_M10
+module-str = ublox_m10
+source "subsys/logging/Kconfig.template.log_config"
+
+endif

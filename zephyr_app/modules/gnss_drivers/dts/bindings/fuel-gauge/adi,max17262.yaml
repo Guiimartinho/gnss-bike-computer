@@ -1,0 +1,52 @@
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+  Analog Devices (formerly Maxim) MAX17262 1-cell fuel gauge with ModelGauge
+  m5 EZ and internal current sensing, driven by the Zephyr fuel gauge API.
+  The EZ configuration below is written after each power-on reset of the
+  gauge, in the register units of the datasheet (Table 2). A separate
+  compatible from the Zephyr tree's maxim,max17262 (sensor API), whose
+  configuration misses those units.
+
+compatible: "adi,max17262"
+
+include: [fuel-gauge.yaml, i2c-device.yaml]
+
+properties:
+  design-capacity-mah:
+    type: int
+    required: true
+    description: Label capacity of the cell (DesignCap, 0.5 mAh steps).
+
+  charge-term-current-ma:
+    type: int
+    required: true
+    description: |
+      Termination current of the charger (IChgTerm, 156.25 uA steps): the
+      datasheet asks for the exact end-of-charge current of the application.
+
+  empty-voltage-mv:
+    type: int
+    default: 3300
+    description: |
+      Empty voltage under load (VEmpty.VE, 10 mV steps): the gauge declares
+      0 % there. 3300 is the reset value of the gauge.
+
+  recovery-voltage-mv:
+    type: int
+    default: 3880
+    description: |
+      Voltage that clears the empty detection (VEmpty.VR, 40 mV steps);
+      3880 is the reset value and the datasheet's recommendation.
+
+  charge-voltage-mv:
+    type: int
+    default: 4200
+    description: |
+      Charge termination voltage; above 4250 mV the model uses ModelCfg.VChg.
+
+  thermistor:
+    type: boolean
+    description: |
+      A thermistor on the TH pin. Without it (TH tied to BATT) the driver
+      clears Config.ETHRM and the temperature comes from the die.

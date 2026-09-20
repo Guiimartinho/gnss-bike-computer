@@ -11,6 +11,7 @@
 #ifndef MODEL_CRASH_RECOVERY_H_
 #define MODEL_CRASH_RECOVERY_H_
 
+#include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include "app_types.h"
@@ -78,7 +79,8 @@ typedef struct {
     float climb;            /**< Total climb */
     uint16_t nbpts;         /**< Number of GPS points */
     uint16_t nbsec_act;     /**< Active seconds */
-    uint8_t crc;            /**< CRC-8 checksum */
+    uint8_t pr;             /**< Personal record indicator, as SAtt.pr */
+    uint8_t crc;            /**< CRC-8 of everything above */
 } saved_data_t;
 
 /**
@@ -156,7 +158,8 @@ void crash_recovery_save_state(const loc_data_t *loc,
                                float dist,
                                float climb,
                                uint16_t nbpts,
-                               uint16_t nbsec_act);
+                               uint16_t nbsec_act,
+                               uint8_t pr);
 
 /**
  * @brief Get saved state if available
@@ -164,6 +167,12 @@ void crash_recovery_save_state(const loc_data_t *loc,
  * @return true if valid saved data was recovered
  */
 bool crash_recovery_get_saved_state(saved_data_t *data);
+
+/**
+ * @brief CRC-8 of the legacy (`libraries/utils/crc8.c`), used on the saved
+ *        block; public so the tests can check what protects what.
+ */
+uint8_t crash_recovery_crc8(const uint8_t *data, size_t len);
 
 /**
  * @brief Log an error for crash tracking

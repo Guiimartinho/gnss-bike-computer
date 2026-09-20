@@ -1,8 +1,7 @@
 /*
- * Device Tree Overlay for stravaV10 Custom Board
- * Based on nRF52840 - Bike GPS Computer
- *
- * Applied by name to nrf52840dk/nrf52840: the myStravaB V3 pinout on the DK.
+ * nRF52840 DK with the pins of the myStravaB V3 (custom_board_v3.h of the
+ * legacy). The V3 exists as a schematic only; this target keeps the port
+ * building on the nRF52840 and lets the V3 parts be wired to a DK.
  *
  * Pin Mapping (from custom_board_v3.h):
  * - I2C: SDA=P1.00, SCL=P1.01
@@ -14,7 +13,16 @@
  * - GPS: RST=P0.03, STDBY=P1.15, FIX=P1.14
  * - IMU: INT1=P1.02, RST=P1.03
  * - Neopixel: P1.13
+ *
+ * The services find the devices by aliases (docs/16, Serviços): the GPS of
+ * the V3 is an NMEA module (gnss-nmea-generic), the BME280 is the barometer
+ * and the FXOS8700 gives the accelerometer and the magnetometer. The STC3100
+ * fuel gauge has no Zephyr driver, so the V3 target has no battery reading.
+ * The LS027 is the chosen display and the node label longpress gives the
+ * keys to the interface (docs/18).
  */
+
+#include <zephyr/dt-bindings/input/input-event-codes.h>
 
 / {
     chosen {
@@ -26,10 +34,10 @@
         sw0 = &button0;
         sw1 = &button1;
         sw2 = &button2;
-        gps-uart = &uart1;
-        lcd-spi = &spi1;
-        sdc-spi = &spi2;
-        sensor-i2c = &i2c0;
+        gnss = &gnss;
+        baro0 = &baro;
+        imu0 = &fxos;
+        mag0 = &fxos;
     };
 
     leds {
@@ -40,60 +48,35 @@
         };
     };
 
-    buttons {
+    /*
+     * The three keys: short on release before 1 s, long after 1 s held
+     * (docs/18, Botões); the interface reads the codes of this node only.
+     */
+    longpress: longpress {
+        compatible = "zephyr,input-longpress";
+        input = <&v3_buttons>;
+        input-codes = <INPUT_KEY_LEFT>, <INPUT_KEY_ENTER>, <INPUT_KEY_RIGHT>;
+        short-codes = <INPUT_KEY_LEFT>, <INPUT_KEY_ENTER>, <INPUT_KEY_RIGHT>;
+        long-codes = <INPUT_KEY_HOME>, <INPUT_KEY_MENU>, <INPUT_KEY_END>;
+        long-delay-ms = <1000>;
+    };
+
+    v3_buttons: buttons {
         compatible = "gpio-keys";
         button0: button_0 {
             gpios = <&gpio0 14 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
             label = "Button Left";
+            zephyr,code = <INPUT_KEY_LEFT>;
         };
         button1: button_1 {
             gpios = <&gpio0 13 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
             label = "Button Center";
+            zephyr,code = <INPUT_KEY_ENTER>;
         };
         button2: button_2 {
             gpios = <&gpio0 11 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
             label = "Button Right";
-        };
-    };
-
-    /* GPS Control Pins (Antenova M10578-A3: HW_R and HW_S are active low,
-     * legacy/source/sensors/GPSMGMT.cpp:114-136 and :204-207) */
-    gps_ctrl {
-        compatible = "gpio-keys";
-        gps_reset: gps_reset {
-            gpios = <&gpio0 3 GPIO_ACTIVE_LOW>;
-            label = "GPS Reset";
-        };
-        gps_stdby: gps_stdby {
-            gpios = <&gpio1 15 GPIO_ACTIVE_LOW>;
-            label = "GPS Standby";
-        };
-        gps_fix: gps_fix {
-            gpios = <&gpio1 14 (GPIO_PULL_DOWN | GPIO_ACTIVE_HIGH)>;
-            label = "GPS Fix";
-        };
-    };
-
-    /* IMU Control Pins */
-    imu_ctrl {
-        compatible = "gpio-keys";
-        imu_int1: imu_int1 {
-            gpios = <&gpio1 2 (GPIO_PULL_DOWN | GPIO_ACTIVE_HIGH)>;
-            label = "IMU INT1";
-        };
-        /* FXOS8700CQ RST is active high (legacy/source/sensors/fxos.cpp:350-353) */
-        imu_reset: imu_reset {
-            gpios = <&gpio1 3 GPIO_ACTIVE_HIGH>;
-            label = "IMU Reset";
-        };
-    };
-
-    /* Neopixel */
-    neopixel_pin {
-        compatible = "gpio-keys";
-        neo_data: neo_data {
-            gpios = <&gpio1 13 GPIO_ACTIVE_HIGH>;
-            label = "Neopixel Data";
+            zephyr,code = <INPUT_KEY_RIGHT>;
         };
     };
 };
@@ -145,7 +128,8 @@
     };
 
     /* FXOS8700 Accelerometer/Magnetometer. RST has no pull resistor on the
-     * board: the driver drives it (reset pulse, then low) before main(). */
+     * board and is active high (legacy/source/sensors/fxos.cpp:350-353): the
+     * driver drives it (reset pulse, then low) before main(). */
     fxos: fxos8700@1e {
         compatible = "nxp,fxos8700";
         reg = <0x1e>;
@@ -153,16 +137,9 @@
         reset-gpios = <&gpio1 3 GPIO_ACTIVE_HIGH>;
         int1-gpios = <&gpio1 2 GPIO_ACTIVE_HIGH>;
     };
-
-    /* STC3100 Fuel Gauge */
-    stc3100: stc3100@70 {
-        compatible = "st,stc3100";
-        reg = <0x70>;
-        label = "STC3100";
-    };
 };
 
-/* UART1 - GPS Module */
+/* UART1 - GPS Module (Antenova M10578-A3, NMEA at 9600 as the legacy starts it) */
 &uart1 {
     compatible = "nordic,nrf-uarte";
     status = "okay";
@@ -170,9 +147,21 @@
     pinctrl-0 = <&uart1_default>;
     pinctrl-1 = <&uart1_sleep>;
     pinctrl-names = "default", "sleep";
+
+    gnss: gnss-nmea-generic {
+        compatible = "gnss-nmea-generic";
+    };
 };
 
-/* SPI1 - LCD LS027 */
+/*
+ * SPI1 - LCD LS027B7DH01, 5 V from the REG710 (U$16 of the V3). On the V3
+ * EXTMODE and EXTCOMIN go to GND through 10k (R13, R16) and DISP to VCC
+ * through 10k and 0.1 uF (R17, C43): no pins, and the driver of
+ * modules/gnss_drivers inverts the VCOM by the serial bit, as the legacy.
+ * Timing (LS027B7DH01 6-3): 2 MHz at most, chip select active high, 3 us
+ * before the first clock and 1 us after the last (2 us here, margin for the
+ * 220 us the chip select stays high in a one-line update).
+ */
 &spi1 {
     compatible = "nordic,nrf-spim";
     status = "okay";
@@ -181,11 +170,12 @@
     pinctrl-names = "default", "sleep";
     cs-gpios = <&gpio0 17 GPIO_ACTIVE_HIGH>;
 
-    ls027: ls027b4dh01@0 {
-        compatible = "sharp,ls0xx";
+    ls027: display@0 {
+        compatible = "sharp,ls027b7dh01";
         reg = <0>;
         spi-max-frequency = <2000000>;
-        label = "LS027";
+        spi-cs-setup-delay-ns = <3000>;
+        spi-cs-hold-delay-ns = <2000>;
         width = <400>;
         height = <240>;
     };

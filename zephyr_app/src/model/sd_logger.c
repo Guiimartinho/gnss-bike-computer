@@ -22,39 +22,71 @@ LOG_MODULE_REGISTER(sd_logger, CONFIG_LOG_DEFAULT_LEVEL);
  * Private Definitions
  * ========================================================================== */
 
-/** CSV header line */
-static const char csv_header[] =
-    "timestamp,lat,lon,alt_gps,alt_baro,alt_filt,speed_kmh,power_w,"
-    "bpm,cadence,slope_pct,dist_m,climb_m\r\n";
-
 /* ==========================================================================
  * Private Functions
  * ========================================================================== */
 
+int sd_logger_format_line(char *out, size_t size, const sd_log_entry_t *e)
+{
+    if ((out == NULL) || (e == NULL) || (size == 0U)) {
+        return -1;
+    }
+
+    /*
+     * The nineteen fields of `sd_save_pos_buffer`
+     * (`legacy/source/sd/sd_functions.cpp:622-636`), with its formats: six
+     * decimals in the position, two in the altitude, three in the angles,
+     * none in the roughness of the accelerometer and one in the roughness
+     * of the barometer. Every field ends with `;`, and the line with CRLF.
+     */
+    return snprintf(out, size,
+                    "%f;%f;%.2f;%u;"
+                    "%d;%u;%u;"
+                    "%.3f;%.3f;%.3f;%.2f;"
+                    "%.1f;%.2f;%.2f;%.2f;"
+                    "%.0f;%.0f;%.0f;"
+                    "%.1f;"
+                    "\r\n",
+                    (double)e->loc.lat, (double)e->loc.lon, (double)e->loc.alt,
+                    (unsigned int)e->date.secj,
+                    (int)e->sensors.power, (unsigned int)e->sensors.bpm,
+                    (unsigned int)e->sensors.cadence,
+                    (double)e->alti.alpha_bar, (double)e->alti.alpha_zero,
+                    (double)e->alti.baro_alt, (double)e->alti.baro_corr,
+                    (double)e->climb, (double)e->alti.filt_alt, (double)e->alti.gps_alt,
+                    (double)e->alti.vit_asc,
+                    (double)e->alti.rough[0], (double)e->alti.rough[1],
+                    (double)e->alti.rough[2],
+                    (double)e->alti.b_rough);
+}
+
+void sd_logger_filename(char *out, size_t size, uint32_t date)
+{
+    if ((out == NULL) || (size == 0U)) {
+        return;
+    }
+
+    /*
+     * `fname = HISTO_MARKER_CHAR + att->date.date + ".txt"` of the legacy
+     * (`sd_functions.cpp:607-609`): the date goes out as the number it is,
+     * so 5 September 2025 (50925) gives `@50925.txt`. A point without a
+     * date would overwrite the file of the day zero, so it gets the uptime.
+     */
+    if (date == 0U) {
+        (void)snprintf(out, size, "%s/%c%08X.txt", SD_LOG_DIRECTORY, SD_LOG_MARKER,
+                       (unsigned int)(k_uptime_get_32() / 1000U));
+    } else {
+        (void)snprintf(out, size, "%s/%c%u.txt", SD_LOG_DIRECTORY, SD_LOG_MARKER,
+                       (unsigned int)date);
+    }
+}
+
 /**
- * @brief Generate log filename from date
+ * @brief Name of the file of the day, as the legacy builds it
  */
 static void generate_filename(char *filename, size_t size, const date_data_t *date)
 {
-    if (date == NULL) {
-        /* Use timestamp-based name */
-        uint32_t ts = k_uptime_get_32() / 1000U;
-        (void)snprintf(filename, size, "%s/log_%08X.csv",
-                       SD_LOG_DIRECTORY, (unsigned)ts);
-    } else {
-        /* Use date-based name (YYMMDD_HHMMSS) */
-        uint32_t day = date->date / 10000U;
-        uint32_t month = (date->date / 100U) % 100U;
-        uint32_t year = date->date % 100U;
-        uint32_t hours = date->secj / 3600U;
-        uint32_t minutes = (date->secj / 60U) % 60U;
-        uint32_t seconds = date->secj % 60U;
-
-        (void)snprintf(filename, size, "%s/%02u%02u%02u_%02u%02u%02u.csv",
-                       SD_LOG_DIRECTORY,
-                       (unsigned)year, (unsigned)month, (unsigned)day,
-                       (unsigned)hours, (unsigned)minutes, (unsigned)seconds);
-    }
+    sd_logger_filename(filename, size, (date != NULL) ? date->date : 0U);
 }
 
 /**
@@ -79,39 +111,13 @@ static app_err_t write_buffer_to_file(sd_logger_t *logger)
         return APP_ERR_IO;
     }
 
-    /* Check if we need to write header (new file) */
-    struct fs_dirent entry;
-    if ((fs_stat(logger->filename, &entry) == 0) && (entry.size == 0)) {
-        ret = fs_write(&file, csv_header, strlen(csv_header));
-        if (ret < 0) {
-            LOG_ERR("Failed to write header: %d", ret);
-            (void)fs_close(&file);
-            return APP_ERR_IO;
-        }
-        logger->file_size += (uint32_t)ret;
-    }
-
     /* Write each entry */
     char line[256];
 
     for (uint8_t i = 0U; i < logger->buffer_count; i++) {
         const sd_log_entry_t *e = &logger->buffer[i];
 
-        int len = snprintf(line, sizeof(line),
-                           "%u,%.6f,%.6f,%.1f,%.1f,%.1f,%.2f,%u,%u,%u,%d,%.1f,%.1f\r\n",
-                           (unsigned)e->timestamp,
-                           (double)e->loc.lat,
-                           (double)e->loc.lon,
-                           (double)e->alti.gps_alt,
-                           (double)e->alti.baro_alt,
-                           (double)e->alti.filt_alt,
-                           (double)e->sensors.speed / 100.0,
-                           (unsigned)e->sensors.power,
-                           (unsigned)e->sensors.bpm,
-                           (unsigned)e->sensors.cadence,
-                           (int)e->alti.slope,
-                           (double)e->distance,
-                           (double)e->climb);
+        int len = sd_logger_format_line(line, sizeof(line), e);
 
         if (len > 0) {
             ret = fs_write(&file, line, (size_t)len);
@@ -294,13 +300,11 @@ const char *sd_logger_get_filename(const sd_logger_t *logger)
 void sd_logger_build_entry(sd_log_entry_t *entry,
                            const loc_data_t *loc,
                            const date_data_t *date,
-                           uint16_t power,
+                           int16_t power,
                            uint8_t bpm,
                            uint8_t cadence,
                            uint16_t speed,
-                           float baro_alt,
-                           float filt_alt,
-                           int8_t slope,
+                           const sd_log_altitude_t *alti,
                            float distance,
                            float climb)
 {
@@ -324,9 +328,14 @@ void sd_logger_build_entry(sd_log_entry_t *entry,
     entry->sensors.cadence = cadence;
     entry->sensors.speed = speed;
 
-    entry->alti.baro_alt = baro_alt;
-    entry->alti.filt_alt = filt_alt;
-    entry->alti.slope = slope;
+    if (alti != NULL) {
+        float gps_alt = entry->alti.gps_alt;
+
+        entry->alti = *alti;
+        if (alti->gps_alt == 0.0f) {
+            entry->alti.gps_alt = gps_alt; /* the one of the position */
+        }
+    }
 
     entry->distance = distance;
     entry->climb = climb;

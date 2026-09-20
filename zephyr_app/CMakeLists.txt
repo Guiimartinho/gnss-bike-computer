@@ -1,6 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-# stravaV10 - Zephyr Application
-# Bike GPS Computer with Strava Segments
+# GNSS bike computer: the Zephyr port of stravaV10 (docs/16-arquitetura-firmware.md)
 
 cmake_minimum_required(VERSION 3.20.0)
 
@@ -10,9 +9,13 @@ cmake_minimum_required(VERSION 3.20.0)
 # own live in boards/.
 set(BOARD_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 
+# Drivers of our own, as a Zephyr module inside the application: the
+# memory-in-pixel display in portrait (modules/gnss_drivers, docs/05)
+list(APPEND EXTRA_ZEPHYR_MODULES ${CMAKE_CURRENT_SOURCE_DIR}/modules/gnss_drivers)
+
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 
-project(stravaV10 VERSION 2.0.0 LANGUAGES C)
+project(gnss_bike_computer VERSION 2.0.0 LANGUAGES C)
 
 # Compile options following MISRA and 0.memory standards
 target_compile_options(app PRIVATE
@@ -25,86 +28,77 @@ target_compile_options(app PRIVATE
     -fdata-sections
 )
 
-# Include directories
 target_include_directories(app PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/hal
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/drivers
     ${CMAKE_CURRENT_SOURCE_DIR}/include/model
     ${CMAKE_CURRENT_SOURCE_DIR}/include/rf
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/vue
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/utils
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/usb
 )
 
 # =============================================================================
-# Source files organized by module
+# Application: boot, zbus channels, service framework (docs/16)
 # =============================================================================
-
-# Main entry point
 target_sources(app PRIVATE
-    src/main.c
+    src/app/main.c
+    src/app/app_channels.c
+    src/app/app_svc.c
 )
 
-# HAL Layer - Hardware Abstraction
+# =============================================================================
+# Services, one thread each (docs/16, Threads)
+# =============================================================================
 target_sources(app PRIVATE
-    src/hal/hal_gpio.c
-    src/hal/hal_spi.c
-    src/hal/hal_i2c.c
-    src/hal/hal_uart.c
+    src/svc/power/battery.c
+    src/svc/power/charge.c
+    src/svc/power/power_svc.c
+    src/svc/power/sys_fsm.c
+    src/svc/gnss/gnss_power.c
+    src/svc/gnss/gnss_svc.c
+    src/svc/sensors/sensors_svc.c
+    src/svc/sensors/tilt.c
+    src/svc/radio/radio_svc.c
+    src/svc/storage/storage_svc.c
+    src/svc/model/model_svc.c
+    src/svc/model/model_ui.c
+    src/svc/ui/backlight.c
+    src/svc/ui/ui_input.c
+    src/svc/ui/ui_svc.c
 )
 
-# Drivers - LCD
+# =============================================================================
+# Model: the legacy algorithms (docs/06)
+# =============================================================================
 target_sources(app PRIVATE
-    src/drivers/lcd/ls027.c
-)
-
-# Drivers - Sensors
-target_sources(app PRIVATE
-    src/drivers/sensors/baro.c
-    src/drivers/sensors/fxos.c
-    src/drivers/sensors/stc3100.c
-)
-
-# Drivers - GPS
-target_sources(app PRIVATE
-    src/drivers/gps/gps_mgmt.c
-    src/drivers/gps/nmea_parser.c
-    src/drivers/gps/gps_epo.c
-)
-
-# Drivers - NeoPixel
-target_sources(app PRIVATE
-    src/drivers/neopixel.c
-)
-
-# Model Layer - Business Logic
-target_sources(app PRIVATE
-    src/model/boucle.c
-    src/model/model_lock.c
-    src/model/power_scheduler.c
     src/model/attitude.c
-    src/model/locator.c
-    src/model/segment.c
+    src/model/cmd_parser.c
+    src/model/crash_recovery.c
+    src/model/dfu_state.c
     src/model/kalman.c
     src/model/kalman_altitude.c
-    src/model/udmatrix.c
-    src/model/vecteur.c
     src/model/liste_points.c
-    src/model/power_zone.c
-    src/model/suffer_score.c
-    src/model/rr_zone.c
-    src/model/user_settings.c
-    src/model/crash_recovery.c
-    src/model/parcours.c
-    src/model/baro_drift.c
+    src/model/map_project.c
     src/model/loc_source.c
+    src/model/locator.c
+    src/model/parcours.c
+    src/model/power_scheduler.c
+    src/model/distance.c
+    src/model/power_estimate.c
+    src/model/power_zone.c
+    src/model/rr_zone.c
     src/model/sd_logger.c
-    src/model/zwift.c
+    src/model/segment.c
+    src/model/segment_file.c
+    src/model/suffer_score.c
+    src/model/udmatrix.c
+    src/model/user_settings.c
+    src/model/vecteur.c
 )
 
-# RF Layer - Wireless Communication
+# =============================================================================
+# Radio: BLE central and peripheral, sensor clients (docs/07)
+# =============================================================================
 target_sources(app PRIVATE
+    src/app/app_cmd.c
+    src/rf/dfu.c
     src/rf/ble/ble_manager.c
     src/rf/ble/ble_nus.c
     src/rf/ble/ble_lns.c
@@ -114,28 +108,51 @@ target_sources(app PRIVATE
     src/rf/ble_komoot_client.c
 )
 
+# =============================================================================
+# Interface: the LVGL screens (docs/18), the same code as the host renderer
+# of tests/ui
+# =============================================================================
+target_sources_ifdef(CONFIG_LVGL app PRIVATE
+    src/ui/ui_core.c
+    src/ui/ui_fields.c
+    src/ui/ui_fmt.c
+    src/ui/ui_scr_crs.c
+    src/ui/ui_scr_menus.c
+    src/ui/ui_scr_modes.c
+    src/ui/ui_scr_system.c
+    src/ui/ui_text.c
+    src/ui/ui_theme.c
+    src/ui/ui_widgets.c
+    src/ui/fonts/ui_font_b12.c
+    src/ui/fonts/ui_font_b14.c
+    src/ui/fonts/ui_font_b16.c
+    src/ui/fonts/ui_font_b18.c
+    src/ui/fonts/ui_font_b22.c
+    src/ui/fonts/ui_font_b28.c
+    src/ui/fonts/ui_font_b32.c
+    src/ui/fonts/ui_font_b44.c
+    src/ui/fonts/ui_font_b64.c
+    src/ui/fonts/ui_font_r10.c
+    src/ui/fonts/ui_font_r12.c
+)
+
 # ANT on the sdk-ant add-on, only in ANT builds (ANT=1 in tools/fw/fw.sh)
 target_sources_ifdef(CONFIG_ANT app PRIVATE
     src/rf/ant/ant.c
 )
 
-# Vue Layer - User Interface
-target_sources(app PRIVATE
-    src/vue/vue.c
-    src/vue/vue_crs.c
-    src/vue/vue_fec.c
-    src/vue/menu.c
-)
+# =============================================================================
+# Update over the air: src/rf/dfu.c includes img_mgmt.h, which pulls
+# bootutil/image.h from the MCUboot side library
+# (bootloader/mcuboot/boot/bootutil/zephyr/CMakeLists.txt).
+# =============================================================================
+if(CONFIG_MCUBOOT_BOOTUTIL_LIB)
+    zephyr_link_libraries(MCUBOOT_BOOTUTIL)
+endif()
 
-# Utils
-target_sources(app PRIVATE
-    src/utils/utils.c
-    src/utils/ring_buffer.c
-    src/utils/fs_stubs.c
-)
-
-# USB - Disabled until devicetree defines USB CDC-ACM and SD card is configured
-# target_sources(app PRIVATE
-#     src/usb/usb_cdc.c
-#     src/usb/usb_msc.c
-# )
+# =============================================================================
+# USB service: only where the USB device stack is on (the nRF54LM20 target)
+# =============================================================================
+if(CONFIG_USB_DEVICE_STACK_NEXT)
+    target_sources(app PRIVATE src/svc/usb/usb_svc.c)
+endif()

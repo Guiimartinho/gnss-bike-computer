@@ -1,0 +1,46 @@
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+  e-peas AEM10900 solar energy harvester and battery charger with MPPT,
+  driven by the Zephyr charger API. The configuration pins of the board set
+  the MPPT (80 % of the open-circuit voltage), the thresholds (charge to
+  3.90 V, cut at 3.01 V) and the temperature range; with the board on, the
+  driver switches to the I2C configuration to charge up to charge-voltage-mv
+  and to read the average power monitor (APM). Keep-alive must be on
+  (KEEP_ALIVE pin high) so the I2C configuration survives while the 3V0 rail
+  is off.
+
+compatible: "e-peas,aem10900"
+
+include: i2c-device.yaml
+
+properties:
+  charge-voltage-mv:
+    type: int
+    default: 4050
+    description: |
+      Charge threshold (VOVCH) with the board on, in 56.25 mV steps from
+      2.70 V to 4.78 V; docs/14 asks about 4.05 V.
+
+  discharge-voltage-mv:
+    type: int
+    default: 3040
+    description: |
+      Discharge threshold (VOVDIS), in 56.25 mV steps; 3040 is the register
+      reset value, the nearest step to the 3.01 V of the pins.
+
+  pins-charge-voltage-mv:
+    type: int
+    default: 3900
+    description: |
+      Charge threshold the configuration pins (STO_CFG) select, reported
+      while the pins are in force.
+
+  apm-scale-pj:
+    type: int
+    default: 0
+    description: |
+      Energy of one APM unit in picojoules: the theta x L product of the
+      datasheet (section 9.13), which e-peas gives for each application.
+      0 means not calibrated: the driver then reports no power, only that
+      energy flows.

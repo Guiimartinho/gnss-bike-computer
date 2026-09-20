@@ -12,6 +12,8 @@
 #include <math.h>
 
 #include "model/attitude.h"
+#include "model/distance.h"
+#include "model/power_estimate.h"
 #include "model/locator.h"
 #include "model/kalman_altitude.h"
 #include "model/crash_recovery.h"
@@ -30,12 +32,7 @@ LOG_MODULE_REGISTER(attitude, CONFIG_LOG_DEFAULT_LEVEL);
 #define MIN_SPEED_FOR_KALMAN    1.5f
 
 /** Power estimation constants */
-#define DEFAULT_RIDER_WEIGHT_KG 75.0f
-#define BIKE_WEIGHT_KG          10.0f
-#define ROLLING_RESISTANCE      0.005f
-#define AIR_DENSITY             1.225f
-#define DRAG_COEFF              0.3f
-#define FRONTAL_AREA            0.5f
+#define DEFAULT_RIDER_WEIGHT_KG 79.0f /* USER_WEIGHT of the legacy */
 
 /** Climb calculation hysteresis (meters) - from original */
 #define CLIMB_ELEVATION_HYSTERESIS_M    2.0f
@@ -82,6 +79,9 @@ static float accumulated_climb;
 /** Current speed in m/s */
 static float current_speed_ms;
 
+/** Distance ridden, with the rule of the legacy */
+static struct distance_acc ridden;
+
 /** Last Kalman update time */
 static uint32_t last_kalman_time;
 
@@ -101,6 +101,58 @@ static bool has_sea_level_ref;
 
 /** User rider weight in kg (from settings) */
 static float rider_weight_kg;
+
+/**
+ * The legacy averages the last ten pressures (FILTRE_NB, 1 s at 10 Hz) and
+ * turns the average into altitude (`libraries/AltiBaro/AltiBaro.cpp:137-156`);
+ * until the buffer is full, `computeAlti()` answers false.
+ */
+#define BARO_FILTER_NB      10U
+
+static float baro_ring[BARO_FILTER_NB];
+static uint8_t baro_ring_count;
+static uint8_t baro_ring_head;
+
+/**
+ * Mean absolute deviation of the ring, the roughness the legacy logs
+ * (`AltiBaro::getRoughness()`, `libraries/AltiBaro/AltiBaro.cpp:90-112`).
+ * The legacy multiplies by 100 because its buffer is in hPa; the ring here
+ * is in Pa, so the value comes out in Pa already.
+ */
+static float baro_roughness(void);
+
+/** Average of the ring, or 0 while it is not full */
+static float baro_pressure_avg(void)
+{
+    if (baro_ring_count < BARO_FILTER_NB) {
+        return 0.0f;
+    }
+
+    float sum = 0.0f;
+
+    for (uint8_t i = 0U; i < BARO_FILTER_NB; i++) {
+        sum += baro_ring[i];
+    }
+
+    return sum / (float)BARO_FILTER_NB;
+}
+
+static float baro_roughness(void)
+{
+    float avg = baro_pressure_avg();
+
+    if (avg <= 0.0f) {
+        return 0.0f;
+    }
+
+    float sum = 0.0f;
+
+    for (uint8_t i = 0U; i < BARO_FILTER_NB; i++) {
+        sum += fabsf(baro_ring[i] - avg);
+    }
+
+    return sum / (float)BARO_FILTER_NB;
+}
 
 /* ==========================================================================
  * Private Functions
@@ -136,8 +188,8 @@ static float compute_baro_altitude(float pressure)
  */
 static void compute_altitude_fusion(void)
 {
-    /* Get current barometric altitude */
-    float baro_ele = compute_baro_altitude(current_ext.pressure);
+    /* Barometric altitude of the last second, as the legacy averages it */
+    float baro_ele = compute_baro_altitude(baro_pressure_avg());
 
     /* Initialize Kalman if not done */
     if (!kalman_altitude_is_init(&altitude_kf)) {
@@ -173,6 +225,8 @@ static void compute_altitude_fusion(void)
     if (updated) {
         /* Get filtered values */
         current_elevation = output.elevation;
+        current_ext.alpha_bar = output.pitch;
+        current_ext.alpha_zero = output.alpha_zero;
 
         /* Update slope and vertical speed after enough data points */
         if (current_att.nbpts > MIN_PTS_FOR_SLOPE) {
@@ -234,6 +288,42 @@ static void filter_altitude_correction(float gps_alt, float baro_alt)
             (double)gps_alt, (double)baro_alt, (double)altitude_correction);
 }
 
+/** A ride was picked up again, for the service to say it on the screen */
+static bool fdir_restored;
+
+/**
+ * Take the state of the ride back, as the legacy does when the sea level
+ * reference appears (`legacy/source/model/Attitude.cpp:393-417`): the block
+ * has to pass its CRC and carry today's date, and it is used once.
+ */
+static void restore_from_crash(void)
+{
+    saved_data_t saved;
+
+    if (!crash_recovery_has_data() || !crash_recovery_get_saved_state(&saved)) {
+        return;
+    }
+
+    if (saved.date.date != current_att.date.date) {
+        LOG_WRN("FDIR block is from another day (%u)", (unsigned int)saved.date.date);
+        crash_recovery_clear_saved_state();
+        return;
+    }
+
+    LOG_WRN("FDIR: ride restored, %.1f m and %.1f m of climb", (double)saved.dist,
+            (double)saved.climb);
+
+    current_att.dist = saved.dist;
+    distance_restore(&ridden, saved.dist);
+    current_att.climb = saved.climb;
+    accumulated_climb = saved.climb;
+    current_att.nbsec_act = saved.nbsec_act;
+    current_att.pr = saved.pr;
+
+    crash_recovery_clear_saved_state();
+    fdir_restored = true;
+}
+
 /**
  * @brief Save current state for crash recovery
  */
@@ -244,51 +334,22 @@ static void save_crash_recovery_state(void)
                               current_att.dist,
                               current_att.climb,
                               current_att.nbpts,
-                              current_att.nbsec_act);
-}
-
-/**
- * @brief Estimate cycling power using physics model
- *
- * Uses rider weight from user settings combined with bike weight
- * to calculate power from rolling resistance, air drag, and gradient.
- *
- * @param speed_kmh Current speed in km/h
- * @param slope Current gradient in percent
- * @return Estimated power in watts
- */
-static uint16_t estimate_power(float speed_kmh, int8_t slope)
-{
-    if (speed_kmh < 0.5f) {
-        return 0U;
-    }
-
-    float speed_ms = speed_kmh / 3.6f;
-    float total_mass = rider_weight_kg + BIKE_WEIGHT_KG;
-
-    /* Rolling resistance power: P = Crr * m * g * v */
-    float p_roll = ROLLING_RESISTANCE * total_mass * 9.81f * speed_ms;
-
-    /* Air resistance power: P = 0.5 * rho * CdA * v^3 */
-    float p_air = 0.5f * AIR_DENSITY * DRAG_COEFF * FRONTAL_AREA *
-                  speed_ms * speed_ms * speed_ms;
-
-    /* Gravity power (climbing/descending): P = m * g * grade * v */
-    float grade = (float)slope / 100.0f;
-    float p_gravity = total_mass * 9.81f * grade * speed_ms;
-
-    /* Total power (minimum 0) */
-    float power = p_roll + p_air + p_gravity;
-    if (power < 0.0f) {
-        power = 0.0f;
-    }
-
-    return (uint16_t)power;
+                              current_att.nbsec_act,
+                              current_att.pr);
 }
 
 /* ==========================================================================
  * Public Functions
  * ========================================================================== */
+
+bool attitude_take_fdir_notice(void)
+{
+    bool notice = fdir_restored;
+
+    fdir_restored = false;
+
+    return notice;
+}
 
 app_err_t attitude_init(void)
 {
@@ -328,9 +389,12 @@ app_err_t attitude_init(void)
 
     is_altitude_initialized = false;
     has_sea_level_ref = false;
+    distance_init(&ridden);
+    baro_ring_count = 0U;
+    baro_ring_head = 0U;
 
     /* Load rider weight from user settings (stored in hectograms) */
-    user_settings_t *settings = user_settings_get_global();
+    const user_settings_t *settings = user_settings_get_global();
     uint16_t weight_hg = user_settings_get_weight(settings);
     if (weight_hg > 0U) {
         rider_weight_kg = (float)weight_hg / 10.0f;
@@ -339,22 +403,13 @@ app_err_t attitude_init(void)
     }
     LOG_INF("Rider weight: %.1f kg", (double)rider_weight_kg);
 
-    /* Check for crash recovery data */
-    if (crash_recovery_has_data()) {
-        saved_data_t saved;
-        if (crash_recovery_get_saved_state(&saved)) {
-            LOG_WRN("Restoring data from crash recovery");
-            LOG_WRN("Distance: %.1f m, Climb: %.1f m",
-                    (double)saved.dist, (double)saved.climb);
-
-            current_att.dist = saved.dist;
-            current_att.climb = accumulated_climb = saved.climb;
-            current_att.nbpts = saved.nbpts;
-            current_att.nbsec_act = saved.nbsec_act;
-
-            crash_recovery_clear();
-        }
-    }
+    /*
+     * The state of a ride is not restored here: the legacy waits for the
+     * sea level reference, when it already knows the date, and only takes
+     * the block if it is from today (`Attitude.cpp:393-417`). See
+     * restore_from_crash() below.
+     */
+    fdir_restored = false;
 
     is_initialized = true;
     LOG_INF("Attitude manager initialized");
@@ -372,8 +427,12 @@ app_err_t attitude_update_gps(const loc_data_t *loc)
         return APP_ERR_INVALID_PARAM;
     }
 
-    /* Update speed (m/s) */
-    current_speed_ms = loc->speed / 3.6f;
+    /*
+     * The speed only changes at the end of the epoch: the legacy feeds the
+     * altitude filter and the power with the speed of the previous location
+     * and updates m_speed_ms afterwards
+     * (`legacy/source/model/Attitude.cpp:509-524`).
+     */
 
     /* Add to locator for distance calculation */
     app_err_t err = locator_add_point(loc);
@@ -383,7 +442,15 @@ app_err_t attitude_update_gps(const loc_data_t *loc)
 
     /* Update current attitude */
     current_att.loc = *loc;
-    current_att.dist = locator_get_total_distance();
+    /*
+     * Distance as the legacy does it: between raw positions, whatever the
+     * speed, throwing the first 25 m away and saving the state for the
+     * crash recovery every 15 m (`Attitude::computeDistance`). The filtered
+     * distance of the locator stays for whoever wants it.
+     */
+    bool snapshot = distance_add(&ridden, loc->lat, loc->lon);
+
+    current_att.dist = distance_total(&ridden);
     current_att.nbpts++;
 
     /* Initialize sea level pressure if barometer ready and enough GPS points */
@@ -405,13 +472,20 @@ app_err_t attitude_update_gps(const loc_data_t *loc)
 
             LOG_INF("Sea level pressure initialized: %.1f Pa (GPS alt: %.1f m)",
                     (double)sea_level_pressure, (double)alt);
+
+            /* the moment the legacy picks a ride up again */
+            restore_from_crash();
         }
     }
 
     /* Apply GPS/baro altitude correction filter */
-    if (has_sea_level_ref && (current_ext.pressure > 0.0f)) {
-        float baro_alt = compute_baro_altitude(current_ext.pressure);
+    if (has_sea_level_ref && (baro_pressure_avg() > 0.0f)) {
+        float baro_alt = compute_baro_altitude(baro_pressure_avg());
+
         filter_altitude_correction(loc->alt, baro_alt);
+
+        /* one fusion per epoch, as the legacy does */
+        compute_altitude_fusion();
     }
 
     /* Update climb from Kalman-filtered altitude */
@@ -420,6 +494,8 @@ app_err_t attitude_update_gps(const loc_data_t *loc)
 
     /* Update extended data */
     current_ext.base = current_att;
+    current_ext.baro_correction = altitude_correction;
+    current_ext.baro_roughness = baro_roughness();
 
     /* Track moving time */
     uint32_t now = k_uptime_get_32();
@@ -436,8 +512,10 @@ app_err_t attitude_update_gps(const loc_data_t *loc)
         }
 
         last_update = now;
+    }
 
-        /* Save state for crash recovery periodically */
+    /* the legacy saves the state every 15 m, not every second */
+    if (snapshot) {
         save_crash_recovery_state();
     }
 
@@ -447,8 +525,13 @@ app_err_t attitude_update_gps(const loc_data_t *loc)
         speed_count++;
     }
 
-    /* Estimate power */
-    current_att.pwr = estimate_power(loc->speed, current_att.slope);
+    /*
+     * Power with the speed of the previous epoch, as the legacy does: it
+     * calls computePower() before updating m_speed_ms
+     * (`legacy/source/model/Attitude.cpp:516-524`).
+     */
+    current_att.pwr = power_estimate_w(rider_weight_kg, current_speed_ms, current_att.vit_asc);
+    current_speed_ms = loc->speed / 3.6f;
 
     return APP_OK;
 }
@@ -462,15 +545,20 @@ app_err_t attitude_update_baro(float pressure, float temperature)
     current_ext.pressure = pressure;
     current_ext.temperature = temperature;
 
-    /* Calculate barometric altitude using calibrated sea level if available */
     if (pressure > 0.0f) {
-        current_ext.baro_altitude = compute_baro_altitude(pressure);
+        baro_ring[baro_ring_head] = pressure;
+        baro_ring_head = (uint8_t)((baro_ring_head + 1U) % BARO_FILTER_NB);
+        if (baro_ring_count < BARO_FILTER_NB) {
+            baro_ring_count++;
+        }
+        current_ext.baro_altitude = compute_baro_altitude(baro_pressure_avg());
     }
 
-    /* Run altitude fusion if we have sea level reference */
-    if (has_sea_level_ref) {
-        compute_altitude_fusion();
-    }
+    /*
+     * The fusion does not run here: the legacy runs it once per location
+     * (`Attitude::addNewLocation` calls `computeElevation`), with the
+     * average of the last second of pressure.
+     */
 
     return APP_OK;
 }
@@ -573,6 +661,11 @@ float attitude_get_climb(void)
     return current_att.climb;
 }
 
+float attitude_get_elevation(void)
+{
+    return current_elevation;
+}
+
 uint32_t attitude_get_elapsed_time(void)
 {
     return elapsed_seconds;
@@ -627,6 +720,9 @@ void attitude_reset(void)
 
     is_altitude_initialized = false;
     has_sea_level_ref = false;
+    distance_init(&ridden);
+    baro_ring_count = 0U;
+    baro_ring_head = 0U;
 
     locator_reset();
     crash_recovery_clear();

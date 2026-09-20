@@ -1,8 +1,8 @@
 # Rádio: ANT+ e BLE
 
-Como o stravaV10 original usa ANT+ e BLE, o que é o stravaAP, como o port Zephyr trocou os sensores ANT+ por clientes BLE, a decisão de manter ANT+ e BLE e o que falta para o rádio funcionar.
+Como o stravaV10 original usa ANT+ e BLE, o que é o stravaAP, como o port Zephyr trocou os sensores ANT+ por clientes BLE, a decisão de manter ANT+ e BLE e o que falta para o rádio funcionar. O catálogo de todos os dispositivos BLE e ANT+ que o aparelho pode aceitar, com prioridades, está em [17-dispositivos-ble-ant.md](17-dispositivos-ble-ant.md).
 
-**Nesta página:** [Topologia](#topologia) · [ANT+ no legacy](#ant-no-legacy) · [BLE no legacy](#ble-no-legacy) · [stravaAP e comandos](#stravaap-e-comandos) · [Komoot](#komoot) · [Rádio no port](#rádio-no-port) · [Decisão: ANT+ e BLE](#decisão-ant-e-ble) · [O que falta](#o-que-falta)
+**Nesta página:** [Topologia](#topologia) · [ANT+ no legacy](#ant-no-legacy) · [BLE no legacy](#ble-no-legacy) · [stravaAP e comandos](#stravaap-e-comandos) · [Komoot](#komoot) · [Rádio no port](#rádio-no-port) · [Decisão: ANT+ e BLE](#decisão-ant-e-ble) · [Atualização por BLE (DFU)](#atualização-por-ble-dfu) · [O que falta](#o-que-falta)
 
 ## Topologia
 
@@ -78,6 +78,17 @@ sequenceDiagram
 | `$QRY,tipo,arquivo` | 1 lista os logs, 2 envia um arquivo, 3 apaga |
 
 Sem autenticação: qualquer periférico chamado "stravaAP" pode formatar a memória. O `LNS.js` depende do tráfego do Zwift, criptografado desde 2022.
+
+**No port, desde 2026-09-20** (`src/model/cmd_parser.c`, com `test_cmd_parser`, e `src/svc/radio/radio_svc.c`): o leitor das sentenças é um módulo puro que recebe os caracteres do NUS e entrega o comando pronto. O que cada um faz:
+
+| Sentença | No port |
+|---|---|
+| `$LOC` | publica a posição como **simulada**; o modelo a prefere ao receptor por 6 s, que é a prioridade SIM > GPS do legacy |
+| `$HRM`, `$CAD` | entram como um sensor externo, iguais aos do BLE |
+| `$BTN` | aperta uma tecla, para testar a interface do PC |
+| `$ANCS`, `$DBG` | viram notificação na tela |
+| `$DWN` | **só 16 (modo USB) e 18 (calibrar a bússola)**; formatar (13), `mkfs` (15), o teste de hardfault (12) e o de memória (14) são recusados e avisados na tela: esses só saem do menu, onde o ciclista confirma |
+| `$QRY` | ainda não responde: listar e enviar arquivos em blocos falta |
 
 ## Komoot
 
@@ -179,9 +190,57 @@ O build padrão, sem `ANT`, continua idêntico byte a byte ao anterior.
 
 API: as 12 funções `sd_ant_*` que o legacy chama (em `ant.c`, `hrm.c`, `bsc.c` e `fec.c`) existem no add-on como `ant_*` (`include/ant_interface.h`), uma para uma. Dos 21 identificadores de perfis e bibliotecas do nRF5 SDK que o legacy usa, os únicos ausentes no add-on (`ant_search_start`, `ant_search_end` e os dois `*_evt_handler`) são funções do próprio legacy: o port dos perfis pode seguir o legacy linha a linha.
 
+## Atualização por BLE (DFU)
+
+O legacy não atualizava pelo ar: o firmware entrava pelo J-Link ou pelo cartão. O port ganha atualização por Bluetooth com as peças oficiais do NCS v3.3.0 — **MCUboot** pelo sysbuild e **mcumgr SMP sobre BLE** — controladas por um módulo próprio (`zephyr_app/src/rf/dfu.c`) e pela máquina pura de `src/model/dfu_state.c`. O aplicativo do telefone não é deste projeto: qualquer cliente SMP serve (o nRF Connect Device Manager, da Nordic, é o de referência).
+
+```mermaid
+sequenceDiagram
+    participant App as Aplicativo (SMP)
+    participant SMP as mcumgr no aparelho
+    participant DFU as src/rf/dfu.c
+    participant UI as tela
+    participant MB as MCUboot
+    App->>SMP: image upload (pedaços)
+    SMP->>DFU: DFU_STARTED
+    DFU->>UI: fase e porcentagem (chan_dfu)
+    loop cada pedaço
+        SMP->>DFU: DFU_CHUNK (pode recusar)
+        DFU-->>SMP: recusa se em atividade ou bateria fraca
+        DFU->>UI: porcentagem nova
+    end
+    SMP->>DFU: DFU_PENDING (imagem marcada)
+    App->>SMP: reset
+    SMP->>MB: reinicia
+    MB->>MB: troca os slots e inicia a imagem nova
+    DFU->>DFU: boot_write_img_confirmed() quando os serviços sobem
+```
+
+| Peça | Escolha | Onde |
+|---|---|---|
+| Bootloader | MCUboot pelo sysbuild, modo `swap_using_offset` (padrão do NCS 3.3) | `zephyr_app/Kconfig.sysbuild` |
+| Alvo | **só o nRF54LM20A**: slots de 920 KB contra os ~525 KB do firmware. No nRF52840 o slot tem 481 KB contra 480 KB de firmware, e nada caberia | `Kconfig.sysbuild` (`default BOOTLOADER_MCUBOOT if BOARD_NRF54LM20DK`) |
+| Partições | as padrão do SoC: MCUboot 64 KB, `slot0` e `slot1` de 920 KB, `storage` de 36 KB | `zephyr/dts/vendor/nordic/nrf54lm20_a_b_cpuapp_partition.dtsi` |
+| Setores por imagem | 256 fixos (a RRAM apaga em 4096 B; 920 KB dão 230 setores) | `zephyr_app/sysbuild/mcuboot.conf` |
+| Transporte | SMP sobre BLE com remontagem, MTU de 498 B e buffer de 2475 B, como o exemplo `smp_svr` | `boards/nrf54lm20dk_nrf54lm20a_cpuapp.conf` |
+| Confirmação | `boot_write_img_confirmed()` quando os serviços sobem: imagem que não inicia volta sozinha no reset seguinte | `src/rf/dfu.c` |
+| Assinatura | **ainda a chave de desenvolvimento do MCUboot** (decisão do dono em 2026-09-20: sem chave por enquanto) | ver o aviso abaixo |
+
+> [!WARNING]
+> A imagem é assinada com a **chave de desenvolvimento pública do MCUboot**, que está no repositório do bootloader e é conhecida por qualquer pessoa. Enquanto for assim, qualquer um com acesso ao Bluetooth do aparelho pode gravar firmware nele. Antes de sair da bancada: gerar uma chave ED25519 própria (o padrão do nRF54L), guardá-la **fora** deste repositório (que é público) e apontá-la com `SB_CONFIG_BOOT_SIGNATURE_KEY_FILE`.
+
+**Regras do aparelho durante a atualização** (`src/model/dfu_state.c`, testadas em `test_dfu_state`):
+
+- **Em atividade, não atualiza.** Um reset no meio de um passeio perde o que não foi gravado; o alvo recusa o pedaço com `MGMT_ERR_EACCESSDENIED` e avisa na tela.
+- **Bateria abaixo de 30 % e fora do carregador, não atualiza.** Com o USB ligado, qualquer carga serve.
+- A tela de atualização (`docs/telas/28_atualizacao_cor.png`) toma a frente enquanto a imagem chega, mostra a porcentagem e volta para as páginas quando acaba.
+- O log da atividade fecha o arquivo a cada ponto (`sd_logger`), então o reset do mcumgr não perde dados no cartão.
+
+Nada disso foi testado em placa: não há hardware ainda.
+
 ## O que falta
 
-1. **Crítico:** iniciar o scan; inscrição com `disc_params` e `end_handle` (ou descoberta do CCC); `bt_conn_unref` depois do create; classificar conexões por papel; sensores com vários serviços.
+1. **Feito em 2026-09-20:** o serviço de rádio inicia o anúncio e a varredura; a inscrição leva `disc_params` e `end_handle` (descoberta automática do CCC); o `bt_conn_unref` depois do create. **Falta:** classificar conexões por papel e tratar sensores com vários serviços.
 2. **Crítico:** corrigir os parsers (velocidade CSC, flags do FTMS, vários RR) e levar os dados ao modelo (`boucle_update_hrm/bsc`, zonas, log).
 3. **Importante:** ANT+ pelo `sdk-ant` (HRM, BSC, FE-C, busca em background); pareamento com lista de sensores ANT+ e BLE e identificadores salvos (número do dispositivo ANT, `bt_addr_le_t`).
 4. **Importante:** canal de comandos (`$LOC`, `$DWN`, `$QRY`) por NUS e USB, com o papel NUS de volta a cliente ou com uma ponte nova no PC.

@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+  Sharp LS027B7DH01 (and LS027B7DH01A) 2.7" memory LCD, 400 x 240, 1 bit per
+  pixel, SPI with the least significant bit first and the chip select active
+  high: a mode byte (M0 update, M1 VCOM, M2 all clear), then for each line
+  its number, 50 bytes of pixels (1 is white) and a dummy byte, and a last
+  dummy byte. The panel of the myStravaB V3 and of the shopping list of the
+  new board.
+
+compatible: "sharp,ls027b7dh01"
+
+include: memlcd-common.yaml

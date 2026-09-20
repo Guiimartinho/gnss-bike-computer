@@ -35,7 +35,7 @@ extern "C" {
 #define DEFAULT_FTP                 240U
 
 /** Default weight in hectograms (e.g., 750 = 75.0 kg) */
-#define DEFAULT_WEIGHT              750U
+#define DEFAULT_WEIGHT              790U /* USER_WEIGHT of the legacy, 79 kg */
 
 /** Default HRM device ID */
 #define DEFAULT_HRM_DEVID           0x0D22U

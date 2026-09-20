@@ -223,6 +223,14 @@ static void connect_to_sensor(const bt_addr_le_t *addr, uint8_t sensor_type)
         return;
     }
 
+    /*
+     * bt_conn_le_create() hands back a reference of its own. The connected
+     * callback takes the one this module keeps (hrs_conn and friends), so
+     * this one goes back now; without it the pool of four connections runs
+     * out after four attempts.
+     */
+    bt_conn_unref(conn);
+
     /* Store pending sensor info */
     for (uint8_t i = 0U; i < MAX_PENDING_CONN; i++) {
         if (!pending_sensors[i].pending) {

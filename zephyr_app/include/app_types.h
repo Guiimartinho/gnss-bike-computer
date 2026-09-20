@@ -41,8 +41,8 @@ extern "C" {
 /** Maximum number of parcours (routes) */
 #define MAX_PARCOURS         10U
 
-/** GPS history size for position calculations */
-#define HISTO_POINT_SIZE     15U
+/** GPS history size for position calculations (`legacy/source/parameters.h:21`) */
+#define HISTO_POINT_SIZE     20U
 
 /** Attitude buffer size for logging */
 #define ATT_BUFFER_NB_ELEM   20U
@@ -107,7 +107,7 @@ typedef struct {
     float climb;            /**< Total climb in meters */
     float vit_asc;          /**< Vertical speed in m/s */
     int8_t slope;           /**< Current slope in percent */
-    uint16_t pwr;           /**< Estimated power in watts */
+    int16_t pwr;            /**< Estimated power in watts, negative going down */
     uint16_t next;          /**< Distance to next segment in meters */
     uint16_t nbpts;         /**< Number of GPS points received */
     uint16_t nbsec_act;     /**< Active seconds (speed > threshold) */

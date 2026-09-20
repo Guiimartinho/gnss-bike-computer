@@ -1,72 +1,83 @@
 /*
- * nRF54LM20 DK (nrf54lm20dk/nrf54lm20a/cpuapp): development target for the
- * board of our own, which uses the nRF54LM20A. The DK carries the
- * nRF54LM20B, the same part plus an NPU.
+ * nRF54LM20 DK (nrf54lm20dk/nrf54lm20a/cpuapp): development target of the
+ * new board, which uses the nRF54LM20A (the DK carries the nRF54LM20B, the
+ * same part plus an NPU).
  *
- * The DK has none of the myStravaB peripherals. This overlay only gives the
- * application the names it needs (aliases and pin labels) on free pins of
- * the DK expansion header, so the port builds and runs here, and breakout
- * boards can be wired to these pins. The pins follow the nRF54L power
- * domains: serial blocks 20 to 24 on ports P1 and P3, spi00 on P2.
+ * The DK has none of the peripherals of the new board. This overlay puts
+ * them on free pins of the DK, with the pins of docs/14-hardware-placa-nova.md
+ * (Alocação de pinos, "Pino no DK"), so evaluation boards can be wired to
+ * them. The serial blocks follow the nRF54L power domains: 20 to 24 on
+ * ports P1 and P3, spi00 on P2.
  *
  * Console: uart20 (VCOM0 of the DK), from the board files.
- * Buttons and LED: the DK's sw0, sw1, sw2 and led0.
  *
- *   GPS UART (uart21)     TX P1.04, RX P1.05; reset P1.06, standby P1.07,
- *                         FIX P1.13
- *   Sensor I2C (i2c23)    SDA P1.02, SCL P1.03; IMU INT1 P3.04, RST P3.05
- *   LCD SPI (spi22)       SCK P3.03, MOSI P3.00, CS P3.02 (active high)
- *   SD SPI (spi00)        SCK P2.01, MOSI P2.02, MISO P2.04, CS P2.03
- *   NeoPixel              P3.06
+ *   GNSS UART (uart21)    TX P1.04, RX P1.05
+ *   Sensor I2C (i2c23)    SDA P1.29, SCL P1.03; IMU INT1 P3.04
+ *   Storage SPI (spi00)   SCK P2.01, MOSI P2.02, MISO P2.04, CS P2.05 (NOR flash)
+ *   Display SPI (spi22)   SCK P3.03, MOSI P3.00, CS P3.02; DISP P3.05,
+ *                         EXTCOMIN P3.06
+ *   Energy I2C (i2c24)    SDA P1.11, SCL P1.14; nPM1300 0x6B with its GPIO3
+ *                         interrupt on P0.04, MAX17262 0x36, AEM10900 0x41
+ *   Keys                  buttons 0, 1 and 2 of the DK (left, centre, right)
+ *   Light                 LED 1 of the DK (pwm20) stands for the display light
+ *
+ * Two pin rules of the nRF54LM20A (datasheet 4539_001 v1.0) shape this map:
+ *
+ *   - P1.01 (NFC1) and P1.02 (NFC2) leave reset as NFC antenna pins, with the
+ *     GPIO function off (table 78 and NFCT PADCONFIG, reset 0x1, 8.13.3).
+ *     Zephyr only frees them when the uicr node has nfct-pins-as-gpios, so
+ *     nothing here uses them and the NFC antenna stays possible.
+ *   - SCL of TWIM and SCK of SPIM must sit on clock pins (table 79). These
+ *     are P0.03, P0.04, P0.06, P0.07, P1.03, P1.04, P1.07, P1.13, P1.14,
+ *     P1.17, P1.18, P1.23, P1.24, P2.01, P2.06, P3.03 and P3.04. The Nordic
+ *     samples for the nPM1300 EK put SCL on P1.12, which is not one.
+ *
+ * The services find the devices by these aliases: gnss, baro0, imu0, mag0,
+ * light0, backlight, backlight-supply, fuel-gauge0, pmic, pmic-charger,
+ * pmic-regulators and solar-charger (docs/16, Serviços), the display by the chosen node
+ * zephyr,display and the keys by the node label longpress. A device that
+ * does not answer is left out.
  */
+
+#include <zephyr/dt-bindings/input/input-event-codes.h>
+#include <zephyr/dt-bindings/regulator/npm13xx.h>
+#include <zephyr/dt-bindings/sensor/bmp581.h>
 
 / {
     chosen {
-        zephyr,display = &ls027;
+        zephyr,display = &display;
     };
 
     aliases {
-        gps-uart = &uart21;
-        lcd-spi = &spi22;
-        sdc-spi = &spi00;
-        sensor-i2c = &i2c23;
+        gnss = &gnss;
+        baro0 = &bmp585;
+        imu0 = &bmi270;
+        mag0 = &mmc5633;
+        light0 = &opt3001;
+        backlight = &pwm_led1;
+        backlight-supply = &npm1300_ldo2;
+        fuel-gauge0 = &max17262;
+        pmic = &npm1300_pmic;
+        pmic-charger = &npm1300_charger;
+        pmic-regulators = &npm1300_regulators;
+        solar-charger = &aem10900;
     };
 
-    /* Same polarities as the myStravaB V3 (see nrf52840dk_nrf52840.overlay) */
-    gps_ctrl {
-        compatible = "gpio-keys";
-        gps_reset: gps_reset {
-            gpios = <&gpio1 6 GPIO_ACTIVE_LOW>;
-            label = "GPS Reset";
-        };
-        gps_stdby: gps_stdby {
-            gpios = <&gpio1 7 GPIO_ACTIVE_LOW>;
-            label = "GPS Standby";
-        };
-        gps_fix: gps_fix {
-            gpios = <&gpio1 13 (GPIO_PULL_DOWN | GPIO_ACTIVE_HIGH)>;
-            label = "GPS Fix";
-        };
+    /*
+     * The three keys: short on release before 1 s, long after 1 s held
+     * (docs/18, Botões); the interface reads the codes of this node only.
+     */
+    longpress: longpress {
+        compatible = "zephyr,input-longpress";
+        input = <&dk_buttons>;
+        input-codes = <INPUT_KEY_0>, <INPUT_KEY_1>, <INPUT_KEY_2>;
+        short-codes = <INPUT_KEY_LEFT>, <INPUT_KEY_ENTER>, <INPUT_KEY_RIGHT>;
+        long-codes = <INPUT_KEY_HOME>, <INPUT_KEY_MENU>, <INPUT_KEY_END>;
+        long-delay-ms = <1000>;
     };
 
-    imu_ctrl {
-        compatible = "gpio-keys";
-        imu_int1: imu_int1 {
-            gpios = <&gpio3 4 (GPIO_PULL_DOWN | GPIO_ACTIVE_HIGH)>;
-            label = "IMU INT1";
-        };
-        imu_reset: imu_reset {
-            gpios = <&gpio3 5 GPIO_ACTIVE_HIGH>;
-            label = "IMU Reset";
-        };
-    };
-
-    neopixel_pin {
-        compatible = "gpio-keys";
-        neo_data: neo_data {
-            gpios = <&gpio3 6 GPIO_ACTIVE_HIGH>;
-            label = "Neopixel Data";
-        };
+    /* The buttons of the board files, with a label for the node above */
+    dk_buttons: buttons {
     };
 };
 
@@ -75,16 +86,35 @@
     status = "okay";
 };
 
-/* GPS module */
+/*
+ * GNSS: u-blox MAX-M10N-10B by UBX (driver in modules/gnss_drivers). The
+ * receiver leaves the factory at 38400 baud (CFG-UART1-BAUDRATE, interface
+ * description 5.9.29), which is what the UART uses here; the driver turns
+ * NMEA off, asks for one UBX-NAV-PVT and one UBX-NAV-SAT per second, keeps
+ * the portable dynamic model and tracks in LEAP, without the time pulse.
+ */
 &uart21 {
     status = "okay";
-    current-speed = <9600>;
+    current-speed = <38400>;
     pinctrl-0 = <&uart21_default>;
     pinctrl-1 = <&uart21_sleep>;
     pinctrl-names = "default", "sleep";
+
+    gnss: gnss {
+        compatible = "u-blox,max-m10";
+        fix-rate-ms = <1000>;
+        dynamic-model = "portable";
+        power-mode = "leap";
+        satellites-rate = <1>;
+    };
 };
 
-/* Barometer, IMU and fuel gauge, as on the V3 bus */
+/*
+ * Sensors of the new board (docs/14, Barramentos e endereços): no address
+ * collides, and nothing scans the bus (0x7E puts the MMC5633NJL in I3C).
+ * SCL on P1.03, a clock pin, with SDA on P1.29, the neighbouring ball in the
+ * package; P1.02 would be NFC2.
+ */
 &i2c23 {
     status = "okay";
     clock-frequency = <I2C_BITRATE_FAST>;
@@ -92,58 +122,226 @@
     pinctrl-1 = <&i2c23_sleep>;
     pinctrl-names = "default", "sleep";
 
-    baro: bme280@76 {
-        compatible = "bosch,bme280";
-        reg = <0x76>;
+    /* Bosch BMP585 (the BMP581 driver accepts its chip ID); SDO high: 0x47 */
+    bmp585: bmp585@47 {
+        compatible = "bosch,bmp581";
+        reg = <0x47>;
+        power-mode = <BMP581_DT_MODE_NORMAL>;
+        odr = <BMP581_DT_ODR_10_HZ>;
+        press-osr = <BMP581_DT_OVERSAMPLING_8X>;
+        temp-osr = <BMP581_DT_OVERSAMPLING_2X>;
     };
 
-    fxos: fxos8700@1e {
-        compatible = "nxp,fxos8700";
-        reg = <0x1e>;
-        reset-gpios = <&gpio3 5 GPIO_ACTIVE_HIGH>;
-        int1-gpios = <&gpio3 4 GPIO_ACTIVE_HIGH>;
+    /* Bosch BMI270, SDO low: 0x68 */
+    bmi270: bmi270@68 {
+        compatible = "bosch,bmi270";
+        reg = <0x68>;
+        irq-gpios = <&gpio3 4 GPIO_ACTIVE_HIGH>;
     };
 
-    stc3100: stc3100@70 {
-        compatible = "st,stc3100";
-        reg = <0x70>;
+    /* Memsic MMC5633NJL, fixed address; a measurement per fetch */
+    mmc5633: mmc5633@30 {
+        compatible = "memsic,mmc56x3";
+        reg = <0x30>;
+        magn-odr = <0>;
     };
-};
 
-/* LCD on the SPI of the expansion header; the LS027 chip select is active high */
-&spi22 {
-    status = "okay";
-    cs-gpios = <&gpio3 2 GPIO_ACTIVE_HIGH>;
-
-    ls027: ls027b7dh01@0 {
-        compatible = "sharp,ls0xx";
-        reg = <0>;
-        spi-max-frequency = <2000000>;
-        width = <400>;
-        height = <240>;
+    /* TI OPT3001, ADDR low: 0x44 */
+    opt3001: opt3001@44 {
+        compatible = "ti,opt3001";
+        reg = <0x44>;
     };
 };
 
 /*
- * microSD on spi00, the fast SPI of port P2. The DK's MX25R64 flash sits on
- * the same bus (CS P2.05, disabled in the board files); its node goes away
- * so that the SD slot can take unit address 0.
+ * Energy I2C (docs/14, Barramentos e endereços: i2c30 on the new board). On
+ * the DK it takes SDA on P1.11, the pin the Nordic samples use for the
+ * nPM1300 EK, and SCL on P1.14, a clock pin of the same row of balls (the
+ * samples use P1.12, which is not a clock pin). The instance is i2c24, since
+ * i2c21, the one of those samples, shares its block with uart21, the GNSS
+ * here. The evaluation boards of the MAX17262 and the AEM10900 share the
+ * bus: nPM1300 0x6B, MAX17262 0x36, AEM10900 0x41, no collision.
  */
-/delete-node/ &mx25r64;
+&i2c24 {
+    status = "okay";
+    clock-frequency = <I2C_BITRATE_FAST>;
+    pinctrl-0 = <&i2c24_default>;
+    pinctrl-1 = <&i2c24_sleep>;
+    pinctrl-names = "default", "sleep";
 
+    /*
+     * MAX17262 on the 2000 mAh cell (docs/14): the nPM1300 charges at
+     * 600 mA and ends at 10 % of it, 60 mA; TH tied to BATT, so no
+     * thermistor and the temperature comes from the die.
+     */
+    max17262: fuel-gauge@36 {
+        compatible = "adi,max17262";
+        reg = <0x36>;
+        design-capacity-mah = <2000>;
+        charge-term-current-ma = <60>;
+        charge-voltage-mv = <4200>;
+    };
+
+    /*
+     * AEM10900 solar charger, I2C_ADDR tied to I2C_VDD (docs/14): its pins
+     * charge to 3.90 V; with the board on, the I2C configuration charges to
+     * 4.05 V. apm-scale-pj stays 0 until e-peas gives theta x L: no solar
+     * power in mW until then, only whether the panel charges.
+     */
+    aem10900: charger@41 {
+        compatible = "e-peas,aem10900";
+        reg = <0x41>;
+        charge-voltage-mv = <4050>;
+    };
+
+    /*
+     * nPM1300 (docs/14, Alimentação), with the GPIO3 interrupt on P0.04 as
+     * the Nordic samples wire the EK. Ship mode through the regulators node
+     * (alias pmic-regulators); VBUS and charger events for the power service.
+     */
+    npm1300_pmic: pmic@6b {
+        compatible = "nordic,npm1300";
+        reg = <0x6b>;
+        host-int-gpios = <&gpio0 4 GPIO_ACTIVE_HIGH>;
+        pmic-int-pin = <3>;
+
+        npm1300_regulators: regulators {
+            compatible = "nordic,npm1300-regulator";
+
+            /* 1V8: GNSS VCC and V_IO; the V_IO absolute maximum is 1.98 V,
+             * so the voltage is locked (VSET1 of 47k starts it at 1.8 V) */
+            npm1300_buck1: BUCK1 {
+                regulator-min-microvolt = <1800000>;
+                regulator-max-microvolt = <1800000>;
+                regulator-boot-on;
+            };
+
+            /* 3V0: MCU, display, sensors; VSET2 of 150k starts it at 3.0 V */
+            npm1300_buck2: BUCK2 {
+                regulator-min-microvolt = <3000000>;
+                regulator-max-microvolt = <3000000>;
+                regulator-always-on;
+            };
+
+            /* SD3V0: load switch of the card */
+            npm1300_ldo1: LDO1 {
+                regulator-initial-mode = <NPM13XX_LDSW_MODE_LDSW>;
+                regulator-boot-on;
+            };
+
+            /* 3V3BL: LDO of the display light, on only with the light */
+            npm1300_ldo2: LDO2 {
+                regulator-initial-mode = <NPM13XX_LDSW_MODE_LDO>;
+                regulator-min-microvolt = <3300000>;
+                regulator-max-microvolt = <3300000>;
+            };
+        };
+
+        /*
+         * 600 mA (0.3C of the 2000 mAh cell), end at 4.20 V and at 10 % of
+         * the current (60 mA, the IChgTerm of the MAX17262), 500 mA from VBUS
+         * until the USB-C source says more, JEITA with the 10k B3380 NTC of
+         * the pack at the register defaults (0, 10, 45 and 60 degC).
+         */
+        npm1300_charger: charger {
+            compatible = "nordic,npm1300-charger";
+            term-microvolt = <4200000>;
+            current-microamp = <600000>;
+            dischg-limit-microamp = <1000000>;
+            vbus-limit-microamp = <500000>;
+            thermistor-ohms = <10000>;
+            thermistor-beta = <3380>;
+            charging-enable;
+        };
+    };
+};
+
+/*
+ * Display: JDI LPM027M128B (docs/18), 400 x 240 in 8 colours, drawn in
+ * portrait by the driver of modules/gnss_drivers. EXTMODE high on the panel
+ * side: the COM inverts on the rising edges of EXTCOMIN. The panel runs from
+ * 3.0 V and wants its inputs at that level (high above VDD - 0.1 V, datasheet
+ * 3.1): the DK I/O must be at 3.0 V, or the signals need level shifting.
+ * Timing (datasheet 4.2): SCLK 1 MHz typical and 2 MHz at most, chip select
+ * active high, 6 us before the first clock and 2 us after the last.
+ * The Sharp LS027B7DH01 of the backup plan takes the same node with
+ * compatible "sharp,ls027b7dh01", 3 us and 1 us around the chip select and
+ * power-gpios on the enable of its 5 V regulator.
+ */
+&spi22 {
+    status = "okay";
+    cs-gpios = <&gpio3 2 GPIO_ACTIVE_HIGH>;
+    pinctrl-0 = <&spi22_display_default>;
+    pinctrl-1 = <&spi22_display_sleep>;
+    pinctrl-names = "default", "sleep";
+
+    display: display@0 {
+        compatible = "jdi,lpm027m128b";
+        reg = <0>;
+        spi-max-frequency = <2000000>;
+        spi-cs-setup-delay-ns = <6000>;
+        spi-cs-hold-delay-ns = <2000>;
+        width = <400>;
+        height = <240>;
+        disp-gpios = <&gpio3 5 GPIO_ACTIVE_HIGH>;
+        extcomin-gpios = <&gpio3 6 GPIO_ACTIVE_HIGH>;
+    };
+};
+
+/*
+ * Storage on spi00, the fast SPI of port P2.
+ *
+ * The card socket left the new board in 2026-09-20 (decision of the owner:
+ * the soldered SD NAND costs more than the whole storage is worth), and a
+ * soldered SPI NOR takes its place. The DK carries an MX25R6435F of 8 MB on
+ * this same bus, which is what this overlay uses, so the path of the
+ * production board is the one that gets built and run here: FatFs over a
+ * flash disk, mounted on /SD: as before, and the same disk goes to the PC
+ * over USB when the mass storage comes.
+ */
 &spi00 {
     status = "okay";
-    cs-gpios = <&gpio2 3 GPIO_ACTIVE_LOW>;
+    cs-gpios = <&gpio2 5 GPIO_ACTIVE_LOW>;
+};
 
-    sdhc0: sdhc@0 {
-        compatible = "zephyr,sdhc-spi-slot";
-        reg = <0>;
-        spi-max-frequency = <8000000>;
-        mmc {
-            compatible = "zephyr,sdmmc-disk";
-            status = "okay";
-            disk-name = "SD";
+&mx25r64 {
+    status = "okay";
+
+    partitions {
+        compatible = "fixed-partitions";
+        #address-cells = <1>;
+        #size-cells = <1>;
+
+        /* the whole part: activities, segments and routes of the rider */
+        storage_disk: partition@0 {
+            label = "storage_disk";
+            reg = <0x0 DT_SIZE_M(8)>;
         };
+    };
+};
+
+/*
+ * USB: the serial of the commands and the disk of the rider on the PC
+ * ([09](../../docs/09-armazenamento-usb.md)). The DK brings the USB-C of
+ * the nRF54LM20A out on its own connector.
+ */
+&usbhs {
+    status = "okay";
+};
+
+/ {
+    storage_disk0 {
+        compatible = "zephyr,flash-disk";
+        status = "okay";
+        partition = <&storage_disk>;
+        disk-name = "SD";
+        cache-size = <4096>;
+    };
+};
+
+&zephyr_udc0 {
+    cdc_acm_uart0: cdc_acm_uart0 {
+        compatible = "zephyr,cdc-acm-uart";
     };
 };
 
@@ -168,15 +366,47 @@
 
     i2c23_default: i2c23_default {
         group1 {
-            psels = <NRF_PSEL(TWIM_SDA, 1, 2)>,
+            psels = <NRF_PSEL(TWIM_SDA, 1, 29)>,
                     <NRF_PSEL(TWIM_SCL, 1, 3)>;
         };
     };
 
     i2c23_sleep: i2c23_sleep {
         group1 {
-            psels = <NRF_PSEL(TWIM_SDA, 1, 2)>,
+            psels = <NRF_PSEL(TWIM_SDA, 1, 29)>,
                     <NRF_PSEL(TWIM_SCL, 1, 3)>;
+            low-power-enable;
+        };
+    };
+
+    i2c24_default: i2c24_default {
+        group1 {
+            psels = <NRF_PSEL(TWIM_SDA, 1, 11)>,
+                    <NRF_PSEL(TWIM_SCL, 1, 14)>;
+            bias-pull-up;
+        };
+    };
+
+    i2c24_sleep: i2c24_sleep {
+        group1 {
+            psels = <NRF_PSEL(TWIM_SDA, 1, 11)>,
+                    <NRF_PSEL(TWIM_SCL, 1, 14)>;
+            low-power-enable;
+        };
+    };
+
+    /* The display only listens: no MISO, P3.01 stays free */
+    spi22_display_default: spi22_display_default {
+        group1 {
+            psels = <NRF_PSEL(SPIM_SCK, 3, 3)>,
+                    <NRF_PSEL(SPIM_MOSI, 3, 0)>;
+        };
+    };
+
+    spi22_display_sleep: spi22_display_sleep {
+        group1 {
+            psels = <NRF_PSEL(SPIM_SCK, 3, 3)>,
+                    <NRF_PSEL(SPIM_MOSI, 3, 0)>;
             low-power-enable;
         };
     };

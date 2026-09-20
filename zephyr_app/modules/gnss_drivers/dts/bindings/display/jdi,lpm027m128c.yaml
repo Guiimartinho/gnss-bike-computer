@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+  JDI LPM027M128C 2.7" memory-in-pixel LCD, 400 x 240, 8 colours: the
+  LPM027M128B with a light. Same protocol as jdi,lpm027m128b (LPM027M128B
+  specification, section 6), driven in 3-bit mode.
+
+compatible: "jdi,lpm027m128c"
+
+include: memlcd-common.yaml

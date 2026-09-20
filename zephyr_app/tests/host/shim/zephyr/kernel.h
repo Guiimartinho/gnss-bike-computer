@@ -54,6 +54,11 @@ int64_t k_uptime_get(void);
 /** Advances the fake uptime instead of sleeping (support/host_kernel.c). */
 int32_t k_msleep(int32_t ms);
 
+#ifndef __noinit
+/* on the board it keeps the variable out of the startup clear; here it is plain memory */
+#define __noinit
+#endif
+
 #ifndef ARG_UNUSED
 #define ARG_UNUSED(x) ((void)(x))
 #endif

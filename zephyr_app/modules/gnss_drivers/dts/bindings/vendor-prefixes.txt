@@ -1,0 +1,2 @@
+# Vendor prefixes of the bindings of this module, added to the Zephyr list.
+e-peas	e-peas SA

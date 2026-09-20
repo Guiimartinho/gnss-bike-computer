@@ -35,6 +35,9 @@ LOG_MODULE_REGISTER(parcours, CONFIG_LOG_DEFAULT_LEVEL);
 /** Point storage */
 static point_t points[PARCOURS_MAX_POINTS];
 
+/** One point of the file out of this many is kept (see add_point()) */
+static uint16_t route_stride = 1U;
+
 /** Number of points loaded */
 static uint16_t num_points;
 
@@ -157,33 +160,73 @@ static uint16_t find_nearest_point(float lat, float lon)
 /**
  * @brief Parse a line from CRS file
  */
-static bool parse_crs_line(const char *line, float *lat, float *lon, float *alt)
+static bool parse_route_line(const char *line, float *lat, float *lon, float *alt)
 {
-    /* CRS format: lat;lon;alt */
-    char *endptr;
+    /*
+     * The routes of the legacy are three numbers separated by spaces,
+     * `lat lon alt`, and the altitude may be missing
+     * (`legacy/source/parsers/file_parser.cpp:79-123`, `chargerPointPar()`,
+     * with the real files of `tools/TDD/DB`). A line with `<` is metadata.
+     */
+    if (strchr(line, '<') != NULL) {
+        return false;
+    }
+
+    char *endptr = NULL;
 
     *lat = strtof(line, &endptr);
-    if (*endptr != ';') {
+    if ((endptr == NULL) || (endptr == line)) {
         return false;
     }
 
-    *lon = strtof(endptr + 1, &endptr);
-    if (*endptr != ';') {
+    const char *cursor = endptr;
+
+    *lon = strtof(cursor, &endptr);
+    if ((endptr == NULL) || (endptr == cursor)) {
         return false;
     }
 
-    *alt = strtof(endptr + 1, NULL);
+    cursor = endptr;
+    *alt = strtof(cursor, &endptr);
+    if ((endptr == NULL) || (endptr == cursor)) {
+        *alt = 0.0f; /* the legacy takes the point without the altitude */
+    }
 
     return true;
 }
 
 /**
- * @brief Load CRS format file
+ * @brief Take one more point of the route, halving it when the array fills
+ *
+ * The routes of the legacy go past what fits here (`tools/TDD/DB` holds one
+ * of 950 points against the PARCOURS_MAX_POINTS of the port), and the legacy
+ * kept them on the heap. Instead of cutting the route, which would leave the
+ * rider without its end, the resolution drops: one point out of two stays
+ * and the loading goes on, as the segments do (`model/segment.c`).
  */
-static app_err_t load_crs_file(const char *filename)
+static void add_point(float lat, float lon, float alt)
+{
+    if (num_points >= PARCOURS_MAX_POINTS) {
+        uint16_t kept = 0U;
+
+        for (uint16_t i = 0U; i < num_points; i += 2U) {
+            points[kept] = points[i];
+            kept++;
+        }
+        num_points = kept;
+        route_stride *= 2U;
+    }
+
+    points[num_points].lat = lat;
+    points[num_points].lon = lon;
+    points[num_points].alt = alt;
+    points[num_points].rtime = 0.0f;
+    num_points++;
+}
+
+static app_err_t load_route_file(const char *filename)
 {
     struct fs_file_t file;
-    char line[64];
     int ret;
 
     fs_file_t_init(&file);
@@ -194,53 +237,66 @@ static app_err_t load_crs_file(const char *filename)
     }
 
     num_points = 0U;
+    route_stride = 1U;
 
-    /* Read line by line */
-    while (num_points < PARCOURS_MAX_POINTS) {
-        ssize_t len = 0;
-        char ch;
+    /*
+     * Read in chunks and split into lines here: fs_read() knows nothing
+     * about lines, and the files of the legacy end them with CRLF, which
+     * leaves an empty line between points. Reading a byte at a time would
+     * also cost one FatFs call per character.
+     */
+    char chunk[128];
+    char line[PARCOURS_LINE_MAX];
+    size_t line_len = 0U;
+    ssize_t got;
 
-        /* Read until newline or EOF */
-        while (len < (ssize_t)(sizeof(line) - 1U)) {
-            ssize_t r = fs_read(&file, &ch, 1);
-            if (r <= 0) {
-                break;
+    while ((got = fs_read(&file, chunk, sizeof(chunk))) > 0) {
+        for (ssize_t i = 0; i < got; i++) {
+            char c = chunk[i];
+
+            if ((c != '\n') && (c != '\r')) {
+                if (line_len < (PARCOURS_LINE_MAX - 1U)) {
+                    line[line_len] = c;
+                    line_len++;
+                }
+                continue;
             }
-            if ((ch == '\n') || (ch == '\r')) {
-                break;
+
+            line[line_len] = '\0';
+            line_len = 0U;
+
+            float lat;
+            float lon;
+            float alt;
+
+            if (!parse_route_line(line, &lat, &lon, &alt)) {
+                continue;
             }
-            line[len++] = ch;
-        }
-        line[len] = '\0';
-
-        if (len == 0) {
-            break;
-        }
-
-        /* Skip comments and empty lines */
-        if ((line[0] == '#') || (line[0] == '\0')) {
-            continue;
-        }
-
-        /* Parse coordinates */
-        float lat, lon, alt;
-        if (parse_crs_line(line, &lat, &lon, &alt)) {
-            points[num_points].lat = lat;
-            points[num_points].lon = lon;
-            points[num_points].alt = alt;
-            points[num_points].rtime = 0.0f;
-            num_points++;
+            add_point(lat, lon, alt);
         }
     }
 
-    fs_close(&file);
+    /* a file whose last line has no end of line still gives its point */
+    if (line_len > 0U) {
+        float lat;
+        float lon;
+        float alt;
+
+        line[line_len] = '\0';
+        if (parse_route_line(line, &lat, &lon, &alt)) {
+            add_point(lat, lon, alt);
+        }
+    }
+
+    (void)fs_close(&file);
 
     if (num_points < 2U) {
         LOG_ERR("Not enough points in file");
         return APP_ERR_INVALID_PARAM;
     }
 
-    LOG_INF("Loaded %u points from %s", num_points, filename);
+    LOG_INF("Loaded %u points from %s, one of every %u", num_points, filename,
+            (unsigned int)route_stride);
     return APP_OK;
 }
 
@@ -294,14 +350,8 @@ app_err_t parcours_load(const char *filename)
     strncpy(parcours_name, name, PARCOURS_NAME_LEN - 1U);
     parcours_name[PARCOURS_NAME_LEN - 1U] = '\0';
 
-    /* Load based on extension */
-    app_err_t err;
-    if (strstr(filename, ".CRS") != NULL || strstr(filename, ".crs") != NULL) {
-        err = load_crs_file(filename);
-    } else {
-        LOG_ERR("Unsupported file format");
-        err = APP_ERR_INVALID_PARAM;
-    }
+    /* The legacy writes `.PAR`; `.CRS` is the same text with another name */
+    app_err_t err = load_route_file(filename);
 
     if (err == APP_OK) {
         calc_route_stats();
@@ -372,7 +422,13 @@ void parcours_update(float lat, float lon, float alt)
 {
     (void)alt;
 
-    if (state != PARCOURS_STATE_ACTIVE) {
+    /*
+     * Off the route the rider is still riding it: the legacy calls
+     * updatePosAuParcours() every epoch while a route is loaded
+     * (`legacy/source/model/BoucleCRS.cpp:104-111`), and without this the
+     * state below could never come back to ACTIVE.
+     */
+    if ((state != PARCOURS_STATE_ACTIVE) && (state != PARCOURS_STATE_OFF_ROUTE)) {
         return;
     }
 
@@ -477,7 +533,8 @@ bool parcours_is_loaded(void)
 
 bool parcours_is_active(void)
 {
-    return (state == PARCOURS_STATE_ACTIVE);
+    /* being away from the line does not end the navigation */
+    return (state == PARCOURS_STATE_ACTIVE) || (state == PARCOURS_STATE_OFF_ROUTE);
 }
 
 const point_t *parcours_get_point(uint16_t index)
