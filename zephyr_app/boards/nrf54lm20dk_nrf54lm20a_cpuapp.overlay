@@ -100,11 +100,16 @@
     pinctrl-1 = <&uart21_sleep>;
     pinctrl-names = "default", "sleep";
 
+    /*
+     * u-blox MAX-F10S, L1 and L5 at the same time (docs/15, GNSS): the same
+     * MAX footprint and the same UBX driver as the MAX-M10N it replaces, 1 m
+     * of CEP instead of 1,5 m, and no LEAP to ask for. NavIC stays off: it
+     * only covers India.
+     */
     gnss: gnss {
-        compatible = "u-blox,max-m10";
+        compatible = "u-blox,max-f10";
         fix-rate-ms = <1000>;
         dynamic-model = "portable";
-        power-mode = "leap";
         satellites-rate = <1>;
     };
 };
@@ -306,6 +311,15 @@
 
 &mx25r64 {
     status = "okay";
+
+    /*
+     * The part of the new board is this same MX25R6435F (chosen in
+     * 2026-09-20, docs/15): its ultra low power mode spends 3.1 mA to erase
+     * a sector against the 20 mA of the usual parts, and 7 nA in deep power
+     * down. The mode is the default of the part; saying it here keeps it
+     * that way if a batch ever comes with the other one set.
+     */
+    mxicy,mx25r-power-mode = "low-power";
 
     partitions {
         compatible = "fixed-partitions";

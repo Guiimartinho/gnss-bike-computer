@@ -25,8 +25,8 @@ SHEETS = [
     ("telas-crs", "CRS", ["02_crs1", "03_crs1_1seg", "05_crs1_2seg", "09_crs2", "10_crs3"]),
     ("telas-segmentos", "Segmentos", ["04_crs1_1seg_perto", "06_crs1_2seg_1perto", "07_crs1_2seg_2perto",
                                      "08_crs1_2seg_perto", "11_notificacao", "18c_sem_percursos"]),
-    ("telas-modos", "Modos", ["13_prc", "14_prc_sem_percurso", "16_fec", "15_fec_conectando", "12_gnss",
-                              "17_dbg"]),
+    ("telas-modos", "Modos", ["13_prc", "30_perfil", "14_prc_sem_percurso", "16_fec",
+                              "15_fec_conectando", "12_gnss", "17_dbg"]),
     ("telas-menus", "Menus", ["18_menu", "18b_percursos", "19_ajustes", "20_sensores", "21_parear",
                               "22_valor", "23_tela_luz", "24_formatar"]),
     ("telas-sistema", "Sistema", ["01_partida", "25_energia", "26_usb", "27_desligando",
@@ -36,6 +36,7 @@ SHEETS = [
 CAPTIONS = {
     "01_partida": "Partida",
     "28_atualizacao": "Atualização por BLE",
+    "30_perfil": "Perfil do percurso",
     "29_atualizacao_pronta": "Atualização pronta",
     "02_crs1": "CRS, página 1",
     "03_crs1_1seg": "CRS, 1 segmento",

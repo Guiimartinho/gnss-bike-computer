@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
 
 config GNSS_UBLOX_M10
-	bool "u-blox M10 GNSS receiver by UBX (u-blox,max-m10)"
+	bool "u-blox M10 and F10 GNSS receivers by UBX"
 	default y
-	depends on DT_HAS_U_BLOX_MAX_M10_ENABLED
+	depends on DT_HAS_U_BLOX_MAX_M10_ENABLED || DT_HAS_U_BLOX_MAX_F10_ENABLED
 	depends on GNSS
 	select MODEM_MODULES
 	select MODEM_UBX
@@ -11,12 +11,13 @@ config GNSS_UBLOX_M10
 	select MODEM_DEDICATED_WORKQUEUE
 	select UART_INTERRUPT_DRIVEN if !UART_ASYNC_API
 	help
-	  u-blox MAX-M10N and the other M10 receivers on a UART, with the
-	  configuration interface (UBX-CFG-VALSET), one UBX-NAV-PVT per epoch,
-	  UBX-NAV-SAT for the sky plot, the LEAP power mode and the software
-	  standby by UBX-RXM-PMREQ. The Zephyr of the NCS has no M10 driver:
-	  the M8 one speaks the legacy UBX-CFG messages, which the M10 does
-	  not accept.
+	  u-blox MAX-M10N ("u-blox,max-m10") and MAX-F10S ("u-blox,max-f10")
+	  on a UART, with the configuration interface (UBX-CFG-VALSET), one
+	  UBX-NAV-PVT per epoch, UBX-NAV-SAT for the sky plot and the software
+	  standby by UBX-RXM-PMREQ. The M10 adds the LEAP power mode; the F10
+	  receives L1 and L5 at the same time and has no CFG-PM group. The
+	  Zephyr of the NCS has no driver for either: the M8 one speaks the
+	  legacy UBX-CFG messages, which neither part accepts.
 
 if GNSS_UBLOX_M10
 

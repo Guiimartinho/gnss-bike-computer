@@ -1,6 +1,6 @@
 /**
  * @file gnss_ublox_m10.c
- * @brief u-blox M10 receiver (MAX-M10N-10B) on a UART, by UBX
+ * @brief u-blox M10 and F10 receivers on a UART, by UBX
  *
  * The Zephyr of the NCS v3.3.0 has drivers for the u-blox M8 and F9P, not for
  * the M10: the M8 configures with the legacy UBX-CFG messages, which the M10
@@ -9,16 +9,23 @@
  * (modem_ubx over a UART pipe) with the frames of ubx_m10.c, which the host
  * tests check against the u-blox documents.
  *
+ * The board takes two parts in the same footprint, and the driver serves
+ * both: the single-band MAX-M10N-10B ("u-blox,max-m10") and the dual-band
+ * MAX-F10S ("u-blox,max-f10"), which is what the new board carries.
+ *
  * | What | Where |
  * |---|---|
  * | Configuration by UBX-CFG-VALSET in the RAM and BBR layers | interface description 3.10.5, 5.3 |
  * | LEAP by CFG-PM-OPERATEMODE = 2, 1 Hz, without time pulse | integration manual 3.7.2 |
  * | Software standby by UBX-RXM-PMREQ, waking on the UART RX | integration manual 3.7.4.2 |
  * | One UBX-NAV-PVT per epoch, UBX-NAV-SAT for the sky plot | interface description 3.15.11, 3.15.13 |
+ * | L1 and L5 together, NavIC, and no CFG-PM at all | F10 SPG 6.00 UBX-23002975 R02, 4.9.20 |
  *
  * The receiver may miss a message while it duty cycles in LEAP (integration
  * manual 3.7.2): every configuration goes out with retries, and the driver
- * takes the receiver to full power before a batch of them.
+ * takes the receiver to full power before a batch of them. On the F10 there
+ * is no LEAP to leave: the part tracks at full power and the energy comes
+ * back from the standby, which the GNSS service drives.
  */
 
 #define DT_DRV_COMPAT u_blox_max_m10
@@ -41,7 +48,10 @@ LOG_MODULE_REGISTER(ublox_m10, CONFIG_GNSS_LOG_LEVEL);
 /* A UBX-NAV-SAT with 32 satellites takes 8 + 32 x 12 + 8 = 400 bytes */
 #define M10_RX_BUF_SIZE     512
 #define M10_TX_BUF_SIZE     128
-#define M10_REQ_BUF_SIZE    64
+/* The largest request is the signal batch of the F10: seven keys of one byte
+ * in one UBX-CFG-VALSET, 47 bytes. ubx_m10_valset_many() refuses to build a
+ * frame that does not fit, so a batch that grows past this fails loudly. */
+#define M10_REQ_BUF_SIZE    96
 #define M10_RSP_BUF_SIZE    128
 
 /* modem_ubx splits the timeout across the attempts: 4 x 250 ms here */
@@ -52,16 +62,25 @@ LOG_MODULE_REGISTER(ublox_m10, CONFIG_GNSS_LOG_LEVEL);
 #define M10_WAKEUP_MS       100
 /** RESET_N is active low for at least 1 ms (integration manual, 4.2) */
 #define M10_RESET_LOW_MS    2
+/**
+ * A change in the CFG-SIGNAL group resets the GNSS subsystem: "wait first for
+ * the acknowledgement from the receiver and then 0.5 seconds before sending
+ * the next command" (F10 SPG 6.00 interface description, 4.9.20).
+ */
+#define M10_SIGNAL_RESET_MS 500
 
 struct m10_config {
     const struct device *uart;
     const struct gpio_dt_spec reset;
     const struct device *vcc;
+    gnss_systems_t systems;     /**< what the part can receive */
     uint16_t fix_rate_ms;
     uint8_t dyn_model;
     uint8_t power_mode;
     uint8_t sat_rate;
     bool timepulse;
+    bool dual_band;             /**< F10: L1 and L5 together, and no CFG-PM */
+    bool navic;
 };
 
 struct m10_data {
@@ -181,6 +200,8 @@ static enum gnss_system system_of(uint8_t gnss_id)
         return GNSS_SYSTEM_QZSS;
     case UBX_M10_GNSS_GLONASS:
         return GNSS_SYSTEM_GLONASS;
+    case UBX_M10_GNSS_NAVIC:
+        return GNSS_SYSTEM_IRNSS;
     default:
         return GNSS_SYSTEM_GPS;
     }
@@ -295,6 +316,26 @@ static int valset(const struct device *dev, uint32_t key, uint64_t value)
     return err;
 }
 
+/** Write several keys as one message, which the receiver applies together */
+static int valset_many(const struct device *dev, const struct ubx_m10_kv *items, size_t count)
+{
+    struct m10_data *data = dev->data;
+    size_t len = ubx_m10_valset_many(data->script.request_buf, sizeof(data->script.request_buf),
+                                     items, count, UBX_M10_LAYER_RAM | UBX_M10_LAYER_BBR);
+
+    if (len == 0U) {
+        return -EINVAL;
+    }
+
+    int err = run_script(dev, len, UBX_M10_CLASS_ACK, UBX_M10_ACK_ACK, M10_SCRIPT_RETRIES);
+
+    if (err != 0) {
+        LOG_ERR("batch of %u keys not acknowledged: %d", (unsigned int)count, err);
+    }
+
+    return err;
+}
+
 /** Read one configuration key of the layer in use */
 static int valget(const struct device *dev, uint32_t key, uint64_t *value)
 {
@@ -395,10 +436,12 @@ static int m10_get_navigation_mode(const struct device *dev, enum gnss_navigatio
     return 0;
 }
 
-/** The MAX-M10N receives GPS, Galileo and BeiDou at the same time, with QZSS and SBAS */
+/** Both parts receive GPS, Galileo and BeiDou at the same time, with QZSS and SBAS */
 #define M10_SYSTEMS                                                                                \
     (GNSS_SYSTEM_GPS | GNSS_SYSTEM_GALILEO | GNSS_SYSTEM_BEIDOU | GNSS_SYSTEM_QZSS |               \
      GNSS_SYSTEM_SBAS)
+/** The F10 adds NavIC, on L5 (F10 interface description, table 46) */
+#define F10_SYSTEMS (M10_SYSTEMS | GNSS_SYSTEM_IRNSS)
 
 static const struct {
     gnss_systems_t system;
@@ -409,34 +452,68 @@ static const struct {
     {GNSS_SYSTEM_GALILEO, UBX_M10_KEY_SIGNAL_GAL_ENA},
     {GNSS_SYSTEM_BEIDOU, UBX_M10_KEY_SIGNAL_BDS_ENA},
     {GNSS_SYSTEM_QZSS, UBX_M10_KEY_SIGNAL_QZSS_ENA},
+    {GNSS_SYSTEM_IRNSS, UBX_M10_KEY_SIGNAL_NAVIC_ENA},
 };
 
-static int m10_set_enabled_systems(const struct device *dev, gnss_systems_t systems)
+/**
+ * Write the constellations the caller asked for, in one message. A key that
+ * the running firmware does not have makes the receiver NAK the whole message
+ * and apply nothing (interface description 3.10.5), so NavIC only goes in the
+ * batch on a dual-band part.
+ */
+static int m10_write_systems(const struct device *dev, gnss_systems_t systems)
 {
-    if ((systems & ~((gnss_systems_t)M10_SYSTEMS)) != 0U) {
-        return -ENOTSUP; /* the MAX-M10N has no GLONASS */
-    }
+    const struct m10_config *cfg = dev->config;
+    struct ubx_m10_kv items[ARRAY_SIZE(m10_system_keys)];
+    size_t count = 0U;
+    int err;
 
     for (size_t i = 0U; i < ARRAY_SIZE(m10_system_keys); i++) {
-        int err = valset(dev, m10_system_keys[i].key,
-                         ((systems & m10_system_keys[i].system) != 0U) ? 1U : 0U);
-
-        if (err != 0) {
-            return err;
+        if ((m10_system_keys[i].system & cfg->systems) == 0U) {
+            continue;
         }
+
+        items[count].key = m10_system_keys[i].key;
+        items[count].value = ((systems & m10_system_keys[i].system) != 0U) ? 1U : 0U;
+        count++;
     }
+
+    err = valset_many(dev, items, count);
+    if (err != 0) {
+        return err;
+    }
+
+    /* the group resets the GNSS subsystem (interface description 4.9.20) */
+    k_msleep(M10_SIGNAL_RESET_MS);
 
     return 0;
 }
 
+static int m10_set_enabled_systems(const struct device *dev, gnss_systems_t systems)
+{
+    const struct m10_config *cfg = dev->config;
+
+    if ((systems & ~cfg->systems) != 0U) {
+        return -ENOTSUP; /* neither part has GLONASS */
+    }
+
+    return m10_write_systems(dev, systems);
+}
+
 static int m10_get_enabled_systems(const struct device *dev, gnss_systems_t *systems)
 {
+    const struct m10_config *cfg = dev->config;
     gnss_systems_t enabled = 0U;
 
     for (size_t i = 0U; i < ARRAY_SIZE(m10_system_keys); i++) {
         uint64_t value = 0U;
-        int err = valget(dev, m10_system_keys[i].key, &value);
+        int err;
 
+        if ((m10_system_keys[i].system & cfg->systems) == 0U) {
+            continue;
+        }
+
+        err = valget(dev, m10_system_keys[i].key, &value);
         if (err != 0) {
             return err;
         }
@@ -451,9 +528,9 @@ static int m10_get_enabled_systems(const struct device *dev, gnss_systems_t *sys
 
 static int m10_get_supported_systems(const struct device *dev, gnss_systems_t *systems)
 {
-    ARG_UNUSED(dev);
+    const struct m10_config *cfg = dev->config;
 
-    *systems = M10_SYSTEMS;
+    *systems = cfg->systems;
 
     return 0;
 }
@@ -472,9 +549,21 @@ static DEVICE_API(gnss, m10_api) = {
 
 int ublox_m10_set_power_mode(const struct device *dev, enum ublox_m10_power_mode mode)
 {
+    const struct m10_config *cfg = dev->config;
     struct m10_data *data = dev->data;
-    int err = valset(dev, UBX_M10_KEY_PM_OPERATEMODE, (uint64_t)mode);
+    int err;
 
+    if (cfg->dual_band) {
+        /*
+         * The F10 firmware has no CFG-PM group at all (F10 SPG 6.00
+         * interface description, 4.8): the key would come back NAKed. The
+         * part only tracks at full power, so asking for that is not an
+         * error; asking for LEAP is.
+         */
+        return (mode == UBLOX_M10_POWER_FULL) ? 0 : -ENOTSUP;
+    }
+
+    err = valset(dev, UBX_M10_KEY_PM_OPERATEMODE, (uint64_t)mode);
     if (err == 0) {
         data->power_mode = (uint8_t)mode;
     }
@@ -494,6 +583,46 @@ uint8_t ublox_m10_psm_state(const struct device *dev)
     const struct m10_data *data = dev->data;
 
     return data->psm_state;
+}
+
+/**
+ * Put the signals of a dual-band receiver where this board wants them.
+ *
+ * The receiver leaves the factory with L1 and L5 on for GPS, Galileo and
+ * BeiDou (F10 SPG 6.00 interface description, Configuration defaults), but
+ * the software standby clears the RAM and the driver writes every other
+ * setting explicitly, so it writes these too: a receiver whose BBR was left
+ * in another state comes back the same way every time.
+ *
+ * GPS L5 goes on because the firmware has it on; the satellites still
+ * broadcast as unhealthy and stay out of the solution until the signal
+ * becomes operational (MAX-F10S data sheet, 1.1). The gain today is Galileo
+ * E5a and BeiDou B2a. There is nothing to choose: the part does not do one
+ * band alone.
+ */
+static int m10_configure_signals(const struct device *dev)
+{
+    const struct m10_config *cfg = dev->config;
+    const uint64_t navic = cfg->navic ? 1U : 0U;
+    const struct ubx_m10_kv signals[] = {
+        {UBX_M10_KEY_SIGNAL_GPS_L1CA_ENA, 1U},  {UBX_M10_KEY_SIGNAL_GPS_L5_ENA, 1U},
+        {UBX_M10_KEY_SIGNAL_GAL_E1_ENA, 1U},    {UBX_M10_KEY_SIGNAL_GAL_E5A_ENA, 1U},
+        {UBX_M10_KEY_SIGNAL_BDS_B1C_ENA, 1U},   {UBX_M10_KEY_SIGNAL_BDS_B2A_ENA, 1U},
+        {UBX_M10_KEY_SIGNAL_SBAS_L1CA_ENA, 1U}, {UBX_M10_KEY_SIGNAL_NAVIC_ENA, navic},
+        {UBX_M10_KEY_SIGNAL_NAVIC_L5_ENA, navic},
+    };
+    /* one message, so the subsystem resets once and not nine times */
+    int err = valset_many(dev, signals, ARRAY_SIZE(signals));
+
+    if (err != 0) {
+        return err;
+    }
+    k_msleep(M10_SIGNAL_RESET_MS);
+
+    /* the constellation enables stay where the receiver put them, as on the
+     * M10: GPS, SBAS, Galileo and BeiDou on, QZSS off (Configuration
+     * defaults). The rider changes them through the Zephyr GNSS API. */
+    return 0;
 }
 
 int ublox_m10_configure(const struct device *dev)
@@ -548,6 +677,13 @@ int ublox_m10_configure(const struct device *dev)
 #endif
     if (err != 0) {
         return err;
+    }
+
+    if (cfg->dual_band) {
+        err = m10_configure_signals(dev);
+        if (err != 0) {
+            return err;
+        }
     }
 
     if (cfg->power_mode != UBLOX_M10_POWER_FULL) {
@@ -757,25 +893,54 @@ static int m10_init(const struct device *dev)
 #define M10_DYN_MODEL(inst) DT_INST_STRING_UPPER_TOKEN(inst, dynamic_model)
 #define M10_POWER_MODE(inst) DT_INST_STRING_UPPER_TOKEN(inst, power_mode)
 
-#define UBLOX_M10(inst)                                                                            \
+/** What both parts share; the variant fills in bands, systems and power mode */
+#define UBLOX_GNSS_COMMON(inst)                                                                    \
+    .uart = DEVICE_DT_GET(DT_INST_BUS(inst)), .reset = GPIO_DT_SPEC_INST_GET_OR(inst,              \
+                                                                               reset_gpios, {0}),  \
+    .vcc = M10_VCC(inst), .fix_rate_ms = DT_INST_PROP(inst, fix_rate_ms),                          \
+    .dyn_model = _CONCAT(UBX_M10_DYN_, M10_DYN_MODEL(inst)),                                       \
+    .sat_rate = DT_INST_PROP(inst, satellites_rate),                                               \
+    .timepulse = DT_INST_PROP(inst, timepulse_enable)
+
+/* the initializer carries commas: it has to arrive as __VA_ARGS__ */
+#define UBLOX_GNSS_DEVICE(inst, ...)                                                               \
     BUILD_ASSERT(DT_INST_PROP(inst, fix_rate_ms) >= 25 &&                                          \
                      DT_INST_PROP(inst, fix_rate_ms) <= 65535,                                     \
                  "fix-rate-ms outside the range of the receiver");                                 \
                                                                                                    \
-    static const struct m10_config m10_cfg_##inst = {                                              \
-        .uart = DEVICE_DT_GET(DT_INST_BUS(inst)),                                                  \
-        .reset = GPIO_DT_SPEC_INST_GET_OR(inst, reset_gpios, {0}),                                 \
-        .vcc = M10_VCC(inst),                                                                      \
-        .fix_rate_ms = DT_INST_PROP(inst, fix_rate_ms),                                            \
-        .dyn_model = _CONCAT(UBX_M10_DYN_, M10_DYN_MODEL(inst)),                                   \
-        .power_mode = _CONCAT(UBLOX_M10_POWER_, M10_POWER_MODE(inst)),                             \
-        .sat_rate = DT_INST_PROP(inst, satellites_rate),                                           \
-        .timepulse = DT_INST_PROP(inst, timepulse_enable),                                         \
-    };                                                                                             \
+    static const struct m10_config m10_cfg_##inst = __VA_ARGS__;                                   \
                                                                                                    \
     static struct m10_data m10_data_##inst;                                                        \
                                                                                                    \
     DEVICE_DT_INST_DEFINE(inst, m10_init, NULL, &m10_data_##inst, &m10_cfg_##inst, POST_KERNEL,    \
                           CONFIG_GNSS_INIT_PRIORITY, &m10_api);
 
+#define UBLOX_M10(inst)                                                                            \
+    UBLOX_GNSS_DEVICE(inst, {                                                                      \
+        UBLOX_GNSS_COMMON(inst),                                                                   \
+        .systems = M10_SYSTEMS,                                                                    \
+        .power_mode = _CONCAT(UBLOX_M10_POWER_, M10_POWER_MODE(inst)),                             \
+        .dual_band = false,                                                                        \
+        .navic = false,                                                                            \
+    })
+
 DT_INST_FOREACH_STATUS_OKAY(UBLOX_M10)
+
+/*
+ * The MAX-F10S: same frames and same driver, dual band, no CFG-PM group and
+ * NavIC on top. The board takes either part in the same footprint, so both
+ * compatibles live in this file.
+ */
+#undef DT_DRV_COMPAT
+#define DT_DRV_COMPAT u_blox_max_f10
+
+#define UBLOX_F10(inst)                                                                            \
+    UBLOX_GNSS_DEVICE(inst, {                                                                      \
+        UBLOX_GNSS_COMMON(inst),                                                                   \
+        .systems = F10_SYSTEMS,                                                                    \
+        .power_mode = UBLOX_M10_POWER_FULL,                                                        \
+        .dual_band = true,                                                                         \
+        .navic = DT_INST_PROP(inst, navic),                                                        \
+    })
+
+DT_INST_FOREACH_STATUS_OKAY(UBLOX_F10)

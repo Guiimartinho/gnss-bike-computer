@@ -54,6 +54,7 @@ static const ui_screen_ops_t *const ops[UI_SCREEN_COUNT] = {
     [UI_SCREEN_USB] = &ui_scr_usb,
     [UI_SCREEN_SHUTDOWN] = &ui_scr_shutdown,
     [UI_SCREEN_DFU] = &ui_scr_dfu,
+    [UI_SCREEN_PROFILE] = &ui_scr_profile,
     [UI_SCREEN_ROUTES] = &ui_scr_routes,
 };
 
@@ -162,7 +163,8 @@ static bool is_crs_page(ui_screen_t s)
 
 static bool is_data_page(ui_screen_t s)
 {
-    return is_crs_page(s) || (s == UI_SCREEN_PRC) || (s == UI_SCREEN_FEC) || (s == UI_SCREEN_DBG);
+    return is_crs_page(s) || (s == UI_SCREEN_PRC) || (s == UI_SCREEN_PROFILE) ||
+           (s == UI_SCREEN_FEC) || (s == UI_SCREEN_DBG);
 }
 
 ui_screen_t ui_mode_page(void)

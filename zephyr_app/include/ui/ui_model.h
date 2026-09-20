@@ -30,6 +30,8 @@ extern "C" {
 #define UI_SEG_PTS_MAX      64U
 /** Points of the route map in PRC */
 #define UI_ROUTE_PTS_MAX    160U
+/** Columns of the elevation profile (model/route_profile.h) */
+#define UI_PROFILE_PTS      120U
 /** Satellites in the sky plot and in DBG */
 #define UI_SAT_MAX          32U
 /** Paired sensors listed in Sensores */
@@ -205,6 +207,17 @@ typedef struct {
     uint16_t scale_pm;      /**< scale bar length in per mille of the window width */
 } ui_route_t;
 
+/** Elevation profile of the route (PRC) */
+typedef struct {
+    uint8_t n;                      /**< columns filled */
+    uint8_t here;                   /**< column of the rider */
+    int16_t alt_m[UI_PROFILE_PTS];  /**< altitude of each column */
+    int16_t min_m;
+    int16_t max_m;
+    uint16_t climb_left_m;          /**< climb still ahead */
+    float remain_km;
+} ui_profile_t;
+
 /** Trainer (FE-C) values */
 typedef struct {
     uint32_t time_s;
@@ -312,6 +325,7 @@ typedef struct {
     ui_rr_t rr;
     ui_attitude_t att;
     ui_route_t route;
+    ui_profile_t profile;
     ui_fec_t fec;
     ui_gnss_info_t gnss;
     ui_energy_t energy;

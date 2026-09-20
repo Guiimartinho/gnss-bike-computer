@@ -1,12 +1,19 @@
 /**
  * @file ubx_m10.h
- * @brief UBX frames and messages of the u-blox M10, in plain C
+ * @brief UBX frames and messages of the u-blox M10 and F10, in plain C
  *
  * Plain C, no Zephyr, so that the host tests check it byte by byte against
  * the documents. Everything here comes from "u-blox M10 SPG 5.30 Interface
  * description" (UBXDOC-304424225-20395, R01), the firmware of the
- * MAX-M10N-10B, and from "MAX-M10N Integration manual"
- * (UBXDOC-304424225-19802, R03).
+ * MAX-M10N-10B, from "MAX-M10N Integration manual"
+ * (UBXDOC-304424225-19802, R03), and from "u-blox F10 SPG 6.00 Interface
+ * description" (UBX-23002975, R02), the firmware of the MAX-F10S.
+ *
+ * The board takes either module in the same footprint. The frames, the
+ * configuration keys of the UART, of the rate, of the dynamic model and of
+ * the message output, and the five constellation enables are the same on the
+ * two firmwares; what changes is the L5 signals and NavIC, which only the F10
+ * has, and the CFG-PM group, which the F10 does not have at all.
  *
  * | Item | Where |
  * |---|---|
@@ -63,6 +70,10 @@ extern "C" {
 #define UBX_M10_PMREQ_LEN       16U
 #define UBX_M10_VALSET_HDR      4U
 #define UBX_M10_VALSET_MAX      (UBX_M10_VALSET_HDR + 4U + 8U)
+/** Keys ubx_m10_valset_many() takes in one message; the receiver allows 64 */
+#define UBX_M10_VALSET_KEYS_MAX 12U
+/** Payload of the largest batch, with every key of one byte */
+#define UBX_M10_VALSET_BATCH    (UBX_M10_VALSET_HDR + (UBX_M10_VALSET_KEYS_MAX * (4U + 8U)))
 
 /* Configuration keys (5.9), with the storage size in bits 30..28 */
 #define UBX_M10_KEY_UART1_BAUDRATE          0x40520001U /**< U4, default 38400 */
@@ -98,6 +109,26 @@ extern "C" {
 #define UBX_M10_KEY_SIGNAL_GAL_ENA          0x10310021U /**< L */
 #define UBX_M10_KEY_SIGNAL_BDS_ENA          0x10310022U /**< L */
 #define UBX_M10_KEY_SIGNAL_QZSS_ENA         0x10310024U /**< L */
+#define UBX_M10_KEY_SIGNAL_NAVIC_ENA        0x10310026U /**< L, F10 only */
+
+/*
+ * Signal keys of one constellation. The M10 has only the L1 ones; the F10
+ * adds L5 and NavIC. The five constellation keys above hold the same ID on
+ * both, which is why one driver serves the two parts (F10 SPG 6.00 interface
+ * description UBX-23002975 R02, 4.9.20, table 46).
+ */
+#define UBX_M10_KEY_SIGNAL_GPS_L1CA_ENA     0x10310001U /**< L */
+#define UBX_M10_KEY_SIGNAL_GPS_L5_ENA       0x10310004U /**< L, F10 only */
+#define UBX_M10_KEY_SIGNAL_SBAS_L1CA_ENA    0x10310005U /**< L */
+#define UBX_M10_KEY_SIGNAL_GAL_E1_ENA       0x10310007U /**< L */
+#define UBX_M10_KEY_SIGNAL_GAL_E5A_ENA      0x10310009U /**< L, F10 only */
+#define UBX_M10_KEY_SIGNAL_BDS_B1_ENA       0x1031000DU /**< L, B1I */
+#define UBX_M10_KEY_SIGNAL_BDS_B1C_ENA      0x1031000FU /**< L */
+#define UBX_M10_KEY_SIGNAL_BDS_B2A_ENA      0x10310028U /**< L, F10 only */
+#define UBX_M10_KEY_SIGNAL_QZSS_L1CA_ENA    0x10310012U /**< L */
+#define UBX_M10_KEY_SIGNAL_QZSS_L1S_ENA     0x10310014U /**< L */
+#define UBX_M10_KEY_SIGNAL_QZSS_L5_ENA      0x10310017U /**< L, F10 only */
+#define UBX_M10_KEY_SIGNAL_NAVIC_L5_ENA     0x1031001DU /**< L, F10 only */
 
 /**
  * Layers of UBX-CFG-VALSET (3.10.5). The driver writes RAM and BBR: the
@@ -159,7 +190,8 @@ enum ubx_m10_gnss_id {
     UBX_M10_GNSS_GALILEO = 2,
     UBX_M10_GNSS_BEIDOU = 3,
     UBX_M10_GNSS_QZSS = 5,
-    UBX_M10_GNSS_GLONASS = 6
+    UBX_M10_GNSS_GLONASS = 6,
+    UBX_M10_GNSS_NAVIC = 7      /**< F10 only (F10 interface description, table 1) */
 };
 
 /** Wake-up sources of UBX-RXM-PMREQ (3.16.7) */
@@ -238,6 +270,26 @@ size_t ubx_m10_frame(uint8_t *buf, size_t cap, uint8_t cls, uint8_t id, const ui
  * @return frame length, or 0 if the key or the layers are invalid, or it does not fit
  */
 size_t ubx_m10_valset(uint8_t *buf, size_t cap, uint32_t key, uint64_t value, uint8_t layers);
+
+/** One key and its value, for ubx_m10_valset_many() */
+struct ubx_m10_kv {
+    uint32_t key;
+    uint64_t value;
+};
+
+/**
+ * Build a UBX-CFG-VALSET frame with several keys, which the receiver applies
+ * as one message. This is what the CFG-SIGNAL group needs: every change in it
+ * resets the GNSS subsystem (F10 interface description 4.9.20), so a batch in
+ * one frame costs one reset instead of one per key.
+ *
+ * @param items keys and values, in the order they go in the payload
+ * @param count how many, at least one
+ * @param layers where to write: UBX_M10_LAYER_RAM, _BBR, _FLASH, or their or
+ * @return frame length, or 0 if a key or the layers are invalid, or it does not fit
+ */
+size_t ubx_m10_valset_many(uint8_t *buf, size_t cap, const struct ubx_m10_kv *items, size_t count,
+                           uint8_t layers);
 
 /** Build a UBX-CFG-VALGET frame that polls one key of the RAM layer */
 size_t ubx_m10_valget(uint8_t *buf, size_t cap, uint32_t key);

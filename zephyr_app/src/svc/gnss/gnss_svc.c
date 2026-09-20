@@ -34,12 +34,18 @@ LOG_MODULE_REGISTER(gnss_svc, CONFIG_LOG_DEFAULT_LEVEL);
 
 #define GNSS_NODE           DT_ALIAS(gnss)
 
-#if DT_NODE_HAS_STATUS(GNSS_NODE, okay) && DT_NODE_HAS_COMPAT(GNSS_NODE, u_blox_max_m10)
+/* The board takes the single-band MAX-M10N or the dual-band MAX-F10S in the
+ * same footprint; one driver serves both, and only LEAP tells them apart */
+#if DT_NODE_HAS_STATUS(GNSS_NODE, okay) &&                                                         \
+    (DT_NODE_HAS_COMPAT(GNSS_NODE, u_blox_max_m10) || DT_NODE_HAS_COMPAT(GNSS_NODE, u_blox_max_f10))
 #define GNSS_HAS_M10        1
 #include "drivers/gnss/ublox_m10.h"
 #define GNSS_EPOCH_MS       DT_PROP(GNSS_NODE, fix_rate_ms)
+/** The F10 has no CFG-PM group: it tracks at full power and there is no LEAP */
+#define GNSS_HAS_LEAP       DT_NODE_HAS_COMPAT(GNSS_NODE, u_blox_max_m10)
 #else
 #define GNSS_HAS_M10        0
+#define GNSS_HAS_LEAP       0
 #define GNSS_EPOCH_MS       1000U
 #endif
 
@@ -279,7 +285,7 @@ static void gnss_thread(void *p1, void *p2, void *p3)
 #if !DT_NODE_HAS_STATUS(GNSS_NODE, okay)
     LOG_WRN("no GNSS receiver (alias gnss)");
 #endif
-    gnss_power_init(&power);
+    gnss_power_init(&power, GNSS_HAS_LEAP);
 
     int wdt = app_wdt_add("gnss");
 

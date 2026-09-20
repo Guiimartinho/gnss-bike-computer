@@ -58,6 +58,48 @@ Em 2026-09-18 o estouro do `sd_logger` com o cartão indisponível foi corrigido
 
 **USB, desde 2026-09-20** (`src/svc/usb/usb_svc.c`, só no alvo com a pilha `device_next`): o serviço oitavo liga o barramento quando o cabo entra e mostra ao PC uma **porta serial** com os mesmos comandos do legacy (`$LOC`, `$DWN`, `$QRY`...), lidos pelo mesmo `cmd_parser`; a interrupção do CDC só enfileira bytes, e a thread lê. O **disco** só aparece no modo USB, que o menu ou um `$DWN,16` pedem: aí o serviço de armazenamento já desmontou o sistema de arquivos e o PC fica dono da mídia, e sair dele pede reset, como no legacy. Enquanto o ciclista pedala, o disco é do firmware e o PC só vê a serial. Identificadores: VID 0x1209 e PID 0x0001, os de teste do pid.codes — um número próprio precisa ser pedido lá antes de qualquer venda. Nada disso foi testado com cabo.
 
+### Formatos de percurso
+
+O aparelho aceita **três**, e escolhe pelo conteúdo do arquivo, não pela extensão:
+
+| Formato | De onde vem | Tamanho de 100 km a cada 10 m | O que traz |
+|---|---|---|---|
+| **`.RTE`** | `tools/route_convert.py`, do GPX ou do TCX | **100 KB** | nome, distância, subida e caixa no cabeçalho de 64 B; **CRC-32** do corpo; lista de curvas com o nome da rua |
+| `.GPX`, `.TCX` | Strava, Komoot, RideWithGPS, direto | 1 a 3 MB | o traçado e a altitude; sem verificação |
+| `.PAR`, `.CRS` | o legacy | 303 KB | o traçado e a altitude |
+
+O `.RTE` é o formato deste projeto, descrito em `zephyr_app/include/model/route_file.h`: binário, little endian, versionado. Vale a pena porque o envio por Bluetooth fica 10 a 30 vezes mais rápido, o menu mostra nome e distância sem abrir o arquivo inteiro, um envio cortado no meio é pego pelo CRC antes de o ciclista sair seguindo uma rota que acaba no nada, e as curvas chegam padronizadas.
+
+O GPX passa direto porque **ninguém deve ser obrigado a converter**: o leitor (`src/model/gpx_scan.c`) é uma máquina de estados que varre os bytes conforme chegam, sem montar o XML na memória, e aguenta o que os serviços escrevem — prefixos de namespace, extensões desconhecidas, atributos em qualquer ordem, aspas simples ou duplas e o arquivo chegando em pedaços. Como um GPX grande leva segundos para ser lido, o carregador alimenta o watchdog pelo caminho.
+
+### Arquivos pelo telefone
+
+O percurso entra no aparelho como num Garmin: o aplicativo manda o arquivo por Bluetooth, pelo **grupo de arquivos do mcumgr**, no mesmo enlace SMP da atualização ([07](07-radio-ant-ble.md#atualização-por-ble-dfu)). O aplicativo não é deste projeto; qualquer cliente SMP serve, e o nRF Connect Device Manager da Nordic é o de referência.
+
+O firmware não entrega o armazenamento inteiro. As regras estão em `src/model/file_policy.c`, com `test_file_policy`, e valem para cada pedido que chega:
+
+| Pedido | Resposta do aparelho |
+|---|---|
+| gravar `.PAR` ou `.CRS` (percurso) | aceita |
+| gravar um nome de segmento do legacy | aceita |
+| gravar `@DDMMYY.txt` (atividade) | **recusa**: quem escreve a atividade é o aparelho |
+| gravar qualquer outra coisa | **recusa**: o firmware não saberia ler |
+| ler, tamanho ou checksum de qualquer arquivo do cartão | aceita: é assim que o ciclista baixa o pedal |
+| qualquer caminho fora da raiz do armazenamento, com `/` ou `..` | **recusa** |
+
+Quando um arquivo chega, `src/rf/file_xfer.c` avisa na tela e pede ao serviço de armazenamento que liste o cartão de novo, então o percurso novo aparece no menu sem reiniciar. Não testado com telefone.
+
+### Quanto cabe
+
+| O que | Tamanho | Na flash de 8 MB |
+|---|---|---|
+| Segmento do legacy | mediana 3 KB, maior 52 KB | os 138 de exemplo somam 0,44 MB |
+| Percurso de 100 km, ponto a cada 25 m | 121 KB (4.000 pontos de 31 B) | **68 percursos** |
+| Percurso de 100 km, ponto a cada 10 m | 303 KB | 27 percursos |
+| Log de um pedal de 10 h | 1,9 MB | cerca de 35 pedais, se nada mais estivesse guardado |
+
+O limite prático não é a flash e sim a memória do aparelho: um percurso é lido para um array estático de `CONFIG_GNSS_ROUTE_POINTS` pontos (16 B cada) e um arquivo maior é dividido pela metade enquanto carrega. Na placa nova são **4.000 pontos**, o que dá um ponto a cada 25 m num percurso de 100 km — a mesma densidade que o Strava e o Komoot exportam; no alvo nRF52840, que tem um quarto da RAM, ficam os 500 de antes. Os segmentos guardam 768 pontos cada, três ao mesmo tempo.
+
 Desde 2026-09-20 o alvo nRF54LM20 não usa cartão: a placa nova leva **flash NOR soldada** (decisão do dono, [15](15-avaliacao-componentes.md#armazenamento)), e o firmware monta o FatFs sobre um `zephyr,flash-disk` na partição dela, com o mesmo ponto de montagem `/SD:`, o mesmo código de arquivos e o mesmo disco indo ao PC quando o USB chegar. O build usa o MX25R6435F de 8 MB que o nRF54LM20 DK traz no `spi00`; uma parte em branco é formatada na primeira montagem (`CONFIG_FS_FATFS_MKFS`). O alvo nRF52840 DK, que representa a placa V3, continua com o cartão pelo `zephyr,sdhc-spi-slot`.
 
 Desde 2026-09-19 o cartão é do serviço de armazenamento: ele monta o FatFs, carrega os segmentos, lista os percursos (`*.PAR` do legacy e `*.CRS` do port, na raiz) e grava o log com os pontos que o modelo publica, fora das outras threads. Os formatos do legacy estão lidos e escritos (segmentos em texto, `.PAR`, `@DDMMYY.txt`), e o modelo abre o percurso que a tela escolhe. Falta: a formatação do cartão e o MSC. Nada disso foi testado com cartão.

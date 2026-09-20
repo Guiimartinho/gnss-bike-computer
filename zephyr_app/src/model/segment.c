@@ -56,7 +56,12 @@ LOG_MODULE_REGISTER(segment, CONFIG_LOG_DEFAULT_LEVEL);
  * start, the end and the shape of the segment, and only loses resolution.
  */
 #define SEG_SLOTS           3U
+
+#if defined(CONFIG_GNSS_SEGMENT_POINTS)
+#define SEG_SLOT_POINTS     ((uint16_t)CONFIG_GNSS_SEGMENT_POINTS)
+#else
 #define SEG_SLOT_POINTS     256U
+#endif
 
 /** No segment holds the slot */
 #define SEG_NO_OWNER        UINT16_MAX

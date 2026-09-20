@@ -144,12 +144,16 @@ Legacy: `legacy/source/sensors/fxos.cpp`. Port: `zephyr_app/src/svc/sensors/tilt
 
 Legacy (`legacy/source/model/Locator.cpp:111-134`): a simulada (`$LOC`) vence e bloqueia as outras por 2 s; o GPS vence e bloqueia por 1,5 s; o LNS (celular via BLE) só é aceito sem fix no pino FIX. Depois de 5 posições LNS seguidas, envia host aiding (`$PMTK741`) ao GPS. O port tem o árbitro em `loc_source.c`, sem chamador.
 
-### Do MAX-M10N (placa nova)
+### Do MAX-F10S (placa nova)
 
 - Uma época por segundo em `UBX-NAV-PVT`: posição em 1e-7 grau, altitude sobre o nível do mar em mm, velocidade 2D em mm/s, rumo em 1e-5 grau e `numSV`. O port converte para as unidades do Zephyr (nanograus, mm, mm/s, milésimos de grau) no driver, e o serviço para as do modelo.
 - **Diferença registrada:** o `hdop` publicado é o **pDOP** do `UBX-NAV-PVT` (escala 0,01, multiplicado por 10 para os milésimos da API do Zephyr). O legacy lia o HDOP do `$GPGSA` (`legacy/source/model/Locator.cpp:24`) e não o usava em conta nenhuma; aqui ele só alimenta o serviço de localização do BLE. O horizontal exato pediria o `UBX-NAV-DOP`, uma mensagem a mais por época.
 - A hora só sai do receptor quando `valid` traz data **e** hora (bits 0 e 1); sem isso o campo de hora vai zerado e o modelo não usa.
 - O fix vale quando `gnssFixOK` está ligado, `invalidLlh` desligado e o tipo é 2D ou 3D; morto por estimativa (`dead reckoning`) vira "fix estimado" e não conta como posição válida no serviço.
+- **Banda dupla.** O F10S recebe L1 e L5 ao mesmo tempo e não faz banda única. A precisão de referência passa de 1,5 m para 1 m de CEP, e o ganho vem do código do L5, dez vezes mais rápido, contra o multipercurso.
+- **GPS L5 pré-operacional.** A constelação GPS ainda transmite o L5 marcado como não saudável, e o receptor o deixa fora da solução por padrão (ficha do MAX-F10S, 1.1). Esses satélites **aparecem** no `UBX-NAV-SAT`, para a tela de satélites, mas não entram no `numSV` do `UBX-NAV-PVT`, que conta só os usados na solução: a tela pode mostrar mais pontos do que o número de satélites do fix. O ganho de banda dupla hoje vem de Galileo E5a, BeiDou B2a e QZSS L5, todos operacionais.
+- O `UBX-NAV-SAT` traz 8 + 12 bytes **por satélite**, não por sinal (UBX-23002975 R02, 3.14.13.1): a banda dupla não dobra a mensagem.
+- O `psmState` do `UBX-NAV-PVT` só tem significado no M10, que tem o LEAP; no F10S ele fica sempre em "power save off".
 
 ## Recuperação de falha (FDIR)
 

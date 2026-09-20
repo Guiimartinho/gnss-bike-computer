@@ -450,6 +450,16 @@ static void render_theme(ui_theme_t theme)
     ui_set_dfu(UI_DFU_IDLE, 0U);
     expect_screen(UI_SCREEN_FEC, "pages back after the update");
 
+    /* the elevation profile of the route, reached from the PRC map */
+    ui_set_mode(UI_MODE_PRC);
+    ui_go(UI_SCREEN_PRC);
+    ui_update(&m, tick_ms);
+    ui_key(UI_KEY_RIGHT, UI_PRESS_LONG, tick_ms);
+    expect_screen(UI_SCREEN_PROFILE, "long right opens the profile");
+    snap("30_perfil", theme);
+    ui_key(UI_KEY_RIGHT, UI_PRESS_LONG, tick_ms);
+    expect_screen(UI_SCREEN_PRC, "long right goes back to the map");
+
     /* long centre on a page asks to shut down */
     ui_set_mode(UI_MODE_CRS);
     ui_go(UI_SCREEN_CRS1);

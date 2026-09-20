@@ -190,6 +190,16 @@ static void set_mode(int32_t mode)
  * The list comes from the storage service, with the name of the file as it
  * is on the card (`legacy/source/sd/sd_functions.cpp:451`, `load_parcours`).
  */
+/** The channel of this thread, for the loaders that take their time */
+static int model_wdt_channel = -1;
+
+static void model_feed_wdt(void)
+{
+    if (model_wdt_channel >= 0) {
+        app_wdt_feed(model_wdt_channel);
+    }
+}
+
 static void load_selected_route(void)
 {
     char path[48];
@@ -514,6 +524,10 @@ static void model_thread(void *p1, void *p2, void *p3)
     smf_set_initial(SMF_CTX(&ctx), &mode_states[APP_MODE_ID_CRS]);
 
     int wdt = app_wdt_add("model");
+
+    /* a course of megabytes takes longer than the watchdog allows */
+    model_wdt_channel = wdt;
+    parcours_set_progress(model_feed_wdt);
 
     for (;;) {
         uint32_t now = k_uptime_get_32();

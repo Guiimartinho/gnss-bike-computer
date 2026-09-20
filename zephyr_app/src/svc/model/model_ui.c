@@ -17,6 +17,7 @@
 #include "app_types.h"
 #include "model/attitude.h"
 #include "model/map_project.h"
+#include "model/route_profile.h"
 #include "model/parcours.h"
 #include "model/segment.h"
 #include "model/user_settings.h"
@@ -247,6 +248,24 @@ static void fill_nav(const struct model_ctx *ctx, ui_model_t *m)
     m->nav.dist_m = ctx->nav.dist_m;
     m->nav.turn = (ui_turn_t)ctx->nav.turn;
     (void)strncpy(m->nav.street, ctx->nav.street, sizeof(m->nav.street) - 1U);
+
+    /*
+     * With no phone talking, the turns come from the course itself, when
+     * the file brought a cue sheet (`model/route_file.h`). The phone wins
+     * because it knows where the rider actually is on the streets.
+     */
+    if (!m->nav.valid && parcours_is_active()) {
+        parcours_cue_t cue;
+        float dist = 0.0f;
+
+        if (parcours_get_next_cue(&cue, &dist)) {
+            m->nav.valid = true;
+            m->nav.dist_m = (dist > 65535.0f) ? 65535U : (uint16_t)dist;
+            m->nav.turn = (ui_turn_t)cue.turn;
+            (void)strncpy(m->nav.street, cue.street, sizeof(m->nav.street) - 1U);
+            m->nav.street[sizeof(m->nav.street) - 1U] = '\0';
+        }
+    }
 }
 
 static void fill_settings(const struct model_ctx *ctx, ui_model_t *m)
@@ -255,7 +274,9 @@ static void fill_settings(const struct model_ctx *ctx, ui_model_t *m)
 
     m->settings.ftp_w = user_settings_get_ftp(us);
     m->settings.weight_kg = (uint8_t)(user_settings_get_weight(us) / 10U);
-    m->settings.gnss_leap = true;
+    /* the MAX-F10S has no low power tracking mode: the menu shows what the
+     * receiver of the board actually does (docs/16, GNSS) */
+    m->settings.gnss_leap = (ctx->fix.mode == (uint8_t)APP_GNSS_MODE_LEAP);
     m->settings.light_auto = true;     /* the ui service puts its preference over it */
     m->settings.solar_limit_mv = ctx->power.solar_limit_mv;
 
@@ -356,6 +377,41 @@ static void fill_segments(const struct model_ctx *ctx, ui_model_t *m)
 /**
  * @brief The route on the PRC screen, centred on the rider
  */
+/** Altitude of a point of the route, for the profile */
+static float route_alt(uint16_t index, void *user)
+{
+    const point_t *pt = parcours_get_point(index);
+
+    (void)user;
+
+    return (pt != NULL) ? pt->alt : 0.0f;
+}
+
+/**
+ * @brief The elevation profile of the route on the PRC screen
+ */
+static void fill_profile(const struct model_ctx *ctx, ui_model_t *m)
+{
+    struct route_profile prof;
+
+    (void)ctx;
+    if (!parcours_is_loaded()) {
+        return;
+    }
+    if (!route_profile_build(&prof, parcours_get_num_points(), parcours_get_current_index(),
+                             route_alt, NULL)) {
+        return;
+    }
+
+    m->profile.n = (prof.n < UI_PROFILE_PTS) ? prof.n : UI_PROFILE_PTS;
+    m->profile.here = prof.here;
+    (void)memcpy(m->profile.alt_m, prof.alt_m, (size_t)m->profile.n * sizeof(prof.alt_m[0]));
+    m->profile.min_m = prof.min_m;
+    m->profile.max_m = prof.max_m;
+    m->profile.climb_left_m = prof.climb_left_m;
+    m->profile.remain_km = m->route.remain_km;
+}
+
 static void fill_route(const struct model_ctx *ctx, ui_model_t *m)
 {
     uint16_t span = map_span_m(ctx->zoom);
@@ -416,4 +472,5 @@ void model_ui_fill(const struct model_ctx *ctx, ui_model_t *m)
     fill_settings(ctx, m);
     fill_segments(ctx, m);
     fill_route(ctx, m);
+    fill_profile(ctx, m);
 }

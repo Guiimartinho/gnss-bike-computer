@@ -9,7 +9,7 @@
 
 #include "app/app_events.h"
 
-void gnss_power_init(struct gnss_power *p)
+void gnss_power_init(struct gnss_power *p, bool has_leap)
 {
     if (p == NULL) {
         return;
@@ -17,7 +17,10 @@ void gnss_power_init(struct gnss_power *p)
     p->mode = APP_GNSS_MODE_BACKUP;
     p->started = false;
     p->had_fix = false;
-    p->full_power = false;
+    /* without LEAP the receiver only tracks at full power: the machine says
+     * so from the start and never asks for a mode it does not have */
+    p->full_power = !has_leap;
+    p->has_leap = has_leap;
     p->no_fix = 0U;
     p->good_ms = 0U;
     p->silence_ms = 0U;
@@ -41,7 +44,7 @@ enum gnss_power_action gnss_power_mode_change(struct gnss_power *p, bool uses_gn
         /* the receiver comes back from the standby without its configuration */
         p->mode = APP_GNSS_MODE_ACQ;
         p->had_fix = false;
-        p->full_power = false;
+        p->full_power = !p->has_leap;
         p->no_fix = 0U;
         p->good_ms = 0U;
         p->silence_ms = 0U;
@@ -69,7 +72,7 @@ enum gnss_power_action gnss_power_epoch(struct gnss_power *p, bool fix, uint32_t
     if (fix) {
         p->no_fix = 0U;
         p->had_fix = true;
-        if (p->full_power) {
+        if (p->full_power && p->has_leap) {
             p->good_ms += interval_ms;
             if (p->good_ms >= GNSS_POWER_GOOD_MS) {
                 /* the signal came back: the receiver tracks in low power again */

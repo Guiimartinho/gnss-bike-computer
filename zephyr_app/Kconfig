@@ -1,0 +1,44 @@
+# Options of the GNSS bike computer itself (NCS v3.3.0).
+#
+# The application Kconfig has to source the Zephyr one at the end, as the
+# Zephyr application development guide describes.
+
+menu "GNSS bike computer"
+
+config GNSS_ROUTE_POINTS
+	int "Points of a route kept in memory"
+	default 500
+	range 100 16000
+	help
+	  A route of the rider (a `.PAR` of the legacy, or a course exported
+	  from Strava or Komoot) is read into a static array of this many
+	  points, sixteen bytes each. A file with more points is halved as it
+	  loads, so the whole route always fits, with less resolution: a
+	  hundred kilometres over 500 points leaves one point every 200 m,
+	  and over 4000 one every 25 m, which is what the services export.
+
+	  The board with 512 KB of RAM can afford the larger number; the
+	  nRF52840 of the old board cannot.
+
+config GNSS_ROUTE_CUES
+	int "Turns of the cue sheet kept in memory"
+	default 64
+	range 0 512
+	help
+	  A route file of this project (`.RTE`) may carry a cue sheet: the
+	  turns, with the name of the street. Each one takes 26 bytes. A
+	  hundred kilometre course out of a routing service has a few dozen.
+
+config GNSS_SEGMENT_POINTS
+	int "Points of a segment kept in memory"
+	default 256
+	range 64 4000
+	help
+	  Each of the three segments that can be loaded at the same time
+	  holds this many points, sixteen bytes each, and a longer file is
+	  halved as it loads. The longest segment of `tools/TDD/DB` has 1291
+	  points.
+
+endmenu
+
+source "Kconfig.zephyr"

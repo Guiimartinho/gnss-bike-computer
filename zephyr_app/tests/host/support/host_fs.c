@@ -18,8 +18,8 @@
 
 #include "host_fs.h"
 
-#define HOST_FS_FILES       12U
-#define HOST_FS_FILE_SIZE   65536U
+#define HOST_FS_FILES       8U
+#define HOST_FS_FILE_SIZE   400000U
 
 struct host_file {
     char name[MAX_FILE_NAME + 1U];
@@ -135,6 +135,22 @@ bool host_fs_add_file(const char *path, const char *content)
     (void)memcpy(s_files[idx].content, content, len);
     s_files[idx].size = len;
     s_files[idx].content[len] = '\0';
+
+    return true;
+}
+
+bool host_fs_add_bytes(const char *path, const void *bytes, size_t len)
+{
+    int idx = find_file(path);
+
+    if (idx < 0) {
+        idx = create_file(path);
+    }
+    if ((idx < 0) || (len > HOST_FS_FILE_SIZE)) {
+        return false;
+    }
+    (void)memcpy(s_files[idx].content, bytes, len);
+    s_files[idx].size = len;
 
     return true;
 }

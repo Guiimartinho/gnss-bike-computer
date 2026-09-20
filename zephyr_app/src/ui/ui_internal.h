@@ -102,7 +102,7 @@ typedef enum {
     T_SOLAR_LIMIT, T_TEMPERATURE, T_AUTONOMY, T_SRC_NONE, T_SRC_SOLAR,
     T_SRC_USB, T_SRC_USB_FULL, T_USB_MODE, T_USB_FILES, T_USB_UNPLUG,
     T_SAVING, T_ACTIVITY, T_SHUTTING_DOWN, T_UPDATING, T_UPDATE_KEEP, T_UPDATE_DONE,
-    T_UPDATE_FAIL, T_S_HR, T_S_BSC, T_S_POWER, T_S_FEC,
+    T_UPDATE_FAIL, T_PROFILE, T_CLIMB_LEFT, T_NO_PROFILE, T_S_HR, T_S_BSC, T_S_POWER, T_S_FEC,
     T_S_RADAR, T_S_LIGHT, T_L_NONE, T_L_CONNECTED, T_L_LOST, T_L_SEARCH,
     T_NO_SENSOR, T_FIX, T_SATELLITES, T_POS_AGE, T_ACCURACY, T_BATTERY,
     T_CHARGE, T_VERSION, T_NO_ROUTE, T_ABOUT_H, T_REMAIN, T_LIGHT, T_SCREEN,
@@ -177,6 +177,7 @@ extern const ui_screen_ops_t ui_scr_usb;
 extern const ui_screen_ops_t ui_scr_shutdown;
 extern const ui_screen_ops_t ui_scr_routes;
 extern const ui_screen_ops_t ui_scr_dfu;
+extern const ui_screen_ops_t ui_scr_profile;
 
 /** Go to another screen (rebuilds it) */
 void ui_go(ui_screen_t screen);

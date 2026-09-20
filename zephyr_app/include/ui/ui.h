@@ -91,6 +91,7 @@ typedef enum {
     UI_SCREEN_SHUTDOWN,
     UI_SCREEN_ROUTES,
     UI_SCREEN_DFU,
+    UI_SCREEN_PROFILE,
     UI_SCREEN_COUNT
 } ui_screen_t;
 
