@@ -57,6 +57,8 @@ ZBUS_CHAN_DEFINE(chan_storage_info, struct app_storage_info, NULL, NULL, ZBUS_OB
                  ZBUS_MSG_INIT(0));
 ZBUS_CHAN_DEFINE(chan_model_state, ui_model_t, NULL, NULL, ZBUS_OBSERVERS_EMPTY,
                  ZBUS_MSG_INIT(0));
+ZBUS_CHAN_DEFINE(chan_dfu, struct app_dfu, NULL, NULL, ZBUS_OBSERVERS_EMPTY,
+                 ZBUS_MSG_INIT(0));
 
 int app_publish(const struct zbus_channel *chan, const void *msg)
 {

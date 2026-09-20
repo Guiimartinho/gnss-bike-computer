@@ -29,11 +29,14 @@ SHEETS = [
                               "17_dbg"]),
     ("telas-menus", "Menus", ["18_menu", "18b_percursos", "19_ajustes", "20_sensores", "21_parear",
                               "22_valor", "23_tela_luz", "24_formatar"]),
-    ("telas-sistema", "Sistema", ["01_partida", "25_energia", "26_usb", "27_desligando"]),
+    ("telas-sistema", "Sistema", ["01_partida", "25_energia", "26_usb", "27_desligando",
+                                  "28_atualizacao", "29_atualizacao_pronta"]),
 ]
 
 CAPTIONS = {
     "01_partida": "Partida",
+    "28_atualizacao": "Atualização por BLE",
+    "29_atualizacao_pronta": "Atualização pronta",
     "02_crs1": "CRS, página 1",
     "03_crs1_1seg": "CRS, 1 segmento",
     "04_crs1_1seg_perto": "1 segmento, chegando",

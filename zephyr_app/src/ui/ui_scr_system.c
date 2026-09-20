@@ -253,3 +253,88 @@ static void shutdown_update(lv_obj_t *scr)
 }
 
 const ui_screen_ops_t ui_scr_shutdown = {shutdown_create, shutdown_update, boot_key};
+
+/* ==========================================================================
+ * Update over the air (new: the legacy had no update)
+ * ========================================================================== */
+
+static void dfu_update(lv_obj_t *scr);
+
+static lv_obj_t *dfu_bar;
+static lv_obj_t *dfu_pct_label;
+static lv_obj_t *dfu_state_label;
+
+static void dfu_bar_draw(lv_event_t *e)
+{
+    lv_layer_t *layer = lv_event_get_layer(e);
+    const lv_obj_t *obj = lv_event_get_target_obj(e);
+    lv_area_t a;
+    uint8_t pct = (ui_ctx.dfu_pct > 100U) ? 100U : ui_ctx.dfu_pct;
+
+    lv_obj_get_coords(obj, &a);
+    ui_draw_frame(layer, a.x1, a.y1, lv_area_get_width(&a), lv_area_get_height(&a),
+                  ui_col(UI_C_FG), 2);
+    ui_draw_fill(layer, a.x1 + 3, a.y1 + 3, ((lv_area_get_width(&a) - 6) * (int32_t)pct) / 100,
+                 lv_area_get_height(&a) - 6, ui_col(UI_C_NAV));
+}
+
+static void dfu_icon_draw(lv_event_t *e)
+{
+    lv_layer_t *layer = lv_event_get_layer(e);
+    const lv_obj_t *obj = lv_event_get_target_obj(e);
+    lv_color_t fg = ui_col(UI_C_FG);
+    lv_area_t a;
+
+    lv_obj_get_coords(obj, &a);
+    /* an arrow coming down into the device: the image on its way in */
+    ui_draw_fill(layer, a.x1 + 108, a.y1 + 16, 24, 40, fg);
+    ui_draw_triangle(layer, a.x1 + 88, a.y1 + 56, a.x1 + 152, a.y1 + 56, a.x1 + 120,
+                     a.y1 + 88, fg);
+    ui_draw_frame(layer, a.x1 + 70, a.y1 + 100, 100, 56, fg, 4);
+}
+
+static void dfu_create(lv_obj_t *scr)
+{
+    lv_obj_t *l;
+
+    ui_statusbar_create(scr);
+    (void)ui_plot(scr, 0, UI_BAR_H, UI_WIDTH, 176, dfu_icon_draw, NULL);
+    l = ui_label(scr, UI_FONT_LARGE, ui_col(UI_C_FG), ui_txt(T_UPDATING));
+    lv_obj_align(l, LV_ALIGN_TOP_MID, 0, 214);
+    dfu_bar = ui_plot(scr, 40, 252, 160, 16, dfu_bar_draw, NULL);
+    dfu_pct_label = ui_label(scr, UI_FONT_LARGE, ui_col(UI_C_FG), "0%");
+    /* the screen may come up in the middle of a transfer */
+    lv_obj_align(dfu_pct_label, LV_ALIGN_TOP_MID, 0, 278);
+    dfu_state_label = ui_label(scr, UI_FONT_TITLE, ui_col(UI_C_BAD), ui_txt(T_UPDATE_KEEP));
+    lv_obj_align(dfu_state_label, LV_ALIGN_TOP_MID, 0, 320);
+    dfu_update(scr);
+}
+
+static void dfu_update(lv_obj_t *scr)
+{
+    char pct[8];
+
+    (void)scr;
+    ui_statusbar_update();
+    (void)snprintf(pct, sizeof(pct), "%u%%", (unsigned int)ui_ctx.dfu_pct);
+    lv_label_set_text(dfu_pct_label, pct);
+
+    switch (ui_ctx.dfu_phase) {
+    case UI_DFU_DONE:
+        lv_label_set_text(dfu_state_label, ui_txt(T_UPDATE_DONE));
+        lv_obj_set_style_text_color(dfu_state_label, ui_col(UI_C_GOOD), 0);
+        break;
+    case UI_DFU_FAILED:
+        lv_label_set_text(dfu_state_label, ui_txt(T_UPDATE_FAIL));
+        lv_obj_set_style_text_color(dfu_state_label, ui_col(UI_C_BAD), 0);
+        break;
+    default:
+        lv_label_set_text(dfu_state_label, ui_txt(T_UPDATE_KEEP));
+        lv_obj_set_style_text_color(dfu_state_label, ui_col(UI_C_BAD), 0);
+        break;
+    }
+    lv_obj_align(dfu_state_label, LV_ALIGN_TOP_MID, 0, 320);
+    lv_obj_invalidate(dfu_bar);
+}
+
+const ui_screen_ops_t ui_scr_dfu = {dfu_create, dfu_update, boot_key};

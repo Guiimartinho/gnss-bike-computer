@@ -1,4 +1,4 @@
-# As 29 telas da interface
+# As 30 telas da interface
 
 Cada tela da interface da placa nova, nos dois temas: 8 cores, para o JDI LPM027M128C, e preto e branco, para a Sharp LS027B7DH01A da lista de compras. As imagens saem do código de verdade (`zephyr_app/src/ui`, LVGL 9.5), desenhado no PC pelo renderizador de host e reduzido às cores que o painel mostra; os números são dados de exemplo (`zephyr_app/tests/ui/ui_samples.c`). O projeto da interface, as regras e as diferenças para o legacy estão em [18-interface-telas.md](../18-interface-telas.md).
 
@@ -340,6 +340,16 @@ Em todas as listas: esquerda e direita mudam o item (dão a volta nas pontas, co
 
 - **Quando:** desligamento pelo menu, pelo centro longo, pela bateria no fim ou depois de 15 min parado.
 - **Mostra:** "Salvando atividade", a barra de progresso e "Desligando". Nova: o legacy desligava sem aviso.
+
+### 28 Atualização
+
+| 8 cores | Preto e branco |
+|---|---|
+| ![Atualização em 8 cores](28_atualizacao_cor.png) | ![Atualização em preto e branco](28_atualizacao_mono.png) |
+| ![Atualização pronta em 8 cores](29_atualizacao_pronta_cor.png) | ![Atualização pronta em preto e branco](29_atualizacao_pronta_mono.png) |
+
+- **Quando:** um aplicativo manda firmware novo por Bluetooth ([07](../07-radio-ant-ble.md#atualização-por-ble-dfu)). Toma a frente sozinha e devolve as páginas ao terminar.
+- **Mostra:** a seta entrando no aparelho, a porcentagem da imagem recebida e "Não desligue"; no fim, "Reinicie para aplicar". Nova: o legacy não atualizava pelo ar.
 
 ## Botões
 

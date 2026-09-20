@@ -53,6 +53,7 @@ static const ui_screen_ops_t *const ops[UI_SCREEN_COUNT] = {
     [UI_SCREEN_ENERGY] = &ui_scr_energy,
     [UI_SCREEN_USB] = &ui_scr_usb,
     [UI_SCREEN_SHUTDOWN] = &ui_scr_shutdown,
+    [UI_SCREEN_DFU] = &ui_scr_dfu,
     [UI_SCREEN_ROUTES] = &ui_scr_routes,
 };
 
@@ -314,6 +315,31 @@ void ui_set_progress(uint8_t pct)
 {
     ui_ctx.progress = pct;
     if (started && (cur == UI_SCREEN_SHUTDOWN)) {
+        ops[cur]->update(cur_scr);
+    }
+}
+
+void ui_set_dfu(ui_dfu_t phase, uint8_t pct)
+{
+    bool was_busy = (ui_ctx.dfu_phase == UI_DFU_RUNNING) || (ui_ctx.dfu_phase == UI_DFU_DONE);
+    bool busy = (phase == UI_DFU_RUNNING) || (phase == UI_DFU_DONE);
+
+    ui_ctx.dfu_phase = (uint8_t)phase;
+    ui_ctx.dfu_pct = pct;
+
+    if (!started) {
+        return;
+    }
+    if (busy && (cur != UI_SCREEN_DFU)) {
+        /* nothing else matters while the image comes in */
+        ui_go(UI_SCREEN_DFU);
+        return;
+    }
+    if (cur == UI_SCREEN_DFU) {
+        if (!busy && was_busy && (phase != UI_DFU_FAILED)) {
+            ui_show_pages();
+            return;
+        }
         ops[cur]->update(cur_scr);
     }
 }

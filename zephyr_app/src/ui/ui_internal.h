@@ -101,7 +101,8 @@ typedef enum {
     T_THEME_MONO, T_FORMAT_Q, T_FORMAT_YES, T_VOLTAGE, T_CURRENT, T_SOURCE,
     T_SOLAR_LIMIT, T_TEMPERATURE, T_AUTONOMY, T_SRC_NONE, T_SRC_SOLAR,
     T_SRC_USB, T_SRC_USB_FULL, T_USB_MODE, T_USB_FILES, T_USB_UNPLUG,
-    T_SAVING, T_ACTIVITY, T_SHUTTING_DOWN, T_S_HR, T_S_BSC, T_S_POWER, T_S_FEC,
+    T_SAVING, T_ACTIVITY, T_SHUTTING_DOWN, T_UPDATING, T_UPDATE_KEEP, T_UPDATE_DONE,
+    T_UPDATE_FAIL, T_S_HR, T_S_BSC, T_S_POWER, T_S_FEC,
     T_S_RADAR, T_S_LIGHT, T_L_NONE, T_L_CONNECTED, T_L_LOST, T_L_SEARCH,
     T_NO_SENSOR, T_FIX, T_SATELLITES, T_POS_AGE, T_ACCURACY, T_BATTERY,
     T_CHARGE, T_VERSION, T_NO_ROUTE, T_ABOUT_H, T_REMAIN, T_LIGHT, T_SCREEN,
@@ -129,6 +130,8 @@ typedef struct {
     uint32_t now_ms;
     uint32_t boot_ms;
     uint8_t progress;       /**< shutdown progress */
+    uint8_t dfu_pct;        /**< update over the air, 0 to 100 */
+    uint8_t dfu_phase;      /**< enum dfu_phase, as the radio publishes it */
     int32_t sel;            /**< selected item of the list on show */
     int32_t value;          /**< value being edited */
     ui_text_t value_title;  /**< FTP or weight */
@@ -173,6 +176,7 @@ extern const ui_screen_ops_t ui_scr_energy;
 extern const ui_screen_ops_t ui_scr_usb;
 extern const ui_screen_ops_t ui_scr_shutdown;
 extern const ui_screen_ops_t ui_scr_routes;
+extern const ui_screen_ops_t ui_scr_dfu;
 
 /** Go to another screen (rebuilds it) */
 void ui_go(ui_screen_t screen);

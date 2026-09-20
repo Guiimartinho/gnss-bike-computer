@@ -45,6 +45,7 @@ Estados: **fiel** (mesmo comportamento), **diferente** (existe com regras ou con
 | Recuperação de falha (FDIR) | `.noinit` + CRC-8, restauração por data ao achar a referência do nível do mar, uma vez, com notificação | `crash_recovery.c` e `attitude.c` | fiel | corrigidos em 2026-09-19 o CRC (cobria o próprio campo), o `has_data` (exigia falha registrada) e o momento da restauração (era no `attitude_init`, antes de saber a data); `test_crash_recovery` |
 | BLE | só central (NUS→stravaAP, LNS, CPS, Komoot) | periférico + central (HRS, CSC, FTMS) | quebrado | scan nunca iniciado; `bt_gatt_subscribe` com `ccc_handle=0` faria `memset(NULL)` ([07](07-radio-ant-ble.md)) |
 | ANT+ | HRM, BSC, FE-C, busca em background | pilha do `sdk-ant` com `ANT=1` (`src/rf/ant/ant.c`), sem perfis | parcial | compila no NCS v3.3.0; mapa de integração em [07](07-radio-ant-ble.md#ant-no-ncs-v330) |
+| Atualização por BLE | não existia: firmware pelo J-Link | MCUboot pelo sysbuild e mcumgr SMP sobre BLE, com `src/rf/dfu.c`, a máquina pura `model/dfu_state.c` e a tela de atualização | parcial | só no alvo nRF54LM20A (no nRF52840 os slots não cabem); assinada com a **chave de desenvolvimento** do MCUboot, a trocar antes de sair da bancada; `test_dfu_state` (12 casos); não testado em placa ([07](07-radio-ant-ble.md#atualização-por-ble-dfu)) |
 | Interface | retrato, `Org_01`, cadrans, menu, notificações | LVGL em retrato, 29 telas (`src/ui`) testadas no PC; no firmware, a thread `ui` com o retrato do modelo, o driver `memlcd` (`modules/gnss_drivers`), as teclas por `zephyr,input-longpress` e a luz | parcial | falta projetar o mapa e os segmentos na tela (`nseg` e `route.n` vão em 0) e ver tudo num painel; a interface em paisagem (`src/vue`) saiu em 2026-09-19 ([18](18-interface-telas.md#diferenças-para-o-legacy)) |
 | Comandos (`$LOC`, `$DWN`, `$QRY`) e USB | VParser via USB CDC e NUS; MSC | nada; os arquivos da pilha USB antiga saíram | ausente | a USB `device_next` é o passo da USB |
 
@@ -113,10 +114,10 @@ flowchart TD
     F0["0 · estabilização<br/>feito em 2026-09-18"]:::done --> F1
     F1["1 · base de execução<br/>feito: serviços, zbus, SMF de sistema e de modo,<br/>watchdog por serviço, auto-off do legacy<br/>falta: board própria (nRF54LM20A, esquemático próprio)"]:::partial --> F2
     F2["2 · fidelidade dos algoritmos<br/>Kalman (ones, bound, taxa), potência, distância,<br/>zonas, FDIR, testes diferenciais contra o legacy"]:::pending --> F3
-    F3["3 · armazenamento<br/>SD e FAT montados, formatos do legacy,<br/>log @DDMMYY, loader e allocator de segmentos, liste_points"]:::pending --> F4
+    F3["3 · armazenamento<br/>feito: formatos do legacy, log @DDMMYY,<br/>segmentos com pool e alocador por época<br/>falta: percursos .PAR, cartão de verdade"]:::partial --> F4
     F4["4 · rádio<br/>ANT+ pelo sdk-ant (HRM, BSC, FE-C) e BLE central,<br/>sensores no modelo, pareamento"]:::pending --> F5
     F5["5 · interface<br/>feito: telas LVGL testadas no PC, driver da tela,<br/>thread, teclas e luz no firmware<br/>falta: mapa e segmentos na tela, teste em painel"]:::partial --> F6
-    F6["6 · comandos e USB<br/>VParser $LOC/$DWN/$QRY, USB device_next CDC e MSC,<br/>stravaAP e tools/zpm"]:::pending --> F7
+    F6["6 · comandos e USB<br/>feito: atualização por BLE (MCUboot e mcumgr) com tela<br/>falta: VParser $LOC/$DWN/$QRY, USB device_next CDC e MSC,<br/>stravaAP e tools/zpm"]:::partial --> F7
     F7["7 · extras<br/>Komoot, LNS, EPO e host aiding, WS2812, FRAM"]:::pending
     classDef done fill:#2e7d32,color:#ffffff
     classDef partial fill:#f9a825,color:#000000

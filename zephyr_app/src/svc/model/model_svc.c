@@ -109,7 +109,8 @@ static bool rides_outdoors(uint8_t mode)
 
 static void publish_mode(void)
 {
-    struct app_mode_state m = {.mode = ctx.mode, .route = parcours_is_active()};
+    struct app_mode_state m = {.mode = ctx.mode, .route = parcours_is_active(),
+                               .recording = ctx.recording};
 
     (void)app_publish(&chan_mode, &m);
 }
@@ -187,6 +188,16 @@ static void publish_state(void)
 {
     model_ui_fill(&ctx, &snapshot);
     (void)app_publish(&chan_model_state, &snapshot);
+
+    /*
+     * Whoever is not the interface only needs to know whether a ride is
+     * being recorded, and only when that changes: the radio refuses an
+     * update over the air in the middle of one (`model/dfu_state.c`).
+     */
+    if (snapshot.status.recording != ctx.recording) {
+        ctx.recording = snapshot.status.recording;
+        publish_mode();
+    }
 }
 
 /** loc_data_t of the model from a GNSS epoch */

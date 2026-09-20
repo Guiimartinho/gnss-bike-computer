@@ -2,7 +2,7 @@
 
 Como o stravaV10 original usa ANT+ e BLE, o que é o stravaAP, como o port Zephyr trocou os sensores ANT+ por clientes BLE, a decisão de manter ANT+ e BLE e o que falta para o rádio funcionar. O catálogo de todos os dispositivos BLE e ANT+ que o aparelho pode aceitar, com prioridades, está em [17-dispositivos-ble-ant.md](17-dispositivos-ble-ant.md).
 
-**Nesta página:** [Topologia](#topologia) · [ANT+ no legacy](#ant-no-legacy) · [BLE no legacy](#ble-no-legacy) · [stravaAP e comandos](#stravaap-e-comandos) · [Komoot](#komoot) · [Rádio no port](#rádio-no-port) · [Decisão: ANT+ e BLE](#decisão-ant-e-ble) · [O que falta](#o-que-falta)
+**Nesta página:** [Topologia](#topologia) · [ANT+ no legacy](#ant-no-legacy) · [BLE no legacy](#ble-no-legacy) · [stravaAP e comandos](#stravaap-e-comandos) · [Komoot](#komoot) · [Rádio no port](#rádio-no-port) · [Decisão: ANT+ e BLE](#decisão-ant-e-ble) · [Atualização por BLE (DFU)](#atualização-por-ble-dfu) · [O que falta](#o-que-falta)
 
 ## Topologia
 
@@ -178,6 +178,54 @@ O build padrão, sem `ANT`, continua idêntico byte a byte ao anterior.
 | Outros perfis de ciclismo (radar, luzes, câmbio eletrônico, e-bike, controle remoto, temperatura) | não usa | não existem no add-on | exigem os documentos de perfil ANT+ (acordo do dono; nada deles entra no repositório) | futuro |
 
 API: as 12 funções `sd_ant_*` que o legacy chama (em `ant.c`, `hrm.c`, `bsc.c` e `fec.c`) existem no add-on como `ant_*` (`include/ant_interface.h`), uma para uma. Dos 21 identificadores de perfis e bibliotecas do nRF5 SDK que o legacy usa, os únicos ausentes no add-on (`ant_search_start`, `ant_search_end` e os dois `*_evt_handler`) são funções do próprio legacy: o port dos perfis pode seguir o legacy linha a linha.
+
+## Atualização por BLE (DFU)
+
+O legacy não atualizava pelo ar: o firmware entrava pelo J-Link ou pelo cartão. O port ganha atualização por Bluetooth com as peças oficiais do NCS v3.3.0 — **MCUboot** pelo sysbuild e **mcumgr SMP sobre BLE** — controladas por um módulo próprio (`zephyr_app/src/rf/dfu.c`) e pela máquina pura de `src/model/dfu_state.c`. O aplicativo do telefone não é deste projeto: qualquer cliente SMP serve (o nRF Connect Device Manager, da Nordic, é o de referência).
+
+```mermaid
+sequenceDiagram
+    participant App as Aplicativo (SMP)
+    participant SMP as mcumgr no aparelho
+    participant DFU as src/rf/dfu.c
+    participant UI as tela
+    participant MB as MCUboot
+    App->>SMP: image upload (pedaços)
+    SMP->>DFU: DFU_STARTED
+    DFU->>UI: fase e porcentagem (chan_dfu)
+    loop cada pedaço
+        SMP->>DFU: DFU_CHUNK (pode recusar)
+        DFU-->>SMP: recusa se em atividade ou bateria fraca
+        DFU->>UI: porcentagem nova
+    end
+    SMP->>DFU: DFU_PENDING (imagem marcada)
+    App->>SMP: reset
+    SMP->>MB: reinicia
+    MB->>MB: troca os slots e inicia a imagem nova
+    DFU->>DFU: boot_write_img_confirmed() quando os serviços sobem
+```
+
+| Peça | Escolha | Onde |
+|---|---|---|
+| Bootloader | MCUboot pelo sysbuild, modo `swap_using_offset` (padrão do NCS 3.3) | `zephyr_app/Kconfig.sysbuild` |
+| Alvo | **só o nRF54LM20A**: slots de 920 KB contra os ~525 KB do firmware. No nRF52840 o slot tem 481 KB contra 480 KB de firmware, e nada caberia | `Kconfig.sysbuild` (`default BOOTLOADER_MCUBOOT if BOARD_NRF54LM20DK`) |
+| Partições | as padrão do SoC: MCUboot 64 KB, `slot0` e `slot1` de 920 KB, `storage` de 36 KB | `zephyr/dts/vendor/nordic/nrf54lm20_a_b_cpuapp_partition.dtsi` |
+| Setores por imagem | 256 fixos (a RRAM apaga em 4096 B; 920 KB dão 230 setores) | `zephyr_app/sysbuild/mcuboot.conf` |
+| Transporte | SMP sobre BLE com remontagem, MTU de 498 B e buffer de 2475 B, como o exemplo `smp_svr` | `boards/nrf54lm20dk_nrf54lm20a_cpuapp.conf` |
+| Confirmação | `boot_write_img_confirmed()` quando os serviços sobem: imagem que não inicia volta sozinha no reset seguinte | `src/rf/dfu.c` |
+| Assinatura | **ainda a chave de desenvolvimento do MCUboot** (decisão do dono em 2026-09-20: sem chave por enquanto) | ver o aviso abaixo |
+
+> [!WARNING]
+> A imagem é assinada com a **chave de desenvolvimento pública do MCUboot**, que está no repositório do bootloader e é conhecida por qualquer pessoa. Enquanto for assim, qualquer um com acesso ao Bluetooth do aparelho pode gravar firmware nele. Antes de sair da bancada: gerar uma chave ED25519 própria (o padrão do nRF54L), guardá-la **fora** deste repositório (que é público) e apontá-la com `SB_CONFIG_BOOT_SIGNATURE_KEY_FILE`.
+
+**Regras do aparelho durante a atualização** (`src/model/dfu_state.c`, testadas em `test_dfu_state`):
+
+- **Em atividade, não atualiza.** Um reset no meio de um passeio perde o que não foi gravado; o alvo recusa o pedaço com `MGMT_ERR_EACCESSDENIED` e avisa na tela.
+- **Bateria abaixo de 30 % e fora do carregador, não atualiza.** Com o USB ligado, qualquer carga serve.
+- A tela de atualização (`docs/telas/28_atualizacao_cor.png`) toma a frente enquanto a imagem chega, mostra a porcentagem e volta para as páginas quando acaba.
+- O log da atividade fecha o arquivo a cada ponto (`sd_logger`), então o reset do mcumgr não perde dados no cartão.
+
+Nada disso foi testado em placa: não há hardware ainda.
 
 ## O que falta
 

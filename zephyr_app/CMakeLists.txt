@@ -70,6 +70,7 @@ target_sources(app PRIVATE
 target_sources(app PRIVATE
     src/model/attitude.c
     src/model/crash_recovery.c
+    src/model/dfu_state.c
     src/model/kalman.c
     src/model/kalman_altitude.c
     src/model/liste_points.c
@@ -94,6 +95,7 @@ target_sources(app PRIVATE
 # Radio: BLE central and peripheral, sensor clients (docs/07)
 # =============================================================================
 target_sources(app PRIVATE
+    src/rf/dfu.c
     src/rf/ble/ble_manager.c
     src/rf/ble/ble_nus.c
     src/rf/ble/ble_lns.c
@@ -135,3 +137,12 @@ target_sources_ifdef(CONFIG_LVGL app PRIVATE
 target_sources_ifdef(CONFIG_ANT app PRIVATE
     src/rf/ant/ant.c
 )
+
+# =============================================================================
+# Update over the air: src/rf/dfu.c includes img_mgmt.h, which pulls
+# bootutil/image.h from the MCUboot side library
+# (bootloader/mcuboot/boot/bootutil/zephyr/CMakeLists.txt).
+# =============================================================================
+if(CONFIG_MCUBOOT_BOOTUTIL_LIB)
+    zephyr_link_libraries(MCUBOOT_BOOTUTIL)
+endif()

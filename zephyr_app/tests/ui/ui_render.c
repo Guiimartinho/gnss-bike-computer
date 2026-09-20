@@ -440,6 +440,16 @@ static void render_theme(ui_theme_t theme)
     ui_set_progress(70U);
     snap("27_desligando", theme);
 
+    /* update over the air: it takes the screen and gives the pages back */
+    ui_show_pages();
+    ui_set_dfu(UI_DFU_RUNNING, 45U);
+    expect_screen(UI_SCREEN_DFU, "the update takes the screen");
+    snap("28_atualizacao", theme);
+    ui_set_dfu(UI_DFU_DONE, 100U);
+    snap("29_atualizacao_pronta", theme);
+    ui_set_dfu(UI_DFU_IDLE, 0U);
+    expect_screen(UI_SCREEN_FEC, "pages back after the update");
+
     /* long centre on a page asks to shut down */
     ui_set_mode(UI_MODE_CRS);
     ui_go(UI_SCREEN_CRS1);

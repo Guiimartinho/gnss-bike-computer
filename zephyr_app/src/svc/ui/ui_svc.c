@@ -104,6 +104,7 @@ struct ui_msg {
         struct app_ambient ambient;
         struct app_mode_state mode;
         struct app_shutdown_ack ack;
+        struct app_dfu dfu;
     } u;
 };
 
@@ -128,6 +129,7 @@ ZBUS_CHAN_ADD_OBS(chan_ambient, ui_lis, 3);
 ZBUS_CHAN_ADD_OBS(chan_system_state, ui_lis, 3);
 ZBUS_CHAN_ADD_OBS(chan_mode, ui_lis, 3);
 ZBUS_CHAN_ADD_OBS(chan_shutdown_ack, ui_lis, 3);
+ZBUS_CHAN_ADD_OBS(chan_dfu, ui_lis, 3);
 
 /* ==========================================================================
  * Preferences of the interface (settings key ui/prefs)
@@ -376,6 +378,11 @@ static void handle(const struct ui_msg *msg, uint32_t now)
         on_system_state(msg->u.sys.state, now);
     } else if (msg->chan == &chan_shutdown_ack) {
         on_shutdown_ack(msg->u.ack.svc);
+    } else if (msg->chan == &chan_dfu) {
+        /* the update takes the screen while the image comes in (rf/dfu.c) */
+        if (!shutting_down) {
+            ui_set_dfu((ui_dfu_t)msg->u.dfu.phase, msg->u.dfu.percent);
+        }
     } else {
         /* nothing else reaches this inbox */
     }

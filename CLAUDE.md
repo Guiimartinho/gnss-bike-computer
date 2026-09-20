@@ -82,20 +82,21 @@ flowchart TB
 | Desbloquear chip | `bash tools/fw/fw.sh recover` |
 | Placas conectadas | `bash tools/fw/fw.sh devices` |
 | Memória e maiores símbolos | `bash tools/fw/fw.sh size` |
-| Testes de host | `bash tools/fw/host_tests.sh` (16 conjuntos, 169 casos) |
-| Telas da interface no PC (LVGL) | `python tools/ui/render_screens.py` (29 telas em 2 temas, gera `docs/img/telas-lvgl/` e `docs/telas/`) |
+| Testes de host | `bash tools/fw/host_tests.sh` (25 conjuntos, 289 casos) |
+| Telas da interface no PC (LVGL) | `python tools/ui/render_screens.py` (30 telas em 2 temas, gera `docs/img/telas-lvgl/` e `docs/telas/`) |
 | Diagramas e links da documentação | `python tools/docs/mermaid_check.py` e `python tools/docs/links_check.py` |
 | Ambiente do NCS no shell | `source tools/fw/ncs_env.sh` |
 
 Equivalentes no `cmd`: `build.bat [pristine]`, `flash.bat [keep]`, `recover.bat`, `serial.bat COMx`. Variáveis: `BUILD_DIR`, `NRF_SERIAL`, `NCS_VERSION`, `NCS_TOOLCHAIN`, `NOPAUSE`.
 
-Referência de 2026-09-19, com a interface, a energia, o GNSS e os segmentos: nRF52840 DK FLASH 478.568 B (45,6 %), RAM 213.504 B (81,5 %); nRF54LM20 DK FLASH 502.564 B, RAM 243.152 B; 0 avisos. Com `ANT=1`: 507.160 B / 217.984 B (nRF52840) e 532.500 B / 247.744 B (nRF54LM20), com um aviso esperado, de símbolo obsoleto.
+Referência de 2026-09-20, com a interface, a energia, o GNSS, os segmentos e a atualização por BLE: nRF52840 DK (sem MCUboot) FLASH 479.960 B (45,8 %), RAM 213.504 B (81,5 %); nRF54LM20 DK FLASH 524.892 B de 921.456 B do slot (57,0 %), RAM 274.044 B (52,4 %), mais o MCUboot com 45.676 B de FLASH e 22.880 B de RAM; 0 avisos. Com `ANT=1`: 508.588 B / 218.112 B (nRF52840) e 554.848 B / 278.636 B (nRF54LM20), com um aviso esperado, de símbolo obsoleto.
 
 ## 5. Estado e próximos passos
 
 - **Port:** compila no NCS v3.3.0 e passa nos testes de host; **nunca rodou em placa nem no DK**. Matriz completa em [`docs/10-status-do-port.md`](docs/10-status-do-port.md).
 - **Feito em 2026-09-18:** revisão completa do legacy e do port (7 análises), build com sysbuild, scripts novos, testes de host, documentação, e 13 correções críticas: pilha da `main_loop` (4 KB), GPS fora da ISR (ring buffer + processamento na thread), um callback de fix por época, checksum NMEA, parser NMEA, estouro do `sd_logger`, botões, polaridades do GPS e do FXOS, nós do DK desligados, reset em erro fatal, símbolo do SoC. Depois, da fase 1: a `main_loop` como única escritora do modelo, com `model_lock()` para a tela; `task_wdt` com um canal de 4 s por thread; auto-off de 15 min e desligamento pelo STC3100 (`power_scheduler`).
 - **Feito em 2026-09-19:** a base da arquitetura nova ([`docs/05`](docs/05-arquitetura-zephyr.md)): sete serviços com thread e caixa de entrada, eventos no zbus, máquinas de sistema e de modo no SMF, watchdog por serviço, hardware pelas APIs do Zephyr por aliases do devicetree; saíram o HAL próprio, os drivers da V3, a interface em paisagem e a USB antiga. E a interface da placa nova em LVGL (`src/ui`, `include/ui`): 29 telas em retrato, nos temas de 8 cores e preto e branco, com os arranjos e formatos do legacy, testadas no PC pelo renderizador de host (`tests/ui`). Depois, a interface no firmware: driver próprio da tela em `zephyr_app/modules/gnss_drivers` (JDI LPM027M128B/C e Sharp LS027B7DH01, retrato, só as linhas que mudaram), thread `ui` com o LVGL (6 KB de pilha), teclas por `zephyr,input-longpress`, máquina da luz; nada visto num painel. E o medidor MAX17262 por driver próprio (`adi,max17262`, API de fuel gauge), com bateria fraca e crítica no serviço de energia, o nPM1300 (trilhos travados, limite do VBUS pela fonte USB-C, eventos, máquina de carga) e o AEM10900 por driver próprio (`e-peas,aem10900`, API de carregadores; a potência em mW espera o fator da e-peas). E o GNSS: driver próprio do u-blox M10 por UBX (`u-blox,max-m10`, `modem_ubx` sobre a UART, configuração por `CFG-VALSET` nas camadas RAM e BBR, `UBX-NAV-PVT` e `UBX-NAV-SAT` a 1 Hz, LEAP, standby por `UBX-RXM-PMREQ` e reinício por silêncio) com a máquina de energia do receptor em `gnss_power.c`; não testado com nenhum desses componentes.
+- **Feito em 2026-09-20:** os segmentos funcionando de ponta a ponta (pool de 3 × 256 pontos com decimação, janela do histórico que anda, alocador rodando a cada época no serviço do modelo, constantes do legacy) e a **atualização por BLE**: MCUboot pelo sysbuild e mcumgr SMP, só no alvo nRF54LM20A, com regras próprias (recusa em atividade ou com bateria fraca), tela de progresso e confirmação da imagem; ainda com a chave de desenvolvimento do MCUboot ([07](docs/07-radio-ant-ble.md#atualização-por-ble-dfu)). Nada testado em placa.
 - **Ordem proposta do que falta:**
 
 ```mermaid
@@ -179,7 +180,7 @@ flowchart LR
 | Arquitetura do firmware e máquinas de estado da placa nova | [docs/16-arquitetura-firmware.md](docs/16-arquitetura-firmware.md) |
 | Dispositivos BLE e ANT+ | [docs/17-dispositivos-ble-ant.md](docs/17-dispositivos-ble-ant.md) |
 | Interface e telas da placa nova | [docs/18-interface-telas.md](docs/18-interface-telas.md) |
-| As 29 telas, uma a uma | [docs/telas/README.md](docs/telas/README.md) |
+| As 30 telas, uma a uma | [docs/telas/README.md](docs/telas/README.md) |
 | Lista de compras da placa nova | [docs/19-lista-de-compras.md](docs/19-lista-de-compras.md) |
 | Build e ambiente | [docs/03-ambiente-build.md](docs/03-ambiente-build.md) |
 | Legacy | [docs/04-arquitetura-legacy.md](docs/04-arquitetura-legacy.md), [legacy/README.md](legacy/README.md) |

@@ -86,7 +86,7 @@ flowchart LR
 | Zonas de potência, suffer score, variabilidade da FC | sim | portados e testados, sem dados reais |
 | Log no microSD e download pelo PC | sim | log em stub |
 | USB serial e mass storage | sim | fora do build |
-| Telas em retrato, menu, notificações, botões | sim | LVGL no firmware com driver próprio da tela, 29 telas testadas no PC; nunca vistas num painel |
+| Telas em retrato, menu, notificações, botões | sim | LVGL no firmware com driver próprio da tela, 30 telas testadas no PC; nunca vistas num painel |
 
 ## Início rápido
 
@@ -101,7 +101,7 @@ bash tools/fw/fw.sh flash          # grava no DK pelo J-Link
 BOARD=nrf54lm20dk/nrf54lm20a/cpuapp BUILD_DIR=zephyr_app/build_54 bash tools/fw/fw.sh build
 ANT=1 bash tools/fw/fw.sh build pristine   # com a pilha ANT do sdk-ant
 bash tools/fw/host_tests.sh        # 16 conjuntos de testes de host
-python tools/ui/render_screens.py  # desenha as 29 telas no PC (docs/telas)
+python tools/ui/render_screens.py  # desenha as 30 telas no PC (docs/telas)
 python tools/docs/mermaid_check.py # valida os diagramas da documentação
 ```
 

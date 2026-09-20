@@ -277,6 +277,7 @@ struct app_system_state {
 struct app_mode_state {
     uint8_t mode;               /**< enum app_mode */
     bool route;                 /**< PRC with a route loaded */
+    bool recording;             /**< an activity is running: positions are being logged */
 };
 
 /** Services that take part in the shutdown */
@@ -345,6 +346,15 @@ struct app_input {
 #define APP_ROUTE_LIST_MAX  10U
 
 /** Channel storage_info: what the card holds */
+/**
+ * Channel dfu: how a firmware update over Bluetooth is going, published by
+ * the radio service (`src/rf/dfu.c`, `model/dfu_state.c`).
+ */
+struct app_dfu {
+    uint8_t phase;              /**< enum dfu_phase */
+    uint8_t percent;            /**< 0 to 100, 0 while the size is unknown */
+};
+
 struct app_storage_info {
     bool mounted;
     uint16_t segments;          /**< segments loaded */

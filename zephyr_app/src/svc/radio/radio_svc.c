@@ -22,6 +22,7 @@
 #include "rf/ble_fec_client.h"
 #include "rf/ble_hrs_client.h"
 #include "rf/ble_manager.h"
+#include "rf/dfu.h"
 
 LOG_MODULE_REGISTER(radio_svc, CONFIG_LOG_DEFAULT_LEVEL);
 
@@ -35,6 +36,7 @@ struct radio_msg {
         struct app_system_state sys;
         struct app_system_cmd cmd;
         struct app_power_status power;
+        struct app_mode_state mode;
     } u;
 };
 
@@ -63,6 +65,7 @@ ZBUS_LISTENER_DEFINE(radio_lis, radio_listener);
 ZBUS_CHAN_ADD_OBS(chan_system_state, radio_lis, 3);
 ZBUS_CHAN_ADD_OBS(chan_system_cmd, radio_lis, 3);
 ZBUS_CHAN_ADD_OBS(chan_power_status, radio_lis, 3);
+ZBUS_CHAN_ADD_OBS(chan_mode, radio_lis, 3);
 
 /* ---- client callbacks, in the BT receive thread -------------------------- */
 
@@ -144,6 +147,11 @@ static void radio_start(void)
     ble_bsc_client_register_conn_callback(bsc_conn);
     ble_fec_client_register_callback(fec_data);
     ble_fec_client_register_conn_callback(fec_conn);
+
+    /* update over the air: the SMP service rides on this same stack */
+    if (rf_dfu_init() != APP_OK) {
+        LOG_ERR("DFU start failed");
+    }
 }
 
 static void radio_thread(void *p1, void *p2, void *p3)
@@ -155,6 +163,9 @@ static void radio_thread(void *p1, void *p2, void *p3)
     struct radio_msg msg;
     int16_t last_batt = -1;
     bool done = false;
+    bool ride_active = false;
+    bool usb_present = false;
+    uint8_t batt_pct = 100U;
 
     radio_start();
 
@@ -180,6 +191,13 @@ static void radio_thread(void *p1, void *p2, void *p3)
                 last_batt = (int16_t)msg.u.power.pct;
                 ble_manager_update_battery(msg.u.power.pct);
             }
+            usb_present = msg.u.power.vbus;
+            batt_pct = msg.u.power.gauge ? msg.u.power.pct : 100U;
+            rf_dfu_set_conditions(ride_active, usb_present, batt_pct);
+        } else if (msg.chan == &chan_mode) {
+            /* an update is refused in the middle of a ride (rf/dfu.c) */
+            ride_active = msg.u.mode.recording;
+            rf_dfu_set_conditions(ride_active, usb_present, batt_pct);
         } else if (msg.chan == &chan_system_cmd) {
             /* pairing: the radio step (docs/17, Pareamento) */
             LOG_INF("pairing command %u", msg.u.cmd.id);

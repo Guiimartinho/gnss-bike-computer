@@ -125,6 +125,7 @@ Cada serviço tem uma **caixa de entrada**, uma `k_msgq` estática que um listen
 | `chan_input` | tecla e tipo de toque | callback das teclas, na thread da entrada | interface |
 | `chan_storage_info` | cartão montado, segmentos carregados, percursos | armazenamento | modelo |
 | `chan_model_state` | o retrato da tela (`ui_model_t`, [18](18-interface-telas.md#implementação)) | modelo | interface |
+| `chan_dfu` | fase e porcentagem da atualização por BLE ([07](07-radio-ant-ble.md#atualização-por-ble-dfu)) | rádio | interface |
 
 As mensagens estão em `zephyr_app/include/app/app_events.h`, em C sem tipos do Zephyr.
 

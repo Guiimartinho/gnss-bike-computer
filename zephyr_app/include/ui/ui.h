@@ -62,6 +62,14 @@ typedef enum {
 } ui_mode_t;
 
 /** Screens */
+/** Phase of an update over the air, as the radio publishes it */
+typedef enum {
+    UI_DFU_IDLE = 0,
+    UI_DFU_RUNNING,
+    UI_DFU_DONE,
+    UI_DFU_FAILED,
+} ui_dfu_t;
+
 typedef enum {
     UI_SCREEN_BOOT = 0,
     UI_SCREEN_CRS1,
@@ -82,6 +90,7 @@ typedef enum {
     UI_SCREEN_USB,
     UI_SCREEN_SHUTDOWN,
     UI_SCREEN_ROUTES,
+    UI_SCREEN_DFU,
     UI_SCREEN_COUNT
 } ui_screen_t;
 
@@ -150,6 +159,14 @@ void ui_show_pages(void);
 
 /** Progress of the shutdown screen, 0..100 */
 void ui_set_progress(uint8_t pct);
+
+/**
+ * @brief Update over the air: phase and percentage
+ *
+ * The screen of the update comes up on its own while one is running and
+ * gives the pages back when it is over.
+ */
+void ui_set_dfu(ui_dfu_t phase, uint8_t pct);
 
 /** Screen on show */
 ui_screen_t ui_current(void);

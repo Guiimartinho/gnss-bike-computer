@@ -27,6 +27,7 @@ struct model_ctx {
     uint8_t mode;                   /**< enum app_mode in force */
     uint8_t mode_req;               /**< mode asked by the last command */
     bool shutting_down;
+    bool recording;                 /**< an activity is being recorded, as published */
 
     /* inputs, as they last arrived */
     struct app_gnss_fix fix;
