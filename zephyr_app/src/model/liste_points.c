@@ -139,42 +139,54 @@ void liste_clear(liste_points_t *liste)
     liste->capacity = cap;
 }
 
+/**
+ * Put a point at the front, which becomes index 0: what
+ * `ListePoints::ajouteIso()` of the legacy does with the history of the
+ * rider (`legacy/source/routes/ListePoints.cpp`), so index 0 is the
+ * current position and index 1 the previous one.
+ *
+ * The two functions below used to do the opposite of their names: the one
+ * called front appended at the end and the one called back prepended, so a
+ * segment read from its file came out reversed and the "first point" of a
+ * segment was its last.
+ */
 void liste_add_front(liste_points_t *liste, float lat, float lon, float alt, float rtime)
 {
     if ((liste == NULL) || (liste->capacity == 0U)) {
         return;
     }
 
-    /* Add at head position */
-    liste->points[liste->head].lat = lat;
-    liste->points[liste->head].lon = lon;
-    liste->points[liste->head].alt = alt;
-    liste->points[liste->head].rtime = rtime;
+    uint16_t oldest = (liste->head + liste->capacity - liste->count) % liste->capacity;
+    uint16_t slot = (oldest + liste->capacity - 1U) % liste->capacity;
 
-    /* Advance head */
-    liste->head = (liste->head + 1U) % liste->capacity;
+    liste->points[slot].lat = lat;
+    liste->points[slot].lon = lon;
+    liste->points[slot].alt = alt;
+    liste->points[slot].rtime = rtime;
 
     if (liste->count < liste->capacity) {
         liste->count++;
+    } else {
+        /* full: the newest one falls off the other end */
+        liste->head = (liste->head + liste->capacity - 1U) % liste->capacity;
     }
 }
 
+/** Put a point at the end, keeping the order of a segment file */
 void liste_add_back(liste_points_t *liste, float lat, float lon, float alt, float rtime)
 {
     if ((liste == NULL) || (liste->capacity == 0U)) {
         return;
     }
 
+    liste->points[liste->head].lat = lat;
+    liste->points[liste->head].lon = lon;
+    liste->points[liste->head].alt = alt;
+    liste->points[liste->head].rtime = rtime;
+
+    liste->head = (liste->head + 1U) % liste->capacity;
+
     if (liste->count < liste->capacity) {
-        /* Calculate back position */
-        uint16_t oldest = (liste->head + liste->capacity - liste->count) % liste->capacity;
-        uint16_t back = (oldest + liste->capacity - 1U) % liste->capacity;
-
-        liste->points[back].lat = lat;
-        liste->points[back].lon = lon;
-        liste->points[back].alt = alt;
-        liste->points[back].rtime = rtime;
-
         liste->count++;
     }
 }

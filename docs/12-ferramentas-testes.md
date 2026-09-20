@@ -28,7 +28,8 @@ bash tools/fw/host_tests.sh -R tilt     # um conjunto
 | Conjunto | Código testado | Casos | O que garante |
 |---|---|---|---|
 | `test_segment_file` | `model/segment_file.c` | 6 | nome de segmento do legacy (12 caracteres, `#` e `.` nas posições certas), posição em base 36 no nome, leitura da linha `lat ; lon ; rtime ; alt`, ida e volta nome↔posição e a conferência dos **138 segmentos reais** de `tools/TDD/DB`: o nome tem de bater com o primeiro ponto de dentro |
-| `test_vecteur` | `model/vecteur.c` | 9 | distância dentro de 0,5 % da fórmula do legacy, sinais dos eixos, produto escalar, normalização |
+| `test_liste_points` | `model/liste_points.c` | 12 | ordem das listas (segmento em ordem de arquivo, histórico com o mais novo no índice 0), corte do histórico, distância à lista, caixa e centro em graus, e a posição relativa com cinco pontos, projetada e fora do triângulo |
+| `test_vecteur` | `model/vecteur.c` | 25 | distância dentro de 0,5 % da fórmula do legacy, sinais dos eixos, produto escalar, normalização |
 | `test_crash_recovery` | `model/crash_recovery.c` | 6 | a partida limpa não restaura nada, o bloco volta inteiro (com o recorde), não depende de falha registrada, um byte trocado quebra o CRC, o bloco limpo não é aceito e a segunda gravação vale |
 | `test_kalman_altitude` | `model/kalman_altitude.c`, `udmatrix.c` | 6 | a elevação acompanha a subida pelo pitch, a rampa e a velocidade vertical saem do filtro, o offset de montagem é estimado, parado não atualiza e a descida dá velocidade vertical negativa |
 | `test_udmatrix` | `model/udmatrix.c` | 8 | `ones` preenche tudo (P0 = 900), `bound` compara valor absoluto e mantém covariância negativa, e soma e subtração com o destino igual a uma das entradas |
