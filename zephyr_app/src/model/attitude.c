@@ -102,6 +102,33 @@ static bool has_sea_level_ref;
 /** User rider weight in kg (from settings) */
 static float rider_weight_kg;
 
+/**
+ * The legacy averages the last ten pressures (FILTRE_NB, 1 s at 10 Hz) and
+ * turns the average into altitude (`libraries/AltiBaro/AltiBaro.cpp:137-156`);
+ * until the buffer is full, `computeAlti()` answers false.
+ */
+#define BARO_FILTER_NB      10U
+
+static float baro_ring[BARO_FILTER_NB];
+static uint8_t baro_ring_count;
+static uint8_t baro_ring_head;
+
+/** Average of the ring, or 0 while it is not full */
+static float baro_pressure_avg(void)
+{
+    if (baro_ring_count < BARO_FILTER_NB) {
+        return 0.0f;
+    }
+
+    float sum = 0.0f;
+
+    for (uint8_t i = 0U; i < BARO_FILTER_NB; i++) {
+        sum += baro_ring[i];
+    }
+
+    return sum / (float)BARO_FILTER_NB;
+}
+
 /* ==========================================================================
  * Private Functions
  * ========================================================================== */
@@ -136,8 +163,8 @@ static float compute_baro_altitude(float pressure)
  */
 static void compute_altitude_fusion(void)
 {
-    /* Get current barometric altitude */
-    float baro_ele = compute_baro_altitude(current_ext.pressure);
+    /* Barometric altitude of the last second, as the legacy averages it */
+    float baro_ele = compute_baro_altitude(baro_pressure_avg());
 
     /* Initialize Kalman if not done */
     if (!kalman_altitude_is_init(&altitude_kf)) {
@@ -290,9 +317,11 @@ app_err_t attitude_init(void)
     is_altitude_initialized = false;
     has_sea_level_ref = false;
     distance_init(&ridden);
+    baro_ring_count = 0U;
+    baro_ring_head = 0U;
 
     /* Load rider weight from user settings (stored in hectograms) */
-    user_settings_t *settings = user_settings_get_global();
+    const user_settings_t *settings = user_settings_get_global();
     uint16_t weight_hg = user_settings_get_weight(settings);
     if (weight_hg > 0U) {
         rider_weight_kg = (float)weight_hg / 10.0f;
@@ -384,9 +413,13 @@ app_err_t attitude_update_gps(const loc_data_t *loc)
     }
 
     /* Apply GPS/baro altitude correction filter */
-    if (has_sea_level_ref && (current_ext.pressure > 0.0f)) {
-        float baro_alt = compute_baro_altitude(current_ext.pressure);
+    if (has_sea_level_ref && (baro_pressure_avg() > 0.0f)) {
+        float baro_alt = compute_baro_altitude(baro_pressure_avg());
+
         filter_altitude_correction(loc->alt, baro_alt);
+
+        /* one fusion per epoch, as the legacy does */
+        compute_altitude_fusion();
     }
 
     /* Update climb from Kalman-filtered altitude */
@@ -444,15 +477,20 @@ app_err_t attitude_update_baro(float pressure, float temperature)
     current_ext.pressure = pressure;
     current_ext.temperature = temperature;
 
-    /* Calculate barometric altitude using calibrated sea level if available */
     if (pressure > 0.0f) {
-        current_ext.baro_altitude = compute_baro_altitude(pressure);
+        baro_ring[baro_ring_head] = pressure;
+        baro_ring_head = (uint8_t)((baro_ring_head + 1U) % BARO_FILTER_NB);
+        if (baro_ring_count < BARO_FILTER_NB) {
+            baro_ring_count++;
+        }
+        current_ext.baro_altitude = compute_baro_altitude(baro_pressure_avg());
     }
 
-    /* Run altitude fusion if we have sea level reference */
-    if (has_sea_level_ref) {
-        compute_altitude_fusion();
-    }
+    /*
+     * The fusion does not run here: the legacy runs it once per location
+     * (`Attitude::addNewLocation` calls `computeElevation`), with the
+     * average of the last second of pressure.
+     */
 
     return APP_OK;
 }
@@ -610,6 +648,8 @@ void attitude_reset(void)
     is_altitude_initialized = false;
     has_sea_level_ref = false;
     distance_init(&ridden);
+    baro_ring_count = 0U;
+    baro_ring_head = 0U;
 
     locator_reset();
     crash_recovery_clear();

@@ -69,10 +69,11 @@ Estado `X = [h, α_bar, α0]`: elevação, pitch medido e offset de montagem do 
 | Transição | `A = [[1, dl, −dl], [0, 1, 0], [0, 0, 1]]`, `dl = v·Δt` | igual |
 | Q | `diag(0.03, 0.10, 0.0002)` | igual |
 | R | `diag(1000, 600)` | igual |
-| P0 | 900 em **todos** os 9 elementos (`matP.ones(900)`) | 900·I (`udmat_ones` gera identidade) |
-| Limite de P⁻ | valor absoluto em [1e-15, 1e12], sinal preservado | com sinal: todo negativo vira +1e-15, zerando as covariâncias cruzadas (**α0 nunca é estimado**) |
+| P0 | 900 em **todos** os 9 elementos (`matP.ones(900)`) | igual desde 2026-09-19 (o `udmat_ones` gerava identidade) |
+| Limite de P⁻ | `fabs(x) < min → +min`, `fabs(x) > max → +max`, em [1e-15, 1e12] | igual desde 2026-09-19 (comparava o valor com sinal e transformava todo negativo em +1e-15, zerando as covariâncias cruzadas: **α0 nunca era estimado**) |
+| `P⁻ = A·P·Aᵀ + Q` | soma matricial | igual desde 2026-09-19; o `udmat_add()` do port zerava o destino antes de ler a entrada e, como a soma escreve no próprio `P⁻`, a predição virava só `Q` e o filtro quase não se movia |
 | Velocidade mínima | 1,5 m/s | igual |
-| Taxa | uma vez por localização (1 Hz), barômetro médio de 1 s | a cada amostra do barômetro (10 Hz) |
+| Taxa | uma vez por localização (1 Hz), barômetro médio de 1 s (`FILTRE_NB` = 10) | igual desde 2026-09-19 (rodava a cada amostra do barômetro, 10 Hz, com a pressão instantânea) |
 | Pitch | `−atan2f(Ay, −Az)` da média de 50 amostras (eixos da V11) | média de 50 amostras a 50 Hz, pelas equações do AN4248 nos eixos da placa ([Inclinação, rumo e rugosidade](#inclinação-rumo-e-rugosidade)) |
 | Saídas | `slope = α_bar − α0`; com mais de 60 pontos: `att.slope = 100·slope`, `vit_asc = slope·v` | igual, mas o contador de pontos avançava por sentença NMEA (corrigido: agora por época) |
 

@@ -28,6 +28,8 @@ bash tools/fw/host_tests.sh -R tilt     # um conjunto
 | Conjunto | Código testado | Casos | O que garante |
 |---|---|---|---|
 | `test_vecteur` | `model/vecteur.c` | 9 | distância dentro de 0,5 % da fórmula do legacy, sinais dos eixos, produto escalar, normalização |
+| `test_kalman_altitude` | `model/kalman_altitude.c`, `udmatrix.c` | 6 | a elevação acompanha a subida pelo pitch, a rampa e a velocidade vertical saem do filtro, o offset de montagem é estimado, parado não atualiza e a descida dá velocidade vertical negativa |
+| `test_udmatrix` | `model/udmatrix.c` | 8 | `ones` preenche tudo (P0 = 900), `bound` compara valor absoluto e mantém covariância negativa, e soma e subtração com o destino igual a uma das entradas |
 | `test_distance` | `model/distance.c` | 9 | descarte dos primeiros 25 m, instantâneo a cada 15 m (e um só quando a época traz 100 m), parado não soma, total igual ao do legacy em 300 m e a volta do total pela recuperação de falha |
 | `test_power_estimate` | `model/power_estimate.c` | 7 | a fórmula do legacy em 64 pontos de velocidade e rampa contra a transcrição em `legacy_ref.h`, os 147 W a 30 km/h no plano, os 151 W a 12 km/h em 5 %, potência negativa na descida e a saturação do `int16_t` |
 | `test_power_zone` | `model/power_zone.c` | 6 | limites das 7 zonas pelo FTP, janela de 50 a 1950 W, acumulação |
