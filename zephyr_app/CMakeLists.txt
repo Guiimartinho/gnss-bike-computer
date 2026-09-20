@@ -77,6 +77,8 @@ target_sources(app PRIVATE
     src/model/kalman_altitude.c
     src/model/liste_points.c
     src/model/map_project.c
+    src/model/gpx_scan.c
+    src/model/route_file.c
     src/model/route_profile.c
     src/model/loc_source.c
     src/model/locator.c

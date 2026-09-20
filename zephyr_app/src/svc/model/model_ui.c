@@ -248,6 +248,24 @@ static void fill_nav(const struct model_ctx *ctx, ui_model_t *m)
     m->nav.dist_m = ctx->nav.dist_m;
     m->nav.turn = (ui_turn_t)ctx->nav.turn;
     (void)strncpy(m->nav.street, ctx->nav.street, sizeof(m->nav.street) - 1U);
+
+    /*
+     * With no phone talking, the turns come from the course itself, when
+     * the file brought a cue sheet (`model/route_file.h`). The phone wins
+     * because it knows where the rider actually is on the streets.
+     */
+    if (!m->nav.valid && parcours_is_active()) {
+        parcours_cue_t cue;
+        float dist = 0.0f;
+
+        if (parcours_get_next_cue(&cue, &dist)) {
+            m->nav.valid = true;
+            m->nav.dist_m = (dist > 65535.0f) ? 65535U : (uint16_t)dist;
+            m->nav.turn = (ui_turn_t)cue.turn;
+            (void)strncpy(m->nav.street, cue.street, sizeof(m->nav.street) - 1U);
+            m->nav.street[sizeof(m->nav.street) - 1U] = '\0';
+        }
+    }
 }
 
 static void fill_settings(const struct model_ctx *ctx, ui_model_t *m)

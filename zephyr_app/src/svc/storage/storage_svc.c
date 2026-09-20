@@ -128,7 +128,9 @@ static void list_routes(void)
         }
         const char *ext = &entry.name[len - 4U];
 
-        if ((strcmp(ext, ".PAR") == 0) || (strcmp(ext, ".par") == 0) ||
+        if ((strcmp(ext, ".RTE") == 0) || (strcmp(ext, ".rte") == 0) ||
+            (strcmp(ext, ".GPX") == 0) || (strcmp(ext, ".gpx") == 0) ||
+            (strcmp(ext, ".PAR") == 0) || (strcmp(ext, ".par") == 0) ||
             (strcmp(ext, ".CRS") == 0) || (strcmp(ext, ".crs") == 0)) {
             /* the whole name, extension and all: it is what opens the file */
             (void)snprintf(info.route[info.nroutes], sizeof(info.route[0]), "%.*s",

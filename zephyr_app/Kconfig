@@ -20,6 +20,15 @@ config GNSS_ROUTE_POINTS
 	  The board with 512 KB of RAM can afford the larger number; the
 	  nRF52840 of the old board cannot.
 
+config GNSS_ROUTE_CUES
+	int "Turns of the cue sheet kept in memory"
+	default 64
+	range 0 512
+	help
+	  A route file of this project (`.RTE`) may carry a cue sheet: the
+	  turns, with the name of the street. Each one takes 26 bytes. A
+	  hundred kilometre course out of a routing service has a few dozen.
+
 config GNSS_SEGMENT_POINTS
 	int "Points of a segment kept in memory"
 	default 256

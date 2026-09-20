@@ -28,6 +28,9 @@ unsigned int host_fs_open_count(void);
 /** Put a file with this content in the fake card; true on success. */
 bool host_fs_add_file(const char *path, const char *content);
 
+/** Put a file of raw bytes on the card (a `.RTE` has zeros inside) */
+bool host_fs_add_bytes(const char *path, const void *bytes, size_t len);
+
 /** Content of a file, or NULL when it is not there. */
 const char *host_fs_file_content(const char *path);
 

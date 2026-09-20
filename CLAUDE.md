@@ -82,14 +82,15 @@ flowchart TB
 | Desbloquear chip | `bash tools/fw/fw.sh recover` |
 | Placas conectadas | `bash tools/fw/fw.sh devices` |
 | Memória e maiores símbolos | `bash tools/fw/fw.sh size` |
-| Testes de host | `bash tools/fw/host_tests.sh` (31 conjuntos, 341 casos) |
+| Testes de host | `bash tools/fw/host_tests.sh` (33 conjuntos, 367 casos) |
 | Telas da interface no PC (LVGL) | `python tools/ui/render_screens.py` (31 telas em 2 temas, gera `docs/img/telas-lvgl/` e `docs/telas/`) |
+| Converter um percurso do Strava para o formato do projeto | `python tools/route_convert.py entrada.gpx saida.RTE` (e `--selftest`) |
 | Diagramas e links da documentação | `python tools/docs/mermaid_check.py` e `python tools/docs/links_check.py` |
 | Ambiente do NCS no shell | `source tools/fw/ncs_env.sh` |
 
 Equivalentes no `cmd`: `build.bat [pristine]`, `flash.bat [keep]`, `recover.bat`, `serial.bat COMx`. Variáveis: `BUILD_DIR`, `NRF_SERIAL`, `NCS_VERSION`, `NCS_TOOLCHAIN`, `NOPAUSE`.
 
-Referência de 2026-09-20, com a interface, a energia, o GNSS, os segmentos, a atualização por BLE, o USB, o percurso pelo telefone e o perfil: nRF52840 DK (sem MCUboot nem USB) FLASH 486.860 B (46,4 %), RAM 214.912 B (82,0 %); nRF54LM20 DK FLASH 572.360 B de 921.456 B do slot (62,1 %), RAM 376.708 B (72,0 %), mais o MCUboot com 45.676 B de FLASH e 22.880 B de RAM; 0 avisos.
+Referência de 2026-09-20, com a interface, a energia, o GNSS, os segmentos, a atualização por BLE, o USB, o percurso pelo telefone (RTE, GPX e o texto do legacy) e o perfil: nRF52840 DK FLASH 489.780 B (46,7 %), RAM 216.704 B (82,7 %); nRF54LM20 DK FLASH 575.252 B de 921.456 B do slot (62,4 %), RAM 378.420 B (72,3 %), mais o MCUboot com 45.676 B de FLASH e 22.880 B de RAM; 0 avisos.
 
 ## 5. Estado e próximos passos
 

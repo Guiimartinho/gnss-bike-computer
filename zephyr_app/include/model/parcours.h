@@ -40,6 +40,16 @@ extern "C" {
 #define PARCOURS_LINE_MAX       64U
 
 /** Off-route threshold in meters */
+/** Turns of the cue sheet kept in memory (`CONFIG_GNSS_ROUTE_CUES`) */
+#if defined(CONFIG_GNSS_ROUTE_CUES)
+#define PARCOURS_MAX_CUES       ((uint16_t)CONFIG_GNSS_ROUTE_CUES)
+#else
+#define PARCOURS_MAX_CUES       64U
+#endif
+
+/** Longest street name of a turn, as the file carries it */
+#define PARCOURS_STREET_LEN     22U
+
 #define PARCOURS_OFF_ROUTE_M    50.0f
 
 /** Point proximity threshold in meters */
@@ -66,6 +76,13 @@ typedef struct {
     float total_climb;              /**< Total elevation gain */
     bool valid;                     /**< Is parcours valid */
 } parcours_info_t;
+
+/** One turn of the route, from the cue sheet of the file */
+typedef struct {
+    uint16_t point;                         /**< point of the loaded route */
+    uint8_t turn;                           /**< enum route_turn */
+    char street[PARCOURS_STREET_LEN + 1U];
+} parcours_cue_t;
 
 /** Navigation info structure */
 typedef struct {
@@ -145,6 +162,32 @@ app_err_t parcours_get_nav_info(nav_info_t *nav);
  * @return true if loaded
  */
 bool parcours_is_loaded(void);
+
+/**
+ * @brief The next turn of the route, when the file brought a cue sheet
+ *
+ * @param out Where to write the turn
+ * @param dist_m Distance to it, in metres
+ * @return true when there is a turn ahead
+ */
+bool parcours_get_next_cue(parcours_cue_t *out, float *dist_m);
+
+/**
+ * @brief Name of the route, as the file says it (`.RTE`) or its file name
+ */
+const char *parcours_get_name(void);
+
+/** Called now and then while a file is being read, to feed the watchdog */
+typedef void (*parcours_progress_fn)(void);
+
+/**
+ * @brief Who to call while a long file is being read
+ *
+ * A course as it comes from a service is megabytes of XML, and reading it
+ * takes longer than the four seconds of the watchdog; the service that
+ * loads it says here how to feed its channel.
+ */
+void parcours_set_progress(parcours_progress_fn fn);
 
 /**
  * @brief Check if currently navigating

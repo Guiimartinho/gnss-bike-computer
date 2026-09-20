@@ -58,6 +58,20 @@ Em 2026-09-18 o estouro do `sd_logger` com o cartão indisponível foi corrigido
 
 **USB, desde 2026-09-20** (`src/svc/usb/usb_svc.c`, só no alvo com a pilha `device_next`): o serviço oitavo liga o barramento quando o cabo entra e mostra ao PC uma **porta serial** com os mesmos comandos do legacy (`$LOC`, `$DWN`, `$QRY`...), lidos pelo mesmo `cmd_parser`; a interrupção do CDC só enfileira bytes, e a thread lê. O **disco** só aparece no modo USB, que o menu ou um `$DWN,16` pedem: aí o serviço de armazenamento já desmontou o sistema de arquivos e o PC fica dono da mídia, e sair dele pede reset, como no legacy. Enquanto o ciclista pedala, o disco é do firmware e o PC só vê a serial. Identificadores: VID 0x1209 e PID 0x0001, os de teste do pid.codes — um número próprio precisa ser pedido lá antes de qualquer venda. Nada disso foi testado com cabo.
 
+### Formatos de percurso
+
+O aparelho aceita **três**, e escolhe pelo conteúdo do arquivo, não pela extensão:
+
+| Formato | De onde vem | Tamanho de 100 km a cada 10 m | O que traz |
+|---|---|---|---|
+| **`.RTE`** | `tools/route_convert.py`, do GPX ou do TCX | **100 KB** | nome, distância, subida e caixa no cabeçalho de 64 B; **CRC-32** do corpo; lista de curvas com o nome da rua |
+| `.GPX`, `.TCX` | Strava, Komoot, RideWithGPS, direto | 1 a 3 MB | o traçado e a altitude; sem verificação |
+| `.PAR`, `.CRS` | o legacy | 303 KB | o traçado e a altitude |
+
+O `.RTE` é o formato deste projeto, descrito em `zephyr_app/include/model/route_file.h`: binário, little endian, versionado. Vale a pena porque o envio por Bluetooth fica 10 a 30 vezes mais rápido, o menu mostra nome e distância sem abrir o arquivo inteiro, um envio cortado no meio é pego pelo CRC antes de o ciclista sair seguindo uma rota que acaba no nada, e as curvas chegam padronizadas.
+
+O GPX passa direto porque **ninguém deve ser obrigado a converter**: o leitor (`src/model/gpx_scan.c`) é uma máquina de estados que varre os bytes conforme chegam, sem montar o XML na memória, e aguenta o que os serviços escrevem — prefixos de namespace, extensões desconhecidas, atributos em qualquer ordem, aspas simples ou duplas e o arquivo chegando em pedaços. Como um GPX grande leva segundos para ser lido, o carregador alimenta o watchdog pelo caminho.
+
 ### Arquivos pelo telefone
 
 O percurso entra no aparelho como num Garmin: o aplicativo manda o arquivo por Bluetooth, pelo **grupo de arquivos do mcumgr**, no mesmo enlace SMP da atualização ([07](07-radio-ant-ble.md#atualização-por-ble-dfu)). O aplicativo não é deste projeto; qualquer cliente SMP serve, e o nRF Connect Device Manager da Nordic é o de referência.

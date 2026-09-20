@@ -17,9 +17,18 @@ void tearDown(void) {}
 
 static void test_a_route_is_a_route(void)
 {
+    /* the course of this project */
+    TEST_ASSERT_EQUAL_INT(FILE_KIND_ROUTE, file_policy_kind("/SD:/SERRA.RTE"));
+    /* a GPX as Strava or Komoot exports it, with no conversion */
+    TEST_ASSERT_EQUAL_INT(FILE_KIND_ROUTE, file_policy_kind("/SD:/serra.gpx"));
+    TEST_ASSERT_EQUAL_INT(FILE_KIND_ROUTE, file_policy_kind("/SD:/VOLTA.TCX"));
+    /* and the text of the legacy */
     TEST_ASSERT_EQUAL_INT(FILE_KIND_ROUTE, file_policy_kind("/SD:/MJ_40.PAR"));
     TEST_ASSERT_EQUAL_INT(FILE_KIND_ROUTE, file_policy_kind("/SD:/rott.par"));
     TEST_ASSERT_EQUAL_INT(FILE_KIND_ROUTE, file_policy_kind("/SD:/SERRA.CRS"));
+
+    TEST_ASSERT_TRUE(file_policy_allows("/SD:/SERRA.RTE", FILE_ACCESS_WRITE));
+    TEST_ASSERT_TRUE(file_policy_allows("/SD:/serra.gpx", FILE_ACCESS_WRITE));
 }
 
 static void test_a_segment_of_the_legacy_is_a_segment(void)

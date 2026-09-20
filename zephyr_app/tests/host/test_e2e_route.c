@@ -28,6 +28,7 @@
 #include "model/file_policy.h"
 #include "model/map_project.h"
 #include "model/parcours.h"
+#include "model/route_file.h"
 #include "model/route_profile.h"
 
 #define BASE_LAT        48.6921f
@@ -226,6 +227,164 @@ static void test_a_second_course_replaces_the_first(void)
     TEST_ASSERT_NOT_NULL(host_fs_file_content("/SD:/CURTA.PAR"));
 }
 
+/* ==========================================================================
+ * The same course in the three formats the device takes
+ * ========================================================================== */
+
+/** A GPX as Strava exports it, straight from the phone, no conversion */
+static unsigned int send_gpx(const char *path, unsigned int points)
+{
+    static char body[400000];
+    size_t len = 0U;
+
+    len += (size_t)snprintf(&body[len], sizeof(body) - len,
+                            "<?xml version=\"1.0\"?>\n"
+                            "<gpx creator=\"StravaGPX\" "
+                            "xmlns=\"http://www.topografix.com/GPX/1/1\">\n"
+                            "<trk><name>SERRA</name><trkseg>\n");
+    for (unsigned int i = 0U; i < points; i++) {
+        TEST_ASSERT_TRUE(len < (sizeof(body) - 128U));
+        len += (size_t)snprintf(&body[len], sizeof(body) - len,
+                                "<trkpt lat=\"%.7f\" lon=\"%.7f\"><ele>%.1f</ele>"
+                                "<time>2026-09-20T07:42:00Z</time></trkpt>\n",
+                                (double)(BASE_LAT + DEG_LAT(10.0f * (float)i)), (double)BASE_LON,
+                                (double)(300.0f + ((float)i / 10.0f)));
+    }
+    len += (size_t)snprintf(&body[len], sizeof(body) - len, "</trkseg></trk></gpx>\n");
+
+    TEST_ASSERT_TRUE(host_fs_add_file(path, body));
+
+    return (unsigned int)len;
+}
+
+/** The same course as a `.RTE`, as `tools/route_convert.py` writes it */
+static void put_le32(uint8_t *at, uint32_t v)
+{
+    at[0] = (uint8_t)(v & 0xFFU);
+    at[1] = (uint8_t)((v >> 8) & 0xFFU);
+    at[2] = (uint8_t)((v >> 16) & 0xFFU);
+    at[3] = (uint8_t)((v >> 24) & 0xFFU);
+}
+
+static size_t send_rte(const char *path, unsigned int points, unsigned int cues)
+{
+    static uint8_t body[200000];
+    size_t off = ROUTE_FILE_HEADER_SIZE;
+
+    (void)memset(body, 0, sizeof(body));
+    (void)memcpy(body, "RTE1", 4U);
+    body[4] = (uint8_t)ROUTE_FILE_VERSION;
+    body[6] = (cues > 0U) ? (uint8_t)ROUTE_FILE_FLAG_CUES : 0U;
+    put_le32(&body[8], points);
+    put_le32(&body[12], cues);
+    put_le32(&body[16], 10U * points);
+    put_le32(&body[20], (uint32_t)(points / 10U));
+    put_le32(&body[24], (uint32_t)(int32_t)(BASE_LAT * 1e7f));
+    put_le32(&body[28], (uint32_t)(int32_t)((BASE_LAT + DEG_LAT(10.0f * (float)points)) * 1e7f));
+    put_le32(&body[32], (uint32_t)(int32_t)(BASE_LON * 1e7f));
+    put_le32(&body[36], (uint32_t)(int32_t)(BASE_LON * 1e7f));
+    (void)memcpy(&body[40], "SERRA DO MAR", 12U);
+
+    for (unsigned int i = 0U; i < points; i++) {
+        int32_t lat = (int32_t)((double)(BASE_LAT + DEG_LAT(10.0f * (float)i)) * 1e7);
+        int16_t alt = (int16_t)(300 + (int)(i / 10U));
+
+        put_le32(&body[off], (uint32_t)lat);
+        put_le32(&body[off + 4U], (uint32_t)(int32_t)((double)BASE_LON * 1e7));
+        body[off + 8U] = (uint8_t)((uint16_t)alt & 0xFFU);
+        body[off + 9U] = (uint8_t)(((uint16_t)alt >> 8) & 0xFFU);
+        off += ROUTE_FILE_POINT_SIZE;
+    }
+
+    for (unsigned int i = 0U; i < cues; i++) {
+        put_le32(&body[off], (uint32_t)((i + 1U) * (points / (cues + 1U))));
+        body[off + 4U] = (uint8_t)ROUTE_TURN_RIGHT;
+        (void)memcpy(&body[off + 6U], "RUA DAS FLORES", 14U);
+        off += ROUTE_FILE_CUE_SIZE;
+    }
+
+    put_le32(&body[60], route_file_crc32(0U, &body[ROUTE_FILE_HEADER_SIZE],
+                                         off - ROUTE_FILE_HEADER_SIZE));
+
+    TEST_ASSERT_TRUE(host_fs_add_bytes(path, body, off));
+
+    return off;
+}
+
+static void test_a_gpx_from_the_phone_needs_no_conversion(void)
+{
+    unsigned int bytes = send_gpx("/SD:/SERRA.GPX", 2000U);
+
+    TEST_ASSERT_TRUE(file_policy_allows("/SD:/SERRA.GPX", FILE_ACCESS_WRITE));
+    TEST_ASSERT_EQUAL(APP_OK, parcours_load("/SD:/SERRA.GPX"));
+    TEST_ASSERT_TRUE(parcours_get_num_points() > 100U);
+
+    const point_t *first = parcours_get_point(0U);
+
+    TEST_ASSERT_NOT_NULL(first);
+    TEST_ASSERT_FLOAT_WITHIN(0.0005f, BASE_LAT, first->lat);
+    TEST_ASSERT_FLOAT_WITHIN(1.0f, 300.0f, first->alt);
+
+    /* the XML costs what it costs: about 100 bytes a point */
+    TEST_ASSERT_TRUE(bytes > (2000U * 90U));
+}
+
+static void test_the_converted_course_is_smaller_and_checked(void)
+{
+    size_t rte = send_rte("/SD:/SERRA.RTE", 2000U, 3U);
+    unsigned int gpx = send_gpx("/SD:/SERRA.GPX", 2000U);
+
+    /* ten bytes a point against a hundred of the XML */
+    TEST_ASSERT_TRUE(rte < (size_t)(gpx / 5U));
+
+    TEST_ASSERT_EQUAL(APP_OK, parcours_load("/SD:/SERRA.RTE"));
+    TEST_ASSERT_TRUE(parcours_get_num_points() > 100U);
+    /* the name comes from the header, not from the file name */
+    TEST_ASSERT_EQUAL_STRING("SERRA DO MAR", parcours_get_name());
+}
+
+static void test_a_course_cut_in_half_over_the_radio_is_refused(void)
+{
+    static uint8_t half[8000];
+    size_t whole = send_rte("/SD:/SERRA.RTE", 2000U, 0U);
+    const char *content = host_fs_file_content("/SD:/SERRA.RTE");
+
+    TEST_ASSERT_NOT_NULL(content);
+    (void)memcpy(half, content, sizeof(half));
+    /* what arrived is a piece of the file: the CRC of the body will not match */
+    TEST_ASSERT_TRUE(host_fs_add_bytes("/SD:/CORTADA.RTE", half, sizeof(half)));
+    TEST_ASSERT_TRUE(whole > sizeof(half));
+
+    TEST_ASSERT_EQUAL(APP_ERR_CHECKSUM, parcours_load("/SD:/CORTADA.RTE"));
+    TEST_ASSERT_FALSE(parcours_is_loaded());
+}
+
+static void test_the_turns_of_the_course_come_out_in_order(void)
+{
+    (void)send_rte("/SD:/SERRA.RTE", 2000U, 3U);
+    TEST_ASSERT_EQUAL(APP_OK, parcours_load("/SD:/SERRA.RTE"));
+    TEST_ASSERT_EQUAL(APP_OK, parcours_start());
+
+    parcours_cue_t cue;
+    float dist = 0.0f;
+
+    TEST_ASSERT_TRUE(parcours_get_next_cue(&cue, &dist));
+    TEST_ASSERT_EQUAL_UINT8(ROUTE_TURN_RIGHT, cue.turn);
+    TEST_ASSERT_EQUAL_STRING("RUA DAS FLORES", cue.street);
+    TEST_ASSERT_TRUE(dist > 0.0f);
+
+    /* past the first turn, the next one is the one that comes */
+    uint16_t first_point = cue.point;
+
+    for (unsigned int m = 0U; m <= 8000U; m += 200U) {
+        host_uptime_set(1000U * (m / 10U));
+        parcours_update(BASE_LAT + DEG_LAT((float)m), BASE_LON, 300.0f);
+    }
+
+    TEST_ASSERT_TRUE(parcours_get_next_cue(&cue, &dist));
+    TEST_ASSERT_TRUE(cue.point > first_point);
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -234,6 +393,10 @@ int main(void)
     RUN_TEST(test_the_rider_follows_it_and_the_screen_shows_it);
     RUN_TEST(test_the_profile_of_the_screen_comes_out_of_the_same_route);
     RUN_TEST(test_a_second_course_replaces_the_first);
+    RUN_TEST(test_a_gpx_from_the_phone_needs_no_conversion);
+    RUN_TEST(test_the_converted_course_is_smaller_and_checked);
+    RUN_TEST(test_a_course_cut_in_half_over_the_radio_is_refused);
+    RUN_TEST(test_the_turns_of_the_course_come_out_in_order);
 
     return UNITY_END();
 }

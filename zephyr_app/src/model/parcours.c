@@ -11,6 +11,8 @@
 #include <math.h>
 
 #include "model/parcours.h"
+#include "model/gpx_scan.h"
+#include "model/route_file.h"
 #include "model/vecteur.h"
 
 LOG_MODULE_REGISTER(parcours, CONFIG_LOG_DEFAULT_LEVEL);
@@ -40,6 +42,16 @@ static uint16_t route_stride = 1U;
 
 /** Points read from the file, kept or not */
 static uint32_t route_seen;
+
+/** Turns of the route, when the file carried a cue sheet */
+static parcours_cue_t cues[PARCOURS_MAX_CUES];
+static uint16_t num_cues;
+
+/** Called while a long file is read, so the watchdog keeps quiet */
+static parcours_progress_fn progress_fn;
+
+/** Name the file gives the route, when it has one */
+static char route_name[PARCOURS_NAME_LEN];
 
 /** Number of points loaded */
 static uint16_t num_points;
@@ -267,6 +279,168 @@ static void keep_last_point(float lat, float lon, float alt)
     last->rtime = 0.0f;
 }
 
+/**
+ * @brief Read a route file of this project (`.RTE`)
+ *
+ * The header says how much is there and carries the CRC of the body, so a
+ * transfer cut in half over the radio is caught before the rider follows a
+ * route that ends in the middle of nowhere. The points come in with the
+ * same halving as the text of the legacy, and the cue sheet, when the file
+ * has one, gives the turns of the navigation.
+ */
+static app_err_t load_rte_file(struct fs_file_t *file, const uint8_t *head, size_t file_size)
+{
+    struct route_header h;
+
+    if (!route_file_header(&h, head, ROUTE_FILE_HEADER_SIZE, file_size)) {
+        LOG_ERR("route file refused: header");
+        return APP_ERR_CHECKSUM;
+    }
+
+    /* the CRC of the body, read in chunks so nothing big sits on the stack */
+    uint8_t chunk[128];
+    uint32_t crc = 0U;
+    size_t body = (size_t)(h.points * ROUTE_FILE_POINT_SIZE) +
+                  (size_t)(h.cues * ROUTE_FILE_CUE_SIZE);
+    size_t left = body;
+
+    if (fs_seek(file, (off_t)ROUTE_FILE_HEADER_SIZE, FS_SEEK_SET) < 0) {
+        return APP_ERR_IO;
+    }
+    while (left > 0U) {
+        size_t want = (left < sizeof(chunk)) ? left : sizeof(chunk);
+        ssize_t got = fs_read(file, chunk, want);
+
+        if (got <= 0) {
+            LOG_ERR("route file refused: short");
+            return APP_ERR_CHECKSUM;
+        }
+        crc = route_file_crc32(crc, chunk, (size_t)got);
+        left -= (size_t)got;
+    }
+
+    if (crc != h.crc32) {
+        LOG_ERR("route file refused: crc %08x against %08x", (unsigned int)crc,
+                (unsigned int)h.crc32);
+        return APP_ERR_CHECKSUM;
+    }
+
+    /* the points, halved as they come in if there are more than fit */
+    if (fs_seek(file, (off_t)ROUTE_FILE_HEADER_SIZE, FS_SEEK_SET) < 0) {
+        return APP_ERR_IO;
+    }
+
+    uint32_t taken = 0U;
+
+    while (taken < h.points) {
+        uint32_t want = (h.points - taken);
+
+        if (want > (sizeof(chunk) / ROUTE_FILE_POINT_SIZE)) {
+            want = sizeof(chunk) / ROUTE_FILE_POINT_SIZE;
+        }
+
+        ssize_t got = fs_read(file, chunk, (size_t)want * ROUTE_FILE_POINT_SIZE);
+
+        if (got < (ssize_t)((size_t)want * ROUTE_FILE_POINT_SIZE)) {
+            break;
+        }
+        for (uint32_t i = 0U; i < want; i++) {
+            struct route_point pt;
+
+            if (route_file_point(&pt, &chunk[i * ROUTE_FILE_POINT_SIZE],
+                                 ROUTE_FILE_POINT_SIZE)) {
+                add_point((float)((double)pt.lat_e7 * 1e-7), (float)((double)pt.lon_e7 * 1e-7),
+                          (float)pt.alt_m);
+            }
+        }
+        taken += want;
+    }
+
+    if (num_points < 2U) {
+        return APP_ERR_INVALID_PARAM;
+    }
+
+    /* the cue sheet, with the indexes moved to what is in memory */
+    num_cues = 0U;
+    for (uint32_t i = 0U; (i < h.cues) && (num_cues < PARCOURS_MAX_CUES); i++) {
+        struct route_cue c;
+        ssize_t got = fs_read(file, chunk, ROUTE_FILE_CUE_SIZE);
+
+        if (got < (ssize_t)ROUTE_FILE_CUE_SIZE) {
+            break;
+        }
+        if (!route_file_cue(&c, chunk, ROUTE_FILE_CUE_SIZE)) {
+            continue;
+        }
+
+        uint32_t at = c.point / route_stride;
+
+        cues[num_cues].point = (uint16_t)((at < num_points) ? at : (num_points - 1U));
+        cues[num_cues].turn = c.turn;
+        (void)strncpy(cues[num_cues].street, c.street, PARCOURS_STREET_LEN);
+        cues[num_cues].street[PARCOURS_STREET_LEN] = '\0';
+        num_cues++;
+    }
+
+    if (h.name[0] != '\0') {
+        (void)strncpy(route_name, h.name, sizeof(route_name) - 1U);
+        route_name[sizeof(route_name) - 1U] = '\0';
+    }
+
+    LOG_INF("route %s: %u of %u points, %u turns, %u m, %u m of climb", route_name,
+            (unsigned int)num_points, (unsigned int)h.points, (unsigned int)num_cues,
+            (unsigned int)h.distance_m, (unsigned int)h.climb_m);
+
+    return APP_OK;
+}
+
+/** One point out of the GPX reader goes straight into the route */
+static void gpx_point(float lat, float lon, float alt, void *user)
+{
+    (void)user;
+    add_point(lat, lon, alt);
+}
+
+/**
+ * @brief Read a course as the services export it, in GPX
+ *
+ * Megabytes of XML, read in chunks and scanned as they come
+ * (`model/gpx_scan.c`), so nothing but the chunk and the element being
+ * read sits in memory. The watchdog is fed along the way, because this
+ * takes longer than its four seconds on a big file.
+ */
+static app_err_t load_gpx_file(struct fs_file_t *file, const char *head, size_t head_len)
+{
+    struct gpx_scan scan;
+    char chunk[128];
+    ssize_t got;
+    uint32_t reads = 0U;
+
+    gpx_scan_init(&scan);
+    gpx_scan_feed(&scan, head, head_len, gpx_point, NULL);
+
+    while ((got = fs_read(file, chunk, sizeof(chunk))) > 0) {
+        gpx_scan_feed(&scan, chunk, (size_t)got, gpx_point, NULL);
+
+        /* every few kilobytes, say the thread is alive */
+        reads++;
+        if (((reads % 32U) == 0U) && (progress_fn != NULL)) {
+            progress_fn();
+        }
+    }
+    gpx_scan_end(&scan, gpx_point, NULL);
+
+    if (num_points < 2U) {
+        LOG_ERR("no course in the GPX");
+        return APP_ERR_INVALID_PARAM;
+    }
+
+    LOG_INF("GPX: %u of %u points, one of every %u", (unsigned int)num_points,
+            (unsigned int)scan.points, (unsigned int)route_stride);
+
+    return APP_OK;
+}
+
 static app_err_t load_route_file(const char *filename)
 {
     struct fs_file_t file;
@@ -280,8 +454,48 @@ static app_err_t load_route_file(const char *filename)
     }
 
     num_points = 0U;
+    num_cues = 0U;
     route_stride = 1U;
     route_seen = 0U;
+    route_name[0] = '\0';
+
+    /*
+     * The file says which format it is: a route of this project begins with
+     * "RTE1" (`model/route_file.h`), anything else is read as the text of
+     * the legacy.
+     */
+    uint8_t head[ROUTE_FILE_HEADER_SIZE];
+    ssize_t head_len = fs_read(&file, head, sizeof(head));
+
+    if ((head_len >= (ssize_t)ROUTE_FILE_HEADER_SIZE) && route_file_is_rte(head, (size_t)head_len)) {
+        struct fs_dirent entry;
+        size_t size = 0U;
+
+        if (fs_stat(filename, &entry) == 0) {
+            size = (size_t)entry.size;
+        }
+
+        app_err_t err = load_rte_file(&file, head, size);
+
+        (void)fs_close(&file);
+
+        return err;
+    }
+
+    /* a course as a service exported it, in GPX */
+    if ((head_len > 0) && gpx_scan_looks_like_gpx((const char *)head, (size_t)head_len)) {
+        app_err_t err = load_gpx_file(&file, (const char *)head, (size_t)head_len);
+
+        (void)fs_close(&file);
+
+        return err;
+    }
+
+    /* the text of the legacy: back to the start of the file */
+    if (fs_seek(&file, 0, FS_SEEK_SET) < 0) {
+        (void)fs_close(&file);
+        return APP_ERR_IO;
+    }
 
     /*
      * Read in chunks and split into lines here: fs_read() knows nothing
@@ -425,16 +639,56 @@ app_err_t parcours_load(const char *filename)
     return err;
 }
 
+bool parcours_get_next_cue(parcours_cue_t *out, float *dist_m)
+{
+    if ((out == NULL) || (num_cues == 0U) || (num_points == 0U)) {
+        return false;
+    }
+
+    for (uint16_t i = 0U; i < num_cues; i++) {
+        if (cues[i].point < current_idx) {
+            continue;
+        }
+
+        *out = cues[i];
+        if (dist_m != NULL) {
+            float d = 0.0f;
+
+            for (uint16_t k = current_idx; (k + 1U) <= cues[i].point; k++) {
+                d += calc_distance(points[k].lat, points[k].lon, points[k + 1U].lat,
+                                   points[k + 1U].lon);
+            }
+            *dist_m = d;
+        }
+
+        return true;
+    }
+
+    return false;
+}
+
+void parcours_set_progress(parcours_progress_fn fn)
+{
+    progress_fn = fn;
+}
+
+const char *parcours_get_name(void)
+{
+    return (route_name[0] != '\0') ? route_name : parcours_name;
+}
+
 void parcours_unload(void)
 {
     k_mutex_lock(&parcours_mutex, K_FOREVER);
 
     num_points = 0U;
+    num_cues = 0U;
     current_idx = 0U;
     total_distance = 0.0f;
     total_climb = 0.0f;
     dist_completed = 0.0f;
     (void)memset(parcours_name, 0, sizeof(parcours_name));
+    (void)memset(route_name, 0, sizeof(route_name));
     state = PARCOURS_STATE_IDLE;
 
     k_mutex_unlock(&parcours_mutex);

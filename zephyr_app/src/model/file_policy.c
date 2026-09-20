@@ -75,7 +75,10 @@ enum file_kind file_policy_kind(const char *path)
         return FILE_KIND_UNKNOWN;
     }
 
-    if (ends_with(name, ".PAR") || ends_with(name, ".CRS")) {
+    /* the course of this project, the text of the legacy and the GPX of
+     * the services: the device reads all three */
+    if (ends_with(name, ".RTE") || ends_with(name, ".PAR") || ends_with(name, ".CRS") ||
+        ends_with(name, ".GPX") || ends_with(name, ".TCX")) {
         return FILE_KIND_ROUTE;
     }
 

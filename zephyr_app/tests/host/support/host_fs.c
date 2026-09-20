@@ -139,6 +139,22 @@ bool host_fs_add_file(const char *path, const char *content)
     return true;
 }
 
+bool host_fs_add_bytes(const char *path, const void *bytes, size_t len)
+{
+    int idx = find_file(path);
+
+    if (idx < 0) {
+        idx = create_file(path);
+    }
+    if ((idx < 0) || (len > HOST_FS_FILE_SIZE)) {
+        return false;
+    }
+    (void)memcpy(s_files[idx].content, bytes, len);
+    s_files[idx].size = len;
+
+    return true;
+}
+
 const char *host_fs_file_content(const char *path)
 {
     int idx = find_file(path);
