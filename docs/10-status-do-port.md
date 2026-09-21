@@ -6,7 +6,7 @@ Onde o port Zephyr (`zephyr_app/`) está em relação ao firmware original (`leg
 
 ## Resumo
 
-- **Compila** no NCS v3.3.0 sem aviso (nRF52840 DK: FLASH 496.824 B, RAM 217.920 B; nRF54LM20 DK: FLASH 582.488 B, RAM 379.636 B, mais o MCUboot com 45.676 B de FLASH) e **passa em 36 conjuntos de testes de host** (417 casos). **Nada foi testado na placa** nem nos DKs.
+- **Compila** no NCS v3.3.0 sem nenhum aviso de compilador (nRF52840 DK: FLASH 506.052 B, RAM 224.704 B; com `ANT=1`: 534.668 B e 229.312 B; nRF54LM20 DK, o alvo principal: FLASH 591.740 B, RAM 386.452 B, mais o MCUboot com 45.676 B de FLASH e 22.880 B de RAM) e **passa em 39 conjuntos de testes de host** (455 casos). Números conferidos em 2026-09-21 com build do zero nos três alvos. **Nada foi testado na placa** nem nos DKs.
 - Desde 2026-09-19 o firmware é a base da arquitetura de [16](16-arquitetura-firmware.md): sete serviços com thread própria, eventos no zbus, máquinas de sistema e de modo no SMF, hardware pelas APIs do Zephyr ([05](05-arquitetura-zephyr.md)). O HAL próprio, os drivers da V3 e a interface em paisagem saíram.
 - Os algoritmos do legacy continuam no `src/model` e rodam na thread do modelo; alguns **não funcionariam** ainda (segmentos, formatos de arquivo, BLE central), e a interface nova, em LVGL, está no firmware com o driver próprio da tela (JDI LPM027M128B e Sharp LS027B7DH01, em retrato), as teclas com toque longo e a luz; foi testada no PC (29 telas em 2 temas), mas nunca vista em tela de verdade ([18](18-interface-telas.md)).
 - ANT+: a pilha do add-on `sdk-ant` entra no build com `ANT=1` e sobe no boot (`rf_ant_init()`), mas os perfis (HRM, BSC, FE-C) ainda não foram portados; os clientes BLE ainda não funcionam de ponta a ponta.

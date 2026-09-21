@@ -1,6 +1,6 @@
-# As 37 telas da interface
+# As 35 telas da interface
 
-Cada tela da interface da placa nova, nos dois temas: 8 cores, para o JDI LPM027M128C, e preto e branco, para a Sharp LS027B7DH01A da lista de compras. As imagens saem do código de verdade (`zephyr_app/src/ui`, LVGL 9.5), desenhado no PC pelo renderizador de host e reduzido às cores que o painel mostra; os números são dados de exemplo (`zephyr_app/tests/ui/ui_samples.c`). O projeto da interface, as regras e as diferenças para o legacy estão em [18-interface-telas.md](../18-interface-telas.md).
+As 35 telas da interface da placa nova, nos dois temas — 39 quadros, porque algumas telas têm mais de um estado (o CRS com um ou dois segmentos, a volta com o cronômetro parado, a subida em curso e a próxima, a queda e o alarme): 8 cores, para o JDI LPM027M128C, e preto e branco, para a Sharp LS027B7DH01A da lista de compras. As imagens saem do código de verdade (`zephyr_app/src/ui`, LVGL 9.5), desenhado no PC pelo renderizador de host e reduzido às cores que o painel mostra; os números são dados de exemplo (`zephyr_app/tests/ui/ui_samples.c`). O projeto da interface, as regras e as diferenças para o legacy estão em [18-interface-telas.md](../18-interface-telas.md).
 
 > [!IMPORTANT]
 > Desenhadas e conferidas no PC (cores, textos dentro das caixas, navegação dos botões). Ainda não aparecem no firmware, porque falta o driver da tela: **nada foi visto em tela de verdade, não testado na placa.**
@@ -23,10 +23,12 @@ Para gerar de novo, depois de mexer na interface: `python tools/ui/render_screen
 | 08 | [CRS, 2 segmentos chegando](#08-crs-2-segmentos-chegando) | os dois perto |
 | 09 | [CRS, página 2](#09-crs-página-2) | direita na página 1 |
 | 10 | [CRS, página 3](#10-crs-página-3) | direita na página 2 |
+| 30 | [Perfil do percurso](#30-perfil-do-percurso) | no PRC, toque longo na direita |
 | 31 | [Voltas e totais](#31-voltas-e-totais) | direita na página 3 do CRS |
 | 33 | [Subida em curso](#33-subida-em-curso) | no PRC, ao pé de uma subida do percurso |
 | 35 | [Radar traseiro](#35-radar-traseiro) | com um radar pareado, em qualquer página |
 | 36 | [Queda e alarme](#36-queda-e-alarme) | contagem regressiva de queda ou alarme tocando |
+| 28 | [Atualização](#28-atualização) | um aplicativo manda firmware novo por Bluetooth |
 | 11 | [Notificação](#11-notificação) | um evento (segmento, sensor, erro) |
 | 12 | [GNSS procurando](#12-gnss-procurando) | CRS ou PRC sem posição recente |
 | 13 | [PRC](#13-prc) | modo PRC, com percurso |
