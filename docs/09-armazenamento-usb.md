@@ -2,7 +2,7 @@
 
 Onde e como o stravaV10 guarda segmentos, percursos, logs e EPO, a pilha FatFs sobre SD ou flash NOR, a USB composta (CDC + MSC) e o estado disso no port, onde o sistema de arquivos ainda está em stub.
 
-**Nesta página:** [Arquivos do legacy](#arquivos-do-legacy) · [Pilha de armazenamento](#pilha-de-armazenamento) · [USB](#usb) · [Armazenamento no port](#armazenamento-no-port) · [Estado do SD no port](#estado-do-sd-no-port) · [RAM](#ram)
+**Nesta página:** [Arquivos do legacy](#arquivos-do-legacy) · [Arquivo da atividade em FIT](#arquivo-da-atividade-em-fit) · [Pilha de armazenamento](#pilha-de-armazenamento) · [USB](#usb) · [Armazenamento no port](#armazenamento-no-port) · [Estado do SD no port](#estado-do-sd-no-port) · [RAM](#ram)
 
 ## Arquivos do legacy
 
@@ -19,6 +19,26 @@ Tudo na **raiz** do cartão; o tipo é decidido pelo nome (`legacy/source/sd/sd_
 - O tempo de referência `rtime` de cada ponto é relativo ao primeiro (o parser subtrai o `rtime` do 1º ponto).
 - Campos do log: `lat;lon;alt;secj;pwr;bpm;cadence;alpha_bar;alpha_zero;baro_ele;baro_corr;climb;filt_ele;gps_ele;vit_asc;rough0;rough1;rough2;b_rough;`.
 - Amostras reais: 138 segmentos (4 a 1291 pontos, mediana 57) e 2 percursos (`MJ_40.PAR` com 848 linhas, `ROTT.PAR` com 950) em `tools/TDD/DB/`.
+
+## Arquivo da atividade em FIT
+
+Desde 2026-09-21 o aparelho grava **um arquivo FIT por passeio**, ao lado do `@DDMMYY.txt` do legacy, porque é o formato que Strava, Garmin Connect e Komoot leem sem conversor. O codificador é `zephyr_app/src/model/fit_encode.c`, C puro sobre um buffer de quem chama, e quem grava é o serviço de armazenamento (`CONFIG_GNSS_FIT`, ligado de fábrica).
+
+| Item | Escolha | Porquê |
+|---|---|---|
+| Nome | `<DDMMYY>.FIT` na raiz; o segundo passeio do dia ganha uma letra (`210926A.FIT`) | oito caracteres e três de extensão, que a FAT aceita sem nomes longos, e a mesma data do log do legacy |
+| Ritmo | uma mensagem `record` por época, 1 Hz, também com o cronômetro parado | é o que o mercado grava; o log de texto do legacy fica nos seus 15 m |
+| Fabricante | 255, "development" | o formato reserva esse número para aparelho que não é produto |
+| Pausa | uma mensagem `event` de cronômetro em cada pausa e cada retomada | o leitor sabe que o buraco nos pontos é parada, e não receptor mudo |
+| Voltas | uma `lap` a cada volta fechada, automática ou pela tecla | cada uma com distância, tempo, subida, descida e médias próprias |
+| Fim | `timer stop`, a última `lap`, a `session`, a `activity` e o CRC do arquivo | é o que faz do arquivo uma atividade e não uma lista de pontos |
+| Cabeçalho | escrito de novo no fim, com o tamanho que o arquivo ficou | o tamanho só se sabe no fim, e reescrever o cabeçalho **não** estraga o CRC: ver abaixo |
+
+**O cabeçalho no fim não estraga o CRC.** Os dois últimos bytes de um cabeçalho FIT são o CRC dos doze anteriores, e alimentar uma mensagem seguida do próprio CRC deixa esse CRC em zero. Então o estado depois de **qualquer** cabeçalho válido é zero, diga ele o tamanho que disser, e o CRC do arquivo nunca depende do tamanho escrito ali. É isso que deixa o aparelho fechar um arquivo de centenas de quilobytes sem reler um byte do que gravou. `test_fit_encode` confere a propriedade em separado e o CRC final contra o cálculo direto em 33 tamanhos de arquivo.
+
+**Tamanho.** Uma mensagem `record` tem 26 bytes: hora, posição, altitude, frequência, cadência, distância, velocidade, potência e temperatura. A 1 Hz isso dá cerca de 94 KB por hora, ou **380 KB num passeio de quatro horas**. Os 8 MB da placa nova ([19](19-lista-de-compras.md#armazenamento)) guardam perto de vinte passeios desses ao lado dos segmentos; quando encher, o ciclista apaga pelo USB ou pelo telefone.
+
+**O que fica de fora.** O telefone **não** manda um `.FIT` para o aparelho: quem grava um passeio é o aparelho, e um arquivo de fora seria falsificação ([`file_policy.c`](../zephyr_app/src/model/file_policy.c)). Nada disso foi gravado em cartão nem lido por um leitor de verdade: o que existe é o teste de host que monta o arquivo e o lê de volta mensagem a mensagem.
 
 ## Pilha de armazenamento
 

@@ -10,10 +10,14 @@
  *
  * The one thing that deserves its own test is how the encoder closes the
  * file: the file CRC covers the header, and the header carries a size that
- * only the end of the ride knows. Instead of reading the file back, the
- * encoder uses the fact that the CRC is linear over the bits of its state.
- * `test_the_crc_of_the_whole_file_matches_the_direct_calculation` compares
- * the result with the plain calculation over the finished bytes.
+ * only the end of the ride knows. The encoder never reads the file back,
+ * and it does not have to, because the last two bytes of a header are the
+ * CRC of the twelve before them and feeding a message followed by its own
+ * CRC leaves this CRC at zero. The state after any valid header is zero,
+ * whatever size it says, so writing the real header at the end changes
+ * nothing. Two tests hold that up: one on the property itself, and one
+ * that compares the file CRC with the plain calculation over the finished
+ * bytes for thirty-three file lengths.
  */
 
 #include <math.h>
@@ -271,14 +275,30 @@ static void test_a_ride_without_laps_still_declares_one(void)
     TEST_ASSERT_EQUAL_UINT16(1U, rd16(d + 42U));
 }
 
-static void test_the_crc_of_the_whole_file_matches_the_direct_calculation(void)
+static void test_a_header_of_any_size_leaves_the_crc_at_zero(void)
 {
     /*
-     * The encoder closes the file without reading it back: the header it
-     * wrote at the start carried a zero size, and the difference between
-     * that header and the final one is carried through the data by the
-     * linearity of the CRC. This is the test that proves it.
+     * This is what lets the encoder close a file without reading it back.
+     * A header ends with the CRC of its own first twelve bytes, and this
+     * CRC has residue zero, so the running state after the header is zero
+     * whatever size the header declares. If it ever stopped being true,
+     * every file the device writes would carry the wrong CRC.
      */
+    static const uint32_t sizes[] = {0U, 1U, 26U, 55000U, 380000U, 0xFFFFFFFFUL};
+
+    for (size_t i = 0U; i < (sizeof(sizes) / sizeof(sizes[0])); i++) {
+        uint8_t hdr[FIT_HEADER_LEN];
+        struct fit_enc e = {0};
+
+        (void)fit_enc_begin(&e, hdr, sizeof(hdr));
+        e.data_size = sizes[i];
+        TEST_ASSERT_EQUAL_size_t(FIT_HEADER_LEN, fit_enc_header(&e, hdr, sizeof(hdr)));
+        TEST_ASSERT_EQUAL_UINT16(0U, fit_crc(0U, hdr, FIT_HEADER_LEN));
+    }
+}
+
+static void test_the_crc_of_the_whole_file_matches_the_direct_calculation(void)
+{
     struct fit_record r = {.time = 900000000UL, .alt_m = 300.0f, .dist_m = 10.0f};
     struct fit_totals t = {.start_time = 1U, .end_time = 2U, .timer_ms = 1000U};
 
@@ -443,6 +463,7 @@ int main(void)
     RUN_TEST(test_the_date_of_the_legacy_becomes_the_time_of_the_format);
     RUN_TEST(test_a_lap_counts_up_and_the_session_says_how_many);
     RUN_TEST(test_a_ride_without_laps_still_declares_one);
+    RUN_TEST(test_a_header_of_any_size_leaves_the_crc_at_zero);
     RUN_TEST(test_the_crc_of_the_whole_file_matches_the_direct_calculation);
     RUN_TEST(test_the_crc_holds_for_files_of_every_length);
     RUN_TEST(test_a_buffer_that_does_not_hold_the_block_builds_nothing);

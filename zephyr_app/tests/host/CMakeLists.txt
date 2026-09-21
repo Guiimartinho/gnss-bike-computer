@@ -102,6 +102,7 @@ gnss_add_test(test_route_file SOURCES model/route_file.c)
 gnss_add_test(test_gpx_scan SOURCES model/gpx_scan.c)
 gnss_add_test(test_fit_encode SOURCES model/fit_encode.c)
 gnss_add_test(test_activity SOURCES model/activity.c)
+gnss_add_test(test_e2e_activity SOURCES model/activity.c model/fit_encode.c)
 gnss_add_test(test_parcours
     SOURCES model/parcours.c model/vecteur.c model/route_file.c model/gpx_scan.c
     SUPPORT host_kernel.c host_fs.c)

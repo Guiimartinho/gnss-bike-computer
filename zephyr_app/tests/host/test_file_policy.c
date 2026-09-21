@@ -42,6 +42,16 @@ static void test_an_activity_is_a_log(void)
 {
     TEST_ASSERT_EQUAL_INT(FILE_KIND_LOG, file_policy_kind("/SD:/@50925.txt"));
     TEST_ASSERT_EQUAL_INT(FILE_KIND_LOG, file_policy_kind("/SD:/@201226.TXT"));
+    /* the ride in the format Strava reads (`model/fit_encode.h`) */
+    TEST_ASSERT_EQUAL_INT(FILE_KIND_LOG, file_policy_kind("/SD:/210926.FIT"));
+    TEST_ASSERT_EQUAL_INT(FILE_KIND_LOG, file_policy_kind("/SD:/210926a.fit"));
+}
+
+static void test_the_phone_does_not_send_a_fit_either(void)
+{
+    /* the device is what records a ride; one from outside would be a forgery */
+    TEST_ASSERT_FALSE(file_policy_allows("/SD:/210926.FIT", FILE_ACCESS_WRITE));
+    TEST_ASSERT_TRUE(file_policy_allows("/SD:/210926.FIT", FILE_ACCESS_READ));
 }
 
 static void test_anything_else_is_unknown(void)
@@ -96,6 +106,7 @@ int main(void)
     RUN_TEST(test_a_route_is_a_route);
     RUN_TEST(test_a_segment_of_the_legacy_is_a_segment);
     RUN_TEST(test_an_activity_is_a_log);
+    RUN_TEST(test_the_phone_does_not_send_a_fit_either);
     RUN_TEST(test_anything_else_is_unknown);
     RUN_TEST(test_the_transfer_stays_on_the_root);
     RUN_TEST(test_the_phone_sends_routes_and_segments);

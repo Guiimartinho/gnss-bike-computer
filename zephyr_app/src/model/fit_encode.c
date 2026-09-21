@@ -120,26 +120,6 @@ uint16_t fit_crc(uint16_t crc, const uint8_t *data, size_t len)
     return crc;
 }
 
-/**
- * The state after @p n zero bytes.
- *
- * The step is linear over the bits of the state: feeding a byte gives
- * `G(crc) xor c(byte)`, where G does not depend on the byte. So the CRC of
- * two streams that differ only in their first bytes differs by `G^n` of the
- * difference of the states, which is what closes the header at the end
- * without reading the file back. `test_fit_encode` checks it against the
- * direct calculation.
- */
-static uint16_t crc_zeros(uint16_t crc, uint32_t n)
-{
-    for (uint32_t i = 0U; i < n; i++) {
-        crc = crc_nibble(crc, 0U);
-        crc = crc_nibble(crc, 0U);
-    }
-
-    return crc;
-}
-
 /** The 14 bytes of the file header for a given data size */
 static void build_header(uint8_t *hdr, uint32_t data_size)
 {
@@ -505,20 +485,16 @@ size_t fit_enc_end(struct fit_enc *e, uint8_t *buf, size_t cap, const struct fit
     }
 
     /*
-     * The file CRC covers the header too, and the header the caller wrote
-     * carried a zero size. Rebuild both headers, take the difference of
-     * their CRCs through the data, and the running CRC becomes the one the
-     * final file has.
+     * The file CRC covers the header, and the header the caller wrote at
+     * the start carried a zero size instead of the real one. It does not
+     * matter: the last two bytes of a header are the CRC of the twelve
+     * before them, and feeding a message followed by its own CRC leaves
+     * this CRC at zero. So the running state after **any** valid header is
+     * zero, and the size written there never reaches the file CRC.
+     * `test_fit_encode` checks the whole thing against the plain
+     * calculation over the finished bytes, for thirty-three file lengths.
      */
-    uint8_t first[FIT_HEADER_LEN];
-    uint8_t final[FIT_HEADER_LEN];
-
-    build_header(first, 0U);
-    build_header(final, e->data_size);
-
-    uint16_t diff = (uint16_t)(fit_crc(0U, final, FIT_HEADER_LEN) ^
-                               fit_crc(0U, first, FIT_HEADER_LEN));
-    uint16_t file_crc = (uint16_t)(e->crc ^ crc_zeros(diff, e->data_size));
+    uint16_t file_crc = e->crc;
 
     if ((w.at + 2U) > cap) {
         return 0U;

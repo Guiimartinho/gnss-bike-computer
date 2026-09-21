@@ -327,7 +327,6 @@ static void on_fix(const struct app_gnss_fix *f)
     attitude_t att;
 
     if (attitude_get(&att) == APP_OK) {
-        update_activity(&att, &loc);
         attitude_ext_t ext;
         struct app_log_point p = {
             .loc = loc,
@@ -355,6 +354,13 @@ static void on_fix(const struct app_gnss_fix *f)
             p.baro_alt = loc.alt;
         }
         (void)app_publish(&chan_log_point, &p);
+
+        /*
+         * After the point, not before: the storage writes the record of
+         * this epoch first, so a lap that closes here lands after the
+         * records that belong to it.
+         */
+        update_activity(&att, &loc);
     }
 }
 

@@ -7,7 +7,9 @@
  * the segments, lists the routes and writes the activity log from the
  * points the model publishes, so no other thread waits on the card. The
  * log keeps the legacy rhythm through sd_logger: one entry each 15 m, five
- * entries per write.
+ * entries per write. Beside it, and only when CONFIG_GNSS_FIT is on, the
+ * same points go into one **FIT** file per ride, which Strava, Garmin
+ * Connect and Komoot read without a converter (`model/fit_encode.h`).
  */
 
 #include <stdio.h>
@@ -25,6 +27,8 @@
 
 #include "app/app_channels.h"
 #include "app/app_svc.h"
+#include "model/activity.h"
+#include "model/fit_encode.h"
 #include "model/sd_logger.h"
 #include "model/segment.h"
 
@@ -46,6 +50,7 @@ struct storage_msg {
         struct app_system_state sys;
         struct app_system_cmd cmd;
         struct app_log_point point;
+        struct app_activity act;
     } u;
 };
 
@@ -74,6 +79,7 @@ ZBUS_LISTENER_DEFINE(storage_lis, storage_listener);
 ZBUS_CHAN_ADD_OBS(chan_system_state, storage_lis, 3);
 ZBUS_CHAN_ADD_OBS(chan_system_cmd, storage_lis, 3);
 ZBUS_CHAN_ADD_OBS(chan_log_point, storage_lis, 3);
+ZBUS_CHAN_ADD_OBS(chan_activity, storage_lis, 3);
 
 static sd_logger_t logger;
 static struct app_storage_info info;
@@ -159,6 +165,209 @@ static void list_routes(void)
 
 #endif /* CONFIG_FAT_FILESYSTEM_ELM */
 
+#if defined(CONFIG_GNSS_FIT) && defined(CONFIG_FAT_FILESYSTEM_ELM)
+
+/*
+ * One FIT file per ride, written as the points come in
+ * (`model/fit_encode.h`). Everything here is the shell around the pure
+ * encoder: open the file, push the blocks it builds, and at the end seek
+ * back to write the header with the size the file ended up with.
+ */
+
+static struct fit_enc fit;
+static struct fs_file_t fit_file;
+static uint8_t fit_block[FIT_BLOCK_MAX];
+static bool fit_open;
+static bool fit_running;        /**< the timer was running at the last epoch */
+
+/** Push what the encoder built; a short write closes the file for good */
+static bool fit_push(size_t n)
+{
+    if (n == 0U) {
+        LOG_ERR("FIT: the encoder refused a block");
+        return false;
+    }
+    if (fs_write(&fit_file, fit_block, n) != (ssize_t)n) {
+        LOG_ERR("FIT: write failed, the file stops here");
+        return false;
+    }
+
+    return true;
+}
+
+/**
+ * Open `<DDMMYY>.FIT` in the root, as the legacy names its text log.
+ *
+ * A second ride on the same day takes a letter: `210926A.FIT`. Eight
+ * characters and three of extension, which FAT takes without long names.
+ */
+static bool fit_start(const struct app_log_point *p)
+{
+    char name[32];
+    uint32_t created = p->fit_time;
+
+    if (created == 0U) {
+        return false;   /* no date yet: the file would have no time base */
+    }
+
+    for (unsigned int i = 0U; i < 27U; i++) {
+        struct fs_dirent ent;
+
+        if (i == 0U) {
+            (void)snprintf(name, sizeof(name), MOUNT_POINT "/%06u.FIT",
+                           (unsigned int)p->date.date);
+        } else {
+            (void)snprintf(name, sizeof(name), MOUNT_POINT "/%06u%c.FIT",
+                           (unsigned int)p->date.date, (char)('A' + (int)i - 1));
+        }
+        if (fs_stat(name, &ent) != 0) {
+            break;      /* free */
+        }
+        if (i == 26U) {
+            LOG_WRN("FIT: no free name for today");
+            return false;
+        }
+    }
+
+    fs_file_t_init(&fit_file);
+    if (fs_open(&fit_file, name, FS_O_CREATE | FS_O_WRITE) != 0) {
+        LOG_ERR("FIT: cannot open %s", name);
+        return false;
+    }
+
+    fit_open = true;
+    fit_running = true;
+    if (!fit_push(fit_enc_begin(&fit, fit_block, sizeof(fit_block))) ||
+        !fit_push(fit_enc_file_id(&fit, fit_block, sizeof(fit_block), 0U, created)) ||
+        !fit_push(fit_enc_timer(&fit, fit_block, sizeof(fit_block), created, true))) {
+        (void)fs_close(&fit_file);
+        fit_open = false;
+        return false;
+    }
+    LOG_INF("FIT: %s", name);
+
+    return true;
+}
+
+/** One point of the ride */
+static void fit_point(const struct app_log_point *p)
+{
+    if (!fit_open && !fit_start(p)) {
+        return;
+    }
+
+    struct fit_record r = {
+        .time = p->fit_time,
+        .lat_semi = fit_semicircles(p->loc.lat),
+        .lon_semi = fit_semicircles(p->loc.lon),
+        .alt_m = p->filt_alt,
+        .dist_m = p->dist_m,
+        .speed_kmh = p->loc.speed,
+        .power_w = p->power_w,
+        .hr_bpm = p->hr_bpm,
+        .cadence_rpm = p->cadence_rpm,
+        .temp_c = INT8_MIN,
+    };
+
+    if (!fit_push(fit_enc_record(&fit, fit_block, sizeof(fit_block), &r))) {
+        (void)fs_close(&fit_file);
+        fit_open = false;
+    }
+}
+
+/** The compact totals of the channel, as the encoder wants them */
+static void fit_totals_from(struct fit_totals *out, const struct app_totals *t)
+{
+    out->start_time = t->start_time;
+    out->end_time = t->end_time;
+    out->elapsed_ms = t->elapsed_ms;
+    out->timer_ms = t->timer_ms;
+    out->dist_m = t->dist_m;
+    out->ascent_m = t->ascent_m;
+    out->descent_m = t->descent_m;
+    out->avg_speed_kmh = t->avg_speed_kmh;
+    out->max_speed_kmh = t->max_speed_kmh;
+    out->avg_power_w = t->avg_power_w;
+    out->max_power_w = t->max_power_w;
+    out->calories_kcal = t->calories_kcal;
+    out->avg_hr_bpm = t->avg_hr_bpm;
+    out->max_hr_bpm = t->max_hr_bpm;
+    out->avg_cadence_rpm = t->avg_cadence_rpm;
+}
+
+/** Close the file: the last lap, the session, the activity and the header */
+static void fit_stop(const struct app_activity *a)
+{
+    if (!fit_open) {
+        return;
+    }
+    fit_open = false;
+
+    struct fit_totals ride;
+    struct fit_totals lap;
+
+    fit_totals_from(&ride, &a->ride);
+    fit_totals_from(&lap, &a->lap);
+
+    bool ok = fit_push(fit_enc_timer(&fit, fit_block, sizeof(fit_block), ride.end_time, false));
+
+    /* activity_finish() closed the lap that was open, so it goes out here */
+    ok = ok && fit_push(fit_enc_lap(&fit, fit_block, sizeof(fit_block), &lap));
+    ok = ok && fit_push(fit_enc_session(&fit, fit_block, sizeof(fit_block), &ride));
+    ok = ok && fit_push(fit_enc_end(&fit, fit_block, sizeof(fit_block), &ride));
+
+    /*
+     * The header went out with the size still zero; now that the size is
+     * known it is written over the first fourteen bytes. The file CRC the
+     * encoder just wrote already takes this header into account.
+     */
+    if (ok && (fs_seek(&fit_file, 0, FS_SEEK_SET) == 0)) {
+        size_t n = fit_enc_header(&fit, fit_block, sizeof(fit_block));
+
+        if (fs_write(&fit_file, fit_block, n) != (ssize_t)n) {
+            LOG_ERR("FIT: the header did not reach the file");
+        }
+    }
+    (void)fs_close(&fit_file);
+    LOG_INF("FIT: closed, %u bytes of data, %u laps",
+            (unsigned int)fit.data_size, (unsigned int)a->laps);
+}
+
+/** What the ride is doing: laps, pauses and the end */
+static void fit_activity(const struct app_activity *a)
+{
+    if (a->finished) {
+        fit_stop(a);
+        return;
+    }
+    if (!fit_open) {
+        return;
+    }
+
+    /*
+     * A pause is a timer event in the file, so a reader knows the gap in
+     * the records is a stop and not a receiver that went quiet.
+     */
+    if (a->running != fit_running) {
+        fit_running = a->running;
+        (void)fit_push(fit_enc_timer(&fit, fit_block, sizeof(fit_block), a->ride.end_time,
+                                     a->running));
+    }
+    if (a->event == (uint8_t)ACTIVITY_EVENT_LAP) {
+        struct fit_totals lap;
+
+        fit_totals_from(&lap, &a->lap);
+        (void)fit_push(fit_enc_lap(&fit, fit_block, sizeof(fit_block), &lap));
+    }
+}
+
+#else
+
+static void fit_point(const struct app_log_point *p) { ARG_UNUSED(p); }
+static void fit_activity(const struct app_activity *a) { ARG_UNUSED(a); }
+
+#endif /* CONFIG_GNSS_FIT && CONFIG_FAT_FILESYSTEM_ELM */
+
 static void on_point(const struct app_log_point *p)
 {
     sd_log_entry_t entry;
@@ -186,6 +395,9 @@ static void on_point(const struct app_log_point *p)
     sd_logger_build_entry(&entry, &p->loc, &p->date, p->power_w, p->hr_bpm, p->cadence_rpm,
                           (uint16_t)(p->loc.speed * 100.0f), &alti, p->dist_m, p->climb_m);
     (void)sd_logger_add_entry(&logger, &entry, p->dist_m);
+
+    /* the text log of the legacy keeps its 15 m; the FIT takes every epoch */
+    fit_point(p);
 }
 
 static void storage_thread(void *p1, void *p2, void *p3)
@@ -216,6 +428,10 @@ static void storage_thread(void *p1, void *p2, void *p3)
         if (msg.chan == &chan_log_point) {
             if (!done) {
                 on_point(&msg.u.point);
+            }
+        } else if (msg.chan == &chan_activity) {
+            if (!done) {
+                fit_activity(&msg.u.act);
             }
         } else if (msg.chan == &chan_system_state) {
             if ((msg.u.sys.state == APP_SYS_SHUTDOWN) && !done) {

@@ -20,6 +20,7 @@
  * | Definition: reserved, architecture, global number, fields | definition message |
  * | Base types: `0x84` uint16, `0x85` sint32, `0x86` uint32 | base type field |
  * | CRC-16 with the 16-entry nibble table, over header and data | CRC |
+ * | A message followed by its own CRC leaves the CRC at zero | CRC |
  * | `date_time` counts seconds from 1989-12-31 00:00 UTC | date_time type |
  * | Position in semicircles: degree x (2^31 / 180) | semicircles |
  *
@@ -142,6 +143,14 @@ size_t fit_enc_end(struct fit_enc *e, uint8_t *buf, size_t cap, const struct fit
  * The caller seeks back to offset 0 and writes these FIT_HEADER_LEN bytes
  * over the ones fit_enc_begin() gave. Call it **after** fit_enc_end(),
  * which is what knows the size.
+ *
+ * Writing the header again does not invalidate the file CRC that
+ * fit_enc_end() already produced. The last two bytes of a header are the
+ * CRC of the twelve before them, and feeding a message followed by its own
+ * CRC leaves this CRC at zero, so the state after **any** valid header is
+ * zero and the size written there never reaches the file CRC. That is what
+ * lets the encoder close a file of hundreds of kilobytes without reading a
+ * byte of it back.
  *
  * @return FIT_HEADER_LEN, or 0 on a bad argument
  */

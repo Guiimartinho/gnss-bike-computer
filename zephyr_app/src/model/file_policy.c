@@ -82,8 +82,13 @@ enum file_kind file_policy_kind(const char *path)
         return FILE_KIND_ROUTE;
     }
 
-    /* `@DDMMYY.txt` of the legacy (`sd_functions.cpp`) */
+    /* `@DDMMYY.txt` of the legacy (`sd_functions.cpp`) and the `.FIT` of
+     * the ride (`model/fit_encode.h`): the rider downloads both, and
+     * neither is ever taken from outside */
     if ((name[0] == '@') && ends_with(name, ".TXT")) {
+        return FILE_KIND_LOG;
+    }
+    if (ends_with(name, ".FIT")) {
         return FILE_KIND_LOG;
     }
 
