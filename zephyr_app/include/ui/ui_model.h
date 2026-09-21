@@ -139,6 +139,19 @@ typedef struct {
 } ui_status_t;
 
 /**
+ * Vehicles coming from behind, as a rear radar reports them
+ * (`model/radar.h`). Nothing of this is in the legacy.
+ */
+typedef struct {
+    bool linked;            /**< a radar is connected */
+    uint8_t n;              /**< vehicles behind */
+    uint8_t worst;          /**< enum radar_level of the worst of them */
+    uint16_t range_m[8];    /**< nearest first */
+    uint8_t level[8];
+    bool live[8];           /**< solid, or fading because the frame was dropped */
+} ui_radar_t;
+
+/**
  * The climb ahead (`model/climb.h`).
  *
  * The legacy shows the whole route and the total climb, and nothing about
@@ -368,6 +381,7 @@ typedef struct {
     ui_ride_t ride;
     ui_activity_t act;
     ui_climb_t climb;
+    ui_radar_t radar;
     uint8_t nseg;           /**< segments on screen: 0, 1 or 2 */
     ui_segment_t seg[UI_SEG_MAX];
     ui_nav_t nav;

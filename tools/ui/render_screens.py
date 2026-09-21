@@ -23,7 +23,7 @@ SRC = ROOT / "zephyr_app" / "tests" / "ui"
 # Contact sheets: file name, title, frames (name stem without theme)
 SHEETS = [
     ("telas-crs", "CRS", ["02_crs1", "03_crs1_1seg", "05_crs1_2seg", "09_crs2", "10_crs3",
-                          "31_volta", "32_volta_pausada"]),
+                          "31_volta", "32_volta_pausada", "35_radar"]),
     ("telas-segmentos", "Segmentos", ["04_crs1_1seg_perto", "06_crs1_2seg_1perto", "07_crs1_2seg_2perto",
                                      "08_crs1_2seg_perto", "11_notificacao", "18c_sem_percursos"]),
     ("telas-modos", "Modos", ["13_prc", "30_perfil", "33_subida", "34_proxima_subida",
@@ -40,6 +40,7 @@ CAPTIONS = {
     "28_atualizacao": "Atualização por BLE",
     "30_perfil": "Perfil do percurso",
     "29_atualizacao_pronta": "Atualização pronta",
+    "35_radar": "Radar traseiro",
     "33_subida": "Subida em curso",
     "34_proxima_subida": "Próxima subida",
     "31_volta": "Volta e totais",

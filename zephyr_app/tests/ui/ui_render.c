@@ -313,6 +313,30 @@ static void render_theme(ui_theme_t theme)
     ui_go(UI_SCREEN_CRS1);
     ui_update(&m, tick_ms);
 
+    /* the rear radar: three vehicles behind, the nearest one closing */
+    m.radar.linked = true;
+    m.radar.n = 3U;
+    m.radar.worst = 3U;             /* RADAR_LEVEL_DANGER */
+    m.radar.range_m[0] = 28U;
+    m.radar.level[0] = 3U;
+    m.radar.live[0] = true;
+    m.radar.range_m[1] = 75U;
+    m.radar.level[1] = 2U;          /* RADAR_LEVEL_FAST */
+    m.radar.live[1] = true;
+    m.radar.range_m[2] = 140U;
+    m.radar.level[2] = 1U;          /* RADAR_LEVEL_APPROACHING */
+    m.radar.live[2] = false;        /* the frame was dropped: hollow */
+    /* the strip goes over a drawing, so the PRC map is where it shows */
+    ui_set_mode(UI_MODE_PRC);
+    ui_go(UI_SCREEN_PRC);
+    ui_update(&m, tick_ms);
+    snap("35_radar", theme);
+    ui_set_mode(UI_MODE_CRS);
+    ui_go(UI_SCREEN_CRS1);
+    m.radar.linked = false;
+    m.radar.n = 0U;
+    ui_update(&m, tick_ms);
+
     /* notification over page 1 */
     ui_notify("Segmento", "Serra do Mar", "+12.4 s", true, 6000U, tick_ms);
     snap("11_notificacao", theme);

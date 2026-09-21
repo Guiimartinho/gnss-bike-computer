@@ -1,4 +1,4 @@
-# As 34 telas da interface
+# As 35 telas da interface
 
 Cada tela da interface da placa nova, nos dois temas: 8 cores, para o JDI LPM027M128C, e preto e branco, para a Sharp LS027B7DH01A da lista de compras. As imagens saem do código de verdade (`zephyr_app/src/ui`, LVGL 9.5), desenhado no PC pelo renderizador de host e reduzido às cores que o painel mostra; os números são dados de exemplo (`zephyr_app/tests/ui/ui_samples.c`). O projeto da interface, as regras e as diferenças para o legacy estão em [18-interface-telas.md](../18-interface-telas.md).
 
@@ -25,6 +25,7 @@ Para gerar de novo, depois de mexer na interface: `python tools/ui/render_screen
 | 10 | [CRS, página 3](#10-crs-página-3) | direita na página 2 |
 | 31 | [Voltas e totais](#31-voltas-e-totais) | direita na página 3 do CRS |
 | 33 | [Subida em curso](#33-subida-em-curso) | no PRC, ao pé de uma subida do percurso |
+| 35 | [Radar traseiro](#35-radar-traseiro) | com um radar pareado, em qualquer página |
 | 11 | [Notificação](#11-notificação) | um evento (segmento, sensor, erro) |
 | 12 | [GNSS procurando](#12-gnss-procurando) | CRS ou PRC sem posição recente |
 | 13 | [PRC](#13-prc) | modo PRC, com percurso |
@@ -373,6 +374,17 @@ Em todas as listas: esquerda e direita mudam o item (dão a volta nas pontas, co
 - **Quando:** no modo PRC, **sozinha**, assim que o ciclista chega ao pé de uma subida do percurso; o topo devolve o mapa. O toque longo na tecla direita sai antes da hora. É o ponto do recurso: o ciclista não pede a tela, ela aparece.
 - **Mostra:** qual subida é e quantas o percurso tem, a categoria pela escala do ciclismo (C4 a C1, FC), o perfil **da subida** com o trecho já pedalado em verde e o resto colorido pela inclinação (azul até 6 %, amarelo até 10 %, vermelho acima), quanto falta de distância e de altimetria, a média do que resta e a inclinação dos próximos 200 m. Entre duas subidas, mostra a distância até o pé da próxima e o tamanho dela.
 - **Nova:** o legacy mostra o percurso inteiro e a subida total, e nada sobre a subida em que se está ([`model/climb.h`](../../zephyr_app/include/model/climb.h), [06](../06-algoritmos.md#subidas-do-percurso-climbpro)).
+
+### 35 Radar traseiro
+
+| 8 cores | Preto e branco |
+|---|---|
+| ![Radar em 8 cores](35_radar_cor.png) | ![Radar em preto e branco](35_radar_mono.png) |
+
+- **Quando:** com um radar traseiro pareado (Garmin Varia e semelhantes). Não é uma página: é uma **faixa** na borda direita das páginas que têm desenho (o mapa do PRC, o perfil e a subida) mais um **ponto** na barra de estado, que aparece em todas as páginas.
+- **Mostra:** a faixa é a pista vista de cima — embaixo a bicicleta, em cima o alcance do radar — com uma marca por veículo na distância dele, azul para quem só se aproxima, amarelo para quem vem rápido e vermelho para quem está perto ou muito rápido. Uma marca que parou de ser reportada fica **vazada** em vez de sumir, porque um radar perde quadro e marca piscando é pior que marca parada. O ponto da barra de estado tem a cor do pior veículo atrás.
+- **Por que só nas páginas com desenho:** nas páginas de dados as unidades ficam na borda direita, e a faixa cobriria o texto.
+- **Nova:** o legacy é anterior ao Varia e não tem radar. O formato BLE do Varia é de engenharia reversa e **não foi conferido em aparelho** ([`model/radar_wire.h`](../../zephyr_app/include/model/radar_wire.h)); pelo ANT+, o perfil não pode entrar neste repositório ([`rf/radar_ant.h`](../../zephyr_app/include/rf/radar_ant.h)).
 
 ### 28 Atualização
 

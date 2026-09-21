@@ -17,6 +17,7 @@
 
 #include "app/app_events.h"
 #include "model/climb.h"
+#include "model/radar.h"
 
 /**
  * Points of the thinned copy of the route the climb scan walks.
@@ -55,6 +56,7 @@ struct model_ctx {
     struct app_activity act;        /**< totals, auto-pause and laps (model/activity.h) */
     struct climb_list climbs;       /**< climbs of the loaded route (model/climb.h) */
     struct climb_state climb;       /**< where the rider is on the one ahead */
+    struct radar rad;               /**< vehicles behind (model/radar.h) */
     float heading_deg;
     bool heading_valid;
     float pitch_deg;

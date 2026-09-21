@@ -56,6 +56,9 @@ void ui_sample_ride(ui_model_t *m)
     m->status.charge = UI_CHARGE_SOLAR;
     m->status.batt_pct = 91U;
 
+    /* nothing behind by default; the renderer turns the radar on */
+    m->radar.linked = false;
+
     /* the climb ahead (`model/climb.h`): a second category, half done */
     m->climb.on_climb = false;    /* the renderer turns it on for the climb page */
     m->climb.remain_m = 3400.0f;

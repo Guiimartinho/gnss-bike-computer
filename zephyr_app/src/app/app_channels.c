@@ -53,6 +53,8 @@ ZBUS_CHAN_DEFINE(chan_log_point, struct app_log_point, NULL, NULL, ZBUS_OBSERVER
                  ZBUS_MSG_INIT(0));
 ZBUS_CHAN_DEFINE(chan_activity, struct app_activity, NULL, NULL, ZBUS_OBSERVERS_EMPTY,
                  ZBUS_MSG_INIT(0));
+ZBUS_CHAN_DEFINE(chan_radar, struct app_radar, NULL, NULL, ZBUS_OBSERVERS_EMPTY,
+                 ZBUS_MSG_INIT(0));
 ZBUS_CHAN_DEFINE(chan_input, struct app_input, NULL, NULL, ZBUS_OBSERVERS_EMPTY,
                  ZBUS_MSG_INIT(0));
 ZBUS_CHAN_DEFINE(chan_storage_info, struct app_storage_info, NULL, NULL, ZBUS_OBSERVERS_EMPTY,

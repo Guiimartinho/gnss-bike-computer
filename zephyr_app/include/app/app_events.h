@@ -371,6 +371,24 @@ struct app_activity {
     bool finished;              /**< the ride ended: the file can be closed */
 };
 
+/**
+ * Channel radar: one frame of a rear radar (`model/radar.h`).
+ *
+ * The frame goes whole, not one vehicle at a time, because a radar
+ * reports everything it sees at once and a target missing from a frame
+ * means it is gone.
+ */
+struct app_radar {
+    uint32_t uptime_ms;
+    uint8_t n;                  /**< vehicles in the frame */
+    uint8_t id[8];
+    uint16_t range_m[8];
+    uint16_t closing_kmh[8];
+    uint8_t level[8];           /**< enum radar_level; 0 means "work it out" */
+    uint8_t side[8];
+    bool linked;                /**< a radar is connected */
+};
+
 /** Keys of the device */
 enum app_key {
     APP_KEY_LEFT = 0,

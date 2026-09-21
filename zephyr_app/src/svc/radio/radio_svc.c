@@ -23,6 +23,7 @@
 #include "rf/ble_fec_client.h"
 #include "rf/ble_hrs_client.h"
 #include "rf/ble_manager.h"
+#include "rf/ble_radar_client.h"
 #include "rf/ble_nus.h"
 #include "rf/dfu.h"
 #include "rf/file_xfer.h"
@@ -97,6 +98,34 @@ static void hrs_conn(bool connected)
     publish_link(APP_EXT_HR, connected);
 }
 
+/**
+ * One frame of the rear radar.
+ *
+ * Runs on the BT RX thread: it only copies into the channel message and
+ * publishes, as the rule for radio callbacks says (docs/05, threads).
+ */
+static void radar_frame(const struct radar_frame *f)
+{
+    struct app_radar msg = {.uptime_ms = k_uptime_get_32(), .n = f->n, .linked = true};
+
+    for (uint8_t i = 0U; (i < f->n) && (i < RADAR_TARGETS_MAX); i++) {
+        msg.id[i] = f->t[i].id;
+        msg.range_m[i] = f->t[i].range_m;
+        msg.closing_kmh[i] = f->t[i].closing_kmh;
+        msg.level[i] = f->t[i].level;
+        msg.side[i] = f->t[i].side;
+    }
+    (void)app_publish(&chan_radar, &msg);
+}
+
+static void radar_link(bool linked)
+{
+    struct app_radar msg = {.uptime_ms = k_uptime_get_32(), .n = 0U, .linked = linked};
+
+    publish_link(APP_EXT_RADAR, linked);
+    (void)app_publish(&chan_radar, &msg);
+}
+
 static void bsc_data(uint16_t speed, uint8_t cadence)
 {
     struct app_ext_sensor e = {.uptime_ms = k_uptime_get_32(), .kind = APP_EXT_BSC,
@@ -162,6 +191,7 @@ static void radio_start(void)
     }
     ble_hrs_client_register_callback(hrs_data);
     ble_hrs_client_register_conn_callback(hrs_conn);
+    (void)ble_radar_client_init(radar_frame, radar_link);
     ble_bsc_client_register_callback(bsc_data);
     ble_bsc_client_register_conn_callback(bsc_conn);
     ble_fec_client_register_callback(fec_data);

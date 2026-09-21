@@ -27,6 +27,7 @@
 #include "model/activity.h"
 #include "model/attitude.h"
 #include "model/climb.h"
+#include "model/radar.h"
 #include "model/vecteur.h"
 #include "model/fit_encode.h"
 #include "model/crash_recovery.h"
@@ -64,6 +65,7 @@ struct model_msg {
         struct app_system_cmd cmd;
         struct app_system_state sys;
         struct app_phone_nav nav;
+        struct app_radar radar;
     } u;
 };
 
@@ -110,6 +112,7 @@ ZBUS_CHAN_ADD_OBS(chan_baro, model_lis, 3);
 ZBUS_CHAN_ADD_OBS(chan_imu, model_lis, 3);
 ZBUS_CHAN_ADD_OBS(chan_mag, model_lis, 3);
 ZBUS_CHAN_ADD_OBS(chan_ext_sensor, model_lis, 3);
+ZBUS_CHAN_ADD_OBS(chan_radar, model_lis, 3);
 ZBUS_CHAN_ADD_OBS(chan_link_status, model_lis, 3);
 ZBUS_CHAN_ADD_OBS(chan_pair_list, model_lis, 3);
 ZBUS_CHAN_ADD_OBS(chan_phone_nav, model_lis, 3);
@@ -413,6 +416,9 @@ static void on_fix(const struct app_gnss_fix *f)
         (void)memset(&ctx.climb, 0, sizeof(ctx.climb));
     }
 
+    /* the vehicles behind age whether a frame came or not */
+    radar_tick(&ctx.rad, k_uptime_get_32());
+
     if (attitude_take_fdir_notice()) {
         /* the legacy shows "FDIR / Attitude restored" (`Attitude.cpp:410`) */
         app_notify("FDIR", "Atitude restaurada", NULL, true, 0U);
@@ -510,6 +516,28 @@ static void on_imu(const struct app_imu *imu)
         (void)memmove(&ctx.pitch_histo[0], &ctx.pitch_histo[1], UI_HISTO_MAX - 1U);
         ctx.pitch_histo[UI_HISTO_MAX - 1U] = v;
     }
+}
+
+/** One frame of the rear radar (`model/radar.h`) */
+static void on_radar(const struct app_radar *in)
+{
+    uint32_t now = k_uptime_get_32();
+
+    radar_set_link(&ctx.rad, in->linked, now);
+    if (!in->linked) {
+        return;
+    }
+
+    struct radar_frame f = {.n = (in->n < RADAR_TARGETS_MAX) ? in->n : RADAR_TARGETS_MAX};
+
+    for (uint8_t i = 0U; i < f.n; i++) {
+        f.t[i].id = in->id[i];
+        f.t[i].range_m = in->range_m[i];
+        f.t[i].closing_kmh = in->closing_kmh[i];
+        f.t[i].level = in->level[i];
+        f.t[i].side = in->side[i];
+    }
+    radar_feed(&ctx.rad, &f, now);
 }
 
 /** Fill the compact form the channel carries from a set of totals */
@@ -670,6 +698,8 @@ static void handle(struct model_msg *msg)
         ctx.heading_deg = msg->u.mag.heading_deg;
     } else if (chan == &chan_ext_sensor) {
         on_ext(&msg->u.ext);
+    } else if (chan == &chan_radar) {
+        on_radar(&msg->u.radar);
     } else if (chan == &chan_link_status) {
         if (msg->u.link.kind < APP_EXT_KINDS) {
             ctx.link[msg->u.link.kind] = msg->u.link;

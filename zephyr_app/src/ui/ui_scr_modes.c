@@ -83,6 +83,8 @@ static void prc_create(lv_obj_t *scr)
     band = ui_band(scr, 4, 2);
     prc_map = ui_plot(band, 0, 0, UI_WIDTH, ui_rows_h(4, 2) - 1, prc_draw, NULL);
     ui_fields_create(scr, batt_row, ARRAY_SIZE(batt_row));
+    /* the map is the only part of this page the strip may cover */
+    ui_radar_strip_create(band, 0, ui_rows_h(4, 2) - 1);
 }
 
 static void prc_update(lv_obj_t *scr)
@@ -620,6 +622,7 @@ static void profile_create(lv_obj_t *scr)
     l = ui_label(band, UI_FONT_TITLE, ui_col(UI_C_FG), ui_txt(T_PROFILE));
     lv_obj_align(l, LV_ALIGN_LEFT_MID, 4, 0);
 
+    ui_radar_strip_create(scr, ui_row_y(1), ui_rows_h(1, 3) - 1);
     prof_plot = ui_plot(scr, 0, ui_row_y(1), UI_WIDTH, ui_rows_h(1, 3) - 1, profile_draw, NULL);
 
     ui_field_create(&prof_climb, scr, 0, 4, 1, ui_txt(T_CLIMB_LEFT), "m", UI_C_FG);
@@ -835,6 +838,7 @@ static void climb_create(lv_obj_t *scr)
     climb_title = ui_label(scr, UI_FONT_SMALL, ui_col(UI_C_FG), ui_txt(T_CLIMB_N));
     lv_obj_align(climb_title, LV_ALIGN_TOP_LEFT, 4, ui_row_y(0) + 2);
 
+    ui_radar_strip_create(scr, ui_row_y(1), ui_rows_h(1, 3) - 1);
     climb_plot = ui_plot(scr, 0, ui_row_y(1), UI_WIDTH, ui_rows_h(1, 3) - 1, climb_draw, NULL);
 
     ui_field_create(&climb_left, scr, 0, 4, 1, ui_txt(T_TO_TOP), "km", UI_C_FG);

@@ -11,6 +11,7 @@
 
 #include "lvgl.h"
 #include "model/climb.h"
+#include "model/radar.h"
 #include "ui/ui.h"
 #include "ui/ui_fmt.h"
 #include "fonts/ui_fonts.h"
@@ -208,6 +209,9 @@ void ui_statusbar_create(lv_obj_t *scr);
 void ui_statusbar_update(void);
 /** Forget the objects of the deleted screen */
 void ui_statusbar_forget(void);
+
+/** The rear radar strip down the right edge; only for graphical pages */
+void ui_radar_strip_create(lv_obj_t *parent, int32_t y, int32_t h);
 
 /** Title bar under the status bar (menus) */
 void ui_titlebar_create(lv_obj_t *scr, const char *title);

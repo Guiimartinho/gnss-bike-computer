@@ -27,6 +27,9 @@ extern "C" {
 #define UI_HEIGHT           400
 /** Status bar height */
 #define UI_BAR_H            20
+
+/** Width of the rear radar strip down the right edge of a data page */
+#define UI_RADAR_W          14
 /** Rows of the legacy grid (VUE_CRS_NB_LINES) */
 #define UI_ROWS             7
 

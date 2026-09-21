@@ -18,6 +18,7 @@
 #include "model/attitude.h"
 #include "model/climb.h"
 #include "model/map_project.h"
+#include "model/radar.h"
 #include "model/vecteur.h"
 #include "model/route_profile.h"
 #include "model/parcours.h"
@@ -94,6 +95,22 @@ static void fill_activity(const struct model_ctx *ctx, ui_model_t *m)
     a->descent_m = ctx->act.ride.descent_m;
     a->laps = ctx->act.laps;
     a->kcal = ctx->act.ride.calories_kcal;
+}
+
+/** Vehicles behind, for the strip down the side of the data pages */
+static void fill_radar(const struct model_ctx *ctx, ui_model_t *m)
+{
+    ui_radar_t *r = &m->radar;
+
+    (void)memset(r, 0, sizeof(*r));
+    r->linked = ctx->rad.linked;
+    r->n = radar_count(&ctx->rad);
+    r->worst = radar_worst(&ctx->rad);
+    for (uint8_t i = 0U; (i < r->n) && (i < 8U); i++) {
+        r->range_m[i] = ctx->rad.t[i].range_m;
+        r->level[i] = ctx->rad.t[i].level;
+        r->live[i] = ctx->rad.t[i].live;
+    }
 }
 
 /** The climb ahead, and the profile of that climb alone */
@@ -587,6 +604,7 @@ void model_ui_fill(const struct model_ctx *ctx, ui_model_t *m)
     fill_status(ctx, m, now);
     fill_activity(ctx, m);
     fill_climb(ctx, m);
+    fill_radar(ctx, m);
     fill_ride(ctx, m);
     fill_attitude(ctx, m);
     fill_zones(ctx, m);
