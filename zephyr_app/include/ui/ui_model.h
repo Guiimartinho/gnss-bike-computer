@@ -139,6 +139,29 @@ typedef struct {
 } ui_status_t;
 
 /**
+ * The bike alarm and the crash detection (`model/incident.h`).
+ *
+ * Not a safety device: it misses crashes and raises false alarms, and
+ * nobody should ride differently because it is on.
+ */
+/** What the incident page shows, mirroring enum incident_state */
+typedef enum {
+    UI_INC_OFF = 0,
+    UI_INC_SETTLING,
+    UI_INC_ARMED,
+    UI_INC_RINGING,
+    UI_INC_SHAKEN,
+    UI_INC_COUNTING,
+    UI_INC_CRASHED
+} ui_incident_state_t;
+
+typedef struct {
+    uint8_t state;          /**< ui_incident_state_t */
+    uint32_t countdown_s;   /**< left to cancel a crash; 0 when nothing pends */
+    bool armed;             /**< the alarm is watching the bike */
+} ui_incident_t;
+
+/**
  * Vehicles coming from behind, as a rear radar reports them
  * (`model/radar.h`). Nothing of this is in the legacy.
  */
@@ -382,6 +405,7 @@ typedef struct {
     ui_activity_t act;
     ui_climb_t climb;
     ui_radar_t radar;
+    ui_incident_t inc;
     uint8_t nseg;           /**< segments on screen: 0, 1 or 2 */
     ui_segment_t seg[UI_SEG_MAX];
     ui_nav_t nav;

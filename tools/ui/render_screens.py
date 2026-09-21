@@ -32,7 +32,8 @@ SHEETS = [
     ("telas-menus", "Menus", ["18_menu", "18b_percursos", "19_ajustes", "20_sensores", "21_parear",
                               "22_valor", "23_tela_luz", "24_formatar"]),
     ("telas-sistema", "Sistema", ["01_partida", "25_energia", "26_usb", "27_desligando",
-                                  "28_atualizacao", "29_atualizacao_pronta"]),
+                                  "28_atualizacao", "29_atualizacao_pronta",
+                                  "36_queda", "37_alarme"]),
 ]
 
 CAPTIONS = {
@@ -40,6 +41,8 @@ CAPTIONS = {
     "28_atualizacao": "Atualização por BLE",
     "30_perfil": "Perfil do percurso",
     "29_atualizacao_pronta": "Atualização pronta",
+    "36_queda": "Queda, contagem regressiva",
+    "37_alarme": "Alarme da bicicleta",
     "35_radar": "Radar traseiro",
     "33_subida": "Subida em curso",
     "34_proxima_subida": "Próxima subida",

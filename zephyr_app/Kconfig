@@ -66,6 +66,17 @@ config GNSS_FIT
 	  Strava, Garmin Connect and Komoot read directly. A four-hour ride
 	  at one point a second takes about 380 KB.
 
+config GNSS_CRASH_DETECT
+	bool "Detect a crash from the accelerometer"
+	default y
+	help
+	  After a big enough peak, a bike that stops and a device that goes
+	  still start a countdown the rider can cancel with any key; when it
+	  runs out, the device says so on the screen and over Bluetooth.
+	  **It is not a safety device**: it misses crashes and it raises false
+	  alarms, and nobody should ride differently because it is on
+	  (`model/incident.h`). Thresholds in the same file.
+
 config GNSS_ANT_RADAR_DEV_TYPE
 	int "ANT+ device type of the rear radar"
 	default 0

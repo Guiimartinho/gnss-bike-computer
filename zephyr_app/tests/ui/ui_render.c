@@ -537,6 +537,22 @@ static void render_theme(ui_theme_t theme)
     expect_action("|15:0|", "long left marks a lap");
     expect_screen(UI_SCREEN_CRS2, "and stays on the page");
 
+    /* a crash counting down takes the screen, and any key answers it */
+    m.inc.state = 5U;               /* UI_INC_COUNTING */
+    m.inc.countdown_s = 23U;
+    ui_set_mode(UI_MODE_CRS);
+    ui_go(UI_SCREEN_CRS1);
+    ui_update(&m, tick_ms);
+    expect_screen(UI_SCREEN_INCIDENT, "the countdown took the screen");
+    snap("36_queda", theme);
+    m.inc.state = 3U;               /* UI_INC_RINGING: the alarm */
+    m.inc.countdown_s = 0U;
+    ui_update(&m, tick_ms);
+    snap("37_alarme", theme);
+    m.inc.state = 0U;
+    ui_update(&m, tick_ms);
+    expect_screen(UI_SCREEN_CRS1, "and the pages come back");
+
     /* long centre on a page asks to shut down */
     ui_go(UI_SCREEN_CRS1);
     ui_key(UI_KEY_CENTER, UI_PRESS_LONG, tick_ms);

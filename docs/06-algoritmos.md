@@ -2,7 +2,7 @@
 
 Os cálculos do stravaV10 original, com fórmulas, constantes e a origem no código, lado a lado com o que o port faz hoje. Diferença não documentada aqui é defeito: corrija o código ou registre a decisão nesta página. Testes de fidelidade ficam em `zephyr_app/tests/host/` (skill `fw-testes`).
 
-**Nesta página:** [Distância](#distância) · [Vetores e posição relativa](#vetores-e-posição-relativa) · [Segmentos](#segmentos) · [Mapa e zoom](#mapa-e-zoom) · [Altitude: Kalman de 3 estados](#altitude-kalman-de-3-estados) · [Barômetro e drift](#barômetro-e-drift) · [Potência estimada](#potência-estimada) · [Distância acumulada e log](#distância-acumulada-e-log) · [Cronômetro, pausa automática e voltas](#cronômetro-pausa-automática-e-voltas) · [Subidas do percurso (ClimbPro)](#subidas-do-percurso-climbpro) · [Zonas](#zonas) · [Fontes de posição](#fontes-de-posição) · [Bateria](#bateria)
+**Nesta página:** [Distância](#distância) · [Vetores e posição relativa](#vetores-e-posição-relativa) · [Segmentos](#segmentos) · [Mapa e zoom](#mapa-e-zoom) · [Altitude: Kalman de 3 estados](#altitude-kalman-de-3-estados) · [Barômetro e drift](#barômetro-e-drift) · [Potência estimada](#potência-estimada) · [Distância acumulada e log](#distância-acumulada-e-log) · [Cronômetro, pausa automática e voltas](#cronômetro-pausa-automática-e-voltas) · [Subidas do percurso (ClimbPro)](#subidas-do-percurso-climbpro) · [Alarme da bicicleta e detecção de queda](#alarme-da-bicicleta-e-detecção-de-queda) · [Zonas](#zonas) · [Fontes de posição](#fontes-de-posição) · [Bateria](#bateria)
 
 ## Distância
 
@@ -151,6 +151,28 @@ O legacy mostra o percurso inteiro e a subida total, e nada sobre a subida em qu
 O percurso é varrido **afinado**: um percurso de 100 km vira 512 amostras, a cerca de 200 m uma da outra, o que basta para uma subida que precisa ter 500 m para contar e custa 4 KB em vez dos 32 KB do percurso inteiro. A distância, essa, segue ponto a ponto, para o afinamento não cortar curva.
 
 O que o ciclista vê: a subida em curso com o que falta de distância e de altimetria, a inclinação média do que resta e a dos próximos 200 m (`CLIMB_AHEAD_M`), e o perfil **da subida** colorido pela inclinação. A tela sobe sozinha ao pé da subida e devolve o mapa no topo, que é o ponto do recurso.
+
+## Alarme da bicicleta e detecção de queda
+
+> [!WARNING]
+> **Não é equipamento de segurança.** É uma conveniência, como a de um Garmin, e falha nos dois sentidos: uma queda em que a bicicleta continua andando, ou em que o aparelho se solta do guidão, não é detectada, e um meio-fio pego com força parece uma. Ninguém deve pedalar diferente porque está ligado, e ninguém deve contar com ele para ser socorrido. O alarme é igualmente fraco: um ladrão que leva a bicicleta inteira dispara, um que corta o cadeado devagar pode não disparar.
+
+Nada disso existe no legacy. `model/incident.c` roda duas máquinas sobre a mesma entrada, porque as duas perguntam a mesma coisa — a bicicleta está se movendo, e quanto ela foi sacudida.
+
+| Grandeza | Valor | Porquê |
+|---|---|---|
+| Pico que abre a questão | `INCIDENT_CRASH_G`, 6 g | abaixo disso é buraco de rua |
+| Quieto | desvio de 1 g abaixo de `INCIDENT_CRASH_STILL_G` (0,10) | é o aparelho parado, não o guidão vibrando |
+| Parado | abaixo de `INCIDENT_CRASH_STOPPED_KMH` (3 km/h) | bicicleta que segue rolando não caiu |
+| Quieto e parado por | `INCIDENT_CRASH_STILL_MS`, 8 s | um segundo é o susto; oito é não estar levantando |
+| Contagem para cancelar | `INCIDENT_CRASH_COUNT_MS`, 30 s | o ciclista sempre pode dizer que está bem |
+| Janela do pico | `INCIDENT_CRASH_WINDOW_MS`, 15 s | passou disso sem parar, não foi queda |
+| Movimento que dispara o alarme | `INCIDENT_ALARM_G`, 0,15 g, por 1 s | menos que isso é vento |
+| Espera depois de armar | `INCIDENT_ARM_SETTLE_MS`, 5 s | o ciclista ainda está mexendo no cadeado |
+
+A queda precisa das **três** condições em sequência, porque cada uma sozinha é fato corriqueiro: pico, bicicleta parada, aparelho quieto. Só então a contagem começa, e qualquer tecla cancela. Quem está bem sempre cancela; quem não consegue é o caso para o qual isso existe.
+
+O pico vem do serviço de sensores, que acompanha o **maior** módulo da aceleração a 50 Hz e o publica uma vez por segundo: um impacto dura cerca de um décimo de segundo e a média de um segundo o enterraria.
 
 ## Zonas
 

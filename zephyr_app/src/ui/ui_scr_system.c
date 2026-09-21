@@ -338,3 +338,83 @@ static void dfu_update(lv_obj_t *scr)
 }
 
 const ui_screen_ops_t ui_scr_dfu = {dfu_create, dfu_update, boot_key};
+
+/* ==========================================================================
+ * Incident: the bike alarm ringing, or a crash counting down
+ *
+ * Takes the screen the way the update does, because it is the only thing
+ * that matters while it is up. Any key answers it (`model/incident.h`),
+ * and the key goes through the ordinary path: the model turns every key
+ * into APP_CMD_KEY and cancels on it.
+ * ========================================================================== */
+
+static lv_obj_t *inc_title;
+static lv_obj_t *inc_big;
+static lv_obj_t *inc_hint;
+
+static void inc_update(lv_obj_t *scr);
+
+static void inc_icon_draw(lv_event_t *e)
+{
+    lv_layer_t *layer = lv_event_get_layer(e);
+    const lv_obj_t *obj = lv_event_get_target_obj(e);
+    lv_color_t bad = ui_col_fill(UI_C_BAD);
+    lv_area_t a;
+
+    lv_obj_get_coords(obj, &a);
+
+    int32_t cx = (a.x1 + a.x2) / 2;
+    int32_t cy = (a.y1 + a.y2) / 2;
+
+    /* a warning triangle, which reads the same in both themes */
+    ui_draw_triangle(layer, cx, cy - 40, cx - 46, cy + 34, cx + 46, cy + 34, bad);
+    ui_draw_fill(layer, cx - 4, cy - 18, 8, 32, ui_col(UI_C_BG));
+    ui_draw_fill(layer, cx - 4, cy + 20, 8, 8, ui_col(UI_C_BG));
+}
+
+static void inc_create(lv_obj_t *scr)
+{
+    ui_statusbar_create(scr);
+    (void)ui_plot(scr, 0, UI_BAR_H + 10, UI_WIDTH, 140, inc_icon_draw, NULL);
+
+    inc_title = ui_label(scr, UI_FONT_LARGE, ui_col(UI_C_BAD), "");
+    lv_obj_align(inc_title, LV_ALIGN_TOP_MID, 0, 186);
+    inc_big = ui_label(scr, UI_FONT_HUGE, ui_col(UI_C_FG), "");
+    lv_obj_align(inc_big, LV_ALIGN_TOP_MID, 0, 236);
+    inc_hint = ui_label(scr, UI_FONT_TITLE, ui_col(UI_C_FG), "");
+    lv_obj_align(inc_hint, LV_ALIGN_TOP_MID, 0, 320);
+
+    inc_update(scr);
+}
+
+static void inc_update(lv_obj_t *scr)
+{
+    const ui_incident_t *in = &ui_ctx.m.inc;
+    char v[8];
+
+    (void)scr;
+    ui_statusbar_update();
+
+    switch (in->state) {
+    case UI_INC_COUNTING:
+        lv_label_set_text(inc_title, ui_txt(T_CRASH_Q));
+        lv_label_set_text(inc_big, ui_fmt_int(v, sizeof(v), (int32_t)in->countdown_s));
+        lv_label_set_text(inc_hint, ui_txt(T_ANY_KEY));
+        break;
+    case UI_INC_CRASHED:
+        lv_label_set_text(inc_title, ui_txt(T_CRASH));
+        lv_label_set_text(inc_big, "");
+        lv_label_set_text(inc_hint, ui_txt(T_ANY_KEY));
+        break;
+    default:
+        lv_label_set_text(inc_title, ui_txt(T_ALARM));
+        lv_label_set_text(inc_big, "");
+        lv_label_set_text(inc_hint, ui_txt(T_ANY_KEY));
+        break;
+    }
+    lv_obj_align(inc_title, LV_ALIGN_TOP_MID, 0, 186);
+    lv_obj_align(inc_big, LV_ALIGN_TOP_MID, 0, 236);
+    lv_obj_align(inc_hint, LV_ALIGN_TOP_MID, 0, 320);
+}
+
+const ui_screen_ops_t ui_scr_incident = {inc_create, inc_update, NULL};

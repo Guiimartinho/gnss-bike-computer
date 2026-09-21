@@ -97,6 +97,14 @@ struct app_imu {
     float pitch_deg;            /**< nose up positive */
     float roll_deg;
     float rough[3];             /**< mean deviation of X, Y and Z (legacy fxos roughness) */
+    /*
+     * For the alarm and the crash detection (`model/incident.h`). The peak
+     * is of the samples since the last message, not their average: an
+     * impact lasts about a tenth of a second and a mean over a whole
+     * second would bury it.
+     */
+    float peak_g;               /**< largest magnitude seen, in g */
+    float still_g;              /**< how far the last sample was from one g */
 };
 
 /** Channel mag: tilt-compensated heading, 1 Hz */
@@ -253,7 +261,8 @@ enum app_cmd_id {
     APP_CMD_ROUTE_SELECT,       /**< arg: index in the route list */
     APP_CMD_MSC,                /**< expose the card over USB */
     APP_CMD_STORAGE_RESCAN,     /**< a file arrived: list the storage again */
-    APP_CMD_LAP                 /**< close the lap being ridden and start another */
+    APP_CMD_LAP,                /**< close the lap being ridden and start another */
+    APP_CMD_ALARM_TOGGLE        /**< arm or disarm the bike alarm */
 };
 
 /** Channel system_cmd */

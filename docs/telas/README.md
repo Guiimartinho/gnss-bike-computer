@@ -1,4 +1,4 @@
-# As 35 telas da interface
+# As 37 telas da interface
 
 Cada tela da interface da placa nova, nos dois temas: 8 cores, para o JDI LPM027M128C, e preto e branco, para a Sharp LS027B7DH01A da lista de compras. As imagens saem do código de verdade (`zephyr_app/src/ui`, LVGL 9.5), desenhado no PC pelo renderizador de host e reduzido às cores que o painel mostra; os números são dados de exemplo (`zephyr_app/tests/ui/ui_samples.c`). O projeto da interface, as regras e as diferenças para o legacy estão em [18-interface-telas.md](../18-interface-telas.md).
 
@@ -26,6 +26,7 @@ Para gerar de novo, depois de mexer na interface: `python tools/ui/render_screen
 | 31 | [Voltas e totais](#31-voltas-e-totais) | direita na página 3 do CRS |
 | 33 | [Subida em curso](#33-subida-em-curso) | no PRC, ao pé de uma subida do percurso |
 | 35 | [Radar traseiro](#35-radar-traseiro) | com um radar pareado, em qualquer página |
+| 36 | [Queda e alarme](#36-queda-e-alarme) | contagem regressiva de queda ou alarme tocando |
 | 11 | [Notificação](#11-notificação) | um evento (segmento, sensor, erro) |
 | 12 | [GNSS procurando](#12-gnss-procurando) | CRS ou PRC sem posição recente |
 | 13 | [PRC](#13-prc) | modo PRC, com percurso |
@@ -385,6 +386,18 @@ Em todas as listas: esquerda e direita mudam o item (dão a volta nas pontas, co
 - **Mostra:** a faixa é a pista vista de cima — embaixo a bicicleta, em cima o alcance do radar — com uma marca por veículo na distância dele, azul para quem só se aproxima, amarelo para quem vem rápido e vermelho para quem está perto ou muito rápido. Uma marca que parou de ser reportada fica **vazada** em vez de sumir, porque um radar perde quadro e marca piscando é pior que marca parada. O ponto da barra de estado tem a cor do pior veículo atrás.
 - **Por que só nas páginas com desenho:** nas páginas de dados as unidades ficam na borda direita, e a faixa cobriria o texto.
 - **Nova:** o legacy é anterior ao Varia e não tem radar. O formato BLE do Varia é de engenharia reversa e **não foi conferido em aparelho** ([`model/radar_wire.h`](../../zephyr_app/include/model/radar_wire.h)); pelo ANT+, o perfil não pode entrar neste repositório ([`rf/radar_ant.h`](../../zephyr_app/include/rf/radar_ant.h)).
+
+### 36 Queda e alarme
+
+| 8 cores | Preto e branco |
+|---|---|
+| ![Queda em 8 cores](36_queda_cor.png) | ![Queda em preto e branco](36_queda_mono.png) |
+| ![Alarme em 8 cores](37_alarme_cor.png) | ![Alarme em preto e branco](37_alarme_mono.png) |
+
+- **Quando:** toma a tela sozinha, como a atualização, porque enquanto está no ar é a única coisa que importa. Ou porque o aparelho achou que houve queda (pico de aceleração, bicicleta parada e aparelho quieto por 8 s), ou porque o alarme estava armado e a bicicleta se moveu.
+- **Mostra:** o triângulo de aviso, o que aconteceu e, na queda, os segundos que faltam para o aparelho dar o alerta por Bluetooth. **Qualquer tecla cancela** e desarma.
+- **Como armar o alarme:** menu, Ajustes, "Armar alarme" — o item vira "Desarmar alarme" em vermelho enquanto está armado.
+- **Nova, e não é equipamento de segurança:** o legacy não tem nada disso, e isto erra nos dois sentidos — perde quedas e dispara à toa. Ninguém deve pedalar diferente porque está ligado ([`model/incident.h`](../../zephyr_app/include/model/incident.h), [06](../06-algoritmos.md#alarme-da-bicicleta-e-detecção-de-queda)).
 
 ### 28 Atualização
 

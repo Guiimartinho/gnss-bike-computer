@@ -13,6 +13,7 @@
  * magnetometer and the light once a second, with the attitude.
  */
 
+#include <math.h>
 #include <string.h>
 
 #include <zephyr/device.h>
@@ -108,6 +109,14 @@ static void read_baro(void)
     (void)app_publish(&chan_baro, &b);
 }
 
+/*
+ * The peak of the samples of the current second, for the alarm and the
+ * crash detection (`model/incident.h`). Tracked here, at the 50 Hz of the
+ * accelerometer, because a mean over a whole second buries an impact.
+ */
+static float peak_g;
+static float last_g;
+
 static void read_accel(void)
 {
     struct sensor_value a[3];
@@ -116,8 +125,20 @@ static void read_accel(void)
         (sensor_channel_get(imu, SENSOR_CHAN_ACCEL_XYZ, a) != 0)) {
         return;
     }
-    (void)tilt_window_add(&window, sensor_value_to_float(&a[0]), sensor_value_to_float(&a[1]),
-                          sensor_value_to_float(&a[2]));
+
+    float x = sensor_value_to_float(&a[0]);
+    float y = sensor_value_to_float(&a[1]);
+    float z = sensor_value_to_float(&a[2]);
+
+    (void)tilt_window_add(&window, x, y, z);
+
+    /* the sensor API gives m/s^2; one g is 9,80665 of them */
+    float g = sqrtf((x * x) + (y * y) + (z * z)) / 9.80665f;
+
+    last_g = g;
+    if (g > peak_g) {
+        peak_g = g;
+    }
 }
 
 /** Once a second: attitude, heading and light */
@@ -135,6 +156,9 @@ static void publish_second(bool have_imu, bool have_mag, bool have_light)
         };
 
         (void)memcpy(m.rough, out.rough, sizeof(m.rough));
+        m.peak_g = peak_g;
+        m.still_g = fabsf(last_g - 1.0f);
+        peak_g = 0.0f;      /* the next second starts its own peak */
         (void)app_publish(&chan_imu, &m);
     }
 

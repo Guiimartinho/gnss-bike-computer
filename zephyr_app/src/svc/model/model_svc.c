@@ -27,6 +27,7 @@
 #include "model/activity.h"
 #include "model/attitude.h"
 #include "model/climb.h"
+#include "model/incident.h"
 #include "model/radar.h"
 #include "model/vecteur.h"
 #include "model/fit_encode.h"
@@ -499,8 +500,40 @@ static void on_ext(const struct app_ext_sensor *e)
     }
 }
 
+/**
+ * The alarm and the crash detection, once a second with the IMU message.
+ *
+ * Not a safety device: what it is and what it is not, in
+ * `model/incident.h`. The rider is warned and can always say no.
+ */
+static void on_incident(const struct app_imu *imu)
+{
+    attitude_t att;
+    struct incident_sample s = {
+        .peak_g = imu->peak_g,
+        .still_g = imu->still_g,
+        .speed_kmh = (attitude_get(&att) == APP_OK) ? att.loc.speed : 0.0f,
+    };
+
+    switch (incident_update(&ctx.inc, &s, MODEL_STATE_PERIOD_MS)) {
+    case INCIDENT_EVENT_ALARM:
+        app_notify("ALARME", "A bicicleta se moveu", NULL, true, 0U);
+        break;
+    case INCIDENT_EVENT_COUNTING:
+        app_notify("QUEDA?", "Toque para cancelar", NULL, true, 0U);
+        break;
+    case INCIDENT_EVENT_CRASH:
+        /* the phone is told by the radio service, which reads the model */
+        app_notify("QUEDA", "Sem resposta", NULL, true, 0U);
+        break;
+    default:
+        break;
+    }
+}
+
 static void on_imu(const struct app_imu *imu)
 {
+    on_incident(imu);
     ctx.pitch_deg = imu->pitch_deg;
     (void)memcpy(ctx.rough, imu->rough, sizeof(ctx.rough));
     (void)attitude_update_imu(ctx.heading_valid ? ctx.heading_deg : 0.0f, imu->pitch_deg,
@@ -629,6 +662,19 @@ static void on_command(const struct app_system_cmd *cmd)
         attitude_set_rider_weight((float)cmd->arg);
         (void)user_settings_save(settings);
         break;
+    case APP_CMD_ALARM_TOGGLE:
+        incident_arm(&ctx.inc, !incident_is_armed(&ctx.inc));
+        app_notify("Alarme", incident_is_armed(&ctx.inc) ? "Armado" : "Desarmado", NULL, false, 0U);
+        break;
+    case APP_CMD_KEY:
+        /*
+         * Any key answers the device: it silences the alarm and cancels a
+         * crash countdown, because a rider who can press a key is there.
+         */
+        if (incident_state(&ctx.inc) != INCIDENT_OFF) {
+            incident_cancel(&ctx.inc);
+        }
+        break;
     case APP_CMD_LAP:
         if (activity_lap_now(&act)) {
             publish_activity(ACTIVITY_EVENT_LAP, false);
@@ -751,6 +797,7 @@ static void model_thread(void *p1, void *p2, void *p3)
 
     activity_init(&act, (uint32_t)CONFIG_GNSS_AUTOLAP_M,
                   IS_ENABLED(CONFIG_GNSS_AUTO_PAUSE));
+    incident_init(&ctx.inc, IS_ENABLED(CONFIG_GNSS_CRASH_DETECT));
     /* so the status bar does not open showing the ride as paused */
     publish_activity(ACTIVITY_EVENT_NONE, false);
 

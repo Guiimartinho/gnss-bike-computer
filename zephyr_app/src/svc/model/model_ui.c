@@ -18,6 +18,7 @@
 #include "model/attitude.h"
 #include "model/climb.h"
 #include "model/map_project.h"
+#include "model/incident.h"
 #include "model/radar.h"
 #include "model/vecteur.h"
 #include "model/route_profile.h"
@@ -95,6 +96,14 @@ static void fill_activity(const struct model_ctx *ctx, ui_model_t *m)
     a->descent_m = ctx->act.ride.descent_m;
     a->laps = ctx->act.laps;
     a->kcal = ctx->act.ride.calories_kcal;
+}
+
+/** The alarm and the crash countdown (`model/incident.h`) */
+static void fill_incident(const struct model_ctx *ctx, ui_model_t *m)
+{
+    m->inc.state = incident_state(&ctx->inc);
+    m->inc.countdown_s = incident_countdown_s(&ctx->inc);
+    m->inc.armed = incident_is_armed(&ctx->inc);
 }
 
 /** Vehicles behind, for the strip down the side of the data pages */
@@ -605,6 +614,7 @@ void model_ui_fill(const struct model_ctx *ctx, ui_model_t *m)
     fill_activity(ctx, m);
     fill_climb(ctx, m);
     fill_radar(ctx, m);
+    fill_incident(ctx, m);
     fill_ride(ctx, m);
     fill_attitude(ctx, m);
     fill_zones(ctx, m);

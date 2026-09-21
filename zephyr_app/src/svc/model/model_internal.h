@@ -17,6 +17,7 @@
 
 #include "app/app_events.h"
 #include "model/climb.h"
+#include "model/incident.h"
 #include "model/radar.h"
 
 /**
@@ -57,6 +58,7 @@ struct model_ctx {
     struct climb_list climbs;       /**< climbs of the loaded route (model/climb.h) */
     struct climb_state climb;       /**< where the rider is on the one ahead */
     struct radar rad;               /**< vehicles behind (model/radar.h) */
+    struct incident inc;            /**< alarm and crash detection (model/incident.h) */
     float heading_deg;
     bool heading_valid;
     float pitch_deg;

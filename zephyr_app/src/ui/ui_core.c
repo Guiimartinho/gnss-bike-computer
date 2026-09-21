@@ -57,6 +57,7 @@ static const ui_screen_ops_t *const ops[UI_SCREEN_COUNT] = {
     [UI_SCREEN_PROFILE] = &ui_scr_profile,
     [UI_SCREEN_LAP] = &ui_scr_lap,
     [UI_SCREEN_CLIMB] = &ui_scr_climb,
+    [UI_SCREEN_INCIDENT] = &ui_scr_incident,
     [UI_SCREEN_ROUTES] = &ui_scr_routes,
 };
 
@@ -315,6 +316,24 @@ void ui_update(const ui_model_t *m, uint32_t now_ms)
             ui_go(ui_mode_page());
             return;
         }
+    }
+
+    /*
+     * The alarm ringing, or a crash counting down, takes the screen: it is
+     * the only thing that matters while it is up, and any key answers it
+     * through the ordinary path (`model/incident.h`).
+     */
+    bool loud = (m->inc.state == (uint8_t)UI_INC_RINGING) ||
+                (m->inc.state == (uint8_t)UI_INC_COUNTING) ||
+                (m->inc.state == (uint8_t)UI_INC_CRASHED);
+
+    if (loud && (cur != UI_SCREEN_INCIDENT)) {
+        ui_go(UI_SCREEN_INCIDENT);
+        return;
+    }
+    if (!loud && (cur == UI_SCREEN_INCIDENT)) {
+        ui_go(ui_mode_page());
+        return;
     }
 
     /*

@@ -82,15 +82,15 @@ flowchart TB
 | Desbloquear chip | `bash tools/fw/fw.sh recover` |
 | Placas conectadas | `bash tools/fw/fw.sh devices` |
 | Memória e maiores símbolos | `bash tools/fw/fw.sh size` |
-| Testes de host | `bash tools/fw/host_tests.sh` (38 conjuntos, 453 casos) |
-| Telas da interface no PC (LVGL) | `python tools/ui/render_screens.py` (35 telas em 2 temas, gera `docs/img/telas-lvgl/` e `docs/telas/`) |
+| Testes de host | `bash tools/fw/host_tests.sh` (39 conjuntos, 473 casos) |
+| Telas da interface no PC (LVGL) | `python tools/ui/render_screens.py` (37 telas em 2 temas, gera `docs/img/telas-lvgl/` e `docs/telas/`) |
 | Converter um percurso do Strava para o formato do projeto | `python tools/route_convert.py entrada.gpx saida.RTE` (e `--selftest`) |
 | Diagramas e links da documentação | `python tools/docs/mermaid_check.py` e `python tools/docs/links_check.py` |
 | Ambiente do NCS no shell | `source tools/fw/ncs_env.sh` |
 
 Equivalentes no `cmd`: `build.bat [pristine]`, `flash.bat [keep]`, `recover.bat`, `serial.bat COMx`. Variáveis: `BUILD_DIR`, `NRF_SERIAL`, `NCS_VERSION`, `NCS_TOOLCHAIN`, `NOPAUSE`.
 
-Referência de 2026-09-21, com a interface, a energia, o GNSS, os segmentos, a atualização por BLE, o USB, o percurso pelo telefone (RTE, GPX e o texto do legacy), o perfil, as voltas e o arquivo FIT: nRF52840 DK FLASH 504.024 B (48,1 %), RAM 224.576 B (85,7 %); nRF54LM20 DK FLASH 589.700 B de 921.456 B do slot (64,0 %), RAM 386.348 B (73,8 %), mais o MCUboot com 45.676 B de FLASH e 22.880 B de RAM; 0 avisos.
+Referência de 2026-09-21, com a interface, a energia, o GNSS, os segmentos, a atualização por BLE, o USB, o percurso pelo telefone (RTE, GPX e o texto do legacy), o perfil, as voltas e o arquivo FIT: nRF52840 DK FLASH 506.052 B (48,3 %), RAM 224.704 B (85,7 %); nRF54LM20 DK FLASH 591.740 B de 921.456 B do slot (64,2 %), RAM 386.452 B (73,9 %), mais o MCUboot com 45.676 B de FLASH e 22.880 B de RAM; 0 avisos.
 
 ## 5. Estado e próximos passos
 
@@ -194,7 +194,7 @@ flowchart LR
 | Arquitetura do firmware e máquinas de estado da placa nova | [docs/16-arquitetura-firmware.md](docs/16-arquitetura-firmware.md) |
 | Dispositivos BLE e ANT+ | [docs/17-dispositivos-ble-ant.md](docs/17-dispositivos-ble-ant.md) |
 | Interface e telas da placa nova | [docs/18-interface-telas.md](docs/18-interface-telas.md) |
-| As 35 telas, uma a uma | [docs/telas/README.md](docs/telas/README.md) |
+| As 37 telas, uma a uma | [docs/telas/README.md](docs/telas/README.md) |
 | Lista de compras da placa nova | [docs/19-lista-de-compras.md](docs/19-lista-de-compras.md) |
 | Build e ambiente | [docs/03-ambiente-build.md](docs/03-ambiente-build.md) |
 | Legacy | [docs/04-arquitetura-legacy.md](docs/04-arquitetura-legacy.md), [legacy/README.md](legacy/README.md) |

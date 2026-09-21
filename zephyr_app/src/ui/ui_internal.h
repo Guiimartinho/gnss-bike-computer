@@ -112,6 +112,7 @@ typedef enum {
     T_ALT, T_ELAPSED, T_ROUTES, T_ERROR, T_NO_ROUTES,
     T_LAP, T_LAPS, T_MOVING, T_PAUSED, T_DESCENT, T_KCAL,
     T_CLIMB_N, T_TO_TOP, T_GRADE, T_NEXT_M, T_NO_CLIMB, T_HC,
+    T_ALARM, T_CRASH, T_CRASH_Q, T_ANY_KEY, T_ALARM_ARM, T_ALARM_OFF,
     T_COUNT
 } ui_text_t;
 
@@ -184,6 +185,7 @@ extern const ui_screen_ops_t ui_scr_dfu;
 extern const ui_screen_ops_t ui_scr_profile;
 extern const ui_screen_ops_t ui_scr_lap;
 extern const ui_screen_ops_t ui_scr_climb;
+extern const ui_screen_ops_t ui_scr_incident;
 
 /** Go to another screen (rebuilds it) */
 void ui_go(ui_screen_t screen);
