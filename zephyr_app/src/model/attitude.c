@@ -25,8 +25,16 @@ LOG_MODULE_REGISTER(attitude, CONFIG_LOG_DEFAULT_LEVEL);
  * Private Definitions
  * ========================================================================== */
 
-/** Minimum speed for moving time (km/h) */
-#define MOVING_SPEED_THRESHOLD  2.0f
+/**
+ * Speed above which a second counts as active, in km/h.
+ *
+ * `legacy/source/model/Attitude.cpp:509` is `if (loc_.speed > 7.f)
+ * att.nbsec_act++;`. The port had 2.0 here, which made `nbsec_act` count
+ * walking and coasting and put the screen of the legacy well above what the
+ * legacy itself shows. The auto-pause of `model/activity.c` has its own,
+ * much lower threshold: that one only has to tell a stopped bike apart.
+ */
+#define MOVING_SPEED_THRESHOLD  7.0f
 
 /** Minimum speed for Kalman update (m/s) */
 #define MIN_SPEED_FOR_KALMAN    1.5f

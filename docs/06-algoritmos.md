@@ -2,7 +2,7 @@
 
 Os cálculos do stravaV10 original, com fórmulas, constantes e a origem no código, lado a lado com o que o port faz hoje. Diferença não documentada aqui é defeito: corrija o código ou registre a decisão nesta página. Testes de fidelidade ficam em `zephyr_app/tests/host/` (skill `fw-testes`).
 
-**Nesta página:** [Distância](#distância) · [Vetores e posição relativa](#vetores-e-posição-relativa) · [Segmentos](#segmentos) · [Mapa e zoom](#mapa-e-zoom) · [Altitude: Kalman de 3 estados](#altitude-kalman-de-3-estados) · [Barômetro e drift](#barômetro-e-drift) · [Potência estimada](#potência-estimada) · [Distância acumulada e log](#distância-acumulada-e-log) · [Zonas](#zonas) · [Fontes de posição](#fontes-de-posição) · [Bateria](#bateria)
+**Nesta página:** [Distância](#distância) · [Vetores e posição relativa](#vetores-e-posição-relativa) · [Segmentos](#segmentos) · [Mapa e zoom](#mapa-e-zoom) · [Altitude: Kalman de 3 estados](#altitude-kalman-de-3-estados) · [Barômetro e drift](#barômetro-e-drift) · [Potência estimada](#potência-estimada) · [Distância acumulada e log](#distância-acumulada-e-log) · [Cronômetro, pausa automática e voltas](#cronômetro-pausa-automática-e-voltas) · [Zonas](#zonas) · [Fontes de posição](#fontes-de-posição) · [Bateria](#bateria)
 
 ## Distância
 
@@ -119,6 +119,21 @@ Estado `X = [h, α_bar, α0]`: elevação, pitch medido e offset de montagem do 
 
 - Legacy (`Attitude::computeDistance`, `Attitude.cpp:431-490`): soma a distância entre posições brutas; descarta os primeiros 25 m; a cada 15 m guarda um snapshot e, com 5 snapshots, grava no SD e atualiza o estado salvo para FDIR (CRC-8).
 - Port: igual ao legacy desde 2026-09-19 (`distance.c`): posições brutas, sem porta de velocidade, com o descarte dos primeiros 25 m e o instantâneo a cada 15 m, que agora é quem salva o estado da recuperação de falha (antes era a cada segundo). O `sd_logger` mantém os mesmos 15 m e lotes de 5 do legacy, e a distância filtrada do `locator.c` continua disponível para quem quiser.
+
+## Cronômetro, pausa automática e voltas
+
+O legacy não tem nada disso: grava do momento em que liga até desligar, sem início, sem pausa e sem volta (`legacy/source/sd/sd_functions.cpp:605`). O port acrescenta em `model/activity.c`, porque é o que um arquivo FIT carrega e o que o mercado faz.
+
+| Grandeza | Legacy | Port |
+|---|---|---|
+| Segundo ativo (`att.nbsec_act`) | `if (loc_.speed > 7.f)` (`Attitude.cpp:509`) | **igual**, corrigido em 2026-09-21: o port tinha 7 km/h escritos como `MOVING_SPEED_THRESHOLD 2.0f`, o que contava caminhada e giro solto e punha a média da página 1 do CRS acima da do legacy |
+| Tempo em movimento | não existe | o cronômetro para depois de 3 s abaixo de 1,5 km/h e volta acima de 3 km/h (`ACTIVITY_PAUSE_KMH`, `ACTIVITY_RESUME_KMH`, `ACTIVITY_PAUSE_HOLD_MS`) |
+| Média | `dist * 3,6 / nbsec_act` na página 1 (`afficheScreen1`) | a página 1 **não muda**; a página de voltas traz a média sobre o tempo em movimento, que é a que vai no FIT |
+| Volta | não existe | por distância (`CONFIG_GNSS_AUTOLAP_M`, 5 km de fábrica) e pela tecla esquerda longa |
+| Descida | não existe | acumulada da altitude filtrada, com a mesma banda morta de 2 m da subida de `attitude.c`, para que as duas concordem sobre o que é ruído |
+| Energia | não existe | os watt-segundos em quilojoules: para um ciclista o número de kJ de trabalho é o de kcal de comida, dentro de um por cento |
+
+Os dois limiares são separados de propósito. Os 7 km/h dizem se o ciclista está pedalando para valer, e uma subida a 6 km/h ainda é pedalar; a pausa só precisa distinguir bicicleta parada de bicicleta andando. Os três segundos de espera antes de parar o cronômetro contam como tempo em movimento, porque foram pedalados até onde o aparelho sabia.
 
 ## Zonas
 

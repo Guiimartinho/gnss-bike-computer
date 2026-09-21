@@ -108,6 +108,7 @@ typedef enum {
     T_CHARGE, T_VERSION, T_NO_ROUTE, T_ABOUT_H, T_REMAIN, T_LIGHT, T_SCREEN,
     T_AUTO, T_OFF, T_COLOURS, T_BW, T_SEARCHING, T_KG, T_W, T_SEGMENTS,
     T_ALT, T_ELAPSED, T_ROUTES, T_ERROR, T_NO_ROUTES,
+    T_LAP, T_LAPS, T_MOVING, T_PAUSED, T_DESCENT, T_KCAL,
     T_COUNT
 } ui_text_t;
 
@@ -178,6 +179,7 @@ extern const ui_screen_ops_t ui_scr_shutdown;
 extern const ui_screen_ops_t ui_scr_routes;
 extern const ui_screen_ops_t ui_scr_dfu;
 extern const ui_screen_ops_t ui_scr_profile;
+extern const ui_screen_ops_t ui_scr_lap;
 
 /** Go to another screen (rebuilds it) */
 void ui_go(ui_screen_t screen);

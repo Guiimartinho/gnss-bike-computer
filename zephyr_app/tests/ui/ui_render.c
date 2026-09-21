@@ -295,7 +295,23 @@ static void render_theme(ui_theme_t theme)
     expect_screen(UI_SCREEN_CRS3, "right on page 2");
     snap("10_crs3", theme);
     ui_key(UI_KEY_RIGHT, UI_PRESS_SHORT, tick_ms);
-    expect_screen(UI_SCREEN_CRS1, "right on page 3");
+    expect_screen(UI_SCREEN_LAP, "right on page 3 reaches the lap page");
+    snap("31_volta", theme);
+    ui_key(UI_KEY_RIGHT, UI_PRESS_SHORT, tick_ms);
+    expect_screen(UI_SCREEN_CRS1, "right on the lap page closes the ring");
+    ui_key(UI_KEY_LEFT, UI_PRESS_SHORT, tick_ms);
+    expect_screen(UI_SCREEN_LAP, "left on page 1 goes back to the lap page");
+    ui_key(UI_KEY_RIGHT, UI_PRESS_SHORT, tick_ms);
+    expect_screen(UI_SCREEN_CRS1, "and forward again");
+
+    /* the timer held: the lap page says so */
+    m.status.paused = true;
+    ui_go(UI_SCREEN_LAP);
+    ui_update(&m, tick_ms);
+    snap("32_volta_pausada", theme);
+    m.status.paused = false;
+    ui_go(UI_SCREEN_CRS1);
+    ui_update(&m, tick_ms);
 
     /* notification over page 1 */
     ui_notify("Segmento", "Serra do Mar", "+12.4 s", true, 6000U, tick_ms);
@@ -460,8 +476,14 @@ static void render_theme(ui_theme_t theme)
     ui_key(UI_KEY_RIGHT, UI_PRESS_LONG, tick_ms);
     expect_screen(UI_SCREEN_PRC, "long right goes back to the map");
 
-    /* long centre on a page asks to shut down */
+    /* a long press on the left marks a lap from any data page */
     ui_set_mode(UI_MODE_CRS);
+    ui_go(UI_SCREEN_CRS2);
+    ui_key(UI_KEY_LEFT, UI_PRESS_LONG, tick_ms);
+    expect_action("|15:0|", "long left marks a lap");
+    expect_screen(UI_SCREEN_CRS2, "and stays on the page");
+
+    /* long centre on a page asks to shut down */
     ui_go(UI_SCREEN_CRS1);
     ui_key(UI_KEY_CENTER, UI_PRESS_LONG, tick_ms);
     expect_action("|1:0|", "long centre shuts down");

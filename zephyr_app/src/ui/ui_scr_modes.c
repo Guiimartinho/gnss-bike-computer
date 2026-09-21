@@ -658,3 +658,69 @@ static bool profile_key(ui_key_t key, ui_press_t press)
 }
 
 const ui_screen_ops_t ui_scr_profile = {profile_create, profile_update, profile_key};
+
+/* ==========================================================================
+ * Lap page: the ride and the lap being ridden
+ *
+ * Nothing in the legacy answers "how far into this lap am I": it has no
+ * timer and no lap at all. This page is of the port, from the totals of
+ * `model/activity.h`, and it joins the CRS ring after page 3.
+ * ========================================================================== */
+
+static ui_field_t lap_num;
+static ui_field_t lap_dist;
+static ui_field_t lap_time;
+static ui_field_t ride_time;
+static ui_field_t ride_avg;
+static ui_field_t ride_max;
+static ui_field_t ride_desc;
+static ui_field_t ride_kcal;
+static lv_obj_t *lap_state;
+
+static void lap_update(lv_obj_t *scr);
+
+static void lap_create(lv_obj_t *scr)
+{
+    ui_statusbar_create(scr);
+
+    lv_obj_t *l = ui_label(scr, UI_FONT_SMALL, ui_col(UI_C_FG), ui_txt(T_LAPS));
+
+    lv_obj_align(l, LV_ALIGN_TOP_LEFT, 4, ui_row_y(0) + 2);
+
+    lap_state = ui_label(scr, UI_FONT_SMALL, ui_col(UI_C_BAD), "");
+    lv_obj_align(lap_state, LV_ALIGN_TOP_RIGHT, -4, ui_row_y(0) + 2);
+
+    ui_field_create(&lap_num, scr, 0, 1, 1, ui_txt(T_LAP), "", UI_C_FG);
+    ui_field_create(&lap_dist, scr, 1, 1, 1, ui_txt(T_DIST), "km", UI_C_FG);
+    ui_field_create(&lap_time, scr, 0, 2, 2, ui_txt(T_LAP), "", UI_C_FG);
+    ui_field_create(&ride_time, scr, 0, 3, 2, ui_txt(T_MOVING), "", UI_C_FG);
+    ui_field_create(&ride_avg, scr, 0, 4, 1, ui_txt(T_AVG), "km/h", UI_C_FG);
+    ui_field_create(&ride_max, scr, 1, 4, 1, "MAX", "km/h", UI_C_FG);
+    ui_field_create(&ride_desc, scr, 0, 5, 1, ui_txt(T_DESCENT), "m", UI_C_FG);
+    ui_field_create(&ride_kcal, scr, 1, 5, 1, ui_txt(T_KCAL), "kcal", UI_C_FG);
+
+    lap_update(scr);
+}
+
+static void lap_update(lv_obj_t *scr)
+{
+    const ui_activity_t *a = &ui_ctx.m.act;
+    char v[12];
+
+    (void)scr;
+    ui_statusbar_update();
+
+    /* the rider needs to see at a glance that the timer stopped */
+    lv_label_set_text(lap_state, ui_ctx.m.status.paused ? ui_txt(T_PAUSED) : "");
+
+    ui_field_set(&lap_num, ui_fmt_int(v, sizeof(v), (int32_t)a->laps + 1), UI_C_FG);
+    ui_field_set(&lap_dist, ui_fmt_float(v, sizeof(v), a->lap_dist_m / 1000.0f, 2U), UI_C_FG);
+    ui_field_set(&lap_time, ui_fmt_hms(v, sizeof(v), a->lap_timer_s, ':'), UI_C_FG);
+    ui_field_set(&ride_time, ui_fmt_hms(v, sizeof(v), a->timer_s, ':'), UI_C_FG);
+    ui_field_set(&ride_avg, ui_fmt_float(v, sizeof(v), a->avg_kmh, 1U), UI_C_FG);
+    ui_field_set(&ride_max, ui_fmt_float(v, sizeof(v), a->max_kmh, 1U), UI_C_FG);
+    ui_field_set(&ride_desc, ui_fmt_int(v, sizeof(v), (int32_t)a->descent_m), UI_C_FG);
+    ui_field_set(&ride_kcal, ui_fmt_int(v, sizeof(v), (int32_t)a->kcal), UI_C_FG);
+}
+
+const ui_screen_ops_t ui_scr_lap = {lap_create, lap_update, NULL};

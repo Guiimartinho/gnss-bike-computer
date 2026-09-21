@@ -39,6 +39,33 @@ config GNSS_SEGMENT_POINTS
 	  halved as it loads. The longest segment of `tools/TDD/DB` has 1291
 	  points.
 
+config GNSS_AUTO_PAUSE
+	bool "Stop the timer when the bike stops"
+	default y
+	help
+	  The moving time, the average speed and the FIT file stop counting
+	  while the bike is still, which is what every computer on the market
+	  does. The legacy has no timer at all: it logs from boot to shutdown.
+	  Thresholds in `model/activity.h`.
+
+config GNSS_AUTOLAP_M
+	int "Metres between automatic laps"
+	default 5000
+	range 0 100000
+	help
+	  A lap closes by itself every so many metres, each with its own
+	  totals in the FIT file. Zero leaves only the laps the rider asks
+	  for with the key.
+
+config GNSS_FIT
+	bool "Write the activity as a FIT file"
+	default y
+	depends on FILE_SYSTEM
+	help
+	  One `.FIT` per ride beside the `@DDMMYY.txt` of the legacy, which
+	  Strava, Garmin Connect and Komoot read directly. A four-hour ride
+	  at one point a second takes about 380 KB.
+
 endmenu
 
 source "Kconfig.zephyr"

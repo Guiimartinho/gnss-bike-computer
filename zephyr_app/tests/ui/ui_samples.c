@@ -56,6 +56,17 @@ void ui_sample_ride(ui_model_t *m)
     m->status.charge = UI_CHARGE_SOLAR;
     m->status.batt_pct = 91U;
 
+    /* the ride and the lap of `model/activity.h`, which the legacy has not */
+    m->act.timer_s = 2745U;         /* 45 min 45 s moving */
+    m->act.elapsed_s = 3012U;       /* and 50 min 12 s on the clock */
+    m->act.lap_timer_s = 545U;
+    m->act.lap_dist_m = 3240.0f;
+    m->act.avg_kmh = 23.9f;
+    m->act.max_kmh = 58.2f;
+    m->act.descent_m = 540.0f;
+    m->act.laps = 3U;
+    m->act.kcal = 612U;
+
     m->ride.dist_m = 18200.0f;
     m->ride.speed_kmh = 20.0f;
     m->ride.avg_kmh = 23.4f;

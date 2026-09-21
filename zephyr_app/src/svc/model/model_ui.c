@@ -73,8 +73,25 @@ static void fill_status(const struct model_ctx *ctx, ui_model_t *m, uint32_t now
     /* the legacy logs every location in CRS and PRC: recording while they come */
     s->recording = recent && ((ctx->mode == APP_MODE_ID_CRS) || (ctx->mode == APP_MODE_ID_PRC) ||
                               (ctx->mode == APP_MODE_ID_DBG));
+    s->paused = !ctx->act.running;
     s->charge = (ui_charge_t)ctx->power.charge;
     s->batt_pct = ctx->power.gauge ? ctx->power.pct : 0U;
+}
+
+/** Lap and totals of the ride; nothing of this is in the legacy */
+static void fill_activity(const struct model_ctx *ctx, ui_model_t *m)
+{
+    ui_activity_t *a = &m->act;
+
+    a->timer_s = ctx->act.ride.timer_ms / 1000U;
+    a->elapsed_s = ctx->act.ride.elapsed_ms / 1000U;
+    a->lap_timer_s = ctx->act.lap_timer_ms / 1000U;
+    a->lap_dist_m = ctx->act.lap_dist_m;
+    a->avg_kmh = ctx->act.ride.avg_speed_kmh;
+    a->max_kmh = ctx->act.ride.max_speed_kmh;
+    a->descent_m = ctx->act.ride.descent_m;
+    a->laps = ctx->act.laps;
+    a->kcal = ctx->act.ride.calories_kcal;
 }
 
 static void fill_ride(const struct model_ctx *ctx, ui_model_t *m)
@@ -462,6 +479,7 @@ void model_ui_fill(const struct model_ctx *ctx, ui_model_t *m)
 
     (void)memset(m, 0, sizeof(*m));
     fill_status(ctx, m, now);
+    fill_activity(ctx, m);
     fill_ride(ctx, m);
     fill_attitude(ctx, m);
     fill_zones(ctx, m);

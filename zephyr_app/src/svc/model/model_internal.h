@@ -42,6 +42,7 @@ struct model_ctx {
     struct app_phone_nav nav;
     struct app_pair_list pair;
     struct app_storage_info storage;
+    struct app_activity act;        /**< totals, auto-pause and laps (model/activity.h) */
     float heading_deg;
     bool heading_valid;
     float pitch_deg;

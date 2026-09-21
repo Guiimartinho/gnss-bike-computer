@@ -92,6 +92,7 @@ typedef enum {
     UI_SCREEN_ROUTES,
     UI_SCREEN_DFU,
     UI_SCREEN_PROFILE,
+    UI_SCREEN_LAP,
     UI_SCREEN_COUNT
 } ui_screen_t;
 
@@ -111,7 +112,8 @@ typedef enum {
     UI_ACT_FORMAT,
     UI_ACT_ZOOM,            /**< arg: +1 closer, -1 farther (PRC) */
     UI_ACT_KEY,             /**< any key: feeds the backlight state machine */
-    UI_ACT_ROUTE_SELECT     /**< arg: index in the route list, before UI_ACT_SET_MODE PRC */
+    UI_ACT_ROUTE_SELECT,    /**< arg: index in the route list, before UI_ACT_SET_MODE PRC */
+    UI_ACT_LAP              /**< close the lap being ridden and start another */
 } ui_action_t;
 
 typedef void (*ui_action_cb_t)(ui_action_t action, int32_t arg, void *user);

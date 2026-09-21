@@ -24,7 +24,9 @@
 
 #include "app/app_channels.h"
 #include "app/app_svc.h"
+#include "model/activity.h"
 #include "model/attitude.h"
+#include "model/fit_encode.h"
 #include "model/crash_recovery.h"
 #include "model/parcours.h"
 #include "model/segment.h"
@@ -66,6 +68,17 @@ struct model_msg {
 K_MSGQ_DEFINE(model_inbox, sizeof(struct model_msg), MODEL_INBOX_LEN, 4);
 
 static struct model_ctx ctx;
+
+/*
+ * Totals, auto-pause and laps of the ride (`model/activity.h`). The model
+ * owns it, as it owns everything else the ride is made of; the storage and
+ * the interface read it from `chan_activity`.
+ */
+static struct activity act;
+static uint32_t act_last_ms;
+
+static void update_activity(const attitude_t *att, const loc_data_t *loc);
+static void publish_activity(enum activity_event ev, bool finished);
 
 /** The snapshot is big (UI maps): it lives here, not on the stack */
 static ui_model_t snapshot;
@@ -314,6 +327,7 @@ static void on_fix(const struct app_gnss_fix *f)
     attitude_t att;
 
     if (attitude_get(&att) == APP_OK) {
+        update_activity(&att, &loc);
         attitude_ext_t ext;
         struct app_log_point p = {
             .loc = loc,
@@ -326,6 +340,7 @@ static void on_fix(const struct app_gnss_fix *f)
             .slope_pct = att.slope,
             .dist_m = att.dist,
             .climb_m = att.climb,
+            .fit_time = fit_time_from_date(att.date.date, att.date.secj),
         };
 
         (void)memcpy(p.rough, ctx.rough, sizeof(p.rough));
@@ -396,6 +411,72 @@ static void on_imu(const struct app_imu *imu)
     }
 }
 
+/** Fill the compact form the channel carries from a set of totals */
+static void fill_totals(struct app_totals *out, const struct activity_totals *t)
+{
+    out->start_time = t->start_time;
+    out->end_time = t->end_time;
+    out->elapsed_ms = t->elapsed_ms;
+    out->timer_ms = t->timer_ms;
+    out->dist_m = t->dist_m;
+    out->ascent_m = t->ascent_m;
+    out->descent_m = t->descent_m;
+    out->avg_speed_kmh = activity_avg_speed(t);
+    out->max_speed_kmh = t->max_speed_kmh;
+    out->avg_power_w = activity_avg_power(t);
+    out->max_power_w = t->max_power_w;
+    out->calories_kcal = activity_calories(t);
+    out->avg_hr_bpm = activity_avg_hr(t);
+    out->max_hr_bpm = t->max_hr_bpm;
+    out->avg_cadence_rpm = activity_avg_cadence(t);
+}
+
+/** Tell the storage and the interface where the ride stands */
+static void publish_activity(enum activity_event ev, bool finished)
+{
+    struct app_activity msg = {
+        .lap_dist_m = act.lap.dist_m,
+        .lap_timer_ms = act.lap.timer_ms,
+        .laps = act.laps,
+        .event = (uint8_t)ev,
+        .running = act.running,
+        .finished = finished,
+    };
+
+    fill_totals(&msg.ride, activity_ride(&act));
+    fill_totals(&msg.lap, activity_lap(&act));
+    /* the snapshot of the screens reads it from here (model_ui.c) */
+    ctx.act = msg;
+    (void)app_publish(&chan_activity, &msg);
+}
+
+/** One epoch of the ride: totals, auto-pause and the automatic lap */
+static void update_activity(const attitude_t *att, const loc_data_t *loc)
+{
+    uint32_t now = k_uptime_get_32();
+    uint32_t dt = (act_last_ms != 0U) ? (now - act_last_ms) : 0U;
+
+    act_last_ms = now;
+
+    struct activity_sample s = {
+        .time = fit_time_from_date(att->date.date, att->date.secj),
+        .speed_kmh = loc->speed,
+        .dist_m = att->dist,
+        .climb_m = att->climb,
+        .alt_m = attitude_get_elevation(),
+        .power_w = att->pwr,
+        .hr_bpm = ctx.ext[APP_EXT_HR].hr_bpm,
+        .cadence_rpm = ctx.ext[APP_EXT_BSC].cadence_rpm,
+    };
+
+    enum activity_event ev = activity_update(&act, &s, dt);
+
+    if (ev == ACTIVITY_EVENT_LAP) {
+        app_notify("Volta", NULL, NULL, false, 0U);
+    }
+    publish_activity(ev, false);
+}
+
 static void on_command(const struct app_system_cmd *cmd)
 {
     user_settings_t *settings = user_settings_get_global();
@@ -419,6 +500,12 @@ static void on_command(const struct app_system_cmd *cmd)
         attitude_set_rider_weight((float)cmd->arg);
         (void)user_settings_save(settings);
         break;
+    case APP_CMD_LAP:
+        if (activity_lap_now(&act)) {
+            publish_activity(ACTIVITY_EVENT_LAP, false);
+            app_notify("Volta", NULL, NULL, false, 0U);
+        }
+        break;
     case APP_CMD_ZOOM:
         if ((cmd->arg > 0) && (ctx.zoom < 5U)) {
             ctx.zoom++;
@@ -438,6 +525,14 @@ static void on_system_state(const struct app_system_state *s)
         return;
     }
     ctx.shutting_down = true;
+
+    /*
+     * The lap that was being ridden closes, and the storage hears that the
+     * ride ended: that is what lets it write the session of the FIT file
+     * and seek back to fix the header.
+     */
+    activity_finish(&act);
+    publish_activity(ACTIVITY_EVENT_NONE, true);
 
     /*
      * legacy power_scheduler__shutdown(): forget the saved activity, so the
@@ -522,6 +617,11 @@ static void model_thread(void *p1, void *p2, void *p3)
 
     /* CRS, as the legacy after the boot (main.cpp: boucle__change_mode) */
     smf_set_initial(SMF_CTX(&ctx), &mode_states[APP_MODE_ID_CRS]);
+
+    activity_init(&act, (uint32_t)CONFIG_GNSS_AUTOLAP_M,
+                  IS_ENABLED(CONFIG_GNSS_AUTO_PAUSE));
+    /* so the status bar does not open showing the ride as paused */
+    publish_activity(ACTIVITY_EVENT_NONE, false);
 
     int wdt = app_wdt_add("model");
 

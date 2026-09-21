@@ -1,4 +1,4 @@
-# As 31 telas da interface
+# As 32 telas da interface
 
 Cada tela da interface da placa nova, nos dois temas: 8 cores, para o JDI LPM027M128C, e preto e branco, para a Sharp LS027B7DH01A da lista de compras. As imagens saem do código de verdade (`zephyr_app/src/ui`, LVGL 9.5), desenhado no PC pelo renderizador de host e reduzido às cores que o painel mostra; os números são dados de exemplo (`zephyr_app/tests/ui/ui_samples.c`). O projeto da interface, as regras e as diferenças para o legacy estão em [18-interface-telas.md](../18-interface-telas.md).
 
@@ -23,6 +23,7 @@ Para gerar de novo, depois de mexer na interface: `python tools/ui/render_screen
 | 08 | [CRS, 2 segmentos chegando](#08-crs-2-segmentos-chegando) | os dois perto |
 | 09 | [CRS, página 2](#09-crs-página-2) | direita na página 1 |
 | 10 | [CRS, página 3](#10-crs-página-3) | direita na página 2 |
+| 31 | [Voltas e totais](#31-voltas-e-totais) | direita na página 3 do CRS |
 | 11 | [Notificação](#11-notificação) | um evento (segmento, sensor, erro) |
 | 12 | [GNSS procurando](#12-gnss-procurando) | CRS ou PRC sem posição recente |
 | 13 | [PRC](#13-prc) | modo PRC, com percurso |
@@ -350,6 +351,17 @@ Em todas as listas: esquerda e direita mudam o item (dão a volta nas pontas, co
 - **Quando:** no modo PRC, com toque longo na tecla direita; o mesmo toque volta para o mapa.
 - **Mostra:** o relevo do percurso inteiro, o trecho já pedalado em verde (no tema de uma cor, só o contorno), a posição do ciclista, a subida que falta, o que resta em quilômetros e as altitudes mínima e máxima. Nova: o legacy não tinha perfil.
 
+### 31 Voltas e totais
+
+| 8 cores | Preto e branco |
+|---|---|
+| ![Voltas em 8 cores](31_volta_cor.png) | ![Voltas em preto e branco](31_volta_mono.png) |
+| ![Cronômetro parado em 8 cores](32_volta_pausada_cor.png) | ![Cronômetro parado em preto e branco](32_volta_pausada_mono.png) |
+
+- **Quando:** quarta página do anel do CRS, com a tecla direita na página 3. O toque longo na tecla **esquerda**, de qualquer página de dados, fecha a volta e começa outra.
+- **Mostra:** a volta em curso (número, distância e tempo em movimento), o tempo em movimento do passeio inteiro, a média e a máxima, a descida e a energia gasta. Quando o cronômetro para sozinho porque a bicicleta parou, aparece **PAUSADO** no canto.
+- **Nova:** o legacy não tem cronômetro, nem pausa, nem volta, nem descida — ele grava do momento em que liga até desligar ([`model/activity.h`](../../zephyr_app/include/model/activity.h)).
+
 ### 28 Atualização
 
 | 8 cores | Preto e branco |
@@ -365,6 +377,7 @@ Em todas as listas: esquerda e direita mudam o item (dão a volta nas pontas, co
 | Onde | Esquerda | Centro | Direita | Centro longo |
 |---|---|---|---|---|
 | CRS | página anterior | menu | próxima página | desligar |
+| Qualquer página de dados, esquerda longa | marca uma volta | — | — | — |
 | PRC | afasta o zoom | menu | aproxima o zoom | desligar |
 | FEC, DBG, GNSS procurando | — | menu | — | desligar |
 | Listas dos menus | item anterior | executa | próximo item | volta à página |

@@ -133,9 +133,28 @@ typedef struct {
     bool ant_link;          /**< at least one ANT+ sensor connected */
     bool ble_link;          /**< at least one BLE sensor connected */
     bool recording;
+    bool paused;            /**< the timer is held: the bike is still */
     ui_charge_t charge;
     uint8_t batt_pct;
 } ui_status_t;
+
+/**
+ * The lap and the totals of the ride (`model/activity.h`).
+ *
+ * None of this is in the legacy, which has neither timer nor lap; it is
+ * what the FIT file carries and what the lap page shows.
+ */
+typedef struct {
+    uint32_t timer_s;       /**< moving time of the ride */
+    uint32_t elapsed_s;     /**< wall time of the ride */
+    uint32_t lap_timer_s;   /**< moving time of the lap being ridden */
+    float lap_dist_m;
+    float avg_kmh;          /**< of the ride, over the moving time */
+    float max_kmh;
+    float descent_m;
+    uint16_t laps;          /**< laps already closed */
+    uint16_t kcal;
+} ui_activity_t;
 
 /** Ride values of the data pages (legacy att, bsc_info, hrm_info) */
 typedef struct {
@@ -319,6 +338,7 @@ typedef struct {
 typedef struct {
     ui_status_t status;
     ui_ride_t ride;
+    ui_activity_t act;
     uint8_t nseg;           /**< segments on screen: 0, 1 or 2 */
     ui_segment_t seg[UI_SEG_MAX];
     ui_nav_t nav;
