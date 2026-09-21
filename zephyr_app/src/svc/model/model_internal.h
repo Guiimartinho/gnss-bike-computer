@@ -16,6 +16,16 @@
 #include <zephyr/smf.h>
 
 #include "app/app_events.h"
+#include "model/climb.h"
+
+/**
+ * Points of the thinned copy of the route the climb scan walks.
+ *
+ * A hundred-kilometre route becomes 512 samples, about 200 m apart,
+ * which is enough for a climb that has to be 500 m long to count, and
+ * costs 4 KB instead of the 32 KB the route itself would.
+ */
+#define MODEL_CLIMB_SCAN_MAX    512U
 #include "model/power_zone.h"
 #include "model/rr_zone.h"
 #include "model/suffer_score.h"
@@ -43,6 +53,8 @@ struct model_ctx {
     struct app_pair_list pair;
     struct app_storage_info storage;
     struct app_activity act;        /**< totals, auto-pause and laps (model/activity.h) */
+    struct climb_list climbs;       /**< climbs of the loaded route (model/climb.h) */
+    struct climb_state climb;       /**< where the rider is on the one ahead */
     float heading_deg;
     bool heading_valid;
     float pitch_deg;

@@ -93,6 +93,7 @@ typedef enum {
     UI_SCREEN_DFU,
     UI_SCREEN_PROFILE,
     UI_SCREEN_LAP,
+    UI_SCREEN_CLIMB,
     UI_SCREEN_COUNT
 } ui_screen_t;
 

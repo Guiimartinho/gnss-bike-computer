@@ -83,6 +83,7 @@ target_sources(app PRIVATE
     src/model/loc_source.c
     src/model/locator.c
     src/model/activity.c
+    src/model/climb.c
     src/model/fit_encode.c
     src/model/parcours.c
     src/model/power_scheduler.c

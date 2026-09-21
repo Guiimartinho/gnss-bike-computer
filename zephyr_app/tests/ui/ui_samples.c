@@ -56,6 +56,32 @@ void ui_sample_ride(ui_model_t *m)
     m->status.charge = UI_CHARGE_SOLAR;
     m->status.batt_pct = 91U;
 
+    /* the climb ahead (`model/climb.h`): a second category, half done */
+    m->climb.on_climb = false;    /* the renderer turns it on for the climb page */
+    m->climb.remain_m = 3400.0f;
+    m->climb.remain_gain_m = 238.0f;
+    m->climb.grade_pct = 7.0f;
+    m->climb.ahead_grade_pct = 11.2f;
+    m->climb.done_pct = 46.0f;
+    m->climb.cat = 3U;              /* CLIMB_CAT_2 */
+    m->climb.index = 2U;
+    m->climb.total = 3U;
+    m->climb.prof_span_m = 6300.0f;
+    m->climb.prof_n = 60U;
+    m->climb.prof_here = 27U;
+    m->climb.prof_min_m = 640;
+    m->climb.prof_max_m = 1090;
+    for (unsigned int i = 0U; i < m->climb.prof_n; i++) {
+        /* a pass that steepens towards the top, with a false flat at a third */
+        float t = (float)i / (float)m->climb.prof_n;
+        float rise = (t * t * 0.75f) + (t * 0.25f);
+
+        if ((i > 18U) && (i < 24U)) {
+            rise -= 0.03f;
+        }
+        m->climb.prof_m[i] = (int16_t)(640.0f + (rise * 450.0f));
+    }
+
     /* the ride and the lap of `model/activity.h`, which the legacy has not */
     m->act.timer_s = 2745U;         /* 45 min 45 s moving */
     m->act.elapsed_s = 3012U;       /* and 50 min 12 s on the clock */

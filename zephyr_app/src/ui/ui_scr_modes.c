@@ -724,3 +724,191 @@ static void lap_update(lv_obj_t *scr)
 }
 
 const ui_screen_ops_t ui_scr_lap = {lap_create, lap_update, NULL};
+
+/* ==========================================================================
+ * Climb page: the climb being ridden, not the whole route
+ *
+ * On a pass the profile of the route is a flat line with a bump in it, and
+ * what the rider wants is the bump filling the screen: how much is left, how
+ * steep the rest of it is, and how steep the next two hundred metres are.
+ * The legacy has nothing like it (`model/climb.h`).
+ * ========================================================================== */
+
+static lv_obj_t *climb_plot;
+static lv_obj_t *climb_title;
+static ui_field_t climb_left;
+static ui_field_t climb_up;
+static ui_field_t climb_avg;
+static ui_field_t climb_now;
+
+static void climb_update_scr(lv_obj_t *scr);
+
+/** The name of a category, as cycling writes it */
+static const char *climb_cat_name(uint8_t cat)
+{
+    static const char *const names[] = {"", "4", "3", "2", "1"};
+
+    if (cat == (uint8_t)CLIMB_CAT_HC) {
+        return ui_txt(T_HC);
+    }
+
+    return (cat < (sizeof(names) / sizeof(names[0]))) ? names[cat] : "";
+}
+
+/** Colour of a stretch by how steep it is, as the maps of a race do */
+static ui_role_t climb_grade_role(int32_t pct)
+{
+    if (pct >= 10) {
+        return UI_C_BAD;
+    }
+    if (pct >= 6) {
+        return UI_C_WARN;
+    }
+
+    return UI_C_NAV;
+}
+
+static void climb_draw(lv_event_t *e)
+{
+    lv_layer_t *layer = lv_event_get_layer(e);
+    const lv_obj_t *obj = lv_event_get_target_obj(e);
+    const ui_climb_t *c = &ui_ctx.m.climb;
+    lv_color_t fg = ui_col(UI_C_FG);
+    lv_area_t a;
+
+    lv_obj_get_coords(obj, &a);
+    if (c->prof_n < 2U) {
+        const char *what = (c->total == 0U) ? ui_txt(T_NO_CLIMB) : ui_txt(T_NEXT_M);
+
+        ui_draw_text(layer, (a.x1 + a.x2) / 2, ((a.y1 + a.y2) / 2) - 10, what, UI_FONT_TITLE, fg,
+                     LV_TEXT_ALIGN_CENTER);
+        return;
+    }
+
+    int32_t w = lv_area_get_width(&a);
+    int32_t h = lv_area_get_height(&a);
+    int32_t range = (int32_t)c->prof_max_m - (int32_t)c->prof_min_m;
+
+    if (range < 10) {
+        range = 10;
+    }
+
+    for (uint32_t i = 0U; i < c->prof_n; i++) {
+        int32_t x = a.x1 + (int32_t)((i * (uint32_t)w) / c->prof_n);
+        int32_t next = a.x1 + (int32_t)(((i + 1U) * (uint32_t)w) / c->prof_n);
+        int32_t top = a.y2 - (((int32_t)c->prof_m[i] - (int32_t)c->prof_min_m) * (h - 6)) / range;
+        int32_t cw = (next > x) ? (next - x) : 1;
+        bool done = (i <= c->prof_here);
+
+        /*
+         * The slope of this column decides its colour, in metres over
+         * metres: how wide a column is on the screen has nothing to do
+         * with how much ground it covers.
+         */
+        uint32_t prev = (i > 0U) ? (i - 1U) : 0U;
+        int32_t rise = (int32_t)c->prof_m[i] - (int32_t)c->prof_m[prev];
+        float run_m = (c->prof_span_m > 0.0f) ? (c->prof_span_m / (float)c->prof_n) : 0.0f;
+        int32_t pct = (run_m >= 1.0f) ? (int32_t)(((float)rise / run_m) * 100.0f) : 0;
+
+        if (done && (ui_ctx.theme == UI_THEME_MONO)) {
+            ui_draw_fill(layer, x, top, cw, 3, fg);
+        } else {
+            /* a filled bar keeps the yellow the light theme hides in text */
+            ui_draw_fill(layer, x, top, cw, a.y2 - top,
+                         ui_col_fill(done ? UI_C_GOOD : climb_grade_role(pct)));
+        }
+    }
+
+    int32_t rx = a.x1 + (int32_t)((c->prof_here * (uint32_t)w) / c->prof_n);
+
+    ui_draw_line(layer, rx, a.y1, rx, a.y2, fg, 2);
+    ui_draw_disc(layer, rx,
+                 a.y2 - (((int32_t)c->prof_m[c->prof_here] - (int32_t)c->prof_min_m) * (h - 6)) /
+                            range,
+                 4, fg);
+}
+
+static void climb_create(lv_obj_t *scr)
+{
+    ui_statusbar_create(scr);
+
+    climb_title = ui_label(scr, UI_FONT_SMALL, ui_col(UI_C_FG), ui_txt(T_CLIMB_N));
+    lv_obj_align(climb_title, LV_ALIGN_TOP_LEFT, 4, ui_row_y(0) + 2);
+
+    climb_plot = ui_plot(scr, 0, ui_row_y(1), UI_WIDTH, ui_rows_h(1, 3) - 1, climb_draw, NULL);
+
+    ui_field_create(&climb_left, scr, 0, 4, 1, ui_txt(T_TO_TOP), "km", UI_C_FG);
+    ui_field_create(&climb_up, scr, 1, 4, 1, ui_txt(T_CLIMB_LEFT), "m", UI_C_FG);
+    ui_field_create(&climb_avg, scr, 0, 5, 1, ui_txt(T_AVG), "%", UI_C_FG);
+    ui_field_create(&climb_now, scr, 1, 5, 1, ui_txt(T_GRADE), "%", UI_C_FG);
+
+    climb_update_scr(scr);
+}
+
+static void climb_update_scr(lv_obj_t *scr)
+{
+    const ui_climb_t *c = &ui_ctx.m.climb;
+    char v[16];
+    char t[24];
+
+    (void)scr;
+    ui_statusbar_update();
+
+    if (c->on_climb) {
+        const char *cat = climb_cat_name(c->cat);
+
+        if (cat[0] != '\0') {
+            /* the category as cycling writes it: C1 to C4, or HC */
+            (void)snprintf(t, sizeof(t), "%s %u/%u  %s%s", ui_txt(T_CLIMB_N),
+                           (unsigned int)c->index, (unsigned int)c->total,
+                           (c->cat == (uint8_t)CLIMB_CAT_HC) ? "" : "C", cat);
+        } else {
+            (void)snprintf(t, sizeof(t), "%s %u/%u", ui_txt(T_CLIMB_N), (unsigned int)c->index,
+                           (unsigned int)c->total);
+        }
+        lv_label_set_text(climb_title, t);
+
+        ui_field_set(&climb_left, ui_fmt_float(v, sizeof(v), c->remain_m / 1000.0f, 2U), UI_C_FG);
+        ui_field_set(&climb_up, ui_fmt_int(v, sizeof(v), (int32_t)c->remain_gain_m), UI_C_FG);
+        ui_field_set(&climb_avg, ui_fmt_float(v, sizeof(v), c->grade_pct, 1U),
+                     climb_grade_role((int32_t)c->grade_pct));
+        ui_field_set(&climb_now, ui_fmt_float(v, sizeof(v), c->ahead_grade_pct, 1U),
+                     climb_grade_role((int32_t)c->ahead_grade_pct));
+    } else if (c->total > 0U) {
+        /* between climbs: what the next one is and how far off */
+        (void)snprintf(t, sizeof(t), "%s %s", ui_txt(T_NEXT_M), climb_cat_name(c->next_cat));
+        lv_label_set_text(climb_title, t);
+
+        ui_field_set(&climb_left, ui_fmt_float(v, sizeof(v), c->to_next_m / 1000.0f, 2U), UI_C_FG);
+        ui_field_set(&climb_up, ui_fmt_int(v, sizeof(v), (int32_t)c->next_gain_m), UI_C_FG);
+        ui_field_set(&climb_avg,
+                     ui_fmt_float(v, sizeof(v),
+                                  (c->next_len_m > 1.0f)
+                                      ? ((c->next_gain_m / c->next_len_m) * 100.0f)
+                                      : 0.0f,
+                                  1U),
+                     UI_C_FG);
+        ui_field_set(&climb_now, ui_fmt_float(v, sizeof(v), c->ahead_grade_pct, 1U), UI_C_FG);
+    } else {
+        lv_label_set_text(climb_title, ui_txt(T_CLIMB_N));
+        ui_field_set(&climb_left, "--", UI_C_FG);
+        ui_field_set(&climb_up, "--", UI_C_FG);
+        ui_field_set(&climb_avg, "--", UI_C_FG);
+        ui_field_set(&climb_now, "--", UI_C_FG);
+    }
+
+    lv_obj_invalidate(climb_plot);
+}
+
+static bool climb_key(ui_key_t key, ui_press_t press)
+{
+    /* a long press on the right goes back to the map, as the profile does */
+    if ((key == UI_KEY_RIGHT) && (press == UI_PRESS_LONG)) {
+        ui_go(UI_SCREEN_PRC);
+        return true;
+    }
+
+    return false;
+}
+
+const ui_screen_ops_t ui_scr_climb = {climb_create, climb_update_scr, climb_key};

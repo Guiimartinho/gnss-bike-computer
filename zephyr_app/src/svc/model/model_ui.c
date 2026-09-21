@@ -16,7 +16,9 @@
 
 #include "app_types.h"
 #include "model/attitude.h"
+#include "model/climb.h"
 #include "model/map_project.h"
+#include "model/vecteur.h"
 #include "model/route_profile.h"
 #include "model/parcours.h"
 #include "model/segment.h"
@@ -92,6 +94,110 @@ static void fill_activity(const struct model_ctx *ctx, ui_model_t *m)
     a->descent_m = ctx->act.ride.descent_m;
     a->laps = ctx->act.laps;
     a->kcal = ctx->act.ride.calories_kcal;
+}
+
+/** The climb ahead, and the profile of that climb alone */
+static void fill_climb(const struct model_ctx *ctx, ui_model_t *m)
+{
+    ui_climb_t *c = &m->climb;
+
+    (void)memset(c, 0, sizeof(*c));
+    c->total = ctx->climbs.n;
+    if (ctx->climbs.n == 0U) {
+        return;
+    }
+
+    c->on_climb = ctx->climb.on_climb;
+    c->remain_m = ctx->climb.remain_m;
+    c->remain_gain_m = ctx->climb.remain_gain_m;
+    c->grade_pct = ctx->climb.grade_pct;
+    c->ahead_grade_pct = ctx->climb.ahead_grade_pct;
+    c->done_pct = ctx->climb.done_pct;
+    c->to_next_m = ctx->climb.to_next_m;
+    c->index = (uint8_t)(ctx->climb.index + 1U);
+
+    if (ctx->climb.on_climb) {
+        c->cat = ctx->climbs.c[ctx->climb.index].cat;
+    }
+    if (ctx->climb.have_next) {
+        const struct climb *nx = &ctx->climbs.c[ctx->climb.next_index];
+
+        c->next_cat = nx->cat;
+        c->next_len_m = climb_length(nx);
+        c->next_gain_m = climb_gain(nx);
+    }
+
+    /*
+     * The profile of the climb being ridden, not of the whole route: on a
+     * pass the route profile is a flat line with a bump, and what the rider
+     * needs is the bump filling the screen.
+     */
+    if (!ctx->climb.on_climb || !parcours_is_loaded()) {
+        return;
+    }
+
+    const struct climb *cur = &ctx->climbs.c[ctx->climb.index];
+    uint16_t first = cur->start_idx;
+    uint16_t last = cur->end_idx;
+    uint16_t n = parcours_get_num_points();
+
+    if ((last <= first) || (last >= n)) {
+        return;
+    }
+
+    /*
+     * start_idx and end_idx are points of the thinned copy the model
+     * scanned, so they are scaled back to points of the route.
+     */
+    uint16_t step = (uint16_t)(((uint32_t)n + MODEL_CLIMB_SCAN_MAX - 1U) / MODEL_CLIMB_SCAN_MAX);
+
+    if (step < 1U) {
+        step = 1U;
+    }
+    first = (uint16_t)((uint32_t)first * step);
+    last = (uint16_t)((uint32_t)last * step);
+    if (last >= n) {
+        last = (uint16_t)(n - 1U);
+    }
+    if (last <= first) {
+        return;
+    }
+
+    c->prof_span_m = climb_length(cur);
+
+    uint16_t span = (uint16_t)(last - first);
+    uint16_t cols = (span < UI_PROFILE_PTS) ? span : (uint16_t)UI_PROFILE_PTS;
+
+    c->prof_min_m = INT16_MAX;
+    c->prof_max_m = INT16_MIN;
+    for (uint16_t i = 0U; i < cols; i++) {
+        uint16_t idx = (uint16_t)(first + (((uint32_t)span * i) / cols));
+        const point_t *p = parcours_get_point(idx);
+
+        if (p == NULL) {
+            break;
+        }
+
+        int16_t a = (int16_t)lroundf(p->alt);
+
+        c->prof_m[c->prof_n] = a;
+        c->prof_n++;
+        if (a < c->prof_min_m) {
+            c->prof_min_m = a;
+        }
+        if (a > c->prof_max_m) {
+            c->prof_max_m = a;
+        }
+    }
+    if (c->prof_n == 0U) {
+        c->prof_min_m = 0;
+        c->prof_max_m = 0;
+        return;
+    }
+    c->prof_here = (uint8_t)(((float)c->prof_n * c->done_pct) / 100.0f);
+    if (c->prof_here >= c->prof_n) {
+        c->prof_here = (uint8_t)(c->prof_n - 1U);
+    }
 }
 
 static void fill_ride(const struct model_ctx *ctx, ui_model_t *m)
@@ -480,6 +586,7 @@ void model_ui_fill(const struct model_ctx *ctx, ui_model_t *m)
     (void)memset(m, 0, sizeof(*m));
     fill_status(ctx, m, now);
     fill_activity(ctx, m);
+    fill_climb(ctx, m);
     fill_ride(ctx, m);
     fill_attitude(ctx, m);
     fill_zones(ctx, m);

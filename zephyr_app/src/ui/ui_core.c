@@ -56,6 +56,7 @@ static const ui_screen_ops_t *const ops[UI_SCREEN_COUNT] = {
     [UI_SCREEN_DFU] = &ui_scr_dfu,
     [UI_SCREEN_PROFILE] = &ui_scr_profile,
     [UI_SCREEN_LAP] = &ui_scr_lap,
+    [UI_SCREEN_CLIMB] = &ui_scr_climb,
     [UI_SCREEN_ROUTES] = &ui_scr_routes,
 };
 
@@ -165,7 +166,7 @@ static bool is_crs_page(ui_screen_t s)
 static bool is_data_page(ui_screen_t s)
 {
     return is_crs_page(s) || (s == UI_SCREEN_PRC) || (s == UI_SCREEN_PROFILE) ||
-           (s == UI_SCREEN_LAP) ||
+           (s == UI_SCREEN_LAP) || (s == UI_SCREEN_CLIMB) ||
            (s == UI_SCREEN_FEC) || (s == UI_SCREEN_DBG);
 }
 
@@ -289,6 +290,9 @@ void ui_set_mode(ui_mode_t mode)
     }
 }
 
+/** true while a climb brought the climb page up by itself */
+static bool climb_shown;
+
 void ui_update(const ui_model_t *m, uint32_t now_ms)
 {
     if (!started || (m == NULL)) {
@@ -311,6 +315,28 @@ void ui_update(const ui_model_t *m, uint32_t now_ms)
             ui_go(ui_mode_page());
             return;
         }
+    }
+
+    /*
+     * The point of the climb page is that the rider does not have to ask
+     * for it: in PRC, the foot of a climb brings it up and the top gives
+     * the map back. A page the rider chose by hand is left alone.
+     */
+    if (ui_ctx.mode == UI_MODE_PRC) {
+        if (m->climb.on_climb && !climb_shown && (cur == UI_SCREEN_PRC)) {
+            climb_shown = true;
+            ui_go(UI_SCREEN_CLIMB);
+            return;
+        }
+        if (!m->climb.on_climb && climb_shown) {
+            climb_shown = false;
+            if (cur == UI_SCREEN_CLIMB) {
+                ui_go(UI_SCREEN_PRC);
+                return;
+            }
+        }
+    } else if (climb_shown) {
+        climb_shown = false;
     }
     ops[cur]->update(cur_scr);
 }

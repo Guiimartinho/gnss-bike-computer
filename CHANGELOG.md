@@ -59,6 +59,10 @@ Revisão completa de 2026-09-18: análise do legacy e do port, migração para o
 
 ### Adicionado
 
+- **As subidas do percurso, e a tela que sobe sozinha no pé de cada uma** (`src/model/climb.c`, `test_climb` com 16 casos; [06](docs/06-algoritmos.md#subidas-do-percurso-climbpro)). O legacy mostra o percurso inteiro e a subida total, e nada sobre a subida em que o ciclista está: numa estrada de montanha o perfil do percurso é uma linha reta com um calombo, e o que serve é o calombo ocupando a tela.
+  - O percurso é varrido uma vez, quando abre, **afinado** para 512 amostras (cerca de 200 m num percurso de 100 km; 4 KB em vez dos 32 KB do percurso), com a distância seguindo ponto a ponto para o afinamento não cortar curva.
+  - Uma subida abre e fecha com 10 m de histerese, engole um falso plano de até 1 km e um terço do ganho, e só conta a partir de 500 m, 30 m de ganho e 3 % de média. A categoria vem do ganho, na escala do ciclismo: 80 m é quarta, 800 m é fora de categoria.
+  - **Tela nova, a 33ª**, que aparece sozinha no pé da subida e devolve o mapa no topo: o perfil da subida com o trecho pedalado em verde e o resto colorido pela inclinação, quanto falta de distância e de altimetria, a média do que resta e a inclinação dos próximos 200 m. Entre duas subidas mostra a distância e o tamanho da próxima. Uma notificação anuncia o pé de cada subida.
 - **Cronômetro, pausa automática e voltas** (`src/model/activity.c`, `test_activity` com 19 casos). O legacy grava do momento em que liga até desligar, sem início, sem pausa e sem volta; o port passa a ter o que o mercado tem e o que um arquivo FIT carrega:
   - o **cronômetro** para sozinho depois de 3 s abaixo de 1,5 km/h e volta acima de 3 km/h, de modo que a média é a do passeio e não a do semáforo. A histerese existe para a bicicleta empurrada a 2 km/h não fazer o cronômetro oscilar. `CONFIG_GNSS_AUTO_PAUSE` desliga;
   - **voltas** a cada `CONFIG_GNSS_AUTOLAP_M` metros (5 km de fábrica) e pelo **toque longo na tecla esquerda**, de qualquer página de dados, com notificação;

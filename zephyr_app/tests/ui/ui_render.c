@@ -476,6 +476,36 @@ static void render_theme(ui_theme_t theme)
     ui_key(UI_KEY_RIGHT, UI_PRESS_LONG, tick_ms);
     expect_screen(UI_SCREEN_PRC, "long right goes back to the map");
 
+    /*
+     * The climb page comes up by itself at the foot of a climb, which is
+     * the whole point of it, and gives the map back over the top.
+     */
+    m.climb.on_climb = true;
+    ui_update(&m, tick_ms);
+    expect_screen(UI_SCREEN_CLIMB, "the climb brought its page up");
+    snap("33_subida", theme);
+    ui_key(UI_KEY_RIGHT, UI_PRESS_LONG, tick_ms);
+    expect_screen(UI_SCREEN_PRC, "long right leaves the climb page");
+
+    /* between two climbs it says which one is next */
+    m.climb.on_climb = false;
+    m.climb.to_next_m = 4200.0f;
+    m.climb.next_cat = 2U;
+    m.climb.next_len_m = 5100.0f;
+    m.climb.next_gain_m = 306.0f;
+    m.climb.ahead_grade_pct = -2.1f;
+    ui_go(UI_SCREEN_CLIMB);
+    ui_update(&m, tick_ms);
+    snap("34_proxima_subida", theme);
+    m.climb.on_climb = true;
+    m.climb.ahead_grade_pct = 11.2f;
+    ui_go(UI_SCREEN_PRC);
+    ui_update(&m, tick_ms);
+    expect_screen(UI_SCREEN_CLIMB, "and comes back on the next climb");
+    ui_key(UI_KEY_RIGHT, UI_PRESS_LONG, tick_ms);
+    m.climb.on_climb = false;
+    ui_update(&m, tick_ms);
+
     /* a long press on the left marks a lap from any data page */
     ui_set_mode(UI_MODE_CRS);
     ui_go(UI_SCREEN_CRS2);

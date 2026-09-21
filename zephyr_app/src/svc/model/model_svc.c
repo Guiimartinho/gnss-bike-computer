@@ -26,6 +26,8 @@
 #include "app/app_svc.h"
 #include "model/activity.h"
 #include "model/attitude.h"
+#include "model/climb.h"
+#include "model/vecteur.h"
 #include "model/fit_encode.h"
 #include "model/crash_recovery.h"
 #include "model/parcours.h"
@@ -79,6 +81,13 @@ static uint32_t act_last_ms;
 
 static void update_activity(const attitude_t *att, const loc_data_t *loc);
 static void publish_activity(enum activity_event ev, bool finished);
+
+/* The thinned copy of the route the climb scan walks (model_internal.h) */
+static struct {
+    float dist_m[MODEL_CLIMB_SCAN_MAX];
+    float alt_m[MODEL_CLIMB_SCAN_MAX];
+    uint16_t n;
+} climb_scan;
 
 /** The snapshot is big (UI maps): it lives here, not on the stack */
 static ui_model_t snapshot;
@@ -213,6 +222,67 @@ static void model_feed_wdt(void)
     }
 }
 
+static void climb_scan_point(uint16_t index, float *dist_m, float *alt_m, void *user)
+{
+    ARG_UNUSED(user);
+    *dist_m = climb_scan.dist_m[index];
+    *alt_m = climb_scan.alt_m[index];
+}
+
+/** Walk the route once and write down where its climbs are */
+static void find_climbs(void)
+{
+    uint16_t n = parcours_get_num_points();
+
+    climb_scan.n = 0U;
+    (void)memset(&ctx.climbs, 0, sizeof(ctx.climbs));
+    if (n < 2U) {
+        return;
+    }
+
+    uint16_t step = (uint16_t)(((uint32_t)n + MODEL_CLIMB_SCAN_MAX - 1U) / MODEL_CLIMB_SCAN_MAX);
+
+    if (step < 1U) {
+        step = 1U;
+    }
+
+    float total = 0.0f;
+    const point_t *prev = parcours_get_point(0U);
+
+    if (prev == NULL) {
+        return;
+    }
+
+    float plat = prev->lat;
+    float plon = prev->lon;
+
+    climb_scan.dist_m[0] = 0.0f;
+    climb_scan.alt_m[0] = prev->alt;
+    climb_scan.n = 1U;
+
+    for (uint16_t i = 1U; (i < n) && (climb_scan.n < MODEL_CLIMB_SCAN_MAX); i++) {
+        const point_t *p = parcours_get_point(i);
+
+        if (p == NULL) {
+            break;
+        }
+        /* the distance follows every point, so thinning does not cut corners */
+        total += distance_between(plat, plon, p->lat, p->lon);
+        plat = p->lat;
+        plon = p->lon;
+
+        if (((i % step) == 0U) || (i == (n - 1U))) {
+            climb_scan.dist_m[climb_scan.n] = total;
+            climb_scan.alt_m[climb_scan.n] = p->alt;
+            climb_scan.n++;
+        }
+    }
+
+    uint8_t found = climb_find(&ctx.climbs, climb_scan.n, climb_scan_point, NULL);
+
+    LOG_INF("route: %u climbs over %u m", (unsigned int)found, (unsigned int)total);
+}
+
 static void load_selected_route(void)
 {
     char path[48];
@@ -230,6 +300,7 @@ static void load_selected_route(void)
     }
 
     LOG_INF("route %s loaded", path);
+    find_climbs();
     if (ctx.mode == APP_MODE_ID_PRC) {
         (void)parcours_start();
     }
@@ -316,6 +387,30 @@ static void on_fix(const struct app_gnss_fix *f)
     }
     if ((ctx.mode == APP_MODE_ID_PRC) && parcours_is_active()) {
         parcours_update(loc.lat, loc.lon, loc.alt);
+
+        /* where the rider stands on the climb ahead (`model/climb.h`) */
+        nav_info_t nav;
+        bool was_on = ctx.climb.on_climb;
+        uint8_t was_idx = ctx.climb.index;
+
+        if (parcours_get_nav_info(&nav) == APP_OK) {
+            climb_update(&ctx.climb, &ctx.climbs, nav.dist_completed, loc.alt);
+            ctx.climb.ahead_grade_pct = climb_grade_ahead(climb_scan.n, climb_scan_point, NULL,
+                                                          nav.dist_completed);
+            if (ctx.climb.on_climb && (!was_on || (was_idx != ctx.climb.index))) {
+                /* the foot of a climb: tell the rider what is coming */
+                const struct climb *c = &ctx.climbs.c[ctx.climb.index];
+                char what[24];
+                char how[16];
+
+                (void)snprintf(what, sizeof(what), "%.1f km a %.0f%%",
+                               (double)(climb_length(c) / 1000.0f), (double)climb_grade(c));
+                (void)snprintf(how, sizeof(how), "%d m", (int)climb_gain(c));
+                app_notify("Subida", what, how, false, 0U);
+            }
+        }
+    } else if (ctx.climb.on_climb) {
+        (void)memset(&ctx.climb, 0, sizeof(ctx.climb));
     }
 
     if (attitude_take_fdir_notice()) {

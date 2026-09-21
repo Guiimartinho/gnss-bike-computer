@@ -10,6 +10,7 @@
 #include <stdbool.h>
 
 #include "lvgl.h"
+#include "model/climb.h"
 #include "ui/ui.h"
 #include "ui/ui_fmt.h"
 #include "fonts/ui_fonts.h"
@@ -109,6 +110,7 @@ typedef enum {
     T_AUTO, T_OFF, T_COLOURS, T_BW, T_SEARCHING, T_KG, T_W, T_SEGMENTS,
     T_ALT, T_ELAPSED, T_ROUTES, T_ERROR, T_NO_ROUTES,
     T_LAP, T_LAPS, T_MOVING, T_PAUSED, T_DESCENT, T_KCAL,
+    T_CLIMB_N, T_TO_TOP, T_GRADE, T_NEXT_M, T_NO_CLIMB, T_HC,
     T_COUNT
 } ui_text_t;
 
@@ -180,6 +182,7 @@ extern const ui_screen_ops_t ui_scr_routes;
 extern const ui_screen_ops_t ui_scr_dfu;
 extern const ui_screen_ops_t ui_scr_profile;
 extern const ui_screen_ops_t ui_scr_lap;
+extern const ui_screen_ops_t ui_scr_climb;
 
 /** Go to another screen (rebuilds it) */
 void ui_go(ui_screen_t screen);

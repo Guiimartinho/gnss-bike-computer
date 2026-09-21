@@ -1,4 +1,4 @@
-# As 32 telas da interface
+# As 34 telas da interface
 
 Cada tela da interface da placa nova, nos dois temas: 8 cores, para o JDI LPM027M128C, e preto e branco, para a Sharp LS027B7DH01A da lista de compras. As imagens saem do código de verdade (`zephyr_app/src/ui`, LVGL 9.5), desenhado no PC pelo renderizador de host e reduzido às cores que o painel mostra; os números são dados de exemplo (`zephyr_app/tests/ui/ui_samples.c`). O projeto da interface, as regras e as diferenças para o legacy estão em [18-interface-telas.md](../18-interface-telas.md).
 
@@ -24,6 +24,7 @@ Para gerar de novo, depois de mexer na interface: `python tools/ui/render_screen
 | 09 | [CRS, página 2](#09-crs-página-2) | direita na página 1 |
 | 10 | [CRS, página 3](#10-crs-página-3) | direita na página 2 |
 | 31 | [Voltas e totais](#31-voltas-e-totais) | direita na página 3 do CRS |
+| 33 | [Subida em curso](#33-subida-em-curso) | no PRC, ao pé de uma subida do percurso |
 | 11 | [Notificação](#11-notificação) | um evento (segmento, sensor, erro) |
 | 12 | [GNSS procurando](#12-gnss-procurando) | CRS ou PRC sem posição recente |
 | 13 | [PRC](#13-prc) | modo PRC, com percurso |
@@ -361,6 +362,17 @@ Em todas as listas: esquerda e direita mudam o item (dão a volta nas pontas, co
 - **Quando:** quarta página do anel do CRS, com a tecla direita na página 3. O toque longo na tecla **esquerda**, de qualquer página de dados, fecha a volta e começa outra.
 - **Mostra:** a volta em curso (número, distância e tempo em movimento), o tempo em movimento do passeio inteiro, a média e a máxima, a descida e a energia gasta. Quando o cronômetro para sozinho porque a bicicleta parou, aparece **PAUSADO** no canto.
 - **Nova:** o legacy não tem cronômetro, nem pausa, nem volta, nem descida — ele grava do momento em que liga até desligar ([`model/activity.h`](../../zephyr_app/include/model/activity.h)).
+
+### 33 Subida em curso
+
+| 8 cores | Preto e branco |
+|---|---|
+| ![Subida em 8 cores](33_subida_cor.png) | ![Subida em preto e branco](33_subida_mono.png) |
+| ![Próxima subida em 8 cores](34_proxima_subida_cor.png) | ![Próxima subida em preto e branco](34_proxima_subida_mono.png) |
+
+- **Quando:** no modo PRC, **sozinha**, assim que o ciclista chega ao pé de uma subida do percurso; o topo devolve o mapa. O toque longo na tecla direita sai antes da hora. É o ponto do recurso: o ciclista não pede a tela, ela aparece.
+- **Mostra:** qual subida é e quantas o percurso tem, a categoria pela escala do ciclismo (C4 a C1, FC), o perfil **da subida** com o trecho já pedalado em verde e o resto colorido pela inclinação (azul até 6 %, amarelo até 10 %, vermelho acima), quanto falta de distância e de altimetria, a média do que resta e a inclinação dos próximos 200 m. Entre duas subidas, mostra a distância até o pé da próxima e o tamanho dela.
+- **Nova:** o legacy mostra o percurso inteiro e a subida total, e nada sobre a subida em que se está ([`model/climb.h`](../../zephyr_app/include/model/climb.h), [06](../06-algoritmos.md#subidas-do-percurso-climbpro)).
 
 ### 28 Atualização
 

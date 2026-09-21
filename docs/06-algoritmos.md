@@ -2,7 +2,7 @@
 
 Os cálculos do stravaV10 original, com fórmulas, constantes e a origem no código, lado a lado com o que o port faz hoje. Diferença não documentada aqui é defeito: corrija o código ou registre a decisão nesta página. Testes de fidelidade ficam em `zephyr_app/tests/host/` (skill `fw-testes`).
 
-**Nesta página:** [Distância](#distância) · [Vetores e posição relativa](#vetores-e-posição-relativa) · [Segmentos](#segmentos) · [Mapa e zoom](#mapa-e-zoom) · [Altitude: Kalman de 3 estados](#altitude-kalman-de-3-estados) · [Barômetro e drift](#barômetro-e-drift) · [Potência estimada](#potência-estimada) · [Distância acumulada e log](#distância-acumulada-e-log) · [Cronômetro, pausa automática e voltas](#cronômetro-pausa-automática-e-voltas) · [Zonas](#zonas) · [Fontes de posição](#fontes-de-posição) · [Bateria](#bateria)
+**Nesta página:** [Distância](#distância) · [Vetores e posição relativa](#vetores-e-posição-relativa) · [Segmentos](#segmentos) · [Mapa e zoom](#mapa-e-zoom) · [Altitude: Kalman de 3 estados](#altitude-kalman-de-3-estados) · [Barômetro e drift](#barômetro-e-drift) · [Potência estimada](#potência-estimada) · [Distância acumulada e log](#distância-acumulada-e-log) · [Cronômetro, pausa automática e voltas](#cronômetro-pausa-automática-e-voltas) · [Subidas do percurso (ClimbPro)](#subidas-do-percurso-climbpro) · [Zonas](#zonas) · [Fontes de posição](#fontes-de-posição) · [Bateria](#bateria)
 
 ## Distância
 
@@ -134,6 +134,23 @@ O legacy não tem nada disso: grava do momento em que liga até desligar, sem in
 | Energia | não existe | os watt-segundos em quilojoules: para um ciclista o número de kJ de trabalho é o de kcal de comida, dentro de um por cento |
 
 Os dois limiares são separados de propósito. Os 7 km/h dizem se o ciclista está pedalando para valer, e uma subida a 6 km/h ainda é pedalar; a pausa só precisa distinguir bicicleta parada de bicicleta andando. Os três segundos de espera antes de parar o cronômetro contam como tempo em movimento, porque foram pedalados até onde o aparelho sabia.
+
+## Subidas do percurso (ClimbPro)
+
+O legacy mostra o percurso inteiro e a subida total, e nada sobre a subida em que o ciclista está (`legacy/source/vue/VuePRC.cpp`). Numa estrada de montanha o perfil do percurso é uma linha reta com um calombo, e o que serve é o calombo ocupando a tela. `model/climb.c` acha as subidas uma vez, quando o percurso abre, e a cada época só diz onde o ciclista está na que vem.
+
+| Regra | Valor | Porquê |
+|---|---|---|
+| Uma subida abre quando a altitude sobe | `CLIMB_HYST_M`, 10 m, acima de um ponto baixo | abaixo disso é ruído do arquivo, não morro |
+| E fecha quando desce o mesmo | 10 m abaixo do topo | idem, na descida |
+| O ponto baixo acompanha o plano | comparação `<=`, não `<` | senão uma subida depois de 2 km de vale seria dita começar onde o vale começou |
+| Duas subidas viram uma quando o vão é curto e raso | até `CLIMB_MERGE_M` (1 km) e menos de um terço do ganho | um falso plano no meio de um colo não são duas subidas |
+| Conta como subida a partir de | 500 m, 30 m de ganho e 3 % de média | uma ponte não é subida |
+| Categoria | pelo ganho: 80 m é quarta, 160 terceira, 320 segunda, 640 primeira, 800 fora de categoria | é a escala que o ciclismo usa, e a que o Strava aplica |
+
+O percurso é varrido **afinado**: um percurso de 100 km vira 512 amostras, a cerca de 200 m uma da outra, o que basta para uma subida que precisa ter 500 m para contar e custa 4 KB em vez dos 32 KB do percurso inteiro. A distância, essa, segue ponto a ponto, para o afinamento não cortar curva.
+
+O que o ciclista vê: a subida em curso com o que falta de distância e de altimetria, a inclinação média do que resta e a dos próximos 200 m (`CLIMB_AHEAD_M`), e o perfil **da subida** colorido pela inclinação. A tela sobe sozinha ao pé da subida e devolve o mapa no topo, que é o ponto do recurso.
 
 ## Zonas
 

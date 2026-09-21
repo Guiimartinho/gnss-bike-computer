@@ -139,6 +139,34 @@ typedef struct {
 } ui_status_t;
 
 /**
+ * The climb ahead (`model/climb.h`).
+ *
+ * The legacy shows the whole route and the total climb, and nothing about
+ * the climb the rider is on; this is what the climb page draws.
+ */
+typedef struct {
+    bool on_climb;          /**< riding one right now */
+    float remain_m;         /**< to the top */
+    float remain_gain_m;
+    float grade_pct;        /**< average of what is left */
+    float ahead_grade_pct;  /**< of the next 200 m */
+    float done_pct;
+    float to_next_m;        /**< to the foot of the next climb, when not on one */
+    float next_len_m;       /**< of that next climb */
+    float next_gain_m;
+    uint8_t cat;            /**< enum climb_cat of the one being ridden */
+    uint8_t next_cat;
+    uint8_t index;          /**< which climb of the route, counting from one */
+    uint8_t total;          /**< climbs the route has */
+    float prof_span_m;      /**< horizontal length the profile covers */
+    uint8_t prof_n;         /**< columns of the profile of this climb */
+    uint8_t prof_here;      /**< column of the rider */
+    int16_t prof_m[UI_PROFILE_PTS];
+    int16_t prof_min_m;
+    int16_t prof_max_m;
+} ui_climb_t;
+
+/**
  * The lap and the totals of the ride (`model/activity.h`).
  *
  * None of this is in the legacy, which has neither timer nor lap; it is
@@ -339,6 +367,7 @@ typedef struct {
     ui_status_t status;
     ui_ride_t ride;
     ui_activity_t act;
+    ui_climb_t climb;
     uint8_t nseg;           /**< segments on screen: 0, 1 or 2 */
     ui_segment_t seg[UI_SEG_MAX];
     ui_nav_t nav;
