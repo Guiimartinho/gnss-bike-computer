@@ -13,8 +13,8 @@
 
 #include "model/attitude.h"
 #include "model/distance.h"
+#include "model/vecteur.h"
 #include "model/power_estimate.h"
-#include "model/locator.h"
 #include "model/kalman_altitude.h"
 #include "model/crash_recovery.h"
 #include "model/user_settings.h"
@@ -25,8 +25,16 @@ LOG_MODULE_REGISTER(attitude, CONFIG_LOG_DEFAULT_LEVEL);
  * Private Definitions
  * ========================================================================== */
 
-/** Minimum speed for moving time (km/h) */
-#define MOVING_SPEED_THRESHOLD  2.0f
+/**
+ * Speed above which a second counts as active, in km/h.
+ *
+ * `legacy/source/model/Attitude.cpp:509` is `if (loc_.speed > 7.f)
+ * att.nbsec_act++;`. The port had 2.0 here, which made `nbsec_act` count
+ * walking and coasting and put the screen of the legacy well above what the
+ * legacy itself shows. The auto-pause of `model/activity.c` has its own,
+ * much lower threshold: that one only has to tell a stopped bike apart.
+ */
+#define MOVING_SPEED_THRESHOLD  7.0f
 
 /** Minimum speed for Kalman update (m/s) */
 #define MIN_SPEED_FOR_KALMAN    1.5f
@@ -357,12 +365,6 @@ app_err_t attitude_init(void)
         return APP_ERR_ALREADY_INIT;
     }
 
-    /* Initialize locator */
-    app_err_t err = locator_init();
-    if ((err != APP_OK) && (err != APP_ERR_ALREADY_INIT)) {
-        return err;
-    }
-
     /* Initialize crash recovery */
     (void)crash_recovery_init();
 
@@ -434,10 +436,14 @@ app_err_t attitude_update_gps(const loc_data_t *loc)
      * (`legacy/source/model/Attitude.cpp:509-524`).
      */
 
-    /* Add to locator for distance calculation */
-    app_err_t err = locator_add_point(loc);
-    if (err != APP_OK) {
-        return err;
+    /*
+     * A position the receiver cannot have produced is thrown away before it
+     * reaches the model: one zeroed coordinate would move the ride to the
+     * Gulf of Guinea and add thousands of kilometres to the distance
+     * (`vecteur.c`, the rule of `legacy/source/routes/Points.cpp:37-42`).
+     */
+    if (!latlon_is_valid(loc->lat, loc->lon)) {
+        return APP_ERR_INVALID_PARAM;
     }
 
     /* Update current attitude */
@@ -445,8 +451,7 @@ app_err_t attitude_update_gps(const loc_data_t *loc)
     /*
      * Distance as the legacy does it: between raw positions, whatever the
      * speed, throwing the first 25 m away and saving the state for the
-     * crash recovery every 15 m (`Attitude::computeDistance`). The filtered
-     * distance of the locator stays for whoever wants it.
+     * crash recovery every 15 m (`Attitude::computeDistance`).
      */
     bool snapshot = distance_add(&ridden, loc->lat, loc->lon);
 
@@ -724,7 +729,6 @@ void attitude_reset(void)
     baro_ring_count = 0U;
     baro_ring_head = 0U;
 
-    locator_reset();
     crash_recovery_clear();
 
     LOG_INF("Attitude reset");

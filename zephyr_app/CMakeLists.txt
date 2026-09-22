@@ -71,13 +71,25 @@ target_sources(app PRIVATE
     src/model/attitude.c
     src/model/cmd_parser.c
     src/model/crash_recovery.c
+    src/model/file_policy.c
     src/model/dfu_state.c
     src/model/kalman.c
     src/model/kalman_altitude.c
     src/model/liste_points.c
     src/model/map_project.c
-    src/model/loc_source.c
-    src/model/locator.c
+    src/model/gpx_scan.c
+    src/model/route_file.c
+    src/model/route_profile.c
+    src/model/activity.c
+    src/model/climb.c
+    src/model/loc_arbiter.c
+    src/model/mode_fsm.c
+    src/model/csc_calc.c
+    src/model/ftms_parse.c
+    src/model/incident.c
+    src/model/radar.c
+    src/model/radar_wire.c
+    src/model/fit_encode.c
     src/model/parcours.c
     src/model/power_scheduler.c
     src/model/distance.c
@@ -99,9 +111,11 @@ target_sources(app PRIVATE
 target_sources(app PRIVATE
     src/app/app_cmd.c
     src/rf/dfu.c
+    src/rf/file_xfer.c
     src/rf/ble/ble_manager.c
     src/rf/ble/ble_nus.c
     src/rf/ble/ble_lns.c
+    src/rf/ble_radar_client.c
     src/rf/ble_hrs_client.c
     src/rf/ble_bsc_client.c
     src/rf/ble_fec_client.c
@@ -139,7 +153,16 @@ target_sources_ifdef(CONFIG_LVGL app PRIVATE
 # ANT on the sdk-ant add-on, only in ANT builds (ANT=1 in tools/fw/fw.sh)
 target_sources_ifdef(CONFIG_ANT app PRIVATE
     src/rf/ant/ant.c
+    src/rf/ant/radar_ant.c
 )
+
+# The page decoding of the ANT+ Bike Radar is not in this repository
+# (zephyr_app/include/rf/radar_ant.h): when the owner puts it there, it is
+# compiled and its strong definition takes over from the weak one.
+if(CONFIG_ANT AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/src/rf/ant/radar_pages.c)
+    target_sources(app PRIVATE src/rf/ant/radar_pages.c)
+    message(STATUS "ANT+ radar: local profile found")
+endif()
 
 # =============================================================================
 # Update over the air: src/rf/dfu.c includes img_mgmt.h, which pulls

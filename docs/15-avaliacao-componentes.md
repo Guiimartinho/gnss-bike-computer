@@ -18,10 +18,10 @@ Avaliação de engenharia, bloco a bloco, dos componentes principais da placa no
 | Carga pelo painel | e-peas AEM10900 (QFN28), indutor de 4,7 µH | o único avaliado com MPPT na faixa das strings de 3 células, cerca de 90 % de rendimento a 1,5–1,7 V e corte térmico sem MCU | nenhum com corte térmico e 80 mA; o BQ25798 pediria strings de 7 células ou mais |
 | Convivência das cargas | o USB bloqueia o solar no hardware (DIS_STO_CH pelo VBUSOUT) | os dois carregadores nunca trabalham juntos | bloqueio por registrador, pelo firmware |
 | Medição | Analog Devices MAX17262 | vê as duas fontes, também com o aparelho desligado | nRF Fuel Gauge corrigido pelo APM (perde a carga em ship mode) |
-| GNSS | u-blox MAX-M10N-10B, em LEAP | 13,7 mW contra 46,8 mW do MAX-F10S: o aparelho gasta cerca de 21 mW contra 58 mW e dura cerca de 310 h contra 115 h, e o painel cobre o consumo num pedal de sol | MAX-F10S no mesmo footprint |
+| GNSS | u-blox MAX-F10S, L1 + L5 | 1 m de CEP contra 1,5 m, no mesmo encapsulamento MAX e com o mesmo driver UBX; é o multibanda que menos consome (46,8 mW contra 59 do LC79H e 79 do LC29H). Custa autonomia: o aparelho vai a cerca de 58 mW e dura cerca de 115 h, contra 21 mW e 310 h do MAX-M10N-10B em LEAP | MAX-M10N-10B no mesmo footprint |
 | MCU | Fanstel BM20C (nRF54LM20A) | módulo certificado, 64 GPIO, antena e cristais inclusos; o QFN52 não tem pinos suficientes | chip em CSP98 com antena própria |
 | Display | Sharp LS027B7DH01A com a luz frontal Azumo 11103-06_A1; o JDI LPM027M128C no mesmo conector | o JDI (cor e 30 µW a 1 quadro/s) não tem canal autorizado de compra; a Sharp tem estoque e já roda no port | JDI de revendedores, se a cor voltar ao plano |
-| Antena GNSS | TE L000670 no protótipo | L1 e L5 numa alimentação só: serve ao M10N e ao F10S | elementos de parede sob medida |
+| Antena GNSS | TE L000670 no protótipo | L1 e L5 numa alimentação só: o F10S precisa das duas bandas, e ela ainda serve ao M10N do A/B | elementos de parede sob medida |
 | Barômetro | Bosch BMP585 | robusto a água e produtos químicos (15 bar sem efeito, pela ficha), 1,3 µA a 1 Hz, ±0,5 Pa/K | ST LPS28DFW |
 | IMU e magnetômetro | Bosch BMI270 e Memsic MMC5633NJL | em estoque, com driver no NCS v3.3.0 e despertar por movimento; o footprint do IMU aceita o ST LSM6DSV16X | ST LSM6DSV16X e LIS2MDL, quando voltarem ao estoque |
 | Luz ambiente | TI OPT3001 | resposta do olho humano, 1,8 µA | Vishay VEML7700 |
@@ -182,29 +182,32 @@ flowchart LR
 
 ### Candidatos
 
-Rastreio contínuo a 1 Hz, GPS + Galileo + BeiDou (o padrão de cada módulo), com os números das fichas. Os do M10N vêm da ficha do MAX-M10N-10B (R05, UBXDOC-304424225-18248), que dá figura de ruído de 3 dB contra 1,5 dB do 00B, por causa do SAW na frente do LNA.
+Rastreio contínuo a 1 Hz, GPS + Galileo + BeiDou (o padrão de cada módulo), com os números das fichas. Os do M10N vêm da ficha do MAX-M10N-10B (R05, UBXDOC-304424225-18248), que dá figura de ruído de 3 dB contra 1,5 dB do 00B, por causa do SAW na frente do LNA; os do F10S, da UBXDOC-963802114-12732 R03 (tabelas 2, 15, 16 e 17).
 
-| | u-blox MAX-M10N-10B | u-blox MAX-F10S | u-blox MAX-M10S | Quectel LC76G(PA) | Quectel LC79H(AL) |
-|---|---|---|---|---|---|
-| Bandas | L1 | L1 + L5 | L1 | L1 | L1 + L5 |
-| Sistemas | GPS, Galileo, BeiDou, QZSS e SBAS; sem GLONASS | GPS, Galileo, BeiDou, QZSS, NavIC e SBAS; sem GLONASS | GPS, Galileo, BeiDou, GLONASS, QZSS e SBAS | GPS, GLONASS, Galileo, BeiDou e QZSS | GPS, GLONASS (L1), Galileo, BeiDou, QZSS e NavIC |
-| Consumo em rastreio | LEAP: 7,6 mA a 1,8 V (13,7 mW); potência plena: 15,2 mA (27,4 mW) | 26 mA a 1,8 V (46,8 mW) | 15,2 mA a 1,8 V (27 mW) | 10 mA a 3,3 V (33 mW); modo ALP: 5,5 mA (18 mW) | 33 mA a 1,8 V (59 mW) |
-| Modo econômico | LEAP, com 1,5 m de CEP | nenhum na ficha; sem modo só L1 | rastreio cíclico | ALP | não levantado |
-| CEP em céu aberto | 1,5 m | 1 m | 1,5 m | 1,5 m | 1 m |
-| Sensibilidade de rastreio | −167 dBm; −159 dBm em LEAP | −167 dBm | não levantada | −166 dBm | não levantada |
-| Entrada de RF | SAW, LNA e SAW | SAW, LNA e SAW | LNA e SAW (pede SAW externo) | LNA com cancelador de interferência | LNA e SAW |
-| Firmware | flash, atualizável; AssistNow Live Orbits vitalício | ROM | ROM | EASY e EPO | não levantado |
-| Encapsulamento | MAX, 10,1 × 9,7 × 2,5 mm | MAX, pino a pino com o M10N | MAX | L76, 10,1 × 9,7 × 2,4 mm | L76 (pinagem igual à do LC76G não confirmada) |
-| Driver no NCS v3.3.0 | não (o `u-blox,m10` entra no Zephyr 4.5) | não | não | `quectel,lc76g` | não |
-| Preço (DigiKey) | US$ 14,52 | US$ 13,14 | US$ 11,42 | US$ 9,72 | US$ 14,09 |
+| | **u-blox MAX-F10S** | u-blox MAX-M10N-10B | u-blox MAX-M10S | Quectel LC76G(PA) | Quectel LC29H(AA) | Quectel LC79H(AL) |
+|---|---|---|---|---|---|---|
+| Bandas | **L1 + L5** | L1 | L1 | L1 | L1 + L5 | L1 + L5 |
+| Sistemas | GPS, Galileo, BeiDou, QZSS, NavIC e SBAS; sem GLONASS | GPS, Galileo, BeiDou, QZSS e SBAS; sem GLONASS | GPS, Galileo, BeiDou, GLONASS, QZSS e SBAS | GPS, GLONASS, Galileo, BeiDou e QZSS | GPS, GLONASS, Galileo, BeiDou, QZSS e SBAS | GPS, GLONASS (L1), Galileo, BeiDou, QZSS e NavIC |
+| Consumo em rastreio | 26 mA a 1,8 V (46,8 mW); 19 mA a 3,0 V (57 mW) | LEAP: 7,6 mA a 1,8 V (13,7 mW); potência plena: 15,2 mA (27,4 mW) | 15,2 mA a 1,8 V (27 mW) | 10 mA a 3,3 V (33 mW); modo ALP: 5,5 mA (18 mW) | 24 mA a 3,3 V (79 mW) | 33 mA a 1,8 V (59 mW) |
+| Modo econômico | nenhum: a ficha do F10 não tem o grupo `CFG-PM` | LEAP, com 1,5 m de CEP | rastreio cíclico | ALP | citado sem número na ficha | não levantado |
+| CEP em céu aberto | **1 m** | 1,5 m | 1,5 m | 1,5 m | 1 m | 1 m |
+| Sensibilidade de rastreio | −167 dBm | −167 dBm; −159 dBm em LEAP | não levantada | −166 dBm | −165 dBm | não levantada |
+| Backup de hardware | 28 µA | 34 µA | 28 µA | não levantado | 25 µA | não levantado |
+| Entrada de RF | SAW, LNA e SAW | SAW, LNA e SAW | LNA e SAW (pede SAW externo) | LNA com cancelador de interferência | não levantada | LNA e SAW |
+| Firmware | ROM; AssistNow Offline e Autonomous, só de L1 | flash, atualizável; AssistNow Live Orbits vitalício | ROM | EASY e EPO | não levantado | não levantado |
+| Encapsulamento | **MAX, 10,1 × 9,7 × 2,5 mm** | MAX, o mesmo | MAX | L76, 10,1 × 9,7 × 2,4 mm | 16,0 × 12,2 × 2,5 mm | L76 (pinagem igual à do LC76G não confirmada) |
+| Protocolo e driver | UBX; driver próprio do port (`u-blox,max-f10`) | UBX; o mesmo driver | UBX | NMEA; `quectel,lc76g` no NCS v3.3.0 | NMEA com `PQTM` próprio; driver novo | não levantado |
+| Preço (DigiKey) | US$ 13,14 | US$ 14,52 | US$ 11,42 | US$ 9,72 | não levantado | US$ 14,09 |
 
 ```mermaid
 xychart-beta
     title "GNSS em rastreio contínuo a 1 Hz (mW)"
-    x-axis ["M10N LEAP", "M10N plena", "M10S", "LC76G", "F10S", "LC79H"]
-    y-axis "mW" 0 --> 60
-    bar [13.7, 27.4, 27, 33, 46.8, 59]
+    x-axis ["M10N LEAP", "M10N plena", "M10S", "LC76G", "F10S", "LC79H", "LC29H"]
+    y-axis "mW" 0 --> 80
+    bar [13.7, 27.4, 27, 33, 46.8, 59, 79]
 ```
+
+Entre os de banda dupla — F10S, LC29H(AA) e LC79H(AL) — o F10S é o que menos consome, o menor, o único no encapsulamento que a placa já tem e o único que fala o protocolo que o firmware já implementa.
 
 ### Efeito no aparelho
 
@@ -212,45 +215,67 @@ Resto do aparelho no uso típico do [orçamento](13-placa-nova.md#orçamento-de-
 
 | GNSS | Aparelho, na bateria | Autonomia sem sol | Pedal de sol com os painéis do desenho (22 a 44 mW) |
 |---|---|---|---|
-| MAX-M10N-10B em LEAP (13,7 mW) | cerca de 21 mW | cerca de 310 h | o painel cobre o consumo e a bateria carrega enquanto se pedala |
+| MAX-M10N-10B em LEAP (13,7 mW), a alternativa | cerca de 21 mW | cerca de 310 h | o painel cobre o consumo e a bateria carrega enquanto se pedala |
 | MAX-M10N-10B em potência plena (27,4 mW) | cerca de 37 mW | cerca de 180 h | devolve de 36 a 72 min por hora |
-| MAX-F10S (46,8 mW) | cerca de 58 mW | cerca de 115 h | devolve de 23 a 46 min por hora |
+| **MAX-F10S (46,8 mW), o escolhido** | cerca de 58 mW | cerca de 115 h | devolve de 23 a 46 min por hora |
 
 ### Banda dupla vale o consumo?
 
-- **A favor:** o L5 tem código 10 vezes mais rápido e resiste melhor ao multipercurso de prédios e árvores; a u-blox fala em precisão de metro em ambiente urbano.
+- **A favor:** o L5 tem código 10 vezes mais rápido e resiste melhor ao multipercurso de prédios e árvores; a u-blox fala em precisão de metro em ambiente urbano, e a ficha do F10S dá 1 m de CEP contra 1,5 m do M10.
 - **Contra:**
-  - O MAX-F10S gasta 3,5 vezes o M10N em LEAP e não tem modo só L1 ("Single-band operation is not supported", seção 1.3 da ficha) nem modo econômico na ficha.
+  - O MAX-F10S gasta 3,5 vezes o M10N em LEAP e não tem modo só L1 ("Single-band operation is not supported. Both L1 and L5 signals must be enabled or disabled", seção 1.3 da ficha) nem modo econômico nenhum: a descrição de interface do F10 (UBX-23002975 R02, seção 4.8) não tem o grupo `CFG-PM`.
   - O GPS L5 ainda é pré-operacional e a ficha o deixa fora da solução por padrão; o ganho vem do Galileo E5a, do BeiDou B2a e do QZSS.
   - Numa caixa pequena, o L5 é o ponto fraco da antena: a TE L000670 tem 56 % de eficiência em L5 contra 66 % em L1, num plano de 90 × 41 mm, sem LCD nem bateria. A placa tem 55 mm de largura.
-  - O AssistNow do F10S só cobre os sinais de L1.
+  - O AssistNow do F10S só cobre os sinais de L1, e o módulo é ROM: não tem o AssistNow Live Orbits vitalício do M10N, que é de flash.
 - **No mercado:** Garmin, COROS e Wahoo têm banda dupla, mas a Garmin a oferece como modo à parte, que "roughly halves your battery" segundo o DC Rainmaker.
 
-### Escolha: MAX-M10N-10B
+### Escolha: MAX-F10S
 
-1. **Energia:** com o M10N em LEAP, o aparelho gasta cerca de 21 mW, contra 58 mW com o F10S. A autonomia sem sol sobe de cerca de 115 h para cerca de 310 h, e o painel passa a sustentar o aparelho num pedal de sol. É a diferença entre o painel ser um enfeite e ser uma função.
-2. **Precisão:** 1,5 m de CEP em LEAP, o mesmo da potência plena, e 0,05 m/s de velocidade nos dois modos. O LEAP perde no rumo dinâmico (5° contra 0,3°) e na sensibilidade de rastreio (−159 contra −167 dBm): sob mata fechada, o firmware passa para a potência plena (27,4 mW) e volta ao LEAP quando o sinal melhora.
-3. **Rádio na mesma placa:** o 10B tem SAW antes do LNA, a variante de "highest immunity". O 00B é mais sensível (figura de ruído de 1,5 dB), mas pediria um SAW externo por causa do BLE a +8 dBm.
-4. **Caminho para a banda dupla:** o MAX-F10S é pino a pino. Com a antena de L1 e L5 do protótipo, uma placa com F10S sai sem mudar o layout, para o teste A/B ou para uma versão "multibanda".
-5. **Firmware atualizável** (flash) e AssistNow Live Orbits vitalício; o AssistNow Autonomous dispensa o celular.
+> [!NOTE]
+> Esta seção foi refeita em 2026-09-20. A avaliação de 2026-09-19 escolhia o MAX-M10N-10B pela energia; o dono decidiu pela banda dupla ("aceito mudar para pegarmos um que nos atenda, consuma pouco e melhore a precisão e caiba na case e na PCB"). O M10N continua válido no mesmo footprint e é a peça do teste A/B.
 
-O LC76G(PA) fica como terceira opção. Ele tem driver no NCS v3.3.0, GLONASS e EPO, parecido com o que o legacy usa, mas gasta mais (33 mW, ou cerca de 18 mW em ALP). O footprint dele é outro e a imunidade ao rádio de 2,4 GHz não é especificada. O LC76G(PB), de 1,8 V, declara 13,5 mW em ALP, mas aparecia "em desenvolvimento" na ficha v1.1.
+O F10S é, entre os multibanda avaliados, o que menos consome (46,8 mW contra 59 do LC79H(AL) e 79 do LC29H(AA) a 3,3 V), o único no mesmo encapsulamento da placa e o único que não pede driver novo.
+
+1. **Cabe sem mexer em nada.** Encapsulamento MAX de 10,1 × 9,7 × 2,5 mm, pino a pino com o M10N-10B na alimentação, na UART, no RESET_N, no EXTINT, no TIMEPULSE e no RF_IN. A antena TE L000670 do protótipo já é de L1 e L5, escolhida para este A/B. Layout, empilhamento e caixa não mudam.
+2. **Precisão:** 1 m de CEP contra 1,5 m, sensibilidade de rastreio de −167 dBm, partida a frio em 28 s e a quente em 1 s. O código do L5 é dez vezes mais rápido que o do L1, que é o que ataca o multipercurso de prédio e de mata — o pior caso do legacy.
+3. **Firmware:** o driver do port (`u-blox,max-f10`, no mesmo arquivo do M10) já falava UBX; as chaves da UART, da taxa, do modelo dinâmico e da saída de mensagens têm os mesmos IDs nas duas firmwares. Muda o grupo `CFG-SIGNAL`, que ganha L5 e NavIC, e some o `CFG-PM`.
+4. **Rádio na mesma placa:** entrada com SAW, LNA e SAW, como o 10B — obrigatória com o BLE a +8 dBm do nRF54LM20A a centímetros da antena.
+5. **Preço:** US$ 13,14 contra US$ 14,52 do M10N (DigiKey, 2026-09-18).
+
+**O que custa, sem maquiagem:**
+
+- **Energia.** O aparelho passa de cerca de 21 mW para cerca de 58 mW, e a autonomia sem sol cai de cerca de 310 h para cerca de 115 h. O painel deixa de cobrir o consumo num pedal de sol e passa a devolver de 23 a 46 min por hora ([Efeito no aparelho](#efeito-no-aparelho)).
+- **Não dá para economizar desligando o L5:** a peça não faz banda única.
+- **Sem modo econômico de rastreio.** O que sobra é o standby por software (`UBX-RXM-PMREQ`), que o firmware já usa entre modos, e o backup de hardware de 28 µA.
+- **ROM, sem flash:** perde o AssistNow Live Orbits vitalício; ficam o AssistNow Offline e o Autonomous, e só de L1.
+- **GPS L5 pré-operacional:** os satélites ainda transmitem como não saudáveis e ficam fora da solução. O ganho de hoje é Galileo E5a, BeiDou B2a e QZSS L5.
+
+O **MAX-M10N-10B** fica como a peça do teste A/B no mesmo footprint, e como saída se a bancada mostrar que a autonomia importa mais que o metro de precisão: 13,7 mW em LEAP a 1,8 V, 1,5 m de CEP, firmware de flash com AssistNow Live Orbits vitalício. O firmware aceita os dois pelo devicetree, sem recompilar nada além do overlay.
+
+O LC76G(PA) e o LC29H(AA) ficam de fora. O LC76G(PA) é de banda única, tem driver no NCS v3.3.0, GLONASS e EPO, mas gasta 33 mW (18 mW em ALP), tem outro footprint e não especifica imunidade ao rádio de 2,4 GHz. O LC29H(AA) é de banda dupla e 1 m de CEP, mas gasta 79 mW a 3,3 V, mede 16,0 × 12,2 mm e fala NMEA com comandos proprietários `PQTM`, ou seja, driver novo.
+
+Não avaliado: o ST Teseo-LIV4F, da mesma classe de tamanho. A busca do dia se esgotou e o site da ST não respondeu; fica como segundo candidato se o A/B da bancada decepcionar.
 
 ### Detalhes para o esquemático
 
-- **Alimentação:** VCC e V_IO em 1,8 V pelo BUCK1 (VIO_SEL em GND), travado em 1,8 V no devicetree: com o VIO_SEL em GND, o V_IO e os pinos digitais têm máximo absoluto de 1,98 V. A 3,0 V o M10N em LEAP gasta 16,8 mW, 3 mW a mais, mas dispensaria o tradutor de nível e o BUCK1.
+Valem para o MAX-F10S e para o MAX-M10N-10B: as duas peças têm a mesma pinagem e as mesmas faixas de tensão. Onde o número muda, os dois estão na linha.
+
+- **Alimentação:** VCC e V_IO em 1,8 V pelo BUCK1 (VIO_SEL em GND), travado em 1,8 V no devicetree: com o VIO_SEL em GND, o V_IO e os pinos digitais têm máximo absoluto de 1,98 V. A 3,0 V o F10S gasta 57 mW em rastreio contra 46,8 mW a 1,8 V (o M10N em LEAP, 16,8 contra 13,7 mW), mas dispensaria o tradutor de nível e o BUCK1.
+- **Corrente do BUCK1:** o F10S puxa 26 mA em rastreio e 34 mA na aquisição, contra 7,6 mA do M10N em LEAP, e os dois podem puxar 100 mA de pico na partida (nota das tabelas 15 e 16). O BUCK1 entrega 200 mA: cabe, mas o trilho deixa de ser desprezível no orçamento ([Efeito no aparelho](#efeito-no-aparelho)).
 - **Subida do V_IO:** a ficha limita a rampa entre 25 µs/V e 35.000 µs/V (tabela 12), de 45 µs a 63 ms para 1,8 V; uma rampa fora disso pode danificar o módulo. O buck do nPM1300 parte em cerca de 1,2 ms (3,3 V com 10 µF, na ficha), perto de 360 µs/V, dentro da faixa; confirme com o osciloscópio.
-- **Ripple:** com 7,6 mA o BUCK1 fica no modo histerético, que a ficha do nPM1300 dá com até 50 mVpp de ripple, no limite do que o GNSS aceita. O filtro LC junto do módulo (ferrite e 10 µF) é obrigatório; a outra saída é forçar o BUCK1 em PWM (5 mVpp), que consome mais.
+- **Ripple:** a carga do BUCK1 sobe de 7,6 mA (M10N em LEAP) para 26 mA. Em modo automático o buck do nPM1300 vai do histerético, com até 50 mVpp, ao PWM, com cerca de 5 mVpp; **em que corrente ele troca não foi levantado na ficha**, e nada foi medido. O filtro LC junto do módulo (ferrite e 10 µF) continua obrigatório no esquemático, e forçar o BUCK1 em PWM segue como saída se o ripple atrapalhar o C/N0.
 - **Desligar com o backup ligado:** com V_IO em 1,8 V e V_BCKP alimentado, a ficha pede desligar o V_IO 100 ms antes do VCC ou mandar `UBX-RXM-PMREQ` antes de cortar os dois. Como VCC e V_IO saem do mesmo BUCK1, o firmware manda o `UBX-RXM-PMREQ` antes de desligar o trilho ou de entrar em ship mode.
-- **Backup:** V_BCKP de 1,65 a 3,6 V pelo TPS7A02; 34 µA em backup de hardware (ficha do M10N-10B, com V_BCKP em 3,3 V).
+- **Backup:** V_BCKP de 1,65 a 3,6 V pelo TPS7A02; **28 µA** em backup de hardware no F10S (tabela 17, com V_BCKP em 3,3 V), contra 34 µA do M10N-10B. Em standby de software, 46 µA no V_IO a 3,3 V e 120 nA no VCC.
 - **TIMEPULSE:** divide o pino com o SAFEBOOT_N por 1 kΩ interno, e o módulo entra em safeboot se o pino estiver baixo na partida. O pull-down de 5 MΩ do TXU0204 não vence o pull-up do módulo (6 a 72 kΩ), mas um resistor externo para o GND venceria: não coloque nenhum.
 - **Potência na entrada de RF:** a ficha do 10B dá máximo absoluto de 0 dBm dentro da banda e +15 dBm fora dela (tabela 12). O BLE e o ANT+ a +8 dBm, em 2,4 GHz, ficam fora da banda e não danificam a entrada nem com isolação nenhuma; o risco é o bloqueio. Meça o S21 em 2,44 GHz e o C/N0 com o rádio transmitindo no protótipo, e limite a potência de transmissão se o C/N0 cair.
+- **Antena:** com o F10S, o L5 também precisa casar. A TE L000670 cobre L1 e L5 com uma alimentação só, mas tem 56 % de eficiência em L5 contra 66 % em L1 num plano de 90 × 41 mm, e a placa tem 55 mm. Meça o C/N0 por banda na caixa real.
 
 ### Firmware
 
-- Protocolo UBX por `CFG-VALSET`: parser próprio ou o driver `u-blox,m10` do Zephyr 4.5 trazido para fora da árvore; os comandos PMTK do legacy mudam de nome ([13](13-placa-nova.md#impacto-no-firmware)).
-- Limitações do LEAP na SPG 5.30 (nota de versão, seção 6): o TIMEPULSE pode falhar com o LEAP ligado, a gravação do AssistNow Live Orbits na flash pode falhar (desligar o LEAP antes de enviar os dados) e o odômetro do módulo fica impreciso (o aparelho calcula a distância por conta própria).
-- Outra limitação da SPG 5.30 aumenta o consumo depois de cerca de 49 dias sem reinício. O aparelho religa o módulo a cada uso, então isso não aparece no uso normal.
+- Protocolo UBX por `CFG-VALSET`, com o driver próprio do port (`zephyr_app/modules/gnss_drivers/drivers/gnss/`, compatíveis `u-blox,max-f10` e `u-blox,max-m10`); os comandos PMTK do legacy mudam de nome ([13](13-placa-nova.md#impacto-no-firmware)).
+- **Sinais do F10:** o grupo `CFG-SIGNAL` ganha `GPS_L5_ENA`, `GAL_E5A_ENA`, `BDS_B2A_ENA`, `QZSS_L5_ENA` e o NavIC (descrição de interface UBX-23002975 R02, tabela 46). Toda mudança nesse grupo **reinicia o subsistema GNSS**: o driver manda todas as chaves num `UBX-CFG-VALSET` só e espera 0,5 s depois do reconhecimento, como a seção 4.9.20 pede.
+- **Sem `CFG-PM` no F10:** não existe LEAP nem PSMOO. O que economiza é o standby de software (`UBX-RXM-PMREQ`) entre os modos, que o `gnss_power.c` já faz; a máquina de energia recebe `has_leap = false` e nunca pede um modo que a peça não tem ([16](16-arquitetura-firmware.md#gnss)).
+- Limitações do LEAP na SPG 5.30, que valem só para o M10N (nota de versão, seção 6): o TIMEPULSE pode falhar com o LEAP ligado, a gravação do AssistNow Live Orbits na flash pode falhar (desligar o LEAP antes de enviar os dados) e o odômetro do módulo fica impreciso (o aparelho calcula a distância por conta própria). Outra limitação aumenta o consumo depois de cerca de 49 dias sem reinício; o aparelho religa o módulo a cada uso, então isso não aparece no uso normal.
 
 ## Módulo do MCU
 
@@ -293,12 +318,12 @@ A cor e o consumo fazem do JDI a melhor tela, mas não há canal autorizado de c
 - **Caixa:** a janela e o apoio seguem o contorno maior, o do Sharp.
 - **Compra do JDI:** só amostras de revendedores, sem garantia; voltar à cor é decisão do dono ([19](19-lista-de-compras.md#antes-de-fechar-o-pedido)).
 
-O TFT transflectivo (ST7789, com driver no Zephyr) redesenha a tela o tempo todo e gasta cerca de 20 mW sem a luz: dobraria o consumo do aparelho com o M10N. Por isso fica fora.
+O TFT transflectivo (ST7789, com driver no Zephyr) redesenha a tela o tempo todo e gasta cerca de 20 mW sem a luz: somaria um terço ao consumo do aparelho com o F10S, e o dobraria com o M10N em LEAP. Por isso fica fora.
 
 ## Antena GNSS
 
 - **Protótipo:** TE L000670, antena de chip de 14 × 10,75 × 1 mm na borda de cima, com L1 e L5 numa alimentação só (66 % e 56 % de eficiência num plano de 90 × 41 mm). Serve ao M10N e ao F10S e mantém o teste A/B possível.
-- **Uma antena só de L1** poderia render um pouco mais com o M10N, mas fecharia o caminho da banda dupla. Não compensa no protótipo.
+- **Uma antena só de L1** renderia um pouco mais com o M10N, mas não serve ao F10S, que é a peça escolhida e não faz banda única. Fora de cogitação.
 - **Rede em π** junto da alimentação, com sintonia por VNA dentro da caixa final; área livre em todas as camadas e nada metálico perto, como em [14](14-hardware-placa-nova.md#regras-de-layout).
 - **Segunda versão:** elementos de L1 e L5 na parede da caixa, com contatos de mola, como fazem Garmin, COROS e Wahoo ([13](13-placa-nova.md#antena-gnss-dentro-da-caixa)).
 
@@ -314,7 +339,7 @@ O que o legacy usa, conferido no código: o acelerômetro do FXOS8700 dá a incl
 | Magnetômetro | Memsic MMC5633NJL (WLP de 0,85 × 0,85 mm) | driver `memsic,mmc56x3`, cujo ID (0x10 no registrador 0x39) e mapa de registradores conferem com a ficha; montagem por estêncil e forno, como o MAX17262; o LIS2MDL está sem estoque | Memsic MMC5603NJ (WLP de 0,8 × 0,8 mm, 759 em estoque) |
 | Luz ambiente | TI OPT3001 (USON de 2 × 2 mm) | resposta do olho humano, 1,8 µA, driver `ti,opt3001`; faz o papel do VEML6075 do legacy | Vishay VEML7700 |
 
-- **O IMU pesa com o M10N.** Com acelerômetro e giroscópio ligados, o BMI270 consome 685 µA (970 µA em alto desempenho), cerca de 2 mW a 3,0 V: 10 % do aparelho com o M10N em LEAP. O acelerômetro sozinho em baixo consumo gasta 10 µA a 25 Hz. O firmware liga o giroscópio só quando precisa (tela de percurso, inclinação sob aceleração).
+- **O IMU pesa quando o GNSS é econômico.** Com acelerômetro e giroscópio ligados, o BMI270 consome 685 µA (970 µA em alto desempenho), cerca de 2 mW a 3,0 V: cerca de 3 % do aparelho com o F10S, mas 10 % com o M10N em LEAP. O acelerômetro sozinho em baixo consumo gasta 10 µA a 25 Hz. O firmware liga o giroscópio só quando precisa (tela de percurso, inclinação sob aceleração).
 - **Sem fusão interna:** a inclinação sai do acelerômetro, como no legacy, com o filtro no firmware; o LSM6DSV16X no mesmo footprint devolveria o vetor de gravidade pronto.
 - **Estoque:** o LSM6DSV16X e o LIS2MDL, e todas as IMUs da ST, estavam sem estoque na DigiKey em 2026-09-18; a [lista de compras](19-lista-de-compras.md#sensores) trocou os dois.
 - **Posição:** barômetro atrás de um respiro com membrana e fora da sombra da bateria; magnetômetro longe do buzzer, dos indutores e das trilhas de corrente da carga.
@@ -333,10 +358,42 @@ O legacy grava segmentos, percursos, logs e EPO em FatFs sobre SD (V3) ou flash 
 
 Escolha:
 
-- **Decisão do dono em 2026-09-20:** sai o SD NAND, entra **flash NOR SPI soldada**. O SD NAND de 1 Gbyte custa mais que todo o armazenamento do aparelho vale, e o aparelho não precisa de 1 Gbyte: o log do port grava um ponto a cada 15 m (`sd_logger`), cerca de 70 bytes por segundo a 25 km/h, ou **2,4 MB num pedal de 10 h**; os 138 segmentos de exemplo somam cerca de 7 MB e os percursos, quilobytes.
-- **Escolha:** 32 MB (256 Mbit) dá treze pedais longos além dos segmentos; 16 MB é o mínimo aceitável. Candidatas, as duas em SOIC-8 ou WSON-8 de 8 pinos, com o mesmo `jedec,spi-nor` do Zephyr: **Winbond W25Q256JV** (32 MB) ou **W25Q128JV** (16 MB), as mais comuns e as mais baratas, e **Macronix MX25R6435F** (8 MB), a peça que a Nordic põe nos DKs, de consumo menor parado. **A confirmar antes do layout:** preço e estoque no canal de compra, tensão de operação da versão escolhida (a placa alimenta o armazenamento em 3,0 V), corrente parada em deep power-down e a ficha de cada uma.
+- **Decisão do dono em 2026-09-20:** sai o SD NAND, entra **flash NOR SPI soldada**. O SD NAND de 1 Gbyte custa mais que todo o armazenamento do aparelho vale, e o aparelho não precisa de 1 Gbyte.
+
+#### Quanto o aparelho guarda, medido
+
+| O que | Tamanho | De onde vem o número |
+|---|---|---|
+| 138 segmentos reais | **0,44 MB** (maior: 52 KB) | os arquivos de `tools/TDD/DB`, medidos |
+| 2 percursos reais | 0,05 MB | idem |
+| Log de um pedal de 10 h | **1,9 MB** | `sd_logger` grava uma linha de ~120 B a cada 15 m; a 25 km/h dá 56 B/s |
+
+Ou seja, **8 MB dão os segmentos, os percursos e cerca de 35 pedais de 10 h**; 16 MB, o dobro. A estimativa anterior de 7 MB só de segmentos estava errada por 16 vezes.
+
+#### As duas candidatas, pelas fichas
+
+| | **Macronix MX25R6435F** (rev. 1.6, 2022-08-08) | **Winbond W25Q128JV** (rev. I, 2021-08-23) |
+|---|---|---|
+| Capacidade | 64 Mbit = **8 MB** | 128 Mbit = **16 MB** |
+| VCC | **1,65 a 3,6 V** | 2,7 a 3,6 V (3,0 a 3,6 V acima de 104 MHz) |
+| Parado (standby) | 5 µA típico, 24 µA máx. | 10 µA típico, 60 µA máx. |
+| **Deep power-down** | **0,007 µA típico, 0,35 µA máx.** | 1 µA típico, 20 µA máx. |
+| Leitura | 2,2 mA a 33 MHz | 8 mA a 50 MHz |
+| Gravar página | 3,5 mA típico, 6 máx. | 20 mA típico, 25 máx. |
+| Apagar setor de 4 KB | 3,1 mA, 58 ms típico (240 ms máx.) | 20 mA, 45 ms típico (400 ms máx.) |
+| **Energia por setor apagado** | **0,18 mA·s** | 0,90 mA·s (5 vezes mais) |
+| Parado um ano | 0,06 mAh típico, 3,1 mAh no pior caso | 8,8 mAh típico, 175 mAh no pior caso |
+| Ciclos e organização | 100 mil ciclos, setor de 4 KB, blocos de 32 e 64 KB | 100 mil ciclos, setor de 4 KB, blocos de 32 e 64 KB |
+| Temperatura | industrial −40 a 85 °C | industrial −40 a 85 °C (há versão até 105 °C) |
+| Encapsulamento | 8-SOP 200 mil, **8-WSON**, 8-USON 4 × 4 e 4 × 3, WLCSP | 8-SOP 208 mil, **8-WSON 6 × 5 e 8 × 6**, SOIC-16, TFBGA, WLCSP |
+| Endereço | 3 bytes | 3 bytes |
+| Firmware | `jedec,spi-nor` **com suporte próprio**: `mxicy,mx25r-power-mode` (modo de baixo consumo) e a saída do deep power-down por pulsos de CS | `jedec,spi-nor` comum |
+
+- **Escolhida: Macronix MX25R6435F, 8 MB.** Os 8 MB cobrem o uso medido com folga; gasta **cinco vezes menos energia por setor apagado** e fica em nanoampères desligada, o que importa num aparelho a bateria; aceita de 1,65 a 3,6 V, então serve ao trilho de 3,0 V da placa e sobreviveria a um trilho menor; e é **a mesma peça que o nRF54LM20 DK traz**, de modo que o que se depura na bancada é o que vai na placa. O Zephyr ainda tem tratamento específico para ela.
+- **Alternativa pino a pino: Winbond W25Q128JV, 16 MB**, no mesmo SOIC-8 ou WSON-8. Se um dia o log passar a gravar por segundo, ou se a peça da Macronix sumir, a placa aceita as duas sem mudar nada além do `jedec-id` no devicetree. O preço é a favor dela; o consumo, contra.
+- **A confirmar antes da compra:** preço e estoque das duas no canal escolhido (não deu para conferir hoje: o orçamento de buscas da sessão acabou) e o pico de corrente do apagamento contra os 100 mA da chave LDSW1 — as duas ficam bem abaixo disso.
 - **Protótipo:** a flash soldada e o soquete microSD no mesmo `spi00`, com chip select separado; o cartão serve ao desenvolvimento e sai no produto.
-- **Firmware:** a pilha muda de SD para flash: FatFs sobre um `zephyr,flash-disk` na partição da NOR, com o mesmo ponto de montagem `/SD:` e o mesmo disco indo ao PC pelo USB. Compila e roda a mesma configuração no nRF54LM20 DK, que traz um MX25R6435F de 8 MB no `spi00` ([09](09-armazenamento-usb.md)).
+- **Firmware:** a pilha muda de SD para flash: FatFs sobre um `zephyr,flash-disk` na partição da NOR, com o mesmo ponto de montagem `/SD:` e o mesmo disco indo ao PC pelo USB. Compila e roda com o MX25R6435F do DK ([09](09-armazenamento-usb.md)). Uma peça acima de 16 MB precisaria de endereço de 4 bytes, que o driver resolve pelo SFDP (`CONFIG_SPI_NOR_SFDP_RUNTIME`, já ligado) — nenhuma das duas escolhidas precisa.
 
 ## USB-C e proteção
 
@@ -368,7 +425,7 @@ O nRF54LM20A tem um só VDD, de 1,7 a 3,6 V, para todos os pinos (não há domí
 | Ligação | lado A no 3V0 e lado B no 1V8 | RXD e EXTINT de A para B; TXD e TIMEPULSE de B para A. O OE pode ficar fixo no VCCA, porque o Ioff-float já isola o módulo desligado, e o MCU ganha um pino. O RESET_N não passa pelo tradutor: pino do MCU em dreno aberto, com o pull-up de 7 a 13 kΩ do próprio módulo |
 | Backup | TI TPS7A02 de 1,8 V | 25 nA de consumo próprio, entrada de 1,5 a 6,0 V: liga o V_BCKP ao VBAT sem custo. O backup do módulo gasta de 28 a 34 µA (fichas, a 3,3 V), cerca de 25 mAh por mês com o aparelho desligado |
 
-Alternativa sem tradutor: o GNSS inteiro em 3,0 V pelo BUCK2 (VIO_SEL aberto). Custa 3 mW com o M10N em LEAP (10 mW com o F10S) e libera o BUCK1; em compensação, a ficha permite desligar VCC e V_IO juntos, sem o `UBX-RXM-PMREQ` antes.
+Alternativa sem tradutor: o GNSS inteiro em 3,0 V pelo BUCK2 (VIO_SEL aberto). Custa 10 mW com o F10S (3 mW com o M10N em LEAP) e libera o BUCK1; em compensação, a ficha permite desligar VCC e V_IO juntos, sem o `UBX-RXM-PMREQ` antes.
 
 ## Interface
 
@@ -415,6 +472,7 @@ Conferidos para esta avaliação (seções e tabelas citadas no texto):
 - TI: TPD1E10B06 (SLLSEB1G), TVS2200 (SLVSED5C), ESD751 e ESD761 (SLVSH10C) e TPDxE05U06 (SLVSBO7O); páginas do TPD1S514 e do TPD4S311.
 - Amphenol, folheto "Waterproof USB Type C"; GCT, desenho do USB4105 (rev. B4); DigiKey, fichas dos receptáculos da Molex e da Amphenol e do MAX17262REWL+T.
 - XTX, ficha do SD NAND (rev. 1.0, 2026-03-25) e a lista de produtos; páginas da Longsto (CS) e da MK sobre SD NAND.
+- Macronix, ficha do **MX25R6435F** (P/N PM2138, rev. 1.6, 2022-08-08) e Winbond, ficha do **W25Q128JV** (rev. I, 2021-08-23), lidas para a tabela do armazenamento.
 - Hirose, catálogo da série DM3; GCT, desenhos do MEM2067, MEM2075 e MEM2052.
 - Fanstel, página do BM20C (nRF54LM20A e nRF54LM20B).
 - Código do legacy citado em [Sensores](#sensores), e o NCS v3.3.0 local: amostra `nrf/samples/pmic/native/npm13xx_one_button` e binding `zephyr/dts/bindings/sensor/maxim,max17262.yaml`.

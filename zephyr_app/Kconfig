@@ -1,0 +1,107 @@
+# Options of the GNSS bike computer itself (NCS v3.3.0).
+#
+# The application Kconfig has to source the Zephyr one at the end, as the
+# Zephyr application development guide describes.
+
+menu "GNSS bike computer"
+
+config GNSS_ROUTE_POINTS
+	int "Points of a route kept in memory"
+	default 500
+	range 100 16000
+	help
+	  A route of the rider (a `.PAR` of the legacy, or a course exported
+	  from Strava or Komoot) is read into a static array of this many
+	  points, sixteen bytes each. A file with more points is halved as it
+	  loads, so the whole route always fits, with less resolution: a
+	  hundred kilometres over 500 points leaves one point every 200 m,
+	  and over 4000 one every 25 m, which is what the services export.
+
+	  The board with 512 KB of RAM can afford the larger number; the
+	  nRF52840 of the old board cannot.
+
+config GNSS_ROUTE_CUES
+	int "Turns of the cue sheet kept in memory"
+	default 64
+	range 0 512
+	help
+	  A route file of this project (`.RTE`) may carry a cue sheet: the
+	  turns, with the name of the street. Each one takes 26 bytes. A
+	  hundred kilometre course out of a routing service has a few dozen.
+
+config GNSS_SEGMENT_POINTS
+	int "Points of a segment kept in memory"
+	default 256
+	range 64 4000
+	help
+	  Each of the three segments that can be loaded at the same time
+	  holds this many points, sixteen bytes each, and a longer file is
+	  halved as it loads. The longest segment of `tools/TDD/DB` has 1291
+	  points.
+
+config GNSS_AUTO_PAUSE
+	bool "Stop the timer when the bike stops"
+	default y
+	help
+	  The moving time, the average speed and the FIT file stop counting
+	  while the bike is still, which is what every computer on the market
+	  does. The legacy has no timer at all: it logs from boot to shutdown.
+	  Thresholds in `model/activity.h`.
+
+config GNSS_AUTOLAP_M
+	int "Metres between automatic laps"
+	default 5000
+	range 0 100000
+	help
+	  A lap closes by itself every so many metres, each with its own
+	  totals in the FIT file. Zero leaves only the laps the rider asks
+	  for with the key.
+
+config GNSS_FIT
+	bool "Write the activity as a FIT file"
+	default y
+	depends on FILE_SYSTEM
+	help
+	  One `.FIT` per ride beside the `@DDMMYY.txt` of the legacy, which
+	  Strava, Garmin Connect and Komoot read directly. A four-hour ride
+	  at one point a second takes about 380 KB.
+
+config GNSS_CRASH_DETECT
+	bool "Detect a crash from the accelerometer"
+	default y
+	help
+	  After a big enough peak, a bike that stops and a device that goes
+	  still start a countdown the rider can cancel with any key; when it
+	  runs out, the device says so on the screen and over Bluetooth.
+	  **It is not a safety device**: it misses crashes and it raises false
+	  alarms, and nobody should ride differently because it is on
+	  (`model/incident.h`). Thresholds in the same file.
+
+config GNSS_ANT_RADAR_DEV_TYPE
+	int "ANT+ device type of the rear radar"
+	default 0
+	range 0 255
+	help
+	  Zero leaves the radar over ANT+ turned off, which is how this
+	  repository ships: the Bike Radar profile is under the ANT+ Shared
+	  Source License and cannot be redistributed here, and the repository
+	  is public. The owner sets this, the two below and writes
+	  `src/rf/ant/radar_pages.c` on their own machine; `.gitignore` keeps
+	  that file out. The radar over **BLE** needs none of this and works
+	  as shipped (`rf/radar_ant.h`).
+
+config GNSS_ANT_RADAR_PERIOD
+	int "Channel period of the rear radar, in 1/32768 s"
+	default 0
+	range 0 65535
+	depends on GNSS_ANT_RADAR_DEV_TYPE > 0
+
+config GNSS_ANT_RADAR_RF
+	int "RF channel of the rear radar"
+	default 0
+	range 0 124
+	depends on GNSS_ANT_RADAR_DEV_TYPE > 0
+
+endmenu
+
+source "Kconfig.zephyr"

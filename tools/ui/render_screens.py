@@ -22,21 +22,32 @@ SRC = ROOT / "zephyr_app" / "tests" / "ui"
 
 # Contact sheets: file name, title, frames (name stem without theme)
 SHEETS = [
-    ("telas-crs", "CRS", ["02_crs1", "03_crs1_1seg", "05_crs1_2seg", "09_crs2", "10_crs3"]),
+    ("telas-crs", "CRS", ["02_crs1", "03_crs1_1seg", "05_crs1_2seg", "09_crs2", "10_crs3",
+                          "31_volta", "32_volta_pausada", "35_radar"]),
     ("telas-segmentos", "Segmentos", ["04_crs1_1seg_perto", "06_crs1_2seg_1perto", "07_crs1_2seg_2perto",
                                      "08_crs1_2seg_perto", "11_notificacao", "18c_sem_percursos"]),
-    ("telas-modos", "Modos", ["13_prc", "14_prc_sem_percurso", "16_fec", "15_fec_conectando", "12_gnss",
-                              "17_dbg"]),
+    ("telas-modos", "Modos", ["13_prc", "30_perfil", "33_subida", "34_proxima_subida",
+                              "14_prc_sem_percurso", "16_fec",
+                              "15_fec_conectando", "12_gnss", "17_dbg"]),
     ("telas-menus", "Menus", ["18_menu", "18b_percursos", "19_ajustes", "20_sensores", "21_parear",
                               "22_valor", "23_tela_luz", "24_formatar"]),
     ("telas-sistema", "Sistema", ["01_partida", "25_energia", "26_usb", "27_desligando",
-                                  "28_atualizacao", "29_atualizacao_pronta"]),
+                                  "28_atualizacao", "29_atualizacao_pronta",
+                                  "36_queda", "37_alarme"]),
 ]
 
 CAPTIONS = {
     "01_partida": "Partida",
     "28_atualizacao": "Atualização por BLE",
+    "30_perfil": "Perfil do percurso",
     "29_atualizacao_pronta": "Atualização pronta",
+    "36_queda": "Queda, contagem regressiva",
+    "37_alarme": "Alarme da bicicleta",
+    "35_radar": "Radar traseiro",
+    "33_subida": "Subida em curso",
+    "34_proxima_subida": "Próxima subida",
+    "31_volta": "Volta e totais",
+    "32_volta_pausada": "Volta, cronômetro parado",
     "02_crs1": "CRS, página 1",
     "03_crs1_1seg": "CRS, 1 segmento",
     "04_crs1_1seg_perto": "1 segmento, chegando",

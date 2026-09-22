@@ -194,7 +194,7 @@ const ui_screen_ops_t ui_scr_routes = {routes_create, routes_update, routes_key}
  * Settings (legacy page_set, with the new items)
  * ========================================================================== */
 
-#define SET_N   9
+#define SET_N   10
 
 static char set_ftp[12];
 static char set_weight[12];
@@ -221,6 +221,8 @@ static void settings_create(lv_obj_t *scr)
         item(ui_txt(T_CAL_COMPASS), NULL, UI_C_FG),
         item(ui_txt(T_SCREEN_LIGHT), NULL, UI_C_FG),
         item(ui_txt(T_GNSS), gnss_mode_name(), UI_C_FG),
+        item(ui_ctx.m.inc.armed ? ui_txt(T_ALARM_OFF) : ui_txt(T_ALARM_ARM), NULL,
+             ui_ctx.m.inc.armed ? UI_C_BAD : UI_C_FG),
         item(ui_txt(T_ENERGY), NULL, UI_C_FG),
         item(ui_txt(T_FORMAT), NULL, UI_C_BAD),
     };
@@ -282,6 +284,11 @@ static bool settings_key(ui_key_t key, ui_press_t press)
         ui_action(UI_ACT_GNSS_TOGGLE, 0);
         break;
     case 7:
+        /* the rider arms the alarm when walking away from the bike */
+        ui_action(UI_ACT_ALARM_TOGGLE, 0);
+        ui_go(ui_mode_page());
+        break;
+    case 8:
         ui_go(UI_SCREEN_ENERGY);
         break;
     default:

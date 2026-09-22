@@ -2,7 +2,7 @@
 
 # GNSS Bike Computer
 
-**Computador de bordo para ciclismo com GPS: segmentos do Strava em tempo real, percursos, altimetria por fusão de sensores e sensores sem fio. Portado do stravaV10 para Zephyr, do nRF52840 da myStravaB V3 para o nRF54LM20A de uma placa própria com painel solar.**
+**Computador de bordo para ciclismo com GPS: segmentos do Strava em tempo real, percursos, altimetria por fusão de sensores e sensores sem fio. Portado do stravaV10 para Zephyr, do nRF52840 da myStravaB V3 para o nRF54LM20A de uma placa própria com GNSS de banda dupla e painel solar.**
 
 ![MCU](https://img.shields.io/badge/MCU-nRF52840%20%7C%20nRF54LM20A-00A9CE)
 ![SDK](https://img.shields.io/badge/nRF%20Connect%20SDK-v3.3.0-00A9CE)
@@ -16,7 +16,7 @@
 
 </div>
 
-O projeto leva para o nRF Connect SDK o **stravaV10**, firmware aberto de Vincent Gollé para a placa **myStravaB V3**: um aparelho em retrato com LCD de memória Sharp, GNSS MediaTek, barômetro, acelerômetro, medidor de bateria, microSD e rádio BLE + ANT+. O código original fica em [`legacy/`](legacy/) como referência de comportamento; o port em C puro sobre Zephyr fica em [`zephyr_app/`](zephyr_app/) e compila para o nRF52840-DK e para o nRF54LM20 DK. A próxima placa é própria, com o nRF54LM20A, tela colorida e painéis solares na caixa; a especificação e a avaliação dos componentes estão em [`docs/`](docs/README.md).
+O projeto leva para o nRF Connect SDK o **stravaV10**, firmware aberto de Vincent Gollé para a placa **myStravaB V3**: um aparelho em retrato com LCD de memória Sharp, GNSS MediaTek, barômetro, acelerômetro, medidor de bateria, microSD e rádio BLE + ANT+. O código original fica em [`legacy/`](legacy/) como referência de comportamento; o port em C puro sobre Zephyr fica em [`zephyr_app/`](zephyr_app/) e compila para o nRF52840-DK e para o nRF54LM20 DK. A próxima placa é própria, com o nRF54LM20A, GNSS de banda dupla, tela colorida e painéis solares na caixa que estendem a autonomia, sem sustentar o aparelho sozinhos; a especificação e a avaliação dos componentes estão em [`docs/`](docs/README.md).
 
 > [!WARNING]
 > O port **compila e passa nos testes de host, mas nunca rodou em placa nem nos DKs**. Segmentos, percursos, sensores BLE e ANT+, log no SD e a interface do legacy ainda não funcionam de ponta a ponta. A placa nova ainda não existe: nenhum componente foi comprado nem medido. O estado de cada área está em [docs/10-status-do-port.md](docs/10-status-do-port.md).
@@ -59,7 +59,7 @@ Conceito em escala, a partir da caixa da V3: 62 × 104 × 19 mm, PCB de 55 × 97
 ```mermaid
 flowchart LR
     MCU["Fanstel BM20C<br/>nRF54LM20A, BLE e ANT+"]
-    GNSS2["u-blox MAX-M10N-10B<br/>13,7 mW em LEAP"] -->|UART| MCU
+    GNSS2["u-blox MAX-F10S<br/>L1 + L5, 46,8 mW"] -->|UART| MCU
     LCD2["JDI LPM027M128B de 8 cores<br/>ou Sharp LS027B7DH01A com luz"] ---|SPI| MCU
     PWR["nPM1300, AEM10900, MAX17262<br/>USB-C e painel solar"] -.->|I2C| MCU
     SENS2["BMP585, BMI270,<br/>MMC5633NJL, OPT3001"] -->|I2C| MCU
@@ -69,7 +69,7 @@ flowchart LR
 | Bloco | Escolha | Por quê |
 |---|---|---|
 | Carga | nPM1300 no USB-C, AEM10900 no painel, MAX17262 na célula | o painel carrega com o aparelho desligado e corte térmico próprio; o USB bloqueia a carga solar no hardware |
-| GNSS | u-blox MAX-M10N-10B, com o MAX-F10S (L1 + L5) no mesmo footprint | o aparelho gasta cerca de 21 mW contra 58 mW com o F10S: cerca de 310 h sem sol, e o painel cobre o consumo num pedal de sol (estimativa) |
+| GNSS | u-blox MAX-F10S, banda dupla L1 + L5, com o MAX-M10N-10B (só L1) no mesmo footprint | 1 m de CEP contra 1,5 m, e o código do L5 contra o multipercurso de prédio e mata. Custa autonomia: o aparelho gasta cerca de 58 mW e dura cerca de 115 h sem sol, e o painel devolve de 23 a 46 min por hora de sol em vez de cobrir o consumo. Com o M10N em LEAP seriam cerca de 21 mW e 310 h (estimativas) |
 | Tela | JDI LPM027M128B de 8 cores, sem luz própria (escolha do dono em 2026-09-19, no AliExpress); a Sharp LS027B7DH01A com luz frontal no mesmo conector, de reserva | o firmware atende as duas pelo mesmo driver, em retrato, com um tema para cada |
 | USB e armazenamento | USB-C IPX8 e SD NAND soldado | caixa sem tampas e sem cartão solto na vibração |
 
@@ -86,7 +86,7 @@ flowchart LR
 | Zonas de potência, suffer score, variabilidade da FC | sim | portados e testados, sem dados reais |
 | Log no microSD e download pelo PC | sim | log em stub |
 | USB serial e mass storage | sim | fora do build |
-| Telas em retrato, menu, notificações, botões | sim | LVGL no firmware com driver próprio da tela, 30 telas testadas no PC; nunca vistas num painel |
+| Telas em retrato, menu, notificações, botões | sim | LVGL no firmware com driver próprio da tela, 31 telas testadas no PC; nunca vistas num painel |
 
 ## Início rápido
 
@@ -100,8 +100,8 @@ bash tools/fw/fw.sh build          # compila o zephyr_app (sysbuild) para o nRF5
 bash tools/fw/fw.sh flash          # grava no DK pelo J-Link
 BOARD=nrf54lm20dk/nrf54lm20a/cpuapp BUILD_DIR=zephyr_app/build_54 bash tools/fw/fw.sh build
 ANT=1 bash tools/fw/fw.sh build pristine   # com a pilha ANT do sdk-ant
-bash tools/fw/host_tests.sh        # 16 conjuntos de testes de host
-python tools/ui/render_screens.py  # desenha as 30 telas no PC (docs/telas)
+bash tools/fw/host_tests.sh        # 39 conjuntos de testes de host
+python tools/ui/render_screens.py  # desenha as 31 telas no PC (docs/telas)
 python tools/docs/mermaid_check.py # valida os diagramas da documentação
 ```
 
@@ -155,7 +155,7 @@ flowchart TB
 - **Fase 1 do roteiro:** a base da arquitetura nova (serviços com thread própria, eventos no zbus, máquinas de sistema e de modo no SMF, watchdog por serviço, desligamento automático do legacy), feita em 2026-09-19.
 - **Novos alvos e rádio:** o port compila para o nRF54LM20 DK, e a pilha ANT do add-on `sdk-ant` v2.1.1 compila sobre o NCS v3.3.0 nos dois DKs (`ANT=1`); nada disso foi testado em placa.
 - **Interface:** as 29 telas em LVGL, testadas no PC, rodam no firmware desde 2026-09-19 com um driver próprio da tela (JDI LPM027M128B em 8 cores ou Sharp em preto e branco, em retrato), teclas com toque longo e a máquina da luz; nunca vistas num painel.
-- **Placa nova:** desenho do aparelho, especificação ([14](docs/14-hardware-placa-nova.md)) e avaliação dos componentes ([15](docs/15-avaliacao-componentes.md)). O esquemático é do dono; antes do layout vêm os testes de bancada da carga dupla, do GNSS, da coexistência dos rádios e do display.
+- **Placa nova:** desenho do aparelho, especificação ([14](docs/14-hardware-placa-nova.md)) e avaliação dos componentes ([15](docs/15-avaliacao-componentes.md)). O esquemático é do dono; antes do layout vêm os testes de bancada da carga dupla, do GNSS (C/N0 por banda e isolamento da antena contra o rádio de 2,4 GHz), da coexistência dos rádios e do display.
 - **Decidido:** ANT+ e BLE juntos (os equipamentos externos falam ANT+) e placa própria com o nRF54LM20A. Decisões e pendências em [docs/10-status-do-port.md](docs/10-status-do-port.md#decisões-do-dono).
 - **Próximo:** bancada e esquemático da placa nova, depois fidelidade dos algoritmos, armazenamento, rádio e interface. Roteiro em [docs/10-status-do-port.md](docs/10-status-do-port.md#roteiro).
 

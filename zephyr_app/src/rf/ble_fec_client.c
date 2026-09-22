@@ -12,6 +12,7 @@
 #include <zephyr/bluetooth/uuid.h>
 #include <zephyr/logging/log.h>
 
+#include "model/ftms_parse.h"
 #include "rf/ble_fec_client.h"
 
 LOG_MODULE_REGISTER(ble_fec_client, CONFIG_LOG_DEFAULT_LEVEL);
@@ -40,12 +41,6 @@ LOG_MODULE_REGISTER(ble_fec_client, CONFIG_LOG_DEFAULT_LEVEL);
 #define FTMS_OP_SET_SIMULATION          0x11
 #define FTMS_OP_START                   0x07
 #define FTMS_OP_STOP                    0x08
-
-/* Indoor Bike Data flags */
-#define IBD_FLAG_SPEED_PRESENT          0x0001
-#define IBD_FLAG_CADENCE_PRESENT        0x0002
-#define IBD_FLAG_POWER_PRESENT          0x0040
-#define IBD_FLAG_ELAPSED_TIME_PRESENT   0x0080
 
 /* UUID declarations */
 static struct bt_uuid_16 uuid_ftms = BT_UUID_INIT_16(BT_UUID_FTMS_VAL);
@@ -111,102 +106,36 @@ static K_MUTEX_DEFINE(fec_mutex);
  */
 static void parse_bike_data(const uint8_t *data, uint16_t len)
 {
-    if ((data == NULL) || (len < 2U)) {
+    struct ftms_bike_data in;
+
+    /*
+     * The walk over the fields is in `model/ftms_parse.c`, which the host
+     * tests cover: two of the flags used to be wrong here, so with a
+     * trainer that sends instantaneous cadence and power the cadence was
+     * lost and the power came out of the wrong two bytes.
+     */
+    if (!ftms_parse_bike_data(data, len, &in)) {
         return;
     }
 
-    uint16_t flags = data[0] | ((uint16_t)data[1] << 8U);
-    uint8_t offset = 2U;
-
     k_mutex_lock(&fec_mutex, K_FOREVER);
-
-    /* Speed (0.01 km/h) - always present if not flagged absent */
-    if ((flags & IBD_FLAG_SPEED_PRESENT) == 0U) {
-        if (len >= (offset + 2U)) {
-            fec_data.speed = data[offset] | ((uint16_t)data[offset + 1U] << 8U);
-            offset += 2U;
-        }
+    if (in.have_speed) {
+        fec_data.speed = in.speed_kmh100;
     }
-
-    /* Average speed - skip */
-    if ((flags & 0x0002U) != 0U) {
-        offset += 2U;
+    if (in.have_cadence) {
+        fec_data.cadence = (uint8_t)((in.cadence_rpm > 255U) ? 255U : in.cadence_rpm);
     }
-
-    /* Instantaneous cadence */
-    if ((flags & IBD_FLAG_CADENCE_PRESENT) != 0U) {
-        if (len >= (offset + 2U)) {
-            /* Cadence is in 0.5 RPM units */
-            uint16_t cad_raw = data[offset] | ((uint16_t)data[offset + 1U] << 8U);
-            fec_data.cadence = (uint8_t)(cad_raw / 2U);
-            offset += 2U;
-        }
+    if (in.have_power) {
+        fec_data.power = (uint16_t)((in.power_w > 0) ? in.power_w : 0);
     }
-
-    /* Average cadence - skip */
-    if ((flags & 0x0008U) != 0U) {
-        offset += 2U;
+    if (in.have_elapsed) {
+        fec_data.elapsed_time = in.elapsed_s;
     }
-
-    /* Total distance - skip */
-    if ((flags & 0x0010U) != 0U) {
-        offset += 3U;
-    }
-
-    /* Resistance level - skip */
-    if ((flags & 0x0020U) != 0U) {
-        offset += 2U;
-    }
-
-    /* Instantaneous power */
-    if ((flags & IBD_FLAG_POWER_PRESENT) != 0U) {
-        if (len >= (offset + 2U)) {
-            fec_data.power = data[offset] | ((uint16_t)data[offset + 1U] << 8U);
-            offset += 2U;
-        }
-    }
-
-    /* Average power - skip */
-    if ((flags & 0x0080U) != 0U) {
-        offset += 2U;
-    }
-
-    /* Expended energy - skip */
-    if ((flags & 0x0100U) != 0U) {
-        offset += 4U;
-    }
-
-    /* Heart rate - skip */
-    if ((flags & 0x0200U) != 0U) {
-        offset += 1U;
-    }
-
-    /* Metabolic equivalent - skip */
-    if ((flags & 0x0400U) != 0U) {
-        offset += 1U;
-    }
-
-    /* Elapsed time */
-    if ((flags & IBD_FLAG_ELAPSED_TIME_PRESENT) != 0U) {
-        if (len >= (offset + 2U)) {
-            fec_data.elapsed_time = data[offset] | ((uint16_t)data[offset + 1U] << 8U);
-        }
-    }
-
     fec_data.timestamp = k_uptime_get_32();
     fec_data.connected = true;
     fec_data.status = TRAINER_STATUS_IN_USE;
 
     k_mutex_unlock(&fec_mutex);
-
-    LOG_DBG("FEC: %u W, %u RPM, %u.%02u km/h",
-            fec_data.power, fec_data.cadence,
-            fec_data.speed / 100, fec_data.speed % 100);
-
-    /* Notify callback */
-    if (data_callback != NULL) {
-        data_callback(&fec_data);
-    }
 }
 
 /**

@@ -60,7 +60,7 @@ Os números de tipo de dispositivo ANT+ vêm do SDK FIT da Garmin (enum `antplus
 | Ponte com o stravaAP | — | NUS | comandos e arquivos | `nus_client` do NCS | P1 (o legacy usa) |
 | Hora do celular | — | Current Time, 0x1805 | hora | `cts_client` do NCS | P2 |
 | Bateria dos sensores | páginas comuns 80 e 81 | Battery, 0x180F | nível de bateria | ANT: `ant_common`; BLE: `bas_client` | P2 |
-| Radar traseiro (Garmin Varia, Wahoo TRACKR, Bryton Gardia, Magene L508) | Bike Radar, tipo 40 | só proprietário | distância, velocidade e ameaça de cada veículo | não há perfil no add-on | P2: os radares falam ANT+ aberto, e no BLE são fechados |
+| Radar traseiro (Garmin Varia, Wahoo TRACKR, Bryton Gardia, Magene L508) | Bike Radar, tipo 40 | só proprietário | distância, velocidade e ameaça de cada veículo | **feito pelo BLE** (`rf/ble_radar_client.c`); pelo ANT+, só a tubulação, porque o perfil não pode entrar num repositório público ([09](09-armazenamento-usb.md) e `rf/radar_ant.h`) | o formato BLE é de engenharia reversa e **não foi conferido em aparelho** |
 | Luzes (Garmin Varia, Bryton) | Bike Lights, tipos 35 e 36 | proprietário | modo e tipo de luz | não há perfil; o perfil não aparece na lista de downloads da Garmin | P3 |
 | Câmbio eletrônico SRAM AXS, Campagnolo EPS, FSA | Shifting, tipo 34 | — | marcha e bateria | não há perfil | P3 |
 | Câmbio Shimano Di2 | canal ANT privado, sob licença da Shimano | — | marcha e bateria | fechado (a Shimano cassou a licença de um fabricante em 2022) | Fora |

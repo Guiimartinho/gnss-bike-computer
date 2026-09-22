@@ -26,7 +26,7 @@ flowchart TB
         UIS["ui"]
     end
     subgraph MODEL["src/model: algoritmos do legacy"]
-        ALG["attitude, Kalman, locator, segmentos,<br/>percurso, zonas, log, FDIR, configurações"]
+        ALG["attitude, Kalman, máquina de modos, segmentos,<br/>percurso, zonas, log, FDIR, configurações"]
     end
     subgraph RF["src/rf"]
         BLE["ble_manager e clientes"]
@@ -87,7 +87,7 @@ Prioridade no Zephyr: número menor ganha. Pilhas medidas (ver [Pilhas](#pilhas)
 |---|---|---|---|---|---|
 | `sensors` | `src/svc/sensors/sensors_svc.c` | 4 | 2048 B | a cada 20 ms | acelerômetro a 50 Hz com média de 1 s, barômetro a 10 Hz, magnetômetro e luz a 1 Hz, como o legacy (`fxos.cpp:600`, `Attitude.cpp`) |
 | `model` | `src/svc/model/model_svc.c` | 5 | 4096 B | caixa de entrada; ao menos 1 vez por segundo | o único escritor do modelo: `attitude` e o Kalman, segmentos, zonas, percurso, máquina de modos; publica o retrato da tela e o ponto do log |
-| `gnss` | `src/svc/gnss/gnss_svc.c`, `gnss_power.c` | 6 | 2048 B | caixa de entrada | máquina de energia do receptor (backup, aquisição, LEAP, plena), configura o M10 por UBX, publica a época e segue o modo e o desligamento |
+| `gnss` | `src/svc/gnss/gnss_svc.c`, `gnss_power.c` | 6 | 2048 B | caixa de entrada | máquina de energia do receptor (backup, aquisição, rastreio; LEAP e plena só com o M10), configura o receptor por UBX, publica a época e segue o modo e o desligamento |
 | `radio` | `src/svc/radio/radio_svc.c` | 6 | 3072 B | caixa de entrada | sobe o ANT (com `ANT=1`) e o BLE, liga os clientes aos canais, atualiza o nível da bateria no BLE |
 | `ui` | `src/svc/ui/ui_svc.c` | 7 | 6144 B | caixa de entrada, o próximo timer do LVGL; ao menos 1 vez por segundo | a única que chama o LVGL: telas do retrato, teclas, notificações, telas de USB e de desligamento, luz e COM; o driver manda ao painel só as linhas que mudaram |
 | `storage` | `src/svc/storage/storage_svc.c` | 8 | 3584 B | caixa de entrada | monta o cartão, carrega segmentos, lista percursos, grava o log de atividade |
@@ -283,26 +283,30 @@ O nPM1300 usa os drivers do Zephyr (MFD, reguladores e o carregador pela API de 
 | `src/model/` | `attitude`, `kalman_altitude`, `udmatrix`, `kalman`, `locator`, `loc_source`, `segment`, `liste_points`, `vecteur`, `parcours`, `power_zone`, `suffer_score`, `rr_zone`, `sd_logger`, `crash_recovery`, `user_settings`, `power_scheduler` | os algoritmos do legacy |
 | `src/rf/` | `ble/ble_manager.c`, `ble_nus.c`, `ble_lns.c`, `ble_*_client.c`, `ant/ant.c` | BLE (scan ainda não iniciado) e ANT (só com `ANT=1`) |
 | `src/ui/`, `include/ui/` | interface LVGL da placa nova ([18](18-interface-telas.md)) | a mesma no firmware e no renderizador de host (`tests/ui`) |
-| `modules/gnss_drivers/` | `drivers/display/memlcd.c`, `memlcd_frame.c`, `include/drivers/display/memlcd*.h`, `drivers/fuel_gauge/max17262.c`, `include/drivers/fuel_gauge/max17262_regs.h`, `drivers/charger/aem10900.c`, `include/drivers/charger/aem10900*.h`, `drivers/gnss/gnss_ublox_m10.c`, `ubx_m10.c`, `include/drivers/gnss/ub*_m10.h`, `dts/bindings/` (com o prefixo `e-peas` em `vendor-prefixes.txt`) | drivers próprios num módulo do Zephyr dentro da aplicação: a tela ([Tela](#tela)), o medidor MAX17262 ([Medidor de bateria](#medidor-de-bateria)), o carregador solar AEM10900 ([Carregador](#carregador)) e o receptor u-blox M10 ([Receptor GNSS](#receptor-gnss)) |
+| `modules/gnss_drivers/` | `drivers/display/memlcd.c`, `memlcd_frame.c`, `include/drivers/display/memlcd*.h`, `drivers/fuel_gauge/max17262.c`, `include/drivers/fuel_gauge/max17262_regs.h`, `drivers/charger/aem10900.c`, `include/drivers/charger/aem10900*.h`, `drivers/gnss/gnss_ublox_m10.c`, `ubx_m10.c`, `include/drivers/gnss/ub*_m10.h`, `dts/bindings/` (com o prefixo `e-peas` em `vendor-prefixes.txt`) | drivers próprios num módulo do Zephyr dentro da aplicação: a tela ([Tela](#tela)), o medidor MAX17262 ([Medidor de bateria](#medidor-de-bateria)), o carregador solar AEM10900 ([Carregador](#carregador)) e os receptores u-blox F10 e M10 ([Receptor GNSS](#receptor-gnss)) |
 
 Saíram em 2026-09-19, substituídos pelas APIs do Zephyr ou pelos serviços: o HAL próprio (`src/hal`), os drivers da V3 (`ls027`, `baro`, `fxos`, `stc3100`, `gps_mgmt`, `nmea_parser`, `gps_epo`, `neopixel`), a interface em paisagem (`src/vue`), a USB da pilha antiga (`src/usb`), os stubs do sistema de arquivos (`src/utils`), o `boucle`, o `model_lock`, o `zwift` (protocolo próprio, não o do legacy) e o `baro_drift` (duplicado).
 
 ## Receptor GNSS
 
-O MAX-M10N-10B da placa nova fala UBX, e o Zephyr do NCS v3.3.0 não tem driver do M10: o do M8 configura pelas mensagens `UBX-CFG-*` antigas, que o M10 não aceita, e o do F9P é um receptor RTK. O port traz o seu, em `modules/gnss_drivers/drivers/gnss/`, sobre a camada UBX do Zephyr (`modem_ubx` num pipe de UART).
+O **MAX-F10S** da placa nova fala UBX, e o Zephyr do NCS v3.3.0 não tem driver do M10 nem do F10: o do M8 configura pelas mensagens `UBX-CFG-*` antigas, que nenhum dos dois aceita, e o do F9P é um receptor RTK. O `u-blox,m10` que entra no Zephyr 4.5 também não serve ao F10. O port traz o seu, em `modules/gnss_drivers/drivers/gnss/`, sobre a camada UBX do Zephyr (`modem_ubx` num pipe de UART).
+
+Um driver só atende as duas peças do footprint MAX: o **MAX-F10S** de banda dupla (`u-blox,max-f10`), que a placa leva, e o **MAX-M10N-10B** de banda única (`u-blox,max-m10`), a alternativa econômica. Os quadros e as chaves da UART, da taxa, do modelo dinâmico e da saída de mensagens têm os mesmos IDs nas duas firmwares.
 
 | Parte | O que faz | Onde |
 |---|---|---|
-| Protocolo | `ubx_m10.c` monta e lê os quadros em C puro, sem Zephyr: cabeçalho, checksum de Fletcher de 8 bits, `UBX-CFG-VALSET` e `VALGET` (o tamanho do valor sai dos bits 30 a 28 da chave), `UBX-RXM-PMREQ`, `UBX-CFG-RST`, `UBX-NAV-PVT` e `UBX-NAV-SAT` | ficha "u-blox M10 SPG 5.30 Interface description" (UBXDOC-304424225-20395), seções 3.2, 3.4, 3.10, 3.15 e 3.16; `test_ubx_m10` (20 casos) |
-| Driver | `gnss_ublox_m10.c` liga o pipe, trata as mensagens espontâneas e atende a API GNSS do Zephyr (taxa, modelo dinâmico, constelações) | `u-blox,max-m10` no devicetree |
-| Configuração | protocolos do UART em UBX, NMEA desligado (14 chaves), `UBX-NAV-PVT` e `UBX-NAV-SAT` a cada época, taxa de 1 Hz, modelo `portable`, pulso de tempo desligado e o modo LEAP; tudo nas camadas RAM **e** BBR | o standby apaga a RAM do receptor (manual de integração 3.7.4.2), e a BBR, que o V_BCKP segura, devolve a configuração |
-| Energia | `ublox_m10_set_power_mode()` troca LEAP (`CFG-PM-OPERATEMODE` = 2) e potência plena; `ublox_m10_standby()` manda `UBX-RXM-PMREQ` com backup e force e, se o nó tiver `vcc-supply`, corta o trilho; `ublox_m10_wake()` acorda pela linha RX | manual de integração 3.7.2 e 3.7.4.2 |
+| Protocolo | `ubx_m10.c` monta e lê os quadros em C puro, sem Zephyr: cabeçalho, checksum de Fletcher de 8 bits, `UBX-CFG-VALSET` de uma chave e de um lote (`ubx_m10_valset_many()`), `VALGET` (o tamanho do valor sai dos bits 30 a 28 da chave), `UBX-RXM-PMREQ`, `UBX-CFG-RST`, `UBX-NAV-PVT` e `UBX-NAV-SAT` | fichas "u-blox F10 SPG 6.00 Interface description" (UBX-23002975 R02) e "u-blox M10 SPG 5.30" (UBXDOC-304424225-20395), seções 3.2, 3.4, 3.10, 3.14/3.15 e 3.16; `test_ubx_m10` (24 casos) |
+| Driver | `gnss_ublox_m10.c` liga o pipe, trata as mensagens espontâneas e atende a API GNSS do Zephyr (taxa, modelo dinâmico, constelações) | `u-blox,max-f10` e `u-blox,max-m10` no devicetree |
+| Configuração | protocolos do UART em UBX, NMEA desligado (14 chaves), `UBX-NAV-PVT` e `UBX-NAV-SAT` a cada época, taxa de 1 Hz, modelo `portable`, pulso de tempo desligado; no M10, também o modo LEAP; tudo nas camadas RAM **e** BBR | o standby apaga a RAM do receptor (manual de integração 3.7.4.2), e a BBR, que o V_BCKP segura, devolve a configuração |
+| Sinais (só F10) | um `UBX-CFG-VALSET` com as nove chaves de L1, L5 e NavIC: `GPS_L1CA`, `GPS_L5`, `GAL_E1`, `GAL_E5A`, `BDS_B1C`, `BDS_B2A`, `SBAS_L1CA`, `NAVIC_ENA` e `NAVIC_L5`. NavIC só liga com a propriedade `navic` do devicetree | toda escrita em `CFG-SIGNAL` reinicia o subsistema GNSS: um quadro só custa um reinicio, e o driver espera 0,5 s depois do reconhecimento (UBX-23002975 R02, 4.9.20) |
+| Bandas (só F10) | L1 e L5 juntos, sempre: "Single-band operation is not supported" (ficha do MAX-F10S, 1.3). Nada a escolher no devicetree | o GPS L5 sai ligado na firmware, mas os satélites ainda transmitem como não saudáveis e ficam fora da solução |
+| Energia | `ublox_m10_standby()` manda `UBX-RXM-PMREQ` com backup e force e, se o nó tiver `vcc-supply`, corta o trilho; `ublox_m10_wake()` acorda pela linha RX. `ublox_m10_set_power_mode()` troca LEAP (`CFG-PM-OPERATEMODE` = 2) e potência plena **só no M10**: a firmware do F10 não tem o grupo `CFG-PM`, e a função devolve `-ENOTSUP` se alguém pedir LEAP | manual de integração do M10, 3.7.2 e 3.7.4.2; UBX-23002975 R02, 4.8 |
 | Falhas | `ublox_m10_hw_reset()` puxa o RESET_N por 2 ms quando o receptor para de responder; sem o pino, `UBX-CFG-RST` | `legacy/source/sensors/GPSMGMT.cpp:143-176` reiniciava a UART |
 
-- O receptor pode perder uma mensagem do host enquanto faz o ciclo do LEAP (manual de integração 3.7.2): toda configuração vai com 3 repetições, e o driver leva o receptor à potência plena antes de um lote.
-- Os callbacks do driver rodam no workqueue do modem e **não podem esperar resposta**: quem espera é a thread `gnss`, porque a resposta chega num item de trabalho desse mesmo workqueue.
+- O receptor pode perder uma mensagem do host enquanto faz o ciclo do LEAP (manual de integração 3.7.2): toda configuração vai com 3 repetições, e o driver leva o receptor à potência plena antes de um lote. No F10 não há ciclo, mas as repetições ficam: elas também cobrem um quadro perdido na UART.
+- Os callbacks do driver rodam no workqueue do modem e **não podem esperar resposta**: quem espera é a thread `gnss`, porque a resposta chega num item de trabalho desse mesmo workqueue. É também por isso que a espera de 0,5 s do `CFG-SIGNAL` mora na thread.
 - O `hdop` publicado é o pDOP do `UBX-NAV-PVT` (o horizontal sozinho pediria o `UBX-NAV-DOP`, uma mensagem a mais por época), diferença registrada em [06](06-algoritmos.md#fontes-de-posição).
-- Não testado com receptor nenhum: o DK não tem GNSS, e a placa de avaliação ainda não foi comprada.
+- Não testado com receptor nenhum: o DK não tem GNSS, e a placa de avaliação (EVK-F101-00) ainda não foi comprada.
 
 ## Devicetree e alvos
 
@@ -310,7 +314,7 @@ A placa vem do `-b` (variável `BOARD` dos scripts); o Zephyr aplica `boards/<pl
 
 | Alias | Serviço | nRF54LM20 DK (periféricos da placa nova) | nRF52840 DK (pinos da V3) |
 |---|---|---|---|
-| `gnss` | GNSS | u-blox MAX-M10N (`u-blox,max-m10`) no `uart21` a 38400 baud (TX P1.04, RX P1.05) | `gnss-nmea-generic` no `uart1` (TX P0.05, RX P0.07), o M10578-A3 da V3 |
+| `gnss` | GNSS | u-blox MAX-F10S (`u-blox,max-f10`) no `uart21` a 38400 baud, o valor de fábrica das duas firmwares (TX P1.04, RX P1.05) | `gnss-nmea-generic` no `uart1` (TX P0.05, RX P0.07), o M10578-A3 da V3 |
 | `baro0` | sensores | BMP585 (`bosch,bmp581`) em 0x47 no `i2c23` (SDA P1.29, SCL P1.03) | BME280 em 0x76 no `i2c0` (SDA P1.00, SCL P1.01) |
 | `imu0` | sensores | BMI270 em 0x68, INT1 em P3.04 | FXOS8700 em 0x1E |
 | `mag0` | sensores | MMC5633NJL (`memsic,mmc56x3`) em 0x30 | FXOS8700 |

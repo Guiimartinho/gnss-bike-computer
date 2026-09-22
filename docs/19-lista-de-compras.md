@@ -30,10 +30,10 @@ flowchart LR
 |---|---|---|---|
 | MCU e rádio | 1 | — | tamanho real do módulo, regras da antena, refusões |
 | Energia | 14 | NTC, conector da bateria | trilhos dos bucks, pinos do AEM10900, indutor, configuração do MAX17262, luz pela LDSW2 |
-| GNSS | 6 | — | V_IO travado em 1,8 V, limite de RF fora da banda |
+| GNSS | 6 | módulo, do MAX-M10N-10B para o MAX-F10S | V_IO travado em 1,8 V, 0 dBm no RF_IN sem exceção fora da banda |
 | Sensores | 5 | IMU, magnetômetro | pinos comuns do IMU, CSB do barômetro, nada de varredura no I2C |
 | Display | 7 | tela, conectores, REG710 | tela monocromática com luz frontal, 5 V com EN |
-| Armazenamento | 2 | a peça soldada ainda não foi escolhida | flash NOR de 32 MB, pull-ups de WP e HOLD, pinos com o trilho desligado |
+| Armazenamento | 2 | preço e estoque da NOR ainda não conferidos | MX25R6435F de 8 MB, pull-ups de WP e HOLD, pinos com o trilho desligado |
 | USB | 4 | TVS do VBUS, receptáculo | placa de 0,8 mm |
 | Interface | 4 | botões sem vedação | LEDs no VSYS, buzzer em alta corrente |
 | Passivos | 18 | três capacitores sem estoque ou obsoletos | capacitância efetiva pelo DC bias |
@@ -65,14 +65,14 @@ Todas as peças passam na integração, com as ressalvas de cada linha. Na compr
 Achados da segunda passagem que mudam o circuito ou o firmware. A especificação já traz todos; as ligações fixas de cada CI estão em [14](14-hardware-placa-nova.md#ligações-fixas-dos-cis).
 
 1. **Trilhos dos bucks trocados.** O resistor do VSET1 só escolhe de 1,0 a 2,7 V e o do VSET2, de 1,8 a 3,3 V (tabelas 18 e 19 do nPM1300): o 3,0 V, de que o MCU depende para ligar, só sai do BUCK2. Fica BUCK2 em 3,0 V com 150 kΩ e BUCK1 em 1,8 V com 47 kΩ, a mesma configuração 1 da referência da Nordic (tabela 39). Nenhum VSET pode ficar aberto.
-2. **1V8 travado.** Com o VIO_SEL em GND, o V_IO do MAX-M10N-10B tem máximo absoluto de 1,98 V, e o registrador do BUCK1 aceita até 3,3 V: o devicetree fixa o mínimo e o máximo do BUCK1 em 1,8 V.
+2. **1V8 travado.** Com o VIO_SEL em GND, o V_IO do MAX-F10S tem máximo absoluto de 1,98 V (tabela 12 da UBXDOC-963802114-12732 R03, igual à do M10N-10B), e o registrador do BUCK1 aceita até 3,3 V: o devicetree fixa o mínimo e o máximo do BUCK1 em 1,8 V.
 3. **Luz da tela pela LDSW2.** A LDSW2 do nPM1300 vira LDO de 3,3 V alimentado pelo VSYS (até 50 mA, entrada de 2,6 V ao VSYS), com resistor e N-MOSFET no PWM. O 3,0 V deixaria só 0,33 V para o resistor do LED de 2,67 V do JDI.
 4. **Pinos do AEM10900:** STO_CFG[2] e STO_CFG[0] no VINT e STO_CFG[1] no GND (carga até 3,90 V, corte em 3,01 V); R_MPP[2:0] e T_MPP[1:0] no VINT; KEEP_ALIVE no VINT; I2C_ADDR no I2C_VDD (0x41); DIS_STO_CH pelo divisor de 100 kΩ e 1 MΩ do VBUSOUT.
 5. **Indutor do AEM10900 em 4,7 µH.** A tabela 6 e a fórmula da seção 6.7.2 da ficha discordam (65,5 contra 85 mA com 6,8 µH); a pergunta vai para a e-peas, e a bancada compara 4,7 e 6,8 µH.
 6. **MAX17262:** a configuração de fábrica (0x2210) já deixa o COMMSH e o THSH em 0; com o TH ligado ao BATT, o firmware grava ETHRM = 0 e mantém TSel = 0 (temperatura interna).
 7. **Botão de ligar:** só o botão central vai ao SHPHLD, que tem pull-up interno de 50 kΩ; o nPM1300 avisa o MCU pelo GPIO3 (`NPM13XX_EVENT_SHIPHOLD_PRESS` e `RELEASE`). Segurar mais de 10 s religa o sistema inteiro, recurso ligado de fábrica que serve de reset de emergência.
 8. **BM20C:** 10,0 × 16,2 mm, e não 14,8 mm; os últimos 5,5 mm são a área da antena, que fica fora da placa ou sem terra e sem trilhas em todas as camadas, com o módulo na borda. No máximo duas passagens pelo forno, com o lado do módulo por último. USB em G6 (D−), G7 (D+) e H7 (VBUS de 4,4 a 5,5 V). A ficha não dá a tolerância do cristal de 32,768 kHz, que o ANT pede em ±50 ppm.
-9. **Entrada de RF do GNSS:** o máximo absoluto é 0 dBm dentro da banda e +15 dBm fora dela (tabela 12 da ficha do 10B). O BLE a +8 dBm não danifica o módulo; o teste passa a ser de bloqueio, pelo C/N0 com o rádio transmitindo.
+9. **Entrada de RF do GNSS:** a tabela 12 da ficha do **MAX-F10S** dá um único máximo absoluto de **0 dBm** no RF_IN, sem a exceção de +15 dBm fora da banda que a ficha do 10B traz. Com o BLE a +8 dBm na mesma placa, quem segura o nível é o isolamento entre as antenas: meça o S21 em 2,44 GHz antes de ligar o rádio na potência cheia, e o bloqueio pelo C/N0 com o rádio transmitindo ([14](14-hardware-placa-nova.md#gnss)).
 10. **IMU com dois fabricantes no mesmo footprint:** pinos 2 e 3 no VDDIO (a Bosch proíbe GND), 10 e 11 abertos, 12 no VDDIO, 1 no GND; o BMI270 responde em 0x68 e o LSM6DSV16X, em 0x6A. O devicetree declara os dois, e o firmware usa o que responder. O despertar por movimento do BMI270 pede a configuração `base` do driver (8 KB, com o compatível extra `bosch,bmi270-base`), sem exemplo no NCS: a testar.
 11. **MMC5633NJL:** o endereço 0x7E no barramento o põe em I3C até faltar energia, então o firmware nunca varre o I2C; o VDD pede pelo menos 2,2 µF junto do pino. O ID 0x10 e o mapa de registradores conferem com o driver `memsic,mmc56x3`.
 12. **BMP585:** o CSB precisa estar no VDDIO na partida, ou o I2C fica desligado até o próximo reset de energia; o SDO no VDDIO dá o endereço 0x47.
@@ -118,10 +118,10 @@ Plano B, se o BM20C atrasar: MinewSemi ME54BS13-1Y20TI (6024-ME54BS13-1Y20TITR-N
 
 | Função | Peça | DigiKey | Estoque | US$ 1 / 10 | Por placa | Compra | Situação |
 |---|---|---|---|---|---|---|---|
-| Módulo GNSS | u-blox MAX-M10N-10B | 672-MAX-M10N-10BCT-ND | 1.571 | 14,52 / — | 1 | 6 | aprovada; MSL 4: secar antes do forno se a embalagem ficou aberta |
-| Módulo do teste A/B | u-blox MAX-F10S-00B | 672-MAX-F10S-00BCT-ND | 10.818 | 13,14 / — | — | 2 | mesmo footprint |
+| Módulo GNSS | u-blox MAX-F10S-00B | 672-MAX-F10S-00BCT-ND | 10.818 | 13,14 / — | 1 | 6 | aprovada; L1 + L5; MSL 4: secar antes do forno se a embalagem ficou aberta |
+| Módulo do teste A/B | u-blox MAX-M10N-10B | 672-MAX-M10N-10BCT-ND | 1.571 | 14,52 / — | — | 2 | mesmo footprint; a alternativa econômica, só L1 |
 | Tradutor de nível | TI TXU0204BQAR | 296-TXU0204BQARCT-ND | 3.776 | 1,17 / 0,846 | 1 | 6 | aprovada; alternativa TXU0204RUTR (UQFN-12, 767) |
-| Antena | TE L000670-01 | 343-L000670-01CT-ND | 2.738 | 1,50 / — | 1 | 6 | aprovada; a TE mede com a rede em π em 0 Ω série e paralelos vazios, e a sintonia na caixa escolhe os valores |
+| Antena | TE L000670-01 | 343-L000670-01CT-ND | 2.738 | 1,50 / — | 1 | 6 | aprovada; com o F10S a sintonia tem de fechar **L1 e L5** na mesma rede em π, e não só L1: a TE mede com 0 Ω em série e paralelos vazios, e a sintonia na caixa escolhe os valores |
 | Ferrite do 1V8 | Murata BLM15PX601SN1D | 490-9657-1-ND | 370.529 | 0,10 / 0,07 | 1 | 10 | aprovada; 600 Ω a 100 MHz, 900 mA |
 | Sintonia da antena | Murata GJM1555C1H2R2BB01D (2,2 pF C0G) e LQW15AN3N9C00D (3,9 nH) | — | 86.930 e 60.715 | 0,11 / 0,057 e 0,11 / — | — | 10 de cada | valores de partida para a rede em π; o VNA decide os valores finais |
 
@@ -151,7 +151,7 @@ Plano B, se o BM20C atrasar: MinewSemi ME54BS13-1Y20TI (6024-ME54BS13-1Y20TITR-N
 
 | Função | Peça | DigiKey | Estoque | US$ 1 / 10 | Por placa | Compra | Situação |
 |---|---|---|---|---|---|---|---|
-| Flash NOR soldada | **a escolher**: flash SPI de 32 MB (`jedec,spi-nor`), candidatas em [15](15-avaliacao-componentes.md#armazenamento) | — | — | — | 1 | 6 | **pendente**: o dono tirou o SD NAND em 2026-09-20 por preço (US$ 40,43 na LCSC contra poucos dólares de uma NOR); falta escolher a peça e conferir preço, estoque, tensão e consumo |
+| Flash NOR soldada | **Macronix MX25R6435F** (64 Mbit, 8-WSON ou 8-SOP); alternativa pino a pino: Winbond W25Q128JV (128 Mbit) | a confirmar | a confirmar | a confirmar | 1 | 6 | peça escolhida em 2026-09-20 pela ficha (consumo, tensão de 1,65 a 3,6 V, mesma peça do nRF54LM20 DK); **falta conferir preço e estoque** |
 | Soquete microSD, só no protótipo | Hirose DM3AT-SF-PEJM5 | HR1964CT-ND | 27.897 | 3,55 / 3,02 | 1 | 6 | aprovada; 1,68 mm, push-push |
 
 ### USB
@@ -205,8 +205,8 @@ As quantidades por placa saem do esquemático; a compra sugerida cobre 5 placas 
 | Nordic nPM1300-EK | carga, bucks e ship mode na bancada | 1490-NPM1300-EK-ND | 118 | 64,35 |
 | e-peas 2AAEM10900C002 | carga solar e carga dupla | não vende | — | Mouser ou e-peas |
 | Analog Devices MAX17262XEVKIT# | medidor na célula | MAX17262XEVKIT#-ND | 13 | 117,03 |
-| u-blox EVK-M102-00 | MAX-M10N-10B, LEAP e potência plena | — | 9 | 183,75 |
-| u-blox EVK-F101-00 | MAX-F10S, teste A/B | — | 11 | 187,50 |
+| u-blox EVK-F101-00 | MAX-F10S, a peça escolhida | — | 11 | 187,50 |
+| u-blox EVK-M102-00 | MAX-M10N-10B, o A/B de autonomia (LEAP e potência plena) | — | 9 | 183,75 |
 | TE L000670-80 | antena GNSS num plano de referência | — | 12 | 37,80 |
 | Tag-Connect TC2030-CTX-NL e TC2030-CLIP | SWD pelo footprint TC2030-NL | na loja da Tag-Connect | — | 42,95 (cabo) |
 
@@ -214,7 +214,7 @@ O J-Link da SEGGER já está na máquina de desenvolvimento ([CLAUDE.md](../CLAU
 
 ## Custo
 
-Estimativa das peças de uma placa, com os preços de 10 unidades quando existem, sem o AEM10900, a bateria, a placa de circuito impresso e a montagem: cerca de US$ 215. Os maiores itens são o filme de luz, o SD NAND de 8 Gbit, a tela, os painéis e o GNSS.
+Estimativa das peças de uma placa, com os preços de 10 unidades quando existem, sem o AEM10900, a bateria, a placa de circuito impresso e a montagem: cerca de US$ 214 (a troca do M10N pelo F10S tirou US$ 1,38). Os maiores itens são o filme de luz, o SD NAND de 8 Gbit, a tela, os painéis e o GNSS.
 
 ```mermaid
 pie showData
@@ -223,7 +223,7 @@ pie showData
     "SD NAND 8 Gbit" : 40.43
     "Tela Sharp" : 23.61
     "6 painéis solares" : 15.84
-    "GNSS" : 14.52
+    "GNSS" : 13.14
     "BM20C" : 9.96
     "4 sensores" : 9.78
     "Outros" : 34.47
@@ -245,12 +245,12 @@ Com o SD NAND de 1 Gbit no protótipo (código C7429710, US$ 10,26), a placa cai
 ## Antes de fechar o pedido
 
 1. **Conferir o dia:** estoque e preço na DigiKey, e a Mouser à mão para as mesmas peças.
-2. **BM20C:** entrar na fila da DigiKey ou pedir à Fanstel, e perguntar a tolerância do cristal de 32,768 kHz; sem ela, o ANT fica em risco até a medida do LFCLK contra o 1 PPS do GNSS.
+2. **BM20C:** entrar na fila da DigiKey ou pedir à Fanstel, e perguntar a tolerância do cristal de 32,768 kHz; sem ela, o ANT fica em risco até a medida do LFCLK contra o 1 PPS do GNSS. Com o F10S a medida fica mais simples: sem LEAP, o TIMEPULSE não tem a limitação da SPG 5.30.
 3. **AEM10900:** confirmar a compra e perguntar à e-peas qual corrente de entrada vale.
 4. **Tela:** a lista compra a Sharp com a luz frontal. A tela colorida SPI de 2,7" não tem canal autorizado; a única colorida MIP em estoque é a Sharp LS021B7DD02 (2,13", 240 × 320, 64 cores), de interface paralela de 6 bits e com 3,2 V e 5 V, que pede outra caixa, outro driver e outras telas. A decisão de voltar à cor fica com o dono. Confirmar também com a Azumo o filme sobre a LS027B7DH01A.
 5. **Placa de circuito impresso:** 0,8 mm e 4 camadas, com controle de impedância, por causa do receptáculo USB-C.
 6. **Bateria:** especificação com o fabricante do pack.
-7. **Umidade:** o MAX-M10N-10B é MSL 4 e o BMP585, MSL 3; montar logo depois de abrir a embalagem ou secar antes.
+7. **Umidade:** o MAX-F10S é MSL 4 (o MAX-M10N-10B também) e o BMP585, MSL 3; montar logo depois de abrir a embalagem ou secar antes.
 
 ## Referências
 
@@ -258,7 +258,7 @@ Com o SD NAND de 1 Gbit no protótipo (código C7429710, US$ 10,26), a placa cai
 - Fanstel, BM20C Product Specifications Draft 0.99 (pinagem, p. 11; montagem, p. 17) e biblioteca Eagle BM20C-V7.
 - Nordic, nPM1300 Product Specification v1.1: VSET (tabelas 18 e 19), LDSW (tabelas 23 e 24), ship mode (tabela 33), LPRESETCONFIG, configurações e lista de referência (tabelas 39 e 40).
 - e-peas, AEM1090x datasheet v2.4.0: corrente de entrada (tabela 6 e seção 6.7.2), pinos e lista de materiais (tabela 43).
-- u-blox, MAX-M10N-10B Data sheet R05 (tabelas 12, 13, 15 e 16).
+- u-blox, MAX-F10S Data sheet R03, UBXDOC-963802114-12732 (tabelas 10, 12, 13, 15, 16 e 17) e F10 SPG 6.00 Interface description, UBX-23002975 R02; MAX-M10N-10B Data sheet R05 (tabelas 12, 13, 15 e 16), para a alternativa.
 - Bosch, BMI270 (BST-BMI270-DS000-08, tabela 22) e BMP585 (interface pelo CSB); ST, LSM6DSV16X (tabela 2); Memsic, MMC5633NJL Rev A.
 - XTX, SD NAND Rev 1.0 (pinos, comandos dos modos SD e SPI, CSD).
 - Sharp, LS027B7DH01A (ficha LD-28305A, conectores na tabela 8-2-1); JDI, LPM027M128B Ver.01 (conector, p. 34); Azumo, 2.7" Front Light Panel 11103-xx (12369-01_T4).

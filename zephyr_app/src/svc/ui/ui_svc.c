@@ -224,6 +224,14 @@ static void on_action(ui_action_t action, int32_t arg, void *user)
     case UI_ACT_THEME_TOGGLE:
         want_theme_toggle = true;
         break;
+    case UI_ACT_LAP:
+        /* the two enumerations run together up to UI_ACT_ROUTE_SELECT, and
+         * the commands the interface never sends come after it */
+        app_command(APP_CMD_LAP, 0);
+        break;
+    case UI_ACT_ALARM_TOGGLE:
+        app_command(APP_CMD_ALARM_TOGGLE, 0);
+        break;
     default:
         app_command((enum app_cmd_id)action, arg);
         break;

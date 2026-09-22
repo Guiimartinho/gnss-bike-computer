@@ -15,6 +15,7 @@
 #include <zephyr/logging/log.h>
 #include <string.h>
 
+#include "rf/ble_radar_client.h"
 #include "rf/ble_manager.h"
 #include "rf/ble_nus.h"
 #include "rf/ble_lns.h"
@@ -51,6 +52,7 @@ LOG_MODULE_REGISTER(ble_mgr, CONFIG_LOG_DEFAULT_LEVEL);
 #define SENSOR_TYPE_HRS     0x01U
 #define SENSOR_TYPE_BSC     0x02U
 #define SENSOR_TYPE_FEC     0x04U
+#define SENSOR_TYPE_RADAR   0x08U
 
 /* ==========================================================================
  * Private Variables
@@ -70,6 +72,7 @@ static struct bt_conn *bsc_conn;
 
 /** FEC trainer connection */
 static struct bt_conn *fec_conn;
+static struct bt_conn *radar_conn;
 
 /** Connection info */
 static ble_conn_info_t conn_info;
@@ -111,6 +114,34 @@ static const struct bt_data sd[] = {
 /* ==========================================================================
  * Scan Helpers
  * ========================================================================== */
+
+/**
+ * @brief Check if advertisement contains a specific 128-bit UUID
+ *
+ * The rear radar of a Varia advertises a service of its own, which is
+ * 128 bits and does not go through the 16-bit path above
+ * (`rf/ble_radar_client.h`).
+ */
+static bool ad_contains_uuid128(struct bt_data *data, void *user_data)
+{
+    bool *found = user_data;
+
+    if ((data->type != BT_DATA_UUID128_SOME) && (data->type != BT_DATA_UUID128_ALL)) {
+        return true;
+    }
+
+    for (uint8_t off = 0U; (off + 16U) <= data->data_len; off += 16U) {
+        struct bt_uuid_128 adv;
+
+        if (bt_uuid_create(&adv.uuid, &data->data[off], 16U) &&
+            (bt_uuid_cmp(&adv.uuid, ble_radar_service_uuid()) == 0)) {
+            *found = true;
+            return false;
+        }
+    }
+
+    return true;
+}
 
 /**
  * @brief Check if advertisement contains a specific 16-bit UUID
@@ -173,6 +204,16 @@ static uint8_t detect_sensor_type(const uint8_t *ad_data, uint8_t ad_len)
         sensor_type |= SENSOR_TYPE_FEC;
     }
 
+    /* And for the rear radar, whose service is 128 bits */
+    net_buf_simple_init_with_data(&buf, (uint8_t *)ad_data, ad_len);
+
+    bool radar_found = false;
+
+    bt_data_parse(&buf, ad_contains_uuid128, &radar_found);
+    if (radar_found) {
+        sensor_type |= SENSOR_TYPE_RADAR;
+    }
+
     return sensor_type;
 }
 
@@ -195,6 +236,10 @@ static void connect_to_sensor(const bt_addr_le_t *addr, uint8_t sensor_type)
     }
     if (((sensor_type & SENSOR_TYPE_FEC) != 0U) && (fec_conn != NULL)) {
         LOG_DBG("FEC already connected");
+        return;
+    }
+    if (((sensor_type & SENSOR_TYPE_RADAR) != 0U) && (radar_conn != NULL)) {
+        LOG_DBG("radar already connected");
         return;
     }
 
@@ -332,9 +377,15 @@ static void connected(struct bt_conn *conn, uint8_t err)
             ble_fec_client_on_connect(conn);
             LOG_INF("FEC trainer connected");
         }
+        if ((sensor_type & SENSOR_TYPE_RADAR) != 0U) {
+            radar_conn = bt_conn_ref(conn);
+            (void)ble_radar_client_start(conn);
+            LOG_INF("rear radar connected");
+        }
 
         /* Resume scanning for other sensors */
-        if ((hrs_conn == NULL) || (bsc_conn == NULL) || (fec_conn == NULL)) {
+        if ((hrs_conn == NULL) || (bsc_conn == NULL) || (fec_conn == NULL) ||
+            (radar_conn == NULL)) {
             (void)ble_manager_start_scan();
         }
     } else {
@@ -390,6 +441,12 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
         fec_conn = NULL;
         LOG_INF("FEC trainer disconnected");
         /* Resume scanning to reconnect */
+        (void)ble_manager_start_scan();
+    } else if (conn == radar_conn) {
+        ble_radar_client_stop();
+        bt_conn_unref(radar_conn);
+        radar_conn = NULL;
+        LOG_INF("rear radar disconnected");
         (void)ble_manager_start_scan();
     }
 

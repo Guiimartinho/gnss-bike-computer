@@ -2,7 +2,7 @@
 
 Os cálculos do stravaV10 original, com fórmulas, constantes e a origem no código, lado a lado com o que o port faz hoje. Diferença não documentada aqui é defeito: corrija o código ou registre a decisão nesta página. Testes de fidelidade ficam em `zephyr_app/tests/host/` (skill `fw-testes`).
 
-**Nesta página:** [Distância](#distância) · [Vetores e posição relativa](#vetores-e-posição-relativa) · [Segmentos](#segmentos) · [Mapa e zoom](#mapa-e-zoom) · [Altitude: Kalman de 3 estados](#altitude-kalman-de-3-estados) · [Barômetro e drift](#barômetro-e-drift) · [Potência estimada](#potência-estimada) · [Distância acumulada e log](#distância-acumulada-e-log) · [Zonas](#zonas) · [Fontes de posição](#fontes-de-posição) · [Bateria](#bateria)
+**Nesta página:** [Distância](#distância) · [Vetores e posição relativa](#vetores-e-posição-relativa) · [Segmentos](#segmentos) · [Mapa e zoom](#mapa-e-zoom) · [Altitude: Kalman de 3 estados](#altitude-kalman-de-3-estados) · [Barômetro e drift](#barômetro-e-drift) · [Potência estimada](#potência-estimada) · [Distância acumulada e log](#distância-acumulada-e-log) · [Cronômetro, pausa automática e voltas](#cronômetro-pausa-automática-e-voltas) · [Subidas do percurso (ClimbPro)](#subidas-do-percurso-climbpro) · [Alarme da bicicleta e detecção de queda](#alarme-da-bicicleta-e-detecção-de-queda) · [Zonas](#zonas) · [Fontes de posição](#fontes-de-posição) · [Bateria](#bateria)
 
 ## Distância
 
@@ -12,7 +12,7 @@ Os cálculos do stravaV10 original, com fórmulas, constantes e a origem no cód
 | Raio | 6.371.008 m | o mesmo |
 | Custo | 1 cosseno e 1 raiz | o mesmo |
 
-O port usava haversine com 6.371.000 m até 2026-09-19 (diferença abaixo de 0,5 % em trechos de 5 km, mas 4 senos e cossenos, 2 raízes e um `atan2f`); o `locator_calc_distance()` agora chama a mesma função, e não há duas implementações. Latitude e longitude são `float` nos dois firmwares: cerca de 0,4 m de resolução em latitudes médias.
+O port usava haversine com 6.371.000 m em dois lugares (diferença abaixo de 0,5 % em trechos de 5 km, mas 4 senos e cossenos, 2 raízes e um `atan2f`): no `locator.c`, que saiu em 2026-09-21, e no `parcours.c`, que media o percurso com uma fórmula e um raio diferentes dos da distância pedalada — num percurso de 100 km o progresso e o total discordavam em até 500 m. Hoje existe **uma** implementação, `distance_between()` do `vecteur.c`, e todo mundo a chama. Latitude e longitude são `float` nos dois firmwares: cerca de 0,4 m de resolução em latitudes médias.
 
 **Acúmulo** (`legacy/source/model/Attitude.cpp:431-490`, port em `src/model/distance.c` com `test_distance`): soma a distância entre posições **brutas**, qualquer que seja a velocidade; enquanto não começou, o primeiro salto acima de 25 m joga o total fora (a posição anterior à primeira é (0, 0)) e liga a contagem; daí em diante, cada 15 m é um instantâneo, que salva o ponto e o estado para a recuperação de falha. Com épocas de 8 m (30 km/h a 1 Hz) o instantâneo sai a cada duas épocas, isto é, a cada 16 m: a regra pede **mais** de 15 m desde o último.
 
@@ -120,6 +120,60 @@ Estado `X = [h, α_bar, α0]`: elevação, pitch medido e offset de montagem do 
 - Legacy (`Attitude::computeDistance`, `Attitude.cpp:431-490`): soma a distância entre posições brutas; descarta os primeiros 25 m; a cada 15 m guarda um snapshot e, com 5 snapshots, grava no SD e atualiza o estado salvo para FDIR (CRC-8).
 - Port: igual ao legacy desde 2026-09-19 (`distance.c`): posições brutas, sem porta de velocidade, com o descarte dos primeiros 25 m e o instantâneo a cada 15 m, que agora é quem salva o estado da recuperação de falha (antes era a cada segundo). O `sd_logger` mantém os mesmos 15 m e lotes de 5 do legacy, e a distância filtrada do `locator.c` continua disponível para quem quiser.
 
+## Cronômetro, pausa automática e voltas
+
+O legacy não tem nada disso: grava do momento em que liga até desligar, sem início, sem pausa e sem volta (`legacy/source/sd/sd_functions.cpp:605`). O port acrescenta em `model/activity.c`, porque é o que um arquivo FIT carrega e o que o mercado faz.
+
+| Grandeza | Legacy | Port |
+|---|---|---|
+| Segundo ativo (`att.nbsec_act`) | `if (loc_.speed > 7.f)` (`Attitude.cpp:509`) | **igual**, corrigido em 2026-09-21: o port tinha 7 km/h escritos como `MOVING_SPEED_THRESHOLD 2.0f`, o que contava caminhada e giro solto e punha a média da página 1 do CRS acima da do legacy |
+| Tempo em movimento | não existe | o cronômetro para depois de 3 s abaixo de 1,5 km/h e volta acima de 3 km/h (`ACTIVITY_PAUSE_KMH`, `ACTIVITY_RESUME_KMH`, `ACTIVITY_PAUSE_HOLD_MS`) |
+| Média | `dist * 3,6 / nbsec_act` na página 1 (`afficheScreen1`) | a página 1 **não muda**; a página de voltas traz a média sobre o tempo em movimento, que é a que vai no FIT |
+| Volta | não existe | por distância (`CONFIG_GNSS_AUTOLAP_M`, 5 km de fábrica) e pela tecla esquerda longa |
+| Descida | não existe | acumulada da altitude filtrada, com a mesma banda morta de 2 m da subida de `attitude.c`, para que as duas concordem sobre o que é ruído |
+| Energia | não existe | os watt-segundos em quilojoules: para um ciclista o número de kJ de trabalho é o de kcal de comida, dentro de um por cento |
+
+Os dois limiares são separados de propósito. Os 7 km/h dizem se o ciclista está pedalando para valer, e uma subida a 6 km/h ainda é pedalar; a pausa só precisa distinguir bicicleta parada de bicicleta andando. Os três segundos de espera antes de parar o cronômetro contam como tempo em movimento, porque foram pedalados até onde o aparelho sabia.
+
+## Subidas do percurso (ClimbPro)
+
+O legacy mostra o percurso inteiro e a subida total, e nada sobre a subida em que o ciclista está (`legacy/source/vue/VuePRC.cpp`). Numa estrada de montanha o perfil do percurso é uma linha reta com um calombo, e o que serve é o calombo ocupando a tela. `model/climb.c` acha as subidas uma vez, quando o percurso abre, e a cada época só diz onde o ciclista está na que vem.
+
+| Regra | Valor | Porquê |
+|---|---|---|
+| Uma subida abre quando a altitude sobe | `CLIMB_HYST_M`, 10 m, acima de um ponto baixo | abaixo disso é ruído do arquivo, não morro |
+| E fecha quando desce o mesmo | 10 m abaixo do topo | idem, na descida |
+| O ponto baixo acompanha o plano | comparação `<=`, não `<` | senão uma subida depois de 2 km de vale seria dita começar onde o vale começou |
+| Duas subidas viram uma quando o vão é curto e raso | até `CLIMB_MERGE_M` (1 km) e menos de um terço do ganho | um falso plano no meio de um colo não são duas subidas |
+| Conta como subida a partir de | 500 m, 30 m de ganho e 3 % de média | uma ponte não é subida |
+| Categoria | pelo ganho: 80 m é quarta, 160 terceira, 320 segunda, 640 primeira, 800 fora de categoria | é a escala que o ciclismo usa, e a que o Strava aplica |
+
+O percurso é varrido **afinado**: um percurso de 100 km vira 512 amostras, a cerca de 200 m uma da outra, o que basta para uma subida que precisa ter 500 m para contar e custa 4 KB em vez dos 32 KB do percurso inteiro. A distância, essa, segue ponto a ponto, para o afinamento não cortar curva.
+
+O que o ciclista vê: a subida em curso com o que falta de distância e de altimetria, a inclinação média do que resta e a dos próximos 200 m (`CLIMB_AHEAD_M`), e o perfil **da subida** colorido pela inclinação. A tela sobe sozinha ao pé da subida e devolve o mapa no topo, que é o ponto do recurso.
+
+## Alarme da bicicleta e detecção de queda
+
+> [!WARNING]
+> **Não é equipamento de segurança.** É uma conveniência, como a de um Garmin, e falha nos dois sentidos: uma queda em que a bicicleta continua andando, ou em que o aparelho se solta do guidão, não é detectada, e um meio-fio pego com força parece uma. Ninguém deve pedalar diferente porque está ligado, e ninguém deve contar com ele para ser socorrido. O alarme é igualmente fraco: um ladrão que leva a bicicleta inteira dispara, um que corta o cadeado devagar pode não disparar.
+
+Nada disso existe no legacy. `model/incident.c` roda duas máquinas sobre a mesma entrada, porque as duas perguntam a mesma coisa — a bicicleta está se movendo, e quanto ela foi sacudida.
+
+| Grandeza | Valor | Porquê |
+|---|---|---|
+| Pico que abre a questão | `INCIDENT_CRASH_G`, 6 g | abaixo disso é buraco de rua |
+| Quieto | desvio de 1 g abaixo de `INCIDENT_CRASH_STILL_G` (0,10) | é o aparelho parado, não o guidão vibrando |
+| Parado | abaixo de `INCIDENT_CRASH_STOPPED_KMH` (3 km/h) | bicicleta que segue rolando não caiu |
+| Quieto e parado por | `INCIDENT_CRASH_STILL_MS`, 8 s | um segundo é o susto; oito é não estar levantando |
+| Contagem para cancelar | `INCIDENT_CRASH_COUNT_MS`, 30 s | o ciclista sempre pode dizer que está bem |
+| Janela do pico | `INCIDENT_CRASH_WINDOW_MS`, 15 s | passou disso sem parar, não foi queda |
+| Movimento que dispara o alarme | `INCIDENT_ALARM_G`, 0,15 g, por 1 s | menos que isso é vento |
+| Espera depois de armar | `INCIDENT_ARM_SETTLE_MS`, 5 s | o ciclista ainda está mexendo no cadeado |
+
+A queda precisa das **três** condições em sequência, porque cada uma sozinha é fato corriqueiro: pico, bicicleta parada, aparelho quieto. Só então a contagem começa, e qualquer tecla cancela. Quem está bem sempre cancela; quem não consegue é o caso para o qual isso existe.
+
+O pico vem do serviço de sensores, que acompanha o **maior** módulo da aceleração a 50 Hz e o publica uma vez por segundo: um impacto dura cerca de um décimo de segundo e a média de um segundo o enterraria.
+
 ## Zonas
 
 | Módulo | Regras (legacy) | Port |
@@ -144,12 +198,16 @@ Legacy: `legacy/source/sensors/fxos.cpp`. Port: `zephyr_app/src/svc/sensors/tilt
 
 Legacy (`legacy/source/model/Locator.cpp:111-134`): a simulada (`$LOC`) vence e bloqueia as outras por 2 s; o GPS vence e bloqueia por 1,5 s; o LNS (celular via BLE) só é aceito sem fix no pino FIX. Depois de 5 posições LNS seguidas, envia host aiding (`$PMTK741`) ao GPS. O port tem o árbitro em `loc_source.c`, sem chamador.
 
-### Do MAX-M10N (placa nova)
+### Do MAX-F10S (placa nova)
 
 - Uma época por segundo em `UBX-NAV-PVT`: posição em 1e-7 grau, altitude sobre o nível do mar em mm, velocidade 2D em mm/s, rumo em 1e-5 grau e `numSV`. O port converte para as unidades do Zephyr (nanograus, mm, mm/s, milésimos de grau) no driver, e o serviço para as do modelo.
 - **Diferença registrada:** o `hdop` publicado é o **pDOP** do `UBX-NAV-PVT` (escala 0,01, multiplicado por 10 para os milésimos da API do Zephyr). O legacy lia o HDOP do `$GPGSA` (`legacy/source/model/Locator.cpp:24`) e não o usava em conta nenhuma; aqui ele só alimenta o serviço de localização do BLE. O horizontal exato pediria o `UBX-NAV-DOP`, uma mensagem a mais por época.
 - A hora só sai do receptor quando `valid` traz data **e** hora (bits 0 e 1); sem isso o campo de hora vai zerado e o modelo não usa.
 - O fix vale quando `gnssFixOK` está ligado, `invalidLlh` desligado e o tipo é 2D ou 3D; morto por estimativa (`dead reckoning`) vira "fix estimado" e não conta como posição válida no serviço.
+- **Banda dupla.** O F10S recebe L1 e L5 ao mesmo tempo e não faz banda única. A precisão de referência passa de 1,5 m para 1 m de CEP, e o ganho vem do código do L5, dez vezes mais rápido, contra o multipercurso.
+- **GPS L5 pré-operacional.** A constelação GPS ainda transmite o L5 marcado como não saudável, e o receptor o deixa fora da solução por padrão (ficha do MAX-F10S, 1.1). Esses satélites **aparecem** no `UBX-NAV-SAT`, para a tela de satélites, mas não entram no `numSV` do `UBX-NAV-PVT`, que conta só os usados na solução: a tela pode mostrar mais pontos do que o número de satélites do fix. O ganho de banda dupla hoje vem de Galileo E5a, BeiDou B2a e QZSS L5, todos operacionais.
+- O `UBX-NAV-SAT` traz 8 + 12 bytes **por satélite**, não por sinal (UBX-23002975 R02, 3.14.13.1): a banda dupla não dobra a mensagem.
+- O `psmState` do `UBX-NAV-PVT` só tem significado no M10, que tem o LEAP; no F10S ele fica sempre em "power save off".
 
 ## Recuperação de falha (FDIR)
 

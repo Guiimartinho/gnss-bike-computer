@@ -16,6 +16,20 @@
 #include <zephyr/smf.h>
 
 #include "app/app_events.h"
+#include "model/climb.h"
+#include "model/incident.h"
+#include "model/loc_arbiter.h"
+#include "model/mode_fsm.h"
+#include "model/radar.h"
+
+/**
+ * Points of the thinned copy of the route the climb scan walks.
+ *
+ * A hundred-kilometre route becomes 512 samples, about 200 m apart,
+ * which is enough for a climb that has to be 500 m long to count, and
+ * costs 4 KB instead of the 32 KB the route itself would.
+ */
+#define MODEL_CLIMB_SCAN_MAX    512U
 #include "model/power_zone.h"
 #include "model/rr_zone.h"
 #include "model/suffer_score.h"
@@ -23,11 +37,17 @@
 
 /** What the model keeps between events */
 /** A position older than this shows the GNSS screen (legacy LOCATOR_MAX_DATA_AGE_MS) */
+/*
+ * How old a fix may be and still show as a fix on the status bar. It is
+ * a choice of this port, not a rule of the legacy: the arbitration
+ * between the sources has its own, shorter windows in
+ * `model/loc_arbiter.h`, and used to share this constant by mistake.
+ */
 #define POS_MAX_AGE_MS  6000U
 
 struct model_ctx {
-    struct smf_ctx smf;             /**< first member: mode machine */
-    uint8_t mode;                   /**< enum app_mode in force */
+    struct mode_fsm fsm;            /**< the mode machine (model/mode_fsm.h) */
+    uint8_t mode;                   /**< enum app_mode in force, as it published */
     uint8_t mode_req;               /**< mode asked by the last command */
     bool shutting_down;
     bool recording;                 /**< an activity is being recorded, as published */
@@ -42,6 +62,12 @@ struct model_ctx {
     struct app_phone_nav nav;
     struct app_pair_list pair;
     struct app_storage_info storage;
+    struct app_activity act;        /**< totals, auto-pause and laps (model/activity.h) */
+    struct climb_list climbs;       /**< climbs of the loaded route (model/climb.h) */
+    struct climb_state climb;       /**< where the rider is on the one ahead */
+    struct radar rad;               /**< vehicles behind (model/radar.h) */
+    struct incident inc;            /**< alarm and crash detection (model/incident.h) */
+    struct loc_arbiter arb;         /**< which position source wins (model/loc_arbiter.h) */
     float heading_deg;
     bool heading_valid;
     float pitch_deg;

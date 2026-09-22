@@ -48,7 +48,7 @@ flowchart TB
         FSM["máquinas de estado (SMF)<br/>sistema, modo, gravação, interface"]
     end
     subgraph MODEL["modelo (port do legacy)"]
-        BOU["boucle por modo<br/>attitude, Kalman, locator"]
+        BOU["boucle por modo<br/>attitude, Kalman, mode_fsm"]
         SEG["segmentos, percurso,<br/>zonas, suffer score, RR"]
     end
     subgraph SVC["serviços"]
@@ -77,7 +77,7 @@ As camadas só se falam para baixo por chamada e para cima por evento: um servi�
 | Serviço | Responsável por | Publica | Hardware |
 |---|---|---|---|
 | Energia | ligar e desligar, ship mode, trilhos, carga pelo USB e pelo painel, estado de carga, desligamento automático, botão de ligar | estado da bateria e da carga, pedido de desligar | nPM1300, AEM10900, MAX17262 |
-| GNSS | configuração por UBX, modos LEAP e potência plena, AssistNow, backup, reinício por falta de dado | uma posição por época (NAV-PVT), satélites | u-blox MAX-M10N-10B pelo TXU0204 |
+| GNSS | configuração por UBX, sinais de L1 e L5, AssistNow, backup, reinício por falta de dado (LEAP e potência plena só com o M10N) | uma posição por época (NAV-PVT), satélites | u-blox MAX-F10S pelo TXU0204 |
 | Sensores | barômetro a 10 Hz (como o legacy), IMU por FIFO, magnetômetro, luz ambiente | amostras filtradas | BMP585, BMI270, MMC5633NJL, OPT3001 |
 | Rádio | BLE central (sensores e celular), ANT+ (HRM, BSC, FE-C), pareamento, religação | dados de cada sensor, estado de cada ligação | nRF54LM20A |
 | Armazenamento | FatFs, formatos do legacy, lotes de gravação, carga de segmentos e percursos, modo MSC, comandos `$LOC`, `$DWN`, `$QRY` | resultados de carga, estado do cartão | SD NAND ou microSD no `spi00` |
@@ -123,7 +123,7 @@ O zbus passa mensagens por canais com cópia: quem publica não espera quem lê,
 
 ```mermaid
 flowchart LR
-    GNSSM["MAX-M10N-10B"] -->|"NAV-PVT"| GS["serviço GNSS"]
+    GNSSM["MAX-F10S"] -->|"NAV-PVT"| GS["serviço GNSS"]
     BARO["BMP585"] --> SS["serviço de sensores"]
     IMU["BMI270 e MMC5633NJL"] --> SS
     EXT["sensores BLE e ANT+"] --> RS["serviço de rádio"]
@@ -147,7 +147,7 @@ Todas no SMF do Zephyr, com estados hierárquicos e ações de entrada, execuç�
 | Máquina | Dono | Origem |
 |---|---|---|
 | Sistema e energia | serviço de energia | nova; desligamento automático do legacy (`legacy/source/scheduling/power_scheduler.cpp:16-46`) |
-| Modo | modelo | `boucle__change_mode()` (`legacy/source/model/Boucle.cpp:101-143`) |
+| Modo | modelo | desenho próprio em `model/mode_fsm.c`, com as famílias e as três regras abaixo |
 | Gravação | modelo | log do legacy (`Attitude::computeDistance`, `legacy/source/model/Attitude.cpp:431-490`) |
 | GNSS | serviço GNSS | `GPS_MGMT` (`legacy/source/sensors/GPSMGMT.cpp:143-265`), refeita para UBX |
 | Sensor externo | serviço de rádio, uma por sensor | pareamento do `ant_device_manager` e reaberturas do HRM ([07](07-radio-ant-ble.md#ant-no-legacy)) |
@@ -189,27 +189,45 @@ stateDiagram-v2
 
 ### Modo
 
+Os cinco modos vivem em duas famílias, e a família é um estado pai de verdade, não uma função auxiliar: ao ar livre a posição vem do receptor e alimenta a distância; dentro de casa ela vem do rolo ou do PC, e um fix não quer dizer nada.
+
 ```mermaid
 stateDiagram-v2
     [*] --> CRS
-    CRS --> PRC: menu, com percurso escolhido
-    PRC --> CRS: menu
-    CRS --> FEC: menu
-    FEC --> CRS: menu
-    CRS --> Zwift: menu
-    Zwift --> CRS: menu
-    note right of CRS
+    state "Ao ar livre" as Outdoor {
+        CRS
+        PRC
+        DBG
+    }
+    state "Dentro de casa" as Indoor {
+        FEC
+        Zwift
+    }
+    CRS --> PRC: menu, com percurso carregado
+    PRC --> CRS: menu, ou o percurso saiu
+    CRS --> DBG: menu
+    DBG --> CRS: menu
+    Outdoor --> Indoor: menu, fora de uma gravação
+    Indoor --> Outdoor: menu, fora de uma gravação
+    note right of Outdoor
         GNSS ligado, barômetro a 10 Hz
         ciclo a cada localização
     end note
-    note right of FEC
+    note right of Indoor
         GNSS em backup, canal FE-C aberto
         ciclo a cada dado do rolo
     end note
 ```
 
-- A troca repete o legacy: libera a espera, invalida o modo antigo e inicia o novo sob demanda (`legacy/source/model/Boucle.cpp:101-143`).
-- O GNSS segue o modo: acorda em CRS e PRC (`legacy/source/model/BoucleCRS.cpp:38`) e dorme em FEC e Zwift (`legacy/source/model/BoucleFEC.cpp:45`). No u-blox, dormir é mandar `UBX-RXM-PMREQ` e desligar o BUCK1, com o backup mantido.
+A máquina é `model/mode_fsm.c`, com teste de host próprio (`test_mode_fsm`). Ela **não** é o `boucle__change_mode()` do legacy (`legacy/source/model/Boucle.cpp:101-142`), que não guarda nada e deixa entrar em qualquer modo a qualquer momento. Três regras foram acrescentadas, e cada uma era um jeito de perder um pedal:
+
+1. **Modo de percurso pede percurso.** Entrar em PRC sem nada carregado deixava o ciclista numa tela de navegação sem navegação; agora a troca é recusada e a tela diz o porquê. Se o percurso sair debaixo de quem está seguindo, o modo volta sozinho para CRS.
+2. **Pedal gravando não muda de família.** Sair da rua para o rolo no meio de uma gravação misturava dado de rolo no arquivo de um pedal de verdade. Dentro da mesma família a troca é livre: quem grava na rua pode querer o percurso ou a tela de diagnóstico, e nenhum dos dois muda de onde vêm os números.
+3. **Os números da sessão são da atividade, não do modo.** A máquina não encosta nas zonas de potência nem no suffer score. Até 2026-09-21 entrar em FEC chamava `power_zone_reset()` e `suffer_score_reset()`, e quem punha a bicicleta no rolo perdia as zonas do pedal inteiro — e eram as duas únicas chamadas de reset no firmware, de modo que fora desse caminho as zonas nunca zeravam.
+
+Duas coisas do legacy ficaram **de fora** de propósito: invalidar o modo antigo para liberar os pontos do percurso (aqui eles moram num vetor estático, não há o que liberar) e o `stc.resetCharge()` a cada troca (o medidor de carga do legacy não existe na placa nova).
+
+- O GNSS segue a família: acorda ao ar livre (`legacy/source/model/BoucleCRS.cpp:38`) e dorme dentro de casa (`legacy/source/model/BoucleFEC.cpp:45`). No u-blox, dormir é mandar `UBX-RXM-PMREQ` e desligar o BUCK1, com o backup mantido.
 - O MSC fica na máquina de sistema, porque desmonta o FatFs e para o modelo.
 
 ### Gravação
@@ -231,20 +249,23 @@ stateDiagram-v2
 
 ### GNSS
 
+O receptor escolhido, o **MAX-F10S**, não tem modo econômico de rastreio: a firmware do F10 não tem o grupo `CFG-PM` (descrição de interface UBX-23002975 R02, seção 4.8). A máquina é a mesma para as duas peças do footprint, e o que muda é se o estado **LEAP** existe: o serviço passa `has_leap` ao `gnss_power_init()` a partir do compatível do devicetree.
+
 ```mermaid
 stateDiagram-v2
     [*] --> Backup
     Backup --> Adquirindo: modo CRS ou PRC
-    Adquirindo --> LEAP: primeiro fix
-    LEAP --> Plena: sinal fraco
-    Plena --> LEAP: sinal bom por 60 s
-    LEAP --> Assistencia: dados do AssistNow chegam (a fazer)
-    Assistencia --> LEAP: dados gravados
-    LEAP --> Backup: modo FEC ou Zwift, desligar
+    Adquirindo --> Rastreando: primeiro fix
+    Rastreando --> Plena: sinal fraco, só com LEAP
+    Plena --> Rastreando: sinal bom por 60 s, só com LEAP
+    Rastreando --> Assistencia: dados do AssistNow chegam (a fazer)
+    Assistencia --> Rastreando: dados gravados
+    Rastreando --> Backup: modo FEC ou Zwift, desligar
     Plena --> Backup: modo FEC ou Zwift, desligar
     Adquirindo --> Backup: modo FEC ou Zwift, desligar
-    note right of LEAP
-        13,7 mW, 1 Hz
+    note right of Rastreando
+        F10S: potencia plena, 46,8 mW, 1 Hz
+        M10N: LEAP, 13,7 mW, 1 Hz
         sem depender do TIMEPULSE
     end note
     note right of Backup
@@ -253,10 +274,11 @@ stateDiagram-v2
     end note
 ```
 
-- **Sinal fraco:** fix perdido, ou precisão estimada pior que um limite a ajustar na bancada. O LEAP rastreia até −159 dBm e a potência plena até −167 dBm ([15](15-avaliacao-componentes.md#escolha-max-m10n-10b)).
-- **Assistência:** a SPG 5.30 pede o LEAP desligado enquanto os dados do AssistNow Live Orbits vão para a flash do módulo.
-- **Vigia:** o legacy reinicia a UART quando passa 3 s sem hora nem satélites (`legacy/source/sensors/GPSMGMT.cpp:143-176`), e avisa na tela. Aqui, 10 s sem `UBX-NAV-PVT` com o receptor ligado mandam a configuração de novo, e 30 s puxam o RESET_N (ou mandam `UBX-CFG-RST`, sem o pino), com notificação: a configuração custa cerca de 0,5 s e tira o receptor do LEAP, então não vale repetir a cada 3 s. Implementado em `gnss_power.c` (`GNSS_POWER_SILENCE_MS` e `GNSS_POWER_RESET_MS`), com `test_gnss_power`.
-- **Implementado** em 2026-09-19, sem receptor para testar: a máquina inteira em `src/svc/gnss/gnss_power.c` (pura, com `test_gnss_power`, 16 casos) e as ações no driver próprio do M10 ([05](05-arquitetura-zephyr.md#receptor-gnss)). Falta a assistência: o AssistNow ainda não entrou.
+- **Sinal fraco:** fix perdido, ou precisão estimada pior que um limite a ajustar na bancada. Vale só para o M10N, onde o LEAP rastreia até −159 dBm e a potência plena até −167 dBm ([15](15-avaliacao-componentes.md#escolha-max-f10s)). No F10S o rastreio já é de −167 dBm e não há para onde subir: com `has_leap` falso a máquina nunca pede um modo de energia, e o estado de rastreio aparece como potência plena.
+- **Assistência:** a SPG 5.30 pede o LEAP desligado enquanto os dados do AssistNow Live Orbits vão para a flash do módulo. O F10S é ROM e não tem Live Orbits: sobram o AssistNow Offline e o Autonomous, só de L1.
+- **Sinais do F10:** todo `CFG-SIGNAL` reinicia o subsistema GNSS, e a seção 4.9.20 pede esperar o reconhecimento e mais 0,5 s. O driver manda as nove chaves de L1, L5 e NavIC num `UBX-CFG-VALSET` só, para custar um reinicio em vez de nove.
+- **Vigia:** o legacy reinicia a UART quando passa 3 s sem hora nem satélites (`legacy/source/sensors/GPSMGMT.cpp:143-176`), e avisa na tela. Aqui, 10 s sem `UBX-NAV-PVT` com o receptor ligado mandam a configuração de novo, e 30 s puxam o RESET_N (ou mandam `UBX-CFG-RST`, sem o pino), com notificação: a configuração custa cerca de 0,5 s (mais 0,5 s do reinicio dos sinais, no F10), então não vale repetir a cada 3 s. Implementado em `gnss_power.c` (`GNSS_POWER_SILENCE_MS` e `GNSS_POWER_RESET_MS`), com `test_gnss_power`.
+- **Implementado** em 2026-09-19, sem receptor para testar: a máquina inteira em `src/svc/gnss/gnss_power.c` (pura, com `test_gnss_power`, 21 casos, dos quais 5 são do receptor sem LEAP) e as ações no driver próprio ([05](05-arquitetura-zephyr.md#receptor-gnss)). Falta a assistência: o AssistNow ainda não entrou.
 - **Ajuda do celular:** o legacy manda a posição do LNS ao GPS depois de 5 posições seguidas (`legacy/source/model/Locator.cpp:217`); no u-blox é o `UBX-MGA-INI-POS_LLH`.
 
 ### Sensor externo
@@ -360,7 +382,7 @@ sequenceDiagram
     E->>E: causa do reset, limites do nPM1300, MAX17262, AEM10900 por I2C
     E->>S: ZMS e FatFs
     S->>M: tela inicial e notificação de falha anterior
-    E->>G: BUCK1, configuração UBX, LEAP
+    E->>G: BUCK1, configuração UBX, sinais L1 e L5
     E->>R: BLE e ANT, religação dos sensores salvos
     E->>M: modo CRS e páginas
 ```
@@ -396,9 +418,9 @@ sequenceDiagram
 
 | Estado | MCU | 3V0 (BUCK2) | 1V8 (BUCK1) | LDSW1 | GNSS | Rádio | Tela | Consumo |
 |---|---|---|---|---|---|---|---|---|
-| Desligado | sem alimentação | desligado | desligado | desligado | backup | desligado | desligada | cerca de 40 µA ([14](14-hardware-placa-nova.md#estados-de-energia)) |
+| Desligado | sem alimentação | desligado | desligado | desligado | backup | desligado | desligada | cerca de 34 µA ([14](14-hardware-placa-nova.md#estados-de-energia)) |
 | Carregando desligado | System OFF | ligado | desligado | desligado | backup | desligado | desligada | do USB |
-| CRS ou PRC | ativo entre eventos | ligado | ligado | em lotes | LEAP | ligações e canais abertos | 1 quadro/s | cerca de 21 mW ([15](15-avaliacao-componentes.md#efeito-no-aparelho)) |
+| CRS ou PRC | ativo entre eventos | ligado | ligado | em lotes | rastreio (F10S: potência plena; M10N: LEAP) | ligações e canais abertos | 1 quadro/s | cerca de 58 mW com o F10S, 21 mW com o M10N em LEAP ([15](15-avaliacao-componentes.md#efeito-no-aparelho)) |
 | FEC ou Zwift | ativo entre eventos | ligado | desligado | em lotes | backup | canal FE-C e sensores | 1 quadro/s | a medir |
 | MSC | ativo | ligado | desligado | ligado | backup | desligado | parada | do USB |
 

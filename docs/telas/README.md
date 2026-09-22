@@ -1,6 +1,6 @@
-# As 30 telas da interface
+# As 35 telas da interface
 
-Cada tela da interface da placa nova, nos dois temas: 8 cores, para o JDI LPM027M128C, e preto e branco, para a Sharp LS027B7DH01A da lista de compras. As imagens saem do código de verdade (`zephyr_app/src/ui`, LVGL 9.5), desenhado no PC pelo renderizador de host e reduzido às cores que o painel mostra; os números são dados de exemplo (`zephyr_app/tests/ui/ui_samples.c`). O projeto da interface, as regras e as diferenças para o legacy estão em [18-interface-telas.md](../18-interface-telas.md).
+As 35 telas da interface da placa nova, nos dois temas — 39 quadros, porque algumas telas têm mais de um estado (o CRS com um ou dois segmentos, a volta com o cronômetro parado, a subida em curso e a próxima, a queda e o alarme): 8 cores, para o JDI LPM027M128C, e preto e branco, para a Sharp LS027B7DH01A da lista de compras. As imagens saem do código de verdade (`zephyr_app/src/ui`, LVGL 9.5), desenhado no PC pelo renderizador de host e reduzido às cores que o painel mostra; os números são dados de exemplo (`zephyr_app/tests/ui/ui_samples.c`). O projeto da interface, as regras e as diferenças para o legacy estão em [18-interface-telas.md](../18-interface-telas.md).
 
 > [!IMPORTANT]
 > Desenhadas e conferidas no PC (cores, textos dentro das caixas, navegação dos botões). Ainda não aparecem no firmware, porque falta o driver da tela: **nada foi visto em tela de verdade, não testado na placa.**
@@ -23,6 +23,12 @@ Para gerar de novo, depois de mexer na interface: `python tools/ui/render_screen
 | 08 | [CRS, 2 segmentos chegando](#08-crs-2-segmentos-chegando) | os dois perto |
 | 09 | [CRS, página 2](#09-crs-página-2) | direita na página 1 |
 | 10 | [CRS, página 3](#10-crs-página-3) | direita na página 2 |
+| 30 | [Perfil do percurso](#30-perfil-do-percurso) | no PRC, toque longo na direita |
+| 31 | [Voltas e totais](#31-voltas-e-totais) | direita na página 3 do CRS |
+| 33 | [Subida em curso](#33-subida-em-curso) | no PRC, ao pé de uma subida do percurso |
+| 35 | [Radar traseiro](#35-radar-traseiro) | com um radar pareado, em qualquer página |
+| 36 | [Queda e alarme](#36-queda-e-alarme) | contagem regressiva de queda ou alarme tocando |
+| 28 | [Atualização](#28-atualização) | um aplicativo manda firmware novo por Bluetooth |
 | 11 | [Notificação](#11-notificação) | um evento (segmento, sensor, erro) |
 | 12 | [GNSS procurando](#12-gnss-procurando) | CRS ou PRC sem posição recente |
 | 13 | [PRC](#13-prc) | modo PRC, com percurso |
@@ -341,6 +347,60 @@ Em todas as listas: esquerda e direita mudam o item (dão a volta nas pontas, co
 - **Quando:** desligamento pelo menu, pelo centro longo, pela bateria no fim ou depois de 15 min parado.
 - **Mostra:** "Salvando atividade", a barra de progresso e "Desligando". Nova: o legacy desligava sem aviso.
 
+### 30 Perfil do percurso
+
+| 8 cores | Preto e branco |
+|---|---|
+| ![Perfil em 8 cores](30_perfil_cor.png) | ![Perfil em preto e branco](30_perfil_mono.png) |
+
+- **Quando:** no modo PRC, com toque longo na tecla direita; o mesmo toque volta para o mapa.
+- **Mostra:** o relevo do percurso inteiro, o trecho já pedalado em verde (no tema de uma cor, só o contorno), a posição do ciclista, a subida que falta, o que resta em quilômetros e as altitudes mínima e máxima. Nova: o legacy não tinha perfil.
+
+### 31 Voltas e totais
+
+| 8 cores | Preto e branco |
+|---|---|
+| ![Voltas em 8 cores](31_volta_cor.png) | ![Voltas em preto e branco](31_volta_mono.png) |
+| ![Cronômetro parado em 8 cores](32_volta_pausada_cor.png) | ![Cronômetro parado em preto e branco](32_volta_pausada_mono.png) |
+
+- **Quando:** quarta página do anel do CRS, com a tecla direita na página 3. O toque longo na tecla **esquerda**, de qualquer página de dados, fecha a volta e começa outra.
+- **Mostra:** a volta em curso (número, distância e tempo em movimento), o tempo em movimento do passeio inteiro, a média e a máxima, a descida e a energia gasta. Quando o cronômetro para sozinho porque a bicicleta parou, aparece **PAUSADO** no canto.
+- **Nova:** o legacy não tem cronômetro, nem pausa, nem volta, nem descida — ele grava do momento em que liga até desligar ([`model/activity.h`](../../zephyr_app/include/model/activity.h)).
+
+### 33 Subida em curso
+
+| 8 cores | Preto e branco |
+|---|---|
+| ![Subida em 8 cores](33_subida_cor.png) | ![Subida em preto e branco](33_subida_mono.png) |
+| ![Próxima subida em 8 cores](34_proxima_subida_cor.png) | ![Próxima subida em preto e branco](34_proxima_subida_mono.png) |
+
+- **Quando:** no modo PRC, **sozinha**, assim que o ciclista chega ao pé de uma subida do percurso; o topo devolve o mapa. O toque longo na tecla direita sai antes da hora. É o ponto do recurso: o ciclista não pede a tela, ela aparece.
+- **Mostra:** qual subida é e quantas o percurso tem, a categoria pela escala do ciclismo (C4 a C1, FC), o perfil **da subida** com o trecho já pedalado em verde e o resto colorido pela inclinação (azul até 6 %, amarelo até 10 %, vermelho acima), quanto falta de distância e de altimetria, a média do que resta e a inclinação dos próximos 200 m. Entre duas subidas, mostra a distância até o pé da próxima e o tamanho dela.
+- **Nova:** o legacy mostra o percurso inteiro e a subida total, e nada sobre a subida em que se está ([`model/climb.h`](../../zephyr_app/include/model/climb.h), [06](../06-algoritmos.md#subidas-do-percurso-climbpro)).
+
+### 35 Radar traseiro
+
+| 8 cores | Preto e branco |
+|---|---|
+| ![Radar em 8 cores](35_radar_cor.png) | ![Radar em preto e branco](35_radar_mono.png) |
+
+- **Quando:** com um radar traseiro pareado (Garmin Varia e semelhantes). Não é uma página: é uma **faixa** na borda direita das páginas que têm desenho (o mapa do PRC, o perfil e a subida) mais um **ponto** na barra de estado, que aparece em todas as páginas.
+- **Mostra:** a faixa é a pista vista de cima — embaixo a bicicleta, em cima o alcance do radar — com uma marca por veículo na distância dele, azul para quem só se aproxima, amarelo para quem vem rápido e vermelho para quem está perto ou muito rápido. Uma marca que parou de ser reportada fica **vazada** em vez de sumir, porque um radar perde quadro e marca piscando é pior que marca parada. O ponto da barra de estado tem a cor do pior veículo atrás.
+- **Por que só nas páginas com desenho:** nas páginas de dados as unidades ficam na borda direita, e a faixa cobriria o texto.
+- **Nova:** o legacy é anterior ao Varia e não tem radar. O formato BLE do Varia é de engenharia reversa e **não foi conferido em aparelho** ([`model/radar_wire.h`](../../zephyr_app/include/model/radar_wire.h)); pelo ANT+, o perfil não pode entrar neste repositório ([`rf/radar_ant.h`](../../zephyr_app/include/rf/radar_ant.h)).
+
+### 36 Queda e alarme
+
+| 8 cores | Preto e branco |
+|---|---|
+| ![Queda em 8 cores](36_queda_cor.png) | ![Queda em preto e branco](36_queda_mono.png) |
+| ![Alarme em 8 cores](37_alarme_cor.png) | ![Alarme em preto e branco](37_alarme_mono.png) |
+
+- **Quando:** toma a tela sozinha, como a atualização, porque enquanto está no ar é a única coisa que importa. Ou porque o aparelho achou que houve queda (pico de aceleração, bicicleta parada e aparelho quieto por 8 s), ou porque o alarme estava armado e a bicicleta se moveu.
+- **Mostra:** o triângulo de aviso, o que aconteceu e, na queda, os segundos que faltam para o aparelho dar o alerta por Bluetooth. **Qualquer tecla cancela** e desarma.
+- **Como armar o alarme:** menu, Ajustes, "Armar alarme" — o item vira "Desarmar alarme" em vermelho enquanto está armado.
+- **Nova, e não é equipamento de segurança:** o legacy não tem nada disso, e isto erra nos dois sentidos — perde quedas e dispara à toa. Ninguém deve pedalar diferente porque está ligado ([`model/incident.h`](../../zephyr_app/include/model/incident.h), [06](../06-algoritmos.md#alarme-da-bicicleta-e-detecção-de-queda)).
+
 ### 28 Atualização
 
 | 8 cores | Preto e branco |
@@ -356,6 +416,7 @@ Em todas as listas: esquerda e direita mudam o item (dão a volta nas pontas, co
 | Onde | Esquerda | Centro | Direita | Centro longo |
 |---|---|---|---|---|
 | CRS | página anterior | menu | próxima página | desligar |
+| Qualquer página de dados, esquerda longa | marca uma volta | — | — | — |
 | PRC | afasta o zoom | menu | aproxima o zoom | desligar |
 | FEC, DBG, GNSS procurando | — | menu | — | desligar |
 | Listas dos menus | item anterior | executa | próximo item | volta à página |

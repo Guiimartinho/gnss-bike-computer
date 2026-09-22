@@ -58,6 +58,7 @@ typedef struct {
     lv_obj_t *time;
     lv_obj_t *gps;
     lv_obj_t *ant;
+    lv_obj_t *radar;
     lv_obj_t *ble;
     lv_obj_t *pct;
     lv_obj_t *icons;
@@ -80,6 +81,22 @@ static void bar_icons_draw(lv_event_t *e)
 
     if (st->recording) {
         ui_draw_disc(layer, ox + 153, oy + 10, 4, ui_col_dark(UI_C_BAD));
+    }
+    /*
+     * The rear radar, on every page: a dot coloured by the worst vehicle
+     * behind. The strip with each one at its distance only goes on the
+     * pages whose right edge is a drawing and not a column of units
+     * (ui_radar_strip_create).
+     */
+    if (ui_ctx.m.radar.linked && (ui_ctx.m.radar.n > 0U)) {
+        ui_role_t role = UI_C_RADIO;
+
+        if (ui_ctx.m.radar.worst == (uint8_t)RADAR_LEVEL_DANGER) {
+            role = UI_C_BAD;
+        } else if (ui_ctx.m.radar.worst == (uint8_t)RADAR_LEVEL_FAST) {
+            role = UI_C_WARN;
+        }
+        ui_draw_disc(layer, ox + 210, oy + 10, 4, ui_col_dark(role));
     }
     if (st->charge == UI_CHARGE_SOLAR) {
         lv_color_t sun = ui_col_dark(UI_C_WARN);
@@ -115,6 +132,61 @@ static void bar_icons_draw(lv_event_t *e)
     }
 }
 
+/**
+ * The strip of the rear radar, down the right edge of a data page.
+ *
+ * Garmin puts it there and a rider reads it without thinking: the bottom
+ * is the bike, the top is as far as the radar reaches, and each vehicle is
+ * a mark at its distance, coloured by how much of a threat it is. A mark
+ * that stopped being reported is drawn hollow instead of vanishing, which
+ * is what `model/radar.h` calls fading.
+ */
+static void radar_strip_draw(lv_event_t *e)
+{
+    lv_layer_t *layer = lv_event_get_layer(e);
+    const lv_obj_t *obj = lv_event_get_target_obj(e);
+    const ui_radar_t *r = &ui_ctx.m.radar;
+    lv_area_t a;
+
+    if (!r->linked) {
+        return;
+    }
+
+    lv_obj_get_coords(obj, &a);
+
+    int32_t w = lv_area_get_width(&a);
+    int32_t h = lv_area_get_height(&a);
+
+    /* the lane: a thin line the whole height, with the bike at the bottom */
+    ui_draw_fill(layer, a.x1 + (w / 2) - 1, a.y1, 2, h, ui_col(UI_C_NAV));
+    ui_draw_disc(layer, a.x1 + (w / 2), a.y2 - 3, 3, ui_col(UI_C_FG));
+
+    for (uint8_t i = 0U; (i < r->n) && (i < 8U); i++) {
+        uint32_t range = r->range_m[i];
+
+        if (range > RADAR_RANGE_MAX_M) {
+            range = RADAR_RANGE_MAX_M;
+        }
+
+        /* far away is at the top, right behind is at the bottom */
+        int32_t y = a.y2 - 8 - (int32_t)((range * (uint32_t)(h - 14)) / RADAR_RANGE_MAX_M);
+        ui_role_t role = UI_C_NAV;
+
+        if (r->level[i] == (uint8_t)RADAR_LEVEL_DANGER) {
+            role = UI_C_BAD;
+        } else if (r->level[i] == (uint8_t)RADAR_LEVEL_FAST) {
+            role = UI_C_WARN;
+        }
+
+        if (r->live[i]) {
+            ui_draw_disc(layer, a.x1 + (w / 2), y, 5, ui_col_fill(role));
+        } else {
+            /* fading: the outline only, so it does not blink out */
+            ui_draw_circle(layer, a.x1 + (w / 2), y, 5, ui_col_fill(role), 2);
+        }
+    }
+}
+
 void ui_statusbar_create(lv_obj_t *scr)
 {
     lv_obj_t *b = ui_box(scr, 0, 0, UI_WIDTH, UI_BAR_H);
@@ -133,7 +205,20 @@ void ui_statusbar_create(lv_obj_t *scr)
     bar.icons = ui_plot(b, 148, 0, 60, UI_BAR_H, bar_icons_draw, NULL);
     bar.pct = ui_label(b, UI_FONT_SMALL_B, ui_col_dark(UI_C_ON_DARK), "");
     lv_obj_align(bar.pct, LV_ALIGN_TOP_RIGHT, -2, 3);
+
     ui_statusbar_update();
+}
+
+void ui_radar_strip_create(lv_obj_t *parent, int32_t y, int32_t h)
+{
+    /*
+     * Only over a drawing: on the data pages the units sit at the right
+     * edge and a strip would cover them, so those pages get the dot in the
+     * status bar and nothing else. The caller gives the band the strip may
+     * use, because only it knows where its drawing is.
+     */
+    bar.radar = ui_plot(parent, UI_WIDTH - UI_RADAR_W, y, UI_RADAR_W, h, radar_strip_draw, NULL);
+    lv_obj_move_foreground(bar.radar);
 }
 
 void ui_statusbar_update(void)
@@ -143,6 +228,9 @@ void ui_statusbar_update(void)
 
     if (bar.time == NULL) {
         return;
+    }
+    if (bar.radar != NULL) {
+        lv_obj_invalidate(bar.radar);
     }
     lv_label_set_text(bar.time, ui_fmt_hm(buf, sizeof(buf), st->time_s));
 

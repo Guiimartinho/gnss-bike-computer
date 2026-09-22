@@ -13,6 +13,11 @@
  * (`legacy/source/sensors/GPSMGMT.cpp:195`). The u-blox has no standby pin:
  * the receiver goes down with UBX-RXM-PMREQ and the rail, and the power
  * modes come from CFG-PM-OPERATEMODE.
+ *
+ * The MAX-F10S of the new board has no CFG-PM group at all (u-blox F10 SPG
+ * 6.00 interface description UBX-23002975 R02): with has_leap false the
+ * machine keeps the same shape, never asks for a power mode, and the energy
+ * comes only from the standby between modes.
  */
 
 #ifndef SVC_GNSS_POWER_H
@@ -54,13 +59,22 @@ struct gnss_power {
     bool started;       /**< a mode already reached the machine */
     bool had_fix;       /**< there was a fix since the receiver woke up */
     bool full_power;    /**< the driver was asked for full power */
+    bool has_leap;      /**< the receiver has a low power tracking mode */
     uint8_t no_fix;     /**< epochs in a row without a fix, capped */
     uint32_t good_ms;   /**< time with a fix while at full power */
     uint32_t silence_ms;/**< time since the last epoch, while awake */
 };
 
 /** Start in backup: the receiver only wakes up when the mode asks for it */
-void gnss_power_init(struct gnss_power *p);
+/**
+ * Start the machine.
+ *
+ * @param has_leap true for a receiver with a low power tracking mode (the
+ * MAX-M10N and its LEAP). The MAX-F10S has no CFG-PM group at all: with
+ * false, the machine never asks for a power mode and shows tracking as full
+ * power, and what saves energy is the standby between modes.
+ */
+void gnss_power_init(struct gnss_power *p, bool has_leap);
 
 /**
  * The mode of the device changed. The first call always gives an action,

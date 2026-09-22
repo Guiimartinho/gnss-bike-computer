@@ -295,7 +295,47 @@ static void render_theme(ui_theme_t theme)
     expect_screen(UI_SCREEN_CRS3, "right on page 2");
     snap("10_crs3", theme);
     ui_key(UI_KEY_RIGHT, UI_PRESS_SHORT, tick_ms);
-    expect_screen(UI_SCREEN_CRS1, "right on page 3");
+    expect_screen(UI_SCREEN_LAP, "right on page 3 reaches the lap page");
+    snap("31_volta", theme);
+    ui_key(UI_KEY_RIGHT, UI_PRESS_SHORT, tick_ms);
+    expect_screen(UI_SCREEN_CRS1, "right on the lap page closes the ring");
+    ui_key(UI_KEY_LEFT, UI_PRESS_SHORT, tick_ms);
+    expect_screen(UI_SCREEN_LAP, "left on page 1 goes back to the lap page");
+    ui_key(UI_KEY_RIGHT, UI_PRESS_SHORT, tick_ms);
+    expect_screen(UI_SCREEN_CRS1, "and forward again");
+
+    /* the timer held: the lap page says so */
+    m.status.paused = true;
+    ui_go(UI_SCREEN_LAP);
+    ui_update(&m, tick_ms);
+    snap("32_volta_pausada", theme);
+    m.status.paused = false;
+    ui_go(UI_SCREEN_CRS1);
+    ui_update(&m, tick_ms);
+
+    /* the rear radar: three vehicles behind, the nearest one closing */
+    m.radar.linked = true;
+    m.radar.n = 3U;
+    m.radar.worst = 3U;             /* RADAR_LEVEL_DANGER */
+    m.radar.range_m[0] = 28U;
+    m.radar.level[0] = 3U;
+    m.radar.live[0] = true;
+    m.radar.range_m[1] = 75U;
+    m.radar.level[1] = 2U;          /* RADAR_LEVEL_FAST */
+    m.radar.live[1] = true;
+    m.radar.range_m[2] = 140U;
+    m.radar.level[2] = 1U;          /* RADAR_LEVEL_APPROACHING */
+    m.radar.live[2] = false;        /* the frame was dropped: hollow */
+    /* the strip goes over a drawing, so the PRC map is where it shows */
+    ui_set_mode(UI_MODE_PRC);
+    ui_go(UI_SCREEN_PRC);
+    ui_update(&m, tick_ms);
+    snap("35_radar", theme);
+    ui_set_mode(UI_MODE_CRS);
+    ui_go(UI_SCREEN_CRS1);
+    m.radar.linked = false;
+    m.radar.n = 0U;
+    ui_update(&m, tick_ms);
 
     /* notification over page 1 */
     ui_notify("Segmento", "Serra do Mar", "+12.4 s", true, 6000U, tick_ms);
@@ -450,8 +490,70 @@ static void render_theme(ui_theme_t theme)
     ui_set_dfu(UI_DFU_IDLE, 0U);
     expect_screen(UI_SCREEN_FEC, "pages back after the update");
 
-    /* long centre on a page asks to shut down */
+    /* the elevation profile of the route, reached from the PRC map */
+    ui_set_mode(UI_MODE_PRC);
+    ui_go(UI_SCREEN_PRC);
+    ui_update(&m, tick_ms);
+    ui_key(UI_KEY_RIGHT, UI_PRESS_LONG, tick_ms);
+    expect_screen(UI_SCREEN_PROFILE, "long right opens the profile");
+    snap("30_perfil", theme);
+    ui_key(UI_KEY_RIGHT, UI_PRESS_LONG, tick_ms);
+    expect_screen(UI_SCREEN_PRC, "long right goes back to the map");
+
+    /*
+     * The climb page comes up by itself at the foot of a climb, which is
+     * the whole point of it, and gives the map back over the top.
+     */
+    m.climb.on_climb = true;
+    ui_update(&m, tick_ms);
+    expect_screen(UI_SCREEN_CLIMB, "the climb brought its page up");
+    snap("33_subida", theme);
+    ui_key(UI_KEY_RIGHT, UI_PRESS_LONG, tick_ms);
+    expect_screen(UI_SCREEN_PRC, "long right leaves the climb page");
+
+    /* between two climbs it says which one is next */
+    m.climb.on_climb = false;
+    m.climb.to_next_m = 4200.0f;
+    m.climb.next_cat = 2U;
+    m.climb.next_len_m = 5100.0f;
+    m.climb.next_gain_m = 306.0f;
+    m.climb.ahead_grade_pct = -2.1f;
+    ui_go(UI_SCREEN_CLIMB);
+    ui_update(&m, tick_ms);
+    snap("34_proxima_subida", theme);
+    m.climb.on_climb = true;
+    m.climb.ahead_grade_pct = 11.2f;
+    ui_go(UI_SCREEN_PRC);
+    ui_update(&m, tick_ms);
+    expect_screen(UI_SCREEN_CLIMB, "and comes back on the next climb");
+    ui_key(UI_KEY_RIGHT, UI_PRESS_LONG, tick_ms);
+    m.climb.on_climb = false;
+    ui_update(&m, tick_ms);
+
+    /* a long press on the left marks a lap from any data page */
     ui_set_mode(UI_MODE_CRS);
+    ui_go(UI_SCREEN_CRS2);
+    ui_key(UI_KEY_LEFT, UI_PRESS_LONG, tick_ms);
+    expect_action("|15:0|", "long left marks a lap");
+    expect_screen(UI_SCREEN_CRS2, "and stays on the page");
+
+    /* a crash counting down takes the screen, and any key answers it */
+    m.inc.state = 5U;               /* UI_INC_COUNTING */
+    m.inc.countdown_s = 23U;
+    ui_set_mode(UI_MODE_CRS);
+    ui_go(UI_SCREEN_CRS1);
+    ui_update(&m, tick_ms);
+    expect_screen(UI_SCREEN_INCIDENT, "the countdown took the screen");
+    snap("36_queda", theme);
+    m.inc.state = 3U;               /* UI_INC_RINGING: the alarm */
+    m.inc.countdown_s = 0U;
+    ui_update(&m, tick_ms);
+    snap("37_alarme", theme);
+    m.inc.state = 0U;
+    ui_update(&m, tick_ms);
+    expect_screen(UI_SCREEN_CRS1, "and the pages come back");
+
+    /* long centre on a page asks to shut down */
     ui_go(UI_SCREEN_CRS1);
     ui_key(UI_KEY_CENTER, UI_PRESS_LONG, tick_ms);
     expect_action("|1:0|", "long centre shuts down");

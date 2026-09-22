@@ -90,10 +90,27 @@ gnss_add_test(test_segment
     SOURCES model/segment.c model/liste_points.c model/vecteur.c model/segment_file.c
     SUPPORT host_kernel.c host_fs.c)
 gnss_add_test(test_cmd_parser SOURCES model/cmd_parser.c)
+gnss_add_test(test_file_policy SOURCES model/file_policy.c model/segment_file.c)
+gnss_add_test(test_e2e_route
+    SOURCES model/parcours.c model/vecteur.c model/file_policy.c model/segment_file.c
+            model/map_project.c model/route_profile.c model/route_file.c model/gpx_scan.c
+    SUPPORT host_kernel.c host_fs.c)
 gnss_add_test(test_dfu_state SOURCES model/dfu_state.c)
 gnss_add_test(test_map_project SOURCES model/map_project.c model/vecteur.c)
+gnss_add_test(test_route_profile SOURCES model/route_profile.c model/map_project.c model/vecteur.c)
+gnss_add_test(test_route_file SOURCES model/route_file.c)
+gnss_add_test(test_gpx_scan SOURCES model/gpx_scan.c)
+gnss_add_test(test_fit_encode SOURCES model/fit_encode.c)
+gnss_add_test(test_activity SOURCES model/activity.c)
+gnss_add_test(test_climb SOURCES model/climb.c)
+gnss_add_test(test_radar SOURCES model/radar.c model/radar_wire.c)
+gnss_add_test(test_incident SOURCES model/incident.c)
+gnss_add_test(test_loc_arbiter SOURCES model/loc_arbiter.c)
+gnss_add_test(test_csc_calc SOURCES model/csc_calc.c)
+gnss_add_test(test_ftms_parse SOURCES model/ftms_parse.c)
+gnss_add_test(test_e2e_activity SOURCES model/activity.c model/fit_encode.c)
 gnss_add_test(test_parcours
-    SOURCES model/parcours.c model/vecteur.c
+    SOURCES model/parcours.c model/vecteur.c model/route_file.c model/gpx_scan.c
     SUPPORT host_kernel.c host_fs.c)
 target_compile_definitions(test_parcours PRIVATE
     PARCOURS_DB_DIR="${APP_DIR}/../tools/TDD/DB")
@@ -127,6 +144,9 @@ if(EXISTS ${ZEPHYR_SMF})
         SOURCES svc/power/sys_fsm.c model/power_scheduler.c
         SUPPORT host_kernel.c
         ZEPHYR ${ZEPHYR_SMF})
+    gnss_add_test(test_mode_fsm
+        SOURCES model/mode_fsm.c
+        ZEPHYR ${ZEPHYR_SMF})
 else()
-    message(WARNING "Zephyr SMF not found in ${ZEPHYR_BASE}: test_sys_fsm skipped (pass -DZEPHYR_BASE=...)")
+    message(WARNING "Zephyr SMF not found in ${ZEPHYR_BASE}: test_sys_fsm and test_mode_fsm skipped (pass -DZEPHYR_BASE=...)")
 endif()

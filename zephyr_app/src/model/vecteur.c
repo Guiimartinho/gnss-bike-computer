@@ -50,23 +50,27 @@ void point2d_init(point2d_t *pt, float lat, float lon)
     pt->lon = lon;
 }
 
+bool latlon_is_valid(float lat, float lon)
+{
+    /* `legacy/source/routes/Points.cpp:37-42`, condition for condition */
+    if ((lat == 0.0f) || (fabsf(lat) > 89.0f)) {
+        return false;
+    }
+
+    if ((lon == 0.0f) || (fabsf(lon) > 189.0f)) {
+        return false;
+    }
+
+    return true;
+}
+
 bool point_is_valid(const point_t *pt)
 {
     if (pt == NULL) {
         return false;
     }
 
-    /* Check latitude range */
-    if ((pt->lat == 0.0f) || (fabsf(pt->lat) > 89.0f)) {
-        return false;
-    }
-
-    /* Check longitude range */
-    if ((pt->lon == 0.0f) || (fabsf(pt->lon) > 189.0f)) {
-        return false;
-    }
-
-    return true;
+    return latlon_is_valid(pt->lat, pt->lon);
 }
 
 float distance_between(float lat1, float lon1, float lat2, float lon2)

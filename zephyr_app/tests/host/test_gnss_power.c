@@ -9,6 +9,10 @@
  * with a fix. The legacy did the same with the standby pin of the MT3333
  * (`legacy/source/sensors/GPSMGMT.cpp:195`), woken in CRS and PRC
  * (`legacy/source/model/BoucleCRS.cpp:38`).
+ *
+ * The receiver of the new board, the MAX-F10S, has no low power tracking
+ * mode: the last tests here cover the machine with has_leap false, where the
+ * shape is the same but no power mode is ever asked for.
  */
 
 #include "unity.h"
@@ -22,7 +26,7 @@ static struct gnss_power p;
 
 void setUp(void)
 {
-    gnss_power_init(&p);
+    gnss_power_init(&p, true);
 }
 
 void tearDown(void) {}
@@ -46,7 +50,7 @@ static void test_first_mode_always_acts_because_the_receiver_is_on(void)
     TEST_ASSERT_EQUAL_INT(GNSS_POWER_ACTION_STANDBY, gnss_power_mode_change(&p, false));
     TEST_ASSERT_EQUAL_UINT8(APP_GNSS_MODE_BACKUP, gnss_power_mode(&p));
 
-    gnss_power_init(&p);
+    gnss_power_init(&p, true);
     TEST_ASSERT_EQUAL_INT(GNSS_POWER_ACTION_WAKE, gnss_power_mode_change(&p, true));
     TEST_ASSERT_EQUAL_UINT8(APP_GNSS_MODE_ACQ, gnss_power_mode(&p));
 }
@@ -213,9 +217,75 @@ static void test_a_receiver_in_backup_is_not_expected_to_talk(void)
     TEST_ASSERT_EQUAL_INT(GNSS_POWER_ACTION_NONE, gnss_power_tick(&p, GNSS_POWER_RESET_MS * 2U));
 }
 
+/*
+ * A receiver without LEAP: the MAX-F10S has no CFG-PM group at all (u-blox
+ * F10 SPG 6.00 interface description UBX-23002975 R02, 4.8), so the machine
+ * must never ask for a power mode. What saves energy there is the standby
+ * between modes, which stays the same.
+ */
+
+static void test_without_leap_tracking_already_shows_full_power(void)
+{
+    gnss_power_init(&p, false);
+
+    TEST_ASSERT_EQUAL_INT(GNSS_POWER_ACTION_WAKE, gnss_power_mode_change(&p, true));
+    TEST_ASSERT_EQUAL_INT(GNSS_POWER_ACTION_NONE, gnss_power_epoch(&p, true, EPOCH_MS));
+    TEST_ASSERT_EQUAL_UINT8(APP_GNSS_MODE_FULL, gnss_power_mode(&p));
+}
+
+static void test_without_leap_a_long_gap_asks_for_no_mode(void)
+{
+    gnss_power_init(&p, false);
+    (void)gnss_power_mode_change(&p, true);
+    (void)gnss_power_epoch(&p, true, EPOCH_MS);
+
+    for (unsigned int i = 0U; i < (GNSS_POWER_WEAK_EPOCHS + 5U); i++) {
+        TEST_ASSERT_EQUAL_INT(GNSS_POWER_ACTION_NONE, gnss_power_epoch(&p, false, EPOCH_MS));
+    }
+    TEST_ASSERT_EQUAL_UINT8(APP_GNSS_MODE_ACQ, gnss_power_mode(&p));
+}
+
+static void test_without_leap_a_minute_of_fix_asks_for_no_mode(void)
+{
+    gnss_power_init(&p, false);
+    (void)gnss_power_mode_change(&p, true);
+
+    /* the machine that has LEAP would come back with ACTION_LEAP here */
+    for (unsigned int ms = 0U; ms <= (GNSS_POWER_GOOD_MS + (2U * EPOCH_MS)); ms += EPOCH_MS) {
+        TEST_ASSERT_EQUAL_INT(GNSS_POWER_ACTION_NONE, gnss_power_epoch(&p, true, EPOCH_MS));
+    }
+    TEST_ASSERT_EQUAL_UINT8(APP_GNSS_MODE_FULL, gnss_power_mode(&p));
+}
+
+static void test_without_leap_the_receiver_still_goes_down_and_comes_back(void)
+{
+    gnss_power_init(&p, false);
+    (void)gnss_power_mode_change(&p, true);
+    (void)gnss_power_epoch(&p, true, EPOCH_MS);
+
+    TEST_ASSERT_EQUAL_INT(GNSS_POWER_ACTION_STANDBY, gnss_power_mode_change(&p, false));
+    TEST_ASSERT_EQUAL_UINT8(APP_GNSS_MODE_BACKUP, gnss_power_mode(&p));
+
+    TEST_ASSERT_EQUAL_INT(GNSS_POWER_ACTION_WAKE, gnss_power_mode_change(&p, true));
+    TEST_ASSERT_EQUAL_UINT8(APP_GNSS_MODE_ACQ, gnss_power_mode(&p));
+    /* and the wake-up does not reset it into a mode it does not have */
+    TEST_ASSERT_EQUAL_INT(GNSS_POWER_ACTION_NONE, gnss_power_epoch(&p, true, EPOCH_MS));
+    TEST_ASSERT_EQUAL_UINT8(APP_GNSS_MODE_FULL, gnss_power_mode(&p));
+}
+
+static void test_without_leap_silence_still_asks_for_the_configuration(void)
+{
+    gnss_power_init(&p, false);
+    (void)gnss_power_mode_change(&p, true);
+    (void)gnss_power_epoch(&p, true, EPOCH_MS);
+
+    TEST_ASSERT_EQUAL_INT(GNSS_POWER_ACTION_CONFIGURE,
+                          gnss_power_tick(&p, GNSS_POWER_SILENCE_MS));
+}
+
 static void test_a_null_machine_does_nothing(void)
 {
-    gnss_power_init(NULL);
+    gnss_power_init(NULL, true);
     TEST_ASSERT_EQUAL_INT(GNSS_POWER_ACTION_NONE, gnss_power_mode_change(NULL, true));
     TEST_ASSERT_EQUAL_INT(GNSS_POWER_ACTION_NONE, gnss_power_epoch(NULL, true, EPOCH_MS));
     TEST_ASSERT_EQUAL_INT(GNSS_POWER_ACTION_NONE, gnss_power_tick(NULL, 1000U));
@@ -240,6 +310,11 @@ int main(void)
     RUN_TEST(test_a_receiver_that_never_comes_back_gets_a_reset);
     RUN_TEST(test_an_epoch_clears_the_silence);
     RUN_TEST(test_a_receiver_in_backup_is_not_expected_to_talk);
+    RUN_TEST(test_without_leap_tracking_already_shows_full_power);
+    RUN_TEST(test_without_leap_a_long_gap_asks_for_no_mode);
+    RUN_TEST(test_without_leap_a_minute_of_fix_asks_for_no_mode);
+    RUN_TEST(test_without_leap_the_receiver_still_goes_down_and_comes_back);
+    RUN_TEST(test_without_leap_silence_still_asks_for_the_configuration);
     RUN_TEST(test_a_null_machine_does_nothing);
 
     return UNITY_END();

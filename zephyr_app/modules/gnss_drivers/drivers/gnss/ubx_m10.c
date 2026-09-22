@@ -114,6 +114,47 @@ size_t ubx_m10_valset(uint8_t *buf, size_t cap, uint32_t key, uint64_t value, ui
                          UBX_M10_VALSET_HDR + 4U + size);
 }
 
+size_t ubx_m10_valset_many(uint8_t *buf, size_t cap, const struct ubx_m10_kv *items, size_t count,
+                           uint8_t layers)
+{
+    uint8_t payload[UBX_M10_VALSET_BATCH];
+    size_t at = UBX_M10_VALSET_HDR;
+
+    if ((items == NULL) || (count == 0U) || (count > UBX_M10_VALSET_KEYS_MAX) || (layers == 0U) ||
+        ((layers & ~(UBX_M10_LAYER_RAM | UBX_M10_LAYER_BBR | UBX_M10_LAYER_FLASH)) != 0U)) {
+        return 0U;
+    }
+
+    payload[0] = 0x00U; /* version 0: no transaction */
+    payload[1] = layers;
+    payload[2] = 0x00U;
+    payload[3] = 0x00U;
+
+    for (size_t i = 0U; i < count; i++) {
+        uint32_t key = items[i].key;
+        size_t size = ubx_m10_key_size(key);
+
+        /* one unknown or malformed key makes the receiver NAK the whole
+         * message and apply nothing (3.10.5), so refuse to build it */
+        if (size == 0U) {
+            return 0U;
+        }
+
+        payload[at] = (uint8_t)(key & 0xFFU);
+        payload[at + 1U] = (uint8_t)((key >> 8) & 0xFFU);
+        payload[at + 2U] = (uint8_t)((key >> 16) & 0xFFU);
+        payload[at + 3U] = (uint8_t)((key >> 24) & 0xFFU);
+        at += 4U;
+
+        for (size_t b = 0U; b < size; b++) {
+            payload[at + b] = (uint8_t)((items[i].value >> (8U * b)) & 0xFFU);
+        }
+        at += size;
+    }
+
+    return ubx_m10_frame(buf, cap, UBX_M10_CLASS_CFG, UBX_M10_CFG_VALSET, payload, at);
+}
+
 size_t ubx_m10_valget(uint8_t *buf, size_t cap, uint32_t key)
 {
     uint8_t payload[UBX_M10_VALSET_HDR + 4U];

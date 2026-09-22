@@ -9,9 +9,9 @@
  * copy of what the screens show on chan_model_state, once per epoch and at
  * least once a second.
  *
- * The mode machine (CRS, PRC, FEC, Zwift, DBG) follows
- * boucle__change_mode() (legacy/source/model/Boucle.cpp:101-143): leaving a
- * mode invalidates it, and each mode starts on demand.
+ * The mode machine (CRS, PRC, FEC, Zwift, DBG) lives apart, in
+ * `model/mode_fsm.c`, so that its rules run in the host tests; this file
+ * only lends it the four operations it needs.
  */
 
 #include <math.h>
@@ -24,7 +24,14 @@
 
 #include "app/app_channels.h"
 #include "app/app_svc.h"
+#include "model/activity.h"
 #include "model/attitude.h"
+#include "model/climb.h"
+#include "model/incident.h"
+#include "model/loc_arbiter.h"
+#include "model/radar.h"
+#include "model/vecteur.h"
+#include "model/fit_encode.h"
 #include "model/crash_recovery.h"
 #include "model/parcours.h"
 #include "model/segment.h"
@@ -60,12 +67,31 @@ struct model_msg {
         struct app_system_cmd cmd;
         struct app_system_state sys;
         struct app_phone_nav nav;
+        struct app_radar radar;
     } u;
 };
 
 K_MSGQ_DEFINE(model_inbox, sizeof(struct model_msg), MODEL_INBOX_LEN, 4);
 
 static struct model_ctx ctx;
+
+/*
+ * Totals, auto-pause and laps of the ride (`model/activity.h`). The model
+ * owns it, as it owns everything else the ride is made of; the storage and
+ * the interface read it from `chan_activity`.
+ */
+static struct activity act;
+static uint32_t act_last_ms;
+
+static void update_activity(const attitude_t *att, const loc_data_t *loc);
+static void publish_activity(enum activity_event ev, bool finished);
+
+/* The thinned copy of the route the climb scan walks (model_internal.h) */
+static struct {
+    float dist_m[MODEL_CLIMB_SCAN_MAX];
+    float alt_m[MODEL_CLIMB_SCAN_MAX];
+    uint16_t n;
+} climb_scan;
 
 /** The snapshot is big (UI maps): it lives here, not on the stack */
 static ui_model_t snapshot;
@@ -88,6 +114,7 @@ ZBUS_CHAN_ADD_OBS(chan_baro, model_lis, 3);
 ZBUS_CHAN_ADD_OBS(chan_imu, model_lis, 3);
 ZBUS_CHAN_ADD_OBS(chan_mag, model_lis, 3);
 ZBUS_CHAN_ADD_OBS(chan_ext_sensor, model_lis, 3);
+ZBUS_CHAN_ADD_OBS(chan_radar, model_lis, 3);
 ZBUS_CHAN_ADD_OBS(chan_link_status, model_lis, 3);
 ZBUS_CHAN_ADD_OBS(chan_pair_list, model_lis, 3);
 ZBUS_CHAN_ADD_OBS(chan_phone_nav, model_lis, 3);
@@ -97,15 +124,8 @@ ZBUS_CHAN_ADD_OBS(chan_system_state, model_lis, 3);
 ZBUS_CHAN_ADD_OBS(chan_storage_info, model_lis, 3);
 
 /* ==========================================================================
- * Mode machine (legacy Boucle modes, plus the DBG screen on the CRS loop)
+ * Mode machine: the rules in model/mode_fsm.c, the effects here
  * ========================================================================== */
-
-static const struct smf_state mode_states[APP_MODE_ID_DBG + 1];
-
-static bool rides_outdoors(uint8_t mode)
-{
-    return (mode == APP_MODE_ID_CRS) || (mode == APP_MODE_ID_PRC) || (mode == APP_MODE_ID_DBG);
-}
 
 static void publish_mode(void)
 {
@@ -115,69 +135,55 @@ static void publish_mode(void)
     (void)app_publish(&chan_mode, &m);
 }
 
-static void mode_crs_entry(void *o)
+/* ---- what the machine of model/mode_fsm.c asks of this service ---- */
+
+static void mode_op_publish(enum app_mode mode, void *user)
 {
-    ARG_UNUSED(o);
-    ctx.mode = APP_MODE_ID_CRS;
+    ARG_UNUSED(user);
+    ctx.mode = (uint8_t)mode;
     publish_mode();
 }
 
-static void mode_prc_entry(void *o)
+static void mode_op_route_start(void *user)
 {
-    ARG_UNUSED(o);
-    ctx.mode = APP_MODE_ID_PRC;
-    if (parcours_is_loaded()) {
-        (void)parcours_start();
-    }
-    publish_mode();
+    ARG_UNUSED(user);
+    (void)parcours_start();
 }
 
-static void mode_prc_exit(void *o)
+static void mode_op_route_stop(void *user)
 {
-    ARG_UNUSED(o);
+    ARG_UNUSED(user);
     parcours_stop();
 }
 
-static void mode_fec_entry(void *o)
+static void mode_op_refused(enum app_mode wanted, enum mode_refusal why, void *user)
 {
-    ARG_UNUSED(o);
-    ctx.mode = APP_MODE_ID_FEC;
-    /* the legacy BoucleFEC starts its own zones and score (BoucleFEC.cpp) */
-    power_zone_reset(&ctx.zones);
-    suffer_score_reset(&ctx.suffer);
-    publish_mode();
+    ARG_UNUSED(user);
+    ARG_UNUSED(wanted);
+
+    /* the rider is told why the key did nothing, instead of nothing happening */
+    switch (why) {
+    case MODE_REFUSED_NO_ROUTE:
+        app_notify("MODO", "Carregue um percurso", NULL, false, 0U);
+        break;
+    case MODE_REFUSED_RECORDING:
+        app_notify("MODO", "Termine o pedal antes", NULL, false, 0U);
+        break;
+    default:
+        break;      /* the same mode, or one that does not exist: stay quiet */
+    }
 }
 
-static void mode_zwift_entry(void *o)
-{
-    ARG_UNUSED(o);
-    ctx.mode = APP_MODE_ID_ZWIFT;
-    publish_mode();
-}
-
-static void mode_dbg_entry(void *o)
-{
-    ARG_UNUSED(o);
-    /* legacy _page0_mode_debug(): the DBG screen over the CRS loop */
-    ctx.mode = APP_MODE_ID_DBG;
-    publish_mode();
-}
-
-static const struct smf_state mode_states[APP_MODE_ID_DBG + 1] = {
-    [APP_MODE_ID_CRS] = SMF_CREATE_STATE(mode_crs_entry, NULL, NULL, NULL, NULL),
-    [APP_MODE_ID_PRC] = SMF_CREATE_STATE(mode_prc_entry, NULL, mode_prc_exit, NULL, NULL),
-    [APP_MODE_ID_FEC] = SMF_CREATE_STATE(mode_fec_entry, NULL, NULL, NULL, NULL),
-    [APP_MODE_ID_ZWIFT] = SMF_CREATE_STATE(mode_zwift_entry, NULL, NULL, NULL, NULL),
-    [APP_MODE_ID_DBG] = SMF_CREATE_STATE(mode_dbg_entry, NULL, NULL, NULL, NULL),
+static const struct mode_fsm_ops mode_ops = {
+    .publish = mode_op_publish,
+    .route_start = mode_op_route_start,
+    .route_stop = mode_op_route_stop,
+    .refused = mode_op_refused,
 };
 
 static void set_mode(int32_t mode)
 {
-    if ((mode < 0) || (mode > (int32_t)APP_MODE_ID_DBG) || ((uint8_t)mode == ctx.mode)) {
-        return;
-    }
-    LOG_INF("mode %u -> %d", ctx.mode, (int)mode);
-    smf_set_state(SMF_CTX(&ctx), &mode_states[mode]);
+    (void)mode_fsm_select(&ctx.fsm, mode);
 }
 
 /* ==========================================================================
@@ -190,6 +196,77 @@ static void set_mode(int32_t mode)
  * The list comes from the storage service, with the name of the file as it
  * is on the card (`legacy/source/sd/sd_functions.cpp:451`, `load_parcours`).
  */
+/** The channel of this thread, for the loaders that take their time */
+static int model_wdt_channel = -1;
+
+static void model_feed_wdt(void)
+{
+    if (model_wdt_channel >= 0) {
+        app_wdt_feed(model_wdt_channel);
+    }
+}
+
+static void climb_scan_point(uint16_t index, float *dist_m, float *alt_m, void *user)
+{
+    ARG_UNUSED(user);
+    *dist_m = climb_scan.dist_m[index];
+    *alt_m = climb_scan.alt_m[index];
+}
+
+/** Walk the route once and write down where its climbs are */
+static void find_climbs(void)
+{
+    uint16_t n = parcours_get_num_points();
+
+    climb_scan.n = 0U;
+    (void)memset(&ctx.climbs, 0, sizeof(ctx.climbs));
+    if (n < 2U) {
+        return;
+    }
+
+    uint16_t step = (uint16_t)(((uint32_t)n + MODEL_CLIMB_SCAN_MAX - 1U) / MODEL_CLIMB_SCAN_MAX);
+
+    if (step < 1U) {
+        step = 1U;
+    }
+
+    float total = 0.0f;
+    const point_t *prev = parcours_get_point(0U);
+
+    if (prev == NULL) {
+        return;
+    }
+
+    float plat = prev->lat;
+    float plon = prev->lon;
+
+    climb_scan.dist_m[0] = 0.0f;
+    climb_scan.alt_m[0] = prev->alt;
+    climb_scan.n = 1U;
+
+    for (uint16_t i = 1U; (i < n) && (climb_scan.n < MODEL_CLIMB_SCAN_MAX); i++) {
+        const point_t *p = parcours_get_point(i);
+
+        if (p == NULL) {
+            break;
+        }
+        /* the distance follows every point, so thinning does not cut corners */
+        total += distance_between(plat, plon, p->lat, p->lon);
+        plat = p->lat;
+        plon = p->lon;
+
+        if (((i % step) == 0U) || (i == (n - 1U))) {
+            climb_scan.dist_m[climb_scan.n] = total;
+            climb_scan.alt_m[climb_scan.n] = p->alt;
+            climb_scan.n++;
+        }
+    }
+
+    uint8_t found = climb_find(&ctx.climbs, climb_scan.n, climb_scan_point, NULL);
+
+    LOG_INF("route: %u climbs over %u m", (unsigned int)found, (unsigned int)total);
+}
+
 static void load_selected_route(void)
 {
     char path[48];
@@ -203,10 +280,18 @@ static void load_selected_route(void)
     if (parcours_load(path) != APP_OK) {
         LOG_WRN("route %s did not load", path);
         app_notify("PRC", "Percurso nao abriu", NULL, false, 0U);
+        /*
+         * A failed load may have taken the route that was there with it, so
+         * the machine hears the truth and not an assumption: with no route
+         * left it drops a rider who was in PRC back to the free ride.
+         */
+        mode_fsm_set_route_loaded(&ctx.fsm, parcours_is_loaded());
         return;
     }
 
     LOG_INF("route %s loaded", path);
+    find_climbs();
+    mode_fsm_set_route_loaded(&ctx.fsm, true);
     if (ctx.mode == APP_MODE_ID_PRC) {
         (void)parcours_start();
     }
@@ -225,6 +310,8 @@ static void publish_state(void)
      */
     if (snapshot.status.recording != ctx.recording) {
         ctx.recording = snapshot.status.recording;
+        /* rule 2 of model/mode_fsm.h needs to know a ride is under way */
+        mode_fsm_set_recording(&ctx.fsm, ctx.recording);
         publish_mode();
     }
 }
@@ -245,17 +332,19 @@ static void on_fix(const struct app_gnss_fix *f)
     uint32_t now = k_uptime_get_32();
 
     /*
-     * A position given by a PC wins over the receiver while it keeps
-     * coming, which is the SIM source of the legacy
-     * (`legacy/source/model/Locator.cpp`, eLocationSourceSIM first).
+     * Which source the model listens to is the rule of the legacy, in
+     * `model/loc_arbiter.c` with its own tests: a simulated ride wins and
+     * holds the floor for two seconds between its frames, so the receiver
+     * cannot slip a position in and make the bike jump.
      */
-    if (f->sim) {
-        ctx.sim_uptime_ms = now;
-    } else if ((ctx.sim_uptime_ms != 0U) && ((now - ctx.sim_uptime_ms) < POS_MAX_AGE_MS)) {
+    loc_arbiter_feed(&ctx.arb, f->sim ? LOC_ARB_SIM : LOC_ARB_GPS, now);
+
+    enum loc_arb_src src = loc_arbiter_pick(&ctx.arb, now, ctx.have_fix_msg && ctx.fix.fix);
+
+    if (src == LOC_ARB_NONE) {
         return;
-    } else {
-        ctx.sim_uptime_ms = 0U;
     }
+    ctx.sim_uptime_ms = (src == LOC_ARB_SIM) ? now : 0U;
 
     ctx.fix = *f;
     ctx.have_fix_msg = true;
@@ -274,7 +363,7 @@ static void on_fix(const struct app_gnss_fix *f)
         return;
     }
     ctx.fix_uptime_ms = f->uptime_ms;
-    if (!rides_outdoors(ctx.mode)) {
+    if (!mode_fsm_is_outdoor(&ctx.fsm)) {
         return;
     }
 
@@ -293,7 +382,34 @@ static void on_fix(const struct app_gnss_fix *f)
     }
     if ((ctx.mode == APP_MODE_ID_PRC) && parcours_is_active()) {
         parcours_update(loc.lat, loc.lon, loc.alt);
+
+        /* where the rider stands on the climb ahead (`model/climb.h`) */
+        nav_info_t nav;
+        bool was_on = ctx.climb.on_climb;
+        uint8_t was_idx = ctx.climb.index;
+
+        if (parcours_get_nav_info(&nav) == APP_OK) {
+            climb_update(&ctx.climb, &ctx.climbs, nav.dist_completed, loc.alt);
+            ctx.climb.ahead_grade_pct = climb_grade_ahead(climb_scan.n, climb_scan_point, NULL,
+                                                          nav.dist_completed);
+            if (ctx.climb.on_climb && (!was_on || (was_idx != ctx.climb.index))) {
+                /* the foot of a climb: tell the rider what is coming */
+                const struct climb *c = &ctx.climbs.c[ctx.climb.index];
+                char what[24];
+                char how[16];
+
+                (void)snprintf(what, sizeof(what), "%.1f km a %.0f%%",
+                               (double)(climb_length(c) / 1000.0f), (double)climb_grade(c));
+                (void)snprintf(how, sizeof(how), "%d m", (int)climb_gain(c));
+                app_notify("Subida", what, how, false, 0U);
+            }
+        }
+    } else if (ctx.climb.on_climb) {
+        (void)memset(&ctx.climb, 0, sizeof(ctx.climb));
     }
+
+    /* the vehicles behind age whether a frame came or not */
+    radar_tick(&ctx.rad, k_uptime_get_32());
 
     if (attitude_take_fdir_notice()) {
         /* the legacy shows "FDIR / Attitude restored" (`Attitude.cpp:410`) */
@@ -316,6 +432,7 @@ static void on_fix(const struct app_gnss_fix *f)
             .slope_pct = att.slope,
             .dist_m = att.dist,
             .climb_m = att.climb,
+            .fit_time = fit_time_from_date(att.date.date, att.date.secj),
         };
 
         (void)memcpy(p.rough, ctx.rough, sizeof(p.rough));
@@ -330,6 +447,13 @@ static void on_fix(const struct app_gnss_fix *f)
             p.baro_alt = loc.alt;
         }
         (void)app_publish(&chan_log_point, &p);
+
+        /*
+         * After the point, not before: the storage writes the record of
+         * this epoch first, so a lap that closes here lands after the
+         * records that belong to it.
+         */
+        update_activity(&att, &loc);
     }
 }
 
@@ -367,8 +491,40 @@ static void on_ext(const struct app_ext_sensor *e)
     }
 }
 
+/**
+ * The alarm and the crash detection, once a second with the IMU message.
+ *
+ * Not a safety device: what it is and what it is not, in
+ * `model/incident.h`. The rider is warned and can always say no.
+ */
+static void on_incident(const struct app_imu *imu)
+{
+    attitude_t att;
+    struct incident_sample s = {
+        .peak_g = imu->peak_g,
+        .still_g = imu->still_g,
+        .speed_kmh = (attitude_get(&att) == APP_OK) ? att.loc.speed : 0.0f,
+    };
+
+    switch (incident_update(&ctx.inc, &s, MODEL_STATE_PERIOD_MS)) {
+    case INCIDENT_EVENT_ALARM:
+        app_notify("ALARME", "A bicicleta se moveu", NULL, true, 0U);
+        break;
+    case INCIDENT_EVENT_COUNTING:
+        app_notify("QUEDA?", "Toque para cancelar", NULL, true, 0U);
+        break;
+    case INCIDENT_EVENT_CRASH:
+        /* the phone is told by the radio service, which reads the model */
+        app_notify("QUEDA", "Sem resposta", NULL, true, 0U);
+        break;
+    default:
+        break;
+    }
+}
+
 static void on_imu(const struct app_imu *imu)
 {
+    on_incident(imu);
     ctx.pitch_deg = imu->pitch_deg;
     (void)memcpy(ctx.rough, imu->rough, sizeof(ctx.rough));
     (void)attitude_update_imu(ctx.heading_valid ? ctx.heading_deg : 0.0f, imu->pitch_deg,
@@ -384,6 +540,94 @@ static void on_imu(const struct app_imu *imu)
         (void)memmove(&ctx.pitch_histo[0], &ctx.pitch_histo[1], UI_HISTO_MAX - 1U);
         ctx.pitch_histo[UI_HISTO_MAX - 1U] = v;
     }
+}
+
+/** One frame of the rear radar (`model/radar.h`) */
+static void on_radar(const struct app_radar *in)
+{
+    uint32_t now = k_uptime_get_32();
+
+    radar_set_link(&ctx.rad, in->linked, now);
+    if (!in->linked) {
+        return;
+    }
+
+    struct radar_frame f = {.n = (in->n < RADAR_TARGETS_MAX) ? in->n : RADAR_TARGETS_MAX};
+
+    for (uint8_t i = 0U; i < f.n; i++) {
+        f.t[i].id = in->id[i];
+        f.t[i].range_m = in->range_m[i];
+        f.t[i].closing_kmh = in->closing_kmh[i];
+        f.t[i].level = in->level[i];
+        f.t[i].side = in->side[i];
+    }
+    radar_feed(&ctx.rad, &f, now);
+}
+
+/** Fill the compact form the channel carries from a set of totals */
+static void fill_totals(struct app_totals *out, const struct activity_totals *t)
+{
+    out->start_time = t->start_time;
+    out->end_time = t->end_time;
+    out->elapsed_ms = t->elapsed_ms;
+    out->timer_ms = t->timer_ms;
+    out->dist_m = t->dist_m;
+    out->ascent_m = t->ascent_m;
+    out->descent_m = t->descent_m;
+    out->avg_speed_kmh = activity_avg_speed(t);
+    out->max_speed_kmh = t->max_speed_kmh;
+    out->avg_power_w = activity_avg_power(t);
+    out->max_power_w = t->max_power_w;
+    out->calories_kcal = activity_calories(t);
+    out->avg_hr_bpm = activity_avg_hr(t);
+    out->max_hr_bpm = t->max_hr_bpm;
+    out->avg_cadence_rpm = activity_avg_cadence(t);
+}
+
+/** Tell the storage and the interface where the ride stands */
+static void publish_activity(enum activity_event ev, bool finished)
+{
+    struct app_activity msg = {
+        .lap_dist_m = act.lap.dist_m,
+        .lap_timer_ms = act.lap.timer_ms,
+        .laps = act.laps,
+        .event = (uint8_t)ev,
+        .running = act.running,
+        .finished = finished,
+    };
+
+    fill_totals(&msg.ride, activity_ride(&act));
+    fill_totals(&msg.lap, activity_lap(&act));
+    /* the snapshot of the screens reads it from here (model_ui.c) */
+    ctx.act = msg;
+    (void)app_publish(&chan_activity, &msg);
+}
+
+/** One epoch of the ride: totals, auto-pause and the automatic lap */
+static void update_activity(const attitude_t *att, const loc_data_t *loc)
+{
+    uint32_t now = k_uptime_get_32();
+    uint32_t dt = (act_last_ms != 0U) ? (now - act_last_ms) : 0U;
+
+    act_last_ms = now;
+
+    struct activity_sample s = {
+        .time = fit_time_from_date(att->date.date, att->date.secj),
+        .speed_kmh = loc->speed,
+        .dist_m = att->dist,
+        .climb_m = att->climb,
+        .alt_m = attitude_get_elevation(),
+        .power_w = att->pwr,
+        .hr_bpm = ctx.ext[APP_EXT_HR].hr_bpm,
+        .cadence_rpm = ctx.ext[APP_EXT_BSC].cadence_rpm,
+    };
+
+    enum activity_event ev = activity_update(&act, &s, dt);
+
+    if (ev == ACTIVITY_EVENT_LAP) {
+        app_notify("Volta", NULL, NULL, false, 0U);
+    }
+    publish_activity(ev, false);
 }
 
 static void on_command(const struct app_system_cmd *cmd)
@@ -409,6 +653,25 @@ static void on_command(const struct app_system_cmd *cmd)
         attitude_set_rider_weight((float)cmd->arg);
         (void)user_settings_save(settings);
         break;
+    case APP_CMD_ALARM_TOGGLE:
+        incident_arm(&ctx.inc, !incident_is_armed(&ctx.inc));
+        app_notify("Alarme", incident_is_armed(&ctx.inc) ? "Armado" : "Desarmado", NULL, false, 0U);
+        break;
+    case APP_CMD_KEY:
+        /*
+         * Any key answers the device: it silences the alarm and cancels a
+         * crash countdown, because a rider who can press a key is there.
+         */
+        if (incident_state(&ctx.inc) != INCIDENT_OFF) {
+            incident_cancel(&ctx.inc);
+        }
+        break;
+    case APP_CMD_LAP:
+        if (activity_lap_now(&act)) {
+            publish_activity(ACTIVITY_EVENT_LAP, false);
+            app_notify("Volta", NULL, NULL, false, 0U);
+        }
+        break;
     case APP_CMD_ZOOM:
         if ((cmd->arg > 0) && (ctx.zoom < 5U)) {
             ctx.zoom++;
@@ -428,6 +691,14 @@ static void on_system_state(const struct app_system_state *s)
         return;
     }
     ctx.shutting_down = true;
+
+    /*
+     * The lap that was being ridden closes, and the storage hears that the
+     * ride ended: that is what lets it write the session of the FIT file
+     * and seek back to fix the header.
+     */
+    activity_finish(&act);
+    publish_activity(ACTIVITY_EVENT_NONE, true);
 
     /*
      * legacy power_scheduler__shutdown(): forget the saved activity, so the
@@ -464,6 +735,8 @@ static void handle(struct model_msg *msg)
         ctx.heading_deg = msg->u.mag.heading_deg;
     } else if (chan == &chan_ext_sensor) {
         on_ext(&msg->u.ext);
+    } else if (chan == &chan_radar) {
+        on_radar(&msg->u.radar);
     } else if (chan == &chan_link_status) {
         if (msg->u.link.kind < APP_EXT_KINDS) {
             ctx.link[msg->u.link.kind] = msg->u.link;
@@ -511,9 +784,20 @@ static void model_thread(void *p1, void *p2, void *p3)
     uint32_t last_state_ms = 0U;
 
     /* CRS, as the legacy after the boot (main.cpp: boucle__change_mode) */
-    smf_set_initial(SMF_CTX(&ctx), &mode_states[APP_MODE_ID_CRS]);
+    mode_fsm_init(&ctx.fsm, &mode_ops);
+
+    loc_arbiter_init(&ctx.arb);
+    activity_init(&act, (uint32_t)CONFIG_GNSS_AUTOLAP_M,
+                  IS_ENABLED(CONFIG_GNSS_AUTO_PAUSE));
+    incident_init(&ctx.inc, IS_ENABLED(CONFIG_GNSS_CRASH_DETECT));
+    /* so the status bar does not open showing the ride as paused */
+    publish_activity(ACTIVITY_EVENT_NONE, false);
 
     int wdt = app_wdt_add("model");
+
+    /* a course of megabytes takes longer than the watchdog allows */
+    model_wdt_channel = wdt;
+    parcours_set_progress(model_feed_wdt);
 
     for (;;) {
         uint32_t now = k_uptime_get_32();

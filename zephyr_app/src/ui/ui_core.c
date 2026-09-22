@@ -54,6 +54,10 @@ static const ui_screen_ops_t *const ops[UI_SCREEN_COUNT] = {
     [UI_SCREEN_USB] = &ui_scr_usb,
     [UI_SCREEN_SHUTDOWN] = &ui_scr_shutdown,
     [UI_SCREEN_DFU] = &ui_scr_dfu,
+    [UI_SCREEN_PROFILE] = &ui_scr_profile,
+    [UI_SCREEN_LAP] = &ui_scr_lap,
+    [UI_SCREEN_CLIMB] = &ui_scr_climb,
+    [UI_SCREEN_INCIDENT] = &ui_scr_incident,
     [UI_SCREEN_ROUTES] = &ui_scr_routes,
 };
 
@@ -162,7 +166,9 @@ static bool is_crs_page(ui_screen_t s)
 
 static bool is_data_page(ui_screen_t s)
 {
-    return is_crs_page(s) || (s == UI_SCREEN_PRC) || (s == UI_SCREEN_FEC) || (s == UI_SCREEN_DBG);
+    return is_crs_page(s) || (s == UI_SCREEN_PRC) || (s == UI_SCREEN_PROFILE) ||
+           (s == UI_SCREEN_LAP) || (s == UI_SCREEN_CLIMB) ||
+           (s == UI_SCREEN_FEC) || (s == UI_SCREEN_DBG);
 }
 
 ui_screen_t ui_mode_page(void)
@@ -285,6 +291,9 @@ void ui_set_mode(ui_mode_t mode)
     }
 }
 
+/** true while a climb brought the climb page up by itself */
+static bool climb_shown;
+
 void ui_update(const ui_model_t *m, uint32_t now_ms)
 {
     if (!started || (m == NULL)) {
@@ -307,6 +316,46 @@ void ui_update(const ui_model_t *m, uint32_t now_ms)
             ui_go(ui_mode_page());
             return;
         }
+    }
+
+    /*
+     * The alarm ringing, or a crash counting down, takes the screen: it is
+     * the only thing that matters while it is up, and any key answers it
+     * through the ordinary path (`model/incident.h`).
+     */
+    bool loud = (m->inc.state == (uint8_t)UI_INC_RINGING) ||
+                (m->inc.state == (uint8_t)UI_INC_COUNTING) ||
+                (m->inc.state == (uint8_t)UI_INC_CRASHED);
+
+    if (loud && (cur != UI_SCREEN_INCIDENT)) {
+        ui_go(UI_SCREEN_INCIDENT);
+        return;
+    }
+    if (!loud && (cur == UI_SCREEN_INCIDENT)) {
+        ui_go(ui_mode_page());
+        return;
+    }
+
+    /*
+     * The point of the climb page is that the rider does not have to ask
+     * for it: in PRC, the foot of a climb brings it up and the top gives
+     * the map back. A page the rider chose by hand is left alone.
+     */
+    if (ui_ctx.mode == UI_MODE_PRC) {
+        if (m->climb.on_climb && !climb_shown && (cur == UI_SCREEN_PRC)) {
+            climb_shown = true;
+            ui_go(UI_SCREEN_CLIMB);
+            return;
+        }
+        if (!m->climb.on_climb && climb_shown) {
+            climb_shown = false;
+            if (cur == UI_SCREEN_CLIMB) {
+                ui_go(UI_SCREEN_PRC);
+                return;
+            }
+        }
+    } else if (climb_shown) {
+        climb_shown = false;
     }
     ops[cur]->update(cur_scr);
 }
@@ -380,12 +429,27 @@ void ui_key(ui_key_t key, ui_press_t press, uint32_t now_ms)
         }
         return;
     }
-    if ((press == UI_PRESS_SHORT) && is_crs_page(cur)) {
-        /* legacy VueCRS::propagateEventsCRS(): pages 1, 2 and 3 in a ring */
-        static const ui_screen_t next[3] = {UI_SCREEN_CRS2, UI_SCREEN_CRS3, UI_SCREEN_CRS1};
-        static const ui_screen_t prev[3] = {UI_SCREEN_CRS3, UI_SCREEN_CRS1, UI_SCREEN_CRS2};
-        uint32_t i = (uint32_t)cur - (uint32_t)UI_SCREEN_CRS1;
+    /*
+     * A long press on the left marks a lap from any data page. The legacy
+     * has no lap, so the key was free; a notification confirms it.
+     */
+    if ((key == UI_KEY_LEFT) && (press == UI_PRESS_LONG)) {
+        ui_action(UI_ACT_LAP, 0);
+        return;
+    }
+    if (press != UI_PRESS_SHORT) {
+        return;
+    }
+    if (is_crs_page(cur) || (cur == UI_SCREEN_LAP)) {
+        /*
+         * legacy VueCRS::propagateEventsCRS(): pages 1, 2 and 3 in a ring.
+         * The lap page of the port joins the ring after page 3.
+         */
+        static const ui_screen_t ring[4] = {
+            UI_SCREEN_CRS1, UI_SCREEN_CRS2, UI_SCREEN_CRS3, UI_SCREEN_LAP,
+        };
+        uint32_t i = (cur == UI_SCREEN_LAP) ? 3U : ((uint32_t)cur - (uint32_t)UI_SCREEN_CRS1);
 
-        ui_go((key == UI_KEY_RIGHT) ? next[i] : prev[i]);
+        ui_go(ring[(key == UI_KEY_RIGHT) ? ((i + 1U) % 4U) : ((i + 3U) % 4U)]);
     }
 }

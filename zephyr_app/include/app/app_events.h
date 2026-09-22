@@ -97,6 +97,14 @@ struct app_imu {
     float pitch_deg;            /**< nose up positive */
     float roll_deg;
     float rough[3];             /**< mean deviation of X, Y and Z (legacy fxos roughness) */
+    /*
+     * For the alarm and the crash detection (`model/incident.h`). The peak
+     * is of the samples since the last message, not their average: an
+     * impact lasts about a tenth of a second and a mean over a whole
+     * second would bury it.
+     */
+    float peak_g;               /**< largest magnitude seen, in g */
+    float still_g;              /**< how far the last sample was from one g */
 };
 
 /** Channel mag: tilt-compensated heading, 1 Hz */
@@ -251,7 +259,10 @@ enum app_cmd_id {
     APP_CMD_ZOOM,               /**< arg: +1 closer, -1 farther */
     APP_CMD_KEY,                /**< any key: feeds the backlight */
     APP_CMD_ROUTE_SELECT,       /**< arg: index in the route list */
-    APP_CMD_MSC                 /**< expose the card over USB */
+    APP_CMD_MSC,                /**< expose the card over USB */
+    APP_CMD_STORAGE_RESCAN,     /**< a file arrived: list the storage again */
+    APP_CMD_LAP,                /**< close the lap being ridden and start another */
+    APP_CMD_ALARM_TOGGLE        /**< arm or disarm the bike alarm */
 };
 
 /** Channel system_cmd */
@@ -315,6 +326,7 @@ struct app_notif {
 struct app_log_point {
     loc_data_t loc;
     date_data_t date;
+    uint32_t fit_time;          /**< FIT date_time of this epoch; 0 without a date */
     int16_t power_w;
     uint8_t hr_bpm;
     uint8_t cadence_rpm;
@@ -329,6 +341,61 @@ struct app_log_point {
     int8_t slope_pct;
     float dist_m;
     float climb_m;
+};
+
+/**
+ * Totals of a lap or of the whole ride, as the FIT file needs them.
+ *
+ * The compact form of `struct activity_totals` (`model/activity.h`), with
+ * the averages already worked out: the service that writes the file has no
+ * business running the accumulator again.
+ */
+struct app_totals {
+    uint32_t start_time;        /**< FIT date_time */
+    uint32_t end_time;
+    uint32_t elapsed_ms;        /**< wall time, pauses included */
+    uint32_t timer_ms;          /**< moving time */
+    float dist_m;
+    float ascent_m;
+    float descent_m;
+    float avg_speed_kmh;
+    float max_speed_kmh;
+    uint16_t avg_power_w;
+    uint16_t max_power_w;
+    uint16_t calories_kcal;
+    uint8_t avg_hr_bpm;
+    uint8_t max_hr_bpm;
+    uint8_t avg_cadence_rpm;
+};
+
+/** What the ride is doing, once per epoch (`model/activity.h`) */
+struct app_activity {
+    struct app_totals ride;     /**< always the totals so far */
+    struct app_totals lap;      /**< the lap that closed, when event is LAP */
+    float lap_dist_m;           /**< of the lap being ridden */
+    uint32_t lap_timer_ms;
+    uint16_t laps;              /**< laps already closed */
+    uint8_t event;              /**< enum activity_event */
+    bool running;               /**< the timer counts */
+    bool finished;              /**< the ride ended: the file can be closed */
+};
+
+/**
+ * Channel radar: one frame of a rear radar (`model/radar.h`).
+ *
+ * The frame goes whole, not one vehicle at a time, because a radar
+ * reports everything it sees at once and a target missing from a frame
+ * means it is gone.
+ */
+struct app_radar {
+    uint32_t uptime_ms;
+    uint8_t n;                  /**< vehicles in the frame */
+    uint8_t id[8];
+    uint16_t range_m[8];
+    uint16_t closing_kmh[8];
+    uint8_t level[8];           /**< enum radar_level; 0 means "work it out" */
+    uint8_t side[8];
+    bool linked;                /**< a radar is connected */
 };
 
 /** Keys of the device */

@@ -32,6 +32,8 @@ ZBUS_CHAN_DECLARE(chan_gnss_fix,        /* struct app_gnss_fix: GNSS -> model */
                   chan_shutdown_ack,    /* struct app_shutdown_ack: services -> energy */
                   chan_notif,           /* struct app_notif: anyone -> interface */
                   chan_log_point,       /* struct app_log_point: model -> storage */
+                  chan_activity,        /* struct app_activity: model -> storage, interface */
+                  chan_radar,           /* struct app_radar: radio -> model */
                   chan_input,           /* struct app_input: keys -> interface */
                   chan_storage_info,    /* struct app_storage_info: storage -> model */
                   chan_dfu,             /* struct app_dfu: radio -> interface */

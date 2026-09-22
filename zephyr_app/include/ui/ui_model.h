@@ -30,6 +30,8 @@ extern "C" {
 #define UI_SEG_PTS_MAX      64U
 /** Points of the route map in PRC */
 #define UI_ROUTE_PTS_MAX    160U
+/** Columns of the elevation profile (model/route_profile.h) */
+#define UI_PROFILE_PTS      120U
 /** Satellites in the sky plot and in DBG */
 #define UI_SAT_MAX          32U
 /** Paired sensors listed in Sensores */
@@ -131,9 +133,92 @@ typedef struct {
     bool ant_link;          /**< at least one ANT+ sensor connected */
     bool ble_link;          /**< at least one BLE sensor connected */
     bool recording;
+    bool paused;            /**< the timer is held: the bike is still */
     ui_charge_t charge;
     uint8_t batt_pct;
 } ui_status_t;
+
+/**
+ * The bike alarm and the crash detection (`model/incident.h`).
+ *
+ * Not a safety device: it misses crashes and raises false alarms, and
+ * nobody should ride differently because it is on.
+ */
+/** What the incident page shows, mirroring enum incident_state */
+typedef enum {
+    UI_INC_OFF = 0,
+    UI_INC_SETTLING,
+    UI_INC_ARMED,
+    UI_INC_RINGING,
+    UI_INC_SHAKEN,
+    UI_INC_COUNTING,
+    UI_INC_CRASHED
+} ui_incident_state_t;
+
+typedef struct {
+    uint8_t state;          /**< ui_incident_state_t */
+    uint32_t countdown_s;   /**< left to cancel a crash; 0 when nothing pends */
+    bool armed;             /**< the alarm is watching the bike */
+} ui_incident_t;
+
+/**
+ * Vehicles coming from behind, as a rear radar reports them
+ * (`model/radar.h`). Nothing of this is in the legacy.
+ */
+typedef struct {
+    bool linked;            /**< a radar is connected */
+    uint8_t n;              /**< vehicles behind */
+    uint8_t worst;          /**< enum radar_level of the worst of them */
+    uint16_t range_m[8];    /**< nearest first */
+    uint8_t level[8];
+    bool live[8];           /**< solid, or fading because the frame was dropped */
+} ui_radar_t;
+
+/**
+ * The climb ahead (`model/climb.h`).
+ *
+ * The legacy shows the whole route and the total climb, and nothing about
+ * the climb the rider is on; this is what the climb page draws.
+ */
+typedef struct {
+    bool on_climb;          /**< riding one right now */
+    float remain_m;         /**< to the top */
+    float remain_gain_m;
+    float grade_pct;        /**< average of what is left */
+    float ahead_grade_pct;  /**< of the next 200 m */
+    float done_pct;
+    float to_next_m;        /**< to the foot of the next climb, when not on one */
+    float next_len_m;       /**< of that next climb */
+    float next_gain_m;
+    uint8_t cat;            /**< enum climb_cat of the one being ridden */
+    uint8_t next_cat;
+    uint8_t index;          /**< which climb of the route, counting from one */
+    uint8_t total;          /**< climbs the route has */
+    float prof_span_m;      /**< horizontal length the profile covers */
+    uint8_t prof_n;         /**< columns of the profile of this climb */
+    uint8_t prof_here;      /**< column of the rider */
+    int16_t prof_m[UI_PROFILE_PTS];
+    int16_t prof_min_m;
+    int16_t prof_max_m;
+} ui_climb_t;
+
+/**
+ * The lap and the totals of the ride (`model/activity.h`).
+ *
+ * None of this is in the legacy, which has neither timer nor lap; it is
+ * what the FIT file carries and what the lap page shows.
+ */
+typedef struct {
+    uint32_t timer_s;       /**< moving time of the ride */
+    uint32_t elapsed_s;     /**< wall time of the ride */
+    uint32_t lap_timer_s;   /**< moving time of the lap being ridden */
+    float lap_dist_m;
+    float avg_kmh;          /**< of the ride, over the moving time */
+    float max_kmh;
+    float descent_m;
+    uint16_t laps;          /**< laps already closed */
+    uint16_t kcal;
+} ui_activity_t;
 
 /** Ride values of the data pages (legacy att, bsc_info, hrm_info) */
 typedef struct {
@@ -204,6 +289,17 @@ typedef struct {
     uint16_t scale_m;       /**< scale bar length in meters */
     uint16_t scale_pm;      /**< scale bar length in per mille of the window width */
 } ui_route_t;
+
+/** Elevation profile of the route (PRC) */
+typedef struct {
+    uint8_t n;                      /**< columns filled */
+    uint8_t here;                   /**< column of the rider */
+    int16_t alt_m[UI_PROFILE_PTS];  /**< altitude of each column */
+    int16_t min_m;
+    int16_t max_m;
+    uint16_t climb_left_m;          /**< climb still ahead */
+    float remain_km;
+} ui_profile_t;
 
 /** Trainer (FE-C) values */
 typedef struct {
@@ -306,12 +402,17 @@ typedef struct {
 typedef struct {
     ui_status_t status;
     ui_ride_t ride;
+    ui_activity_t act;
+    ui_climb_t climb;
+    ui_radar_t radar;
+    ui_incident_t inc;
     uint8_t nseg;           /**< segments on screen: 0, 1 or 2 */
     ui_segment_t seg[UI_SEG_MAX];
     ui_nav_t nav;
     ui_rr_t rr;
     ui_attitude_t att;
     ui_route_t route;
+    ui_profile_t profile;
     ui_fec_t fec;
     ui_gnss_info_t gnss;
     ui_energy_t energy;

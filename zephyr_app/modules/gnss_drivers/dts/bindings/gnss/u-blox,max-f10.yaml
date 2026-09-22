@@ -1,0 +1,104 @@
+# Copyright (c) 2026 Luiz Guilherme Ito
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+  u-blox F10 dual-band GNSS receiver on a UART, by the UBX protocol (MAX-F10S
+  of the new board). Same driver as the "u-blox,max-m10": the frames and the
+  configuration keys of the UART, the rate, the dynamic model and the message
+  output are the same on the two firmwares.
+
+  What differs, and why this is a compatible of its own:
+
+  - The F10 receives L1 and L5 at the same time and cannot do one band only:
+    "Single-band operation is not supported. Both L1 and L5 signals must be
+    enabled or disabled" (MAX-F10S data sheet UBXDOC-963802114-12732 R03,
+    section 1.3). There is nothing to configure and no band property here.
+  - The F10 has no CFG-PM group (F10 SPG 6.00 interface description
+    UBX-23002975 R02, section 4.8): no LEAP, no ON/OFF power save. The
+    receiver tracks at full power, 16 mA at VCC plus 3 mA at V_IO with a 3.0 V
+    supply (data sheet, table 15), and what saves energy is the software
+    standby by UBX-RXM-PMREQ, which the driver still has.
+  - It adds NavIC, off by default in the receiver.
+  - GPS L5 is enabled in the firmware but the satellites still broadcast as
+    unhealthy, so the solution leaves them out until the signal becomes
+    operational; the dual-band gain today comes from Galileo E5a, BeiDou B2a
+    and QZSS L5 (data sheet, section 1.1).
+
+  Example:
+
+    &uart21 {
+        status = "okay";
+        current-speed = <38400>;
+
+        gnss: gnss@0 {
+            compatible = "u-blox,max-f10";
+            fix-rate-ms = <1000>;
+            dynamic-model = "portable";
+        };
+    };
+
+compatible: "u-blox,max-f10"
+
+include: uart-device.yaml
+
+properties:
+  fix-rate-ms:
+    type: int
+    default: 1000
+    description: |
+      Interval between navigation epochs, in milliseconds (CFG-RATE-MEAS).
+      The default is the 1 Hz of the legacy. The receiver takes 25 to
+      65535 ms, and reaches 10 Hz in the single-GNSS configurations.
+
+  dynamic-model:
+    type: string
+    default: "portable"
+    description: |
+      Dynamic platform model (CFG-NAVSPG-DYNMODEL). "portable" is what u-blox
+      recommends for most uses and what a bicycle needs: "bike" in the
+      receiver is a motorbike, and "pedestrian" limits speed and altitude
+      changes below what a descent reaches.
+    enum:
+      - "portable"
+      - "stationary"
+      - "pedestrian"
+      - "automotive"
+      - "sea"
+      - "airborne_1g"
+      - "airborne_2g"
+      - "airborne_4g"
+      - "wrist"
+      - "bike"
+
+  navic:
+    type: boolean
+    description: |
+      Also receive NavIC L5 (CFG-SIGNAL-NAVIC_ENA), which the receiver leaves
+      off. It only covers India and the region around it; elsewhere it costs
+      channels for nothing.
+
+  satellites-rate:
+    type: int
+    default: 1
+    description: |
+      Epochs between two UBX-NAV-SAT messages, for the sky plot; 0 turns the
+      message off. Only used when CONFIG_GNSS_SATELLITES is on.
+
+  timepulse-enable:
+    type: boolean
+    description: |
+      Keep the time pulse of the receiver on (CFG-TP-TP1_ENA).
+
+  reset-gpios:
+    type: phandle-array
+    description: |
+      RESET_N of the receiver, active low, driven open drain. The driver only
+      configures it; a reset clears the backup memory of the receiver.
+
+  vcc-supply:
+    type: phandle
+    description: |
+      Regulator of the VCC and V_IO rails of the receiver (BUCK1 of the
+      nPM1300 on the new board). With it, the driver cuts the rail after the
+      software standby, which leaves the receiver in hardware backup on
+      V_BCKP, and turns it back on to wake up.
