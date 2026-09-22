@@ -20,6 +20,7 @@
 #include "model/incident.h"
 #include "model/loc_arbiter.h"
 #include "model/mode_fsm.h"
+#include "model/power_metrics.h"
 #include "model/radar.h"
 
 /**
@@ -68,6 +69,8 @@ struct model_ctx {
     struct radar rad;               /**< vehicles behind (model/radar.h) */
     struct incident inc;            /**< alarm and crash detection (model/incident.h) */
     struct loc_arbiter arb;         /**< which position source wins (model/loc_arbiter.h) */
+    struct power_metrics pm;        /**< NP, IF and TSS of the ride (model/power_metrics.h) */
+    uint32_t pm_last_s;             /**< moving seconds already fed to it */
     float heading_deg;
     bool heading_valid;
     float pitch_deg;

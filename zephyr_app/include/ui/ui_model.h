@@ -311,6 +311,10 @@ typedef struct {
     uint8_t hr_bpm;
     uint8_t zone;
     uint8_t zone_pct[UI_PWR_ZONES];     /**< time share in each power zone */
+    uint16_t np_w;                      /**< normalised power (model/power_metrics.h) */
+    uint16_t if100;                     /**< intensity factor, hundredths */
+    uint16_t tss;                       /**< training stress, whole points */
+    uint16_t vi100;                     /**< variability index, hundredths */
     bool vector_valid;
     uint8_t vector[UI_VECTOR_PTS];      /**< power over one turn, 0..100 */
 } ui_fec_t;

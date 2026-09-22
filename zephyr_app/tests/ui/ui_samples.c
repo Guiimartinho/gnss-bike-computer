@@ -182,6 +182,11 @@ void ui_sample_ride(ui_model_t *m)
     m->fec.cad_rpm = 92U;
     m->fec.hr_bpm = 151U;
     m->fec.zone = 4U;
+    /* what forty-two minutes of that session were worth (model/power_metrics.h) */
+    m->fec.np_w = 252U;
+    m->fec.if100 = 126U;
+    m->fec.tss = 47U;
+    m->fec.vi100 = 103U;
     {
         static const uint8_t z[UI_PWR_ZONES] = {8U, 22U, 30U, 26U, 12U, 6U, 2U};
 

@@ -29,6 +29,7 @@
 #include "model/climb.h"
 #include "model/incident.h"
 #include "model/loc_arbiter.h"
+#include "model/power_metrics.h"
 #include "model/radar.h"
 #include "model/vecteur.h"
 #include "model/fit_encode.h"
@@ -624,6 +625,28 @@ static void update_activity(const attitude_t *att, const loc_data_t *loc)
 
     enum activity_event ev = activity_update(&act, &s, dt);
 
+    /*
+     * One sample a second of **moving** time into the power metrics: the
+     * timer of the activity already leaves the pauses out, so a stop at the
+     * traffic lights cannot feed zeros and drag the rolling average down
+     * (`model/power_metrics.h`). A late epoch catches up second by second,
+     * up to a window's worth; past that the gap is long enough that
+     * pretending the power held would be a lie.
+     */
+    uint32_t moving_s = activity_ride(&act)->timer_ms / 1000U;
+
+    if (moving_s > ctx.pm_last_s) {
+        uint32_t missing = moving_s - ctx.pm_last_s;
+
+        if (missing > PM_WINDOW_S) {
+            missing = PM_WINDOW_S;
+        }
+        for (uint32_t i = 0U; i < missing; i++) {
+            power_metrics_add(&ctx.pm, s.power_w);
+        }
+        ctx.pm_last_s = moving_s;
+    }
+
     if (ev == ACTIVITY_EVENT_LAP) {
         app_notify("Volta", NULL, NULL, false, 0U);
     }
@@ -645,6 +668,7 @@ static void on_command(const struct app_system_cmd *cmd)
     case APP_CMD_SET_FTP:
         user_settings_set_ftp(settings, (uint16_t)cmd->arg);
         power_zone_set_ftp(&ctx.zones, (uint16_t)cmd->arg);
+        power_metrics_set_ftp(&ctx.pm, (uint16_t)cmd->arg);
         (void)user_settings_save(settings);
         break;
     case APP_CMD_SET_WEIGHT:
@@ -832,6 +856,13 @@ void model_svc_init(void)
     ctx.route_sel = -1;
     ctx.zoom = 3U;
     power_zone_init(&ctx.zones, (ftp > 0U) ? ftp : MODEL_DEFAULT_FTP_W);
+    /*
+     * The threshold goes in as the rider set it, zero included: without one
+     * there is no intensity factor and no training stress to show, and a
+     * made-up default would give them a number that means nothing.
+     */
+    power_metrics_init(&ctx.pm, ftp);
+    ctx.pm_last_s = 0U;
     suffer_score_init(&ctx.suffer);
     rr_zone_init(&ctx.rr);
     /* attitude restores the activity a crash interrupted (FDIR) */

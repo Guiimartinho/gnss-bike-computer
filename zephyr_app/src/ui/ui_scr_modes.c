@@ -128,6 +128,7 @@ const ui_screen_ops_t ui_scr_prc = {prc_create, prc_update, prc_key};
 
 static lv_obj_t *fec_zones;
 static lv_obj_t *fec_rr;
+static lv_obj_t *fec_metrics;
 static lv_obj_t *fec_vector;
 static lv_obj_t *fec_wait;
 static bool fec_has_data;
@@ -201,6 +202,57 @@ static void fec_rr_draw(lv_event_t *e)
     }
     (void)snprintf(buf, sizeof(buf), "%u ms", (unsigned int)ui_ctx.m.fec.rr_ms);
     ui_draw_text(layer, a.x2 - 4, a.y1 + 2, buf, UI_FONT_LABEL, fg, LV_TEXT_ALIGN_RIGHT);
+}
+
+/**
+ * What the ride was worth: normalised power, intensity and stress.
+ *
+ * Three numbers on one line, because they are read together and mean
+ * nothing apart (`model/power_metrics.h`). They stay dashes until the
+ * rolling average of thirty seconds exists, and the intensity and the
+ * stress stay dashes until the rider has set a threshold in the settings.
+ */
+static void metrics_draw(lv_event_t *e)
+{
+    lv_layer_t *layer = lv_event_get_layer(e);
+    const lv_obj_t *obj = lv_event_get_target_obj(e);
+    const ui_fec_t *f = &ui_ctx.m.fec;
+    lv_color_t fg = ui_col(UI_C_FG);
+    lv_area_t a;
+    char buf[16];
+
+    lv_obj_get_coords(obj, &a);
+
+    int32_t third = (a.x2 - a.x1) / 3;
+
+    ui_draw_text(layer, a.x1 + 4, a.y1 + 1, "NP", UI_FONT_LABEL, fg, LV_TEXT_ALIGN_LEFT);
+    ui_draw_text(layer, a.x1 + third + 4, a.y1 + 1, "IF", UI_FONT_LABEL, fg, LV_TEXT_ALIGN_LEFT);
+    ui_draw_text(layer, a.x1 + (2 * third) + 4, a.y1 + 1, "TSS", UI_FONT_LABEL, fg,
+                 LV_TEXT_ALIGN_LEFT);
+
+    if (f->np_w > 0U) {
+        (void)snprintf(buf, sizeof(buf), "%u", (unsigned int)f->np_w);
+    } else {
+        (void)snprintf(buf, sizeof(buf), "--");
+    }
+    ui_draw_text(layer, a.x1 + third - 6, a.y1 + 9, buf, UI_FONT_SMALL_B, fg,
+                 LV_TEXT_ALIGN_RIGHT);
+
+    if (f->if100 > 0U) {
+        (void)snprintf(buf, sizeof(buf), "%u.%02u", (unsigned int)(f->if100 / 100U),
+                       (unsigned int)(f->if100 % 100U));
+    } else {
+        (void)snprintf(buf, sizeof(buf), "--");
+    }
+    ui_draw_text(layer, a.x1 + (2 * third) - 6, a.y1 + 9, buf, UI_FONT_SMALL_B, fg,
+                 LV_TEXT_ALIGN_RIGHT);
+
+    if (f->if100 > 0U) {
+        (void)snprintf(buf, sizeof(buf), "%u", (unsigned int)f->tss);
+    } else {
+        (void)snprintf(buf, sizeof(buf), "--");
+    }
+    ui_draw_text(layer, a.x2 - 4, a.y1 + 9, buf, UI_FONT_SMALL_B, fg, LV_TEXT_ALIGN_RIGHT);
 }
 
 /** Legacy VueFEC::cadranPowerVector(): torque over one crank turn, closed curve */
@@ -277,7 +329,8 @@ static void fec_create(lv_obj_t *scr)
     lv_obj_set_style_border_width(cell, 1, 0);
     lv_obj_set_style_border_side(cell, LV_BORDER_SIDE_BOTTOM, 0);
     fec_rr = ui_plot(cell, 0, 0, UI_WIDTH / 2, ui_rows_h(3, 1) - 1, fec_rr_draw, NULL);
-    fec_vector = ui_plot(scr, 0, ui_row_y(4), UI_WIDTH, ui_rows_h(4, 3), vector_draw, NULL);
+    fec_metrics = ui_plot(scr, 0, ui_row_y(4), UI_WIDTH, ui_rows_h(4, 1), metrics_draw, NULL);
+    fec_vector = ui_plot(scr, 0, ui_row_y(5), UI_WIDTH, ui_rows_h(5, 2), vector_draw, NULL);
 }
 
 static void fec_update(lv_obj_t *scr)
@@ -292,6 +345,7 @@ static void fec_update(lv_obj_t *scr)
         ui_fields_update();
         lv_obj_invalidate(fec_zones);
         lv_obj_invalidate(fec_rr);
+        lv_obj_invalidate(fec_metrics);
         lv_obj_invalidate(fec_vector);
     }
 }

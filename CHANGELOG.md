@@ -6,6 +6,10 @@ Mudanças relevantes do projeto. Formato inspirado no [Keep a Changelog](https:/
 
 Revisão completa de 2026-09-18: análise do legacy e do port, migração para o NCS v3.3.0, correções críticas, testes de host e documentação. Nada foi testado na placa nem no nRF52840-DK.
 
+### Adicionado
+
+- **Potência normalizada, fator de intensidade, estresse de treino e índice de variabilidade** (`src/model/power_metrics.c` e `.h`, `test_power_metrics` com 19 casos, faixa nova na tela do rolo). São os três números que um ciclista com medidor de potência olha no fim do pedal, e que faltavam: duas horas firmes a 200 W e duas horas alternando 100 e 300 W têm a mesma média e custam coisas muito diferentes ao corpo. O método é o de Andrew Coggan, o mesmo de todo head unit e de todo site de treino: média móvel dos últimos 30 s de potência, cada valor elevado à quarta, média disso, raiz quarta. Daí saem IF (`NP/FTP`), TSS (`t × NP × IF / (FTP × 3600) × 100`, de modo que uma hora exata no limiar dá 100) e VI (`NP/média`, que diz o quanto o pedal foi irregular). O modelo alimenta **um valor por segundo de tempo em movimento** — o cronômetro da atividade já tira as pausas, então parar no semáforo não enche a janela de zeros. Sem FTP configurado, IF e TSS ficam em zero em vez de inventar número. Uma potência acima de 2.500 W entra como zero, não como descarte, porque descartar deslocaria a janela. Não testado com medidor nenhum.
+
 ### Corrigido
 
 - Quatro defeitos no coração do modelo, achados ao escrever o primeiro teste do `attitude.c` (`src/model/attitude.c`, `src/model/crash_recovery.c`, com `test_attitude` de 18 casos e `test_crash_recovery` de 8).

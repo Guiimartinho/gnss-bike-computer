@@ -25,6 +25,7 @@
 #include "model/parcours.h"
 #include "model/segment.h"
 #include "model/user_settings.h"
+#include "model/power_metrics.h"
 #include "model_internal.h"
 
 uint32_t model_time_of_day(const struct model_ctx *ctx)
@@ -291,6 +292,13 @@ static void fill_zones(const struct model_ctx *ctx, ui_model_t *m)
 
         f->zone_pct[z] = (total > 0U) ? (uint8_t)((t * 100U) / total) : 0U;
     }
+
+    /* what the ride was worth, for the rider with a power meter */
+    f->np_w = power_metrics_np(&ctx->pm);
+    f->if100 = power_metrics_if100(&ctx->pm);
+    f->tss = power_metrics_tss(&ctx->pm);
+    f->vi100 = power_metrics_vi100(&ctx->pm);
+
     f->vector_valid = false;
 }
 
