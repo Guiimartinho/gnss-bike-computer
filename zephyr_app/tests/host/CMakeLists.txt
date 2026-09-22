@@ -105,6 +105,8 @@ gnss_add_test(test_activity SOURCES model/activity.c)
 gnss_add_test(test_climb SOURCES model/climb.c)
 gnss_add_test(test_radar SOURCES model/radar.c model/radar_wire.c)
 gnss_add_test(test_incident SOURCES model/incident.c)
+gnss_add_test(test_csc_calc SOURCES model/csc_calc.c)
+gnss_add_test(test_ftms_parse SOURCES model/ftms_parse.c)
 gnss_add_test(test_e2e_activity SOURCES model/activity.c model/fit_encode.c)
 gnss_add_test(test_parcours
     SOURCES model/parcours.c model/vecteur.c model/route_file.c model/gpx_scan.c

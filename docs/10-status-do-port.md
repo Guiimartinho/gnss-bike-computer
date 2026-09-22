@@ -6,7 +6,7 @@ Onde o port Zephyr (`zephyr_app/`) está em relação ao firmware original (`leg
 
 ## Resumo
 
-- **Compila** no NCS v3.3.0 sem nenhum aviso de compilador (nRF52840 DK: FLASH 506.052 B, RAM 224.704 B; com `ANT=1`: 534.668 B e 229.312 B; nRF54LM20 DK, o alvo principal: FLASH 591.740 B, RAM 386.452 B, mais o MCUboot com 45.676 B de FLASH e 22.880 B de RAM) e **passa em 39 conjuntos de testes de host** (455 casos). Números conferidos em 2026-09-21 com build do zero nos três alvos. **Nada foi testado na placa** nem nos DKs.
+- **Compila** no NCS v3.3.0 sem nenhum aviso de compilador (nRF52840 DK: FLASH 506.200 B, RAM 224.704 B; com `ANT=1`: 534.816 B e 229.312 B; nRF54LM20 DK, o alvo principal: FLASH 591.888 B, RAM 386.452 B, mais o MCUboot com 45.676 B de FLASH e 22.880 B de RAM) e **passa em 41 conjuntos de testes de host** (478 casos). Números conferidos em 2026-09-21 com build do zero nos três alvos. **Nada foi testado na placa** nem nos DKs.
 - Desde 2026-09-19 o firmware é a base da arquitetura de [16](16-arquitetura-firmware.md): sete serviços com thread própria, eventos no zbus, máquinas de sistema e de modo no SMF, hardware pelas APIs do Zephyr ([05](05-arquitetura-zephyr.md)). O HAL próprio, os drivers da V3 e a interface em paisagem saíram.
 - Os algoritmos do legacy continuam no `src/model` e rodam na thread do modelo; alguns **não funcionariam** ainda (segmentos, formatos de arquivo, BLE central), e a interface nova, em LVGL, está no firmware com o driver próprio da tela (JDI LPM027M128B e Sharp LS027B7DH01, em retrato), as teclas com toque longo e a luz; foi testada no PC (29 telas em 2 temas), mas nunca vista em tela de verdade ([18](18-interface-telas.md)).
 - ANT+: a pilha do add-on `sdk-ant` entra no build com `ANT=1` e sobe no boot (`rf_ant_init()`), mas os perfis (HRM, BSC, FE-C) ainda não foram portados; os clientes BLE ainda não funcionam de ponta a ponta.
@@ -93,14 +93,12 @@ A base da arquitetura de [16](16-arquitetura-firmware.md), descrita em [05](05-a
 
 ## Defeitos abertos
 
-Ordenados por gravidade. Linhas conferidas em 2026-09-18. Saíram com o código em 2026-09-19: o retrato errado do `ls027.c`, o EPO do `gps_epo.c`, o menu ilegível do `vue.c`, o score não inicializado do `vue_fec.c`, o campo sem uso do `hal_gpio.c` e o shunt do STC3100; as zonas que só recebiam amostra acima de zero foram corrigidas na migração.
+Ordenados por gravidade. Linhas conferidas em 2026-09-18. Saíram em 2026-09-21, com a lógica tirada dos clientes BLE para módulos puros e cobertos por teste: a velocidade CSC 3600 vezes menor (`model/csc_calc.c`) e os flags do FTMS (`model/ftms_parse.c`). Saíram com o código em 2026-09-19: o retrato errado do `ls027.c`, o EPO do `gps_epo.c`, o menu ilegível do `vue.c`, o score não inicializado do `vue_fec.c`, o campo sem uso do `hal_gpio.c` e o shunt do STC3100; as zonas que só recebiam amostra acima de zero foram corrigidas na migração.
 
 | Gravidade | Onde | Defeito |
 |---|---|---|
 | alto | `src/model/udmatrix.c:64-67, 264-281` | `udmat_ones` gera identidade; `bound` com sinal zera covariâncias negativas: α0 nunca é estimado |
 | alto | `src/model/crash_recovery.c:104-118` | CRC inclui o próprio campo `crc`; a restauração falha em 255 de 256 casos |
-| alto | `src/rf/ble_fec_client.c:46-48, 166-168` | flags do FTMS erradas (cadência, tempo, energia): a potência sai do offset errado |
-| alto | `src/rf/ble_bsc_client.c:136-137` | velocidade CSC 3600 vezes menor |
 
 ## Roteiro
 

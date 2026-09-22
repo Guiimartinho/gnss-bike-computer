@@ -84,6 +84,8 @@ target_sources(app PRIVATE
     src/model/locator.c
     src/model/activity.c
     src/model/climb.c
+    src/model/csc_calc.c
+    src/model/ftms_parse.c
     src/model/incident.c
     src/model/radar.c
     src/model/radar_wire.c

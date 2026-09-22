@@ -12,6 +12,7 @@
 #include <zephyr/bluetooth/uuid.h>
 #include <zephyr/logging/log.h>
 
+#include "model/csc_calc.h"
 #include "rf/ble_bsc_client.h"
 
 LOG_MODULE_REGISTER(ble_bsc_client, CONFIG_LOG_DEFAULT_LEVEL);
@@ -27,12 +28,6 @@ LOG_MODULE_REGISTER(ble_bsc_client, CONFIG_LOG_DEFAULT_LEVEL);
 #ifndef BT_UUID_SENSOR_LOC_VAL
 #define BT_UUID_SENSOR_LOC_VAL      0x2A5D
 #endif
-
-/** Default wheel circumference in mm (700x25c) */
-#define DEFAULT_WHEEL_CIRCUMFERENCE 2105U
-
-/** Time resolution of CSC (1/1024 seconds) */
-#define CSC_TIME_RESOLUTION         1024U
 
 /* CSC Measurement flags */
 #define CSC_FLAG_WHEEL_REV_PRESENT  0x01U
@@ -82,114 +77,18 @@ static bsc_conn_callback_t conn_callback;
 /** Initialization flag */
 static bool is_initialized;
 
-/** Wheel circumference in mm */
-static uint16_t wheel_circumference = DEFAULT_WHEEL_CIRCUMFERENCE;
+/*
+ * Speed and cadence are worked out in `model/csc_calc.c`, which the host
+ * tests cover: the sum used to live here and gave a speed 3600 times too
+ * small, so a wheel turning once a second read as zero.
+ */
+static struct csc_calc calc;
 
-/** Previous wheel revolution count */
-static uint32_t prev_wheel_revs;
-
-/** Previous wheel event time */
-static uint16_t prev_wheel_time;
-
-/** Previous crank revolution count */
-static uint16_t prev_crank_revs;
-
-/** Previous crank event time */
-static uint16_t prev_crank_time;
-
-/** First measurement received flags */
-static bool first_wheel_measurement;
-static bool first_crank_measurement;
+/** Circumference the rider set, kept so a reset does not lose it */
+static uint16_t wheel_mm = CSC_WHEEL_MM;
 
 /** Mutex for data protection */
 static K_MUTEX_DEFINE(bsc_mutex);
-
-/* ==========================================================================
- * Private Functions
- * ========================================================================== */
-
-/**
- * @brief Calculate speed from wheel revolution delta
- * @param wheel_revs Current cumulative wheel revolutions
- * @param wheel_time Current wheel event time (1/1024 sec)
- * @return Speed in 0.01 km/h
- */
-static uint16_t calculate_speed(uint32_t wheel_revs, uint16_t wheel_time)
-{
-    if (first_wheel_measurement) {
-        prev_wheel_revs = wheel_revs;
-        prev_wheel_time = wheel_time;
-        first_wheel_measurement = false;
-        return 0U;
-    }
-
-    /* Calculate deltas with rollover handling */
-    uint32_t rev_delta = wheel_revs - prev_wheel_revs;
-    uint16_t time_delta = wheel_time - prev_wheel_time;
-
-    /* Store for next calculation */
-    prev_wheel_revs = wheel_revs;
-    prev_wheel_time = wheel_time;
-
-    if ((time_delta == 0U) || (rev_delta == 0U)) {
-        return 0U;
-    }
-
-    /* Speed = distance / time
-     * distance = rev_delta * wheel_circumference (mm)
-     * time = time_delta / 1024 (seconds)
-     * speed = (rev_delta * circumference * 1024) / (time_delta * 1000) km/h
-     * speed * 100 = (rev_delta * circumference * 1024 * 100) / (time_delta * 1000000)
-     *             = (rev_delta * circumference * 1024) / (time_delta * 10000)
-     */
-    uint32_t speed_100 = (rev_delta * (uint32_t)wheel_circumference * CSC_TIME_RESOLUTION) /
-                         ((uint32_t)time_delta * 10000U);
-
-    /* Clamp to uint16_t range */
-    if (speed_100 > UINT16_MAX) {
-        speed_100 = UINT16_MAX;
-    }
-
-    return (uint16_t)speed_100;
-}
-
-/**
- * @brief Calculate cadence from crank revolution delta
- * @param crank_revs Current cumulative crank revolutions
- * @param crank_time Current crank event time (1/1024 sec)
- * @return Cadence in RPM
- */
-static uint8_t calculate_cadence(uint16_t crank_revs, uint16_t crank_time)
-{
-    if (first_crank_measurement) {
-        prev_crank_revs = crank_revs;
-        prev_crank_time = crank_time;
-        first_crank_measurement = false;
-        return 0U;
-    }
-
-    /* Calculate deltas with rollover handling */
-    uint16_t rev_delta = crank_revs - prev_crank_revs;
-    uint16_t time_delta = crank_time - prev_crank_time;
-
-    /* Store for next calculation */
-    prev_crank_revs = crank_revs;
-    prev_crank_time = crank_time;
-
-    if ((time_delta == 0U) || (rev_delta == 0U)) {
-        return 0U;
-    }
-
-    /* Cadence = (rev_delta * 60 * 1024) / time_delta RPM */
-    uint32_t cadence = ((uint32_t)rev_delta * 60U * CSC_TIME_RESOLUTION) / (uint32_t)time_delta;
-
-    /* Clamp to reasonable value */
-    if (cadence > 255U) {
-        cadence = 255U;
-    }
-
-    return (uint8_t)cadence;
-}
 
 /**
  * @brief Parse CSC Measurement characteristic value
@@ -214,7 +113,7 @@ static void parse_csc_value(const uint8_t *data, uint16_t len)
                                   ((uint32_t)data[offset + 3U] << 24U);
             uint16_t wheel_time = data[offset + 4U] | ((uint16_t)data[offset + 5U] << 8U);
 
-            speed = calculate_speed(wheel_revs, wheel_time);
+            speed = csc_calc_speed(&calc, wheel_revs, wheel_time);
             offset += 6U;
         }
     }
@@ -225,7 +124,7 @@ static void parse_csc_value(const uint8_t *data, uint16_t len)
             uint16_t crank_revs = data[offset] | ((uint16_t)data[offset + 1U] << 8U);
             uint16_t crank_time = data[offset + 2U] | ((uint16_t)data[offset + 3U] << 8U);
 
-            cadence = calculate_cadence(crank_revs, crank_time);
+            cadence = csc_calc_cadence(&calc, crank_revs, crank_time);
         }
     }
 
@@ -390,8 +289,7 @@ void ble_bsc_client_on_connect(struct bt_conn *conn)
     client_state = BSC_CLIENT_STATE_CONNECTED;
 
     /* Reset measurement state */
-    first_wheel_measurement = true;
-    first_crank_measurement = true;
+    csc_calc_init(&calc, wheel_mm);
 
     LOG_INF("BSC device connected");
 
@@ -450,8 +348,7 @@ app_err_t ble_bsc_client_init(void)
     csc_measurement_handle = 0U;
     client_state = BSC_CLIENT_STATE_IDLE;
 
-    first_wheel_measurement = true;
-    first_crank_measurement = true;
+    csc_calc_init(&calc, wheel_mm);
 
     is_initialized = true;
     LOG_INF("BSC client initialized");
@@ -511,6 +408,7 @@ app_err_t ble_bsc_client_get_info(bsc_info_t *info)
 
 void ble_bsc_client_set_wheel_circumference(uint16_t circumference_mm)
 {
-    wheel_circumference = circumference_mm;
+    wheel_mm = circumference_mm;
+    csc_calc_set_wheel(&calc, circumference_mm);
     LOG_INF("Wheel circumference set to %u mm", circumference_mm);
 }
