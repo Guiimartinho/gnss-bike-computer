@@ -1,0 +1,19 @@
+identifier: gnssbike/nrf54lm20a/cpuapp
+name: GNSS Bike Computer nRF54LM20A Application MCU
+type: mcu
+arch: arm
+toolchain:
+  - zephyr
+sysbuild: true
+ram: 512
+flash: 2028
+supported:
+  - adc
+  - counter
+  - gpio
+  - i2c
+  - spi
+  - pwm
+  - watchdog
+  - usbd
+vendor: gnss

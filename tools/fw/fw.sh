@@ -89,11 +89,15 @@ case "$cmd" in
             # módulos extras; ant.conf liga o ANT só na imagem do app.
             ZEPHYR_EXTRA_MODULES="$(cygpath -m "$SDK_ANT_DIR");$(cygpath -m "$APP_DIR/modules/ant_ncs33_compat")"
             export ZEPHYR_EXTRA_MODULES
-            extra=(-- -Dzephyr_app_EXTRA_CONF_FILE=ant.conf)
+            extra=(-Dzephyr_app_EXTRA_CONF_FILE=ant.conf)
         fi
+        # A placa própria (gnssbike) mora em zephyr_app/boards/gnss/gnssbike;
+        # o BOARD_ROOT é a pasta que contém "boards", e precisa chegar também
+        # à imagem do MCUboot, que o sysbuild constrói à parte.
+        board_root="$(cygpath -m "$APP_DIR")"
         # O west precisa rodar no drive do projeto (F:), não no do NCS (C:).
         cd "$APP_DIR"
-        python -m west build -p "$pristine" -b "$BOARD" -d "$BUILD_DIR" --sysbuild "$APP_DIR" "${extra[@]}"
+        python -m west build -p "$pristine" -b "$BOARD" -d "$BUILD_DIR" --sysbuild "$APP_DIR"             -- "-DBOARD_ROOT=$board_root" "-Dmcuboot_BOARD_ROOT=$board_root" "${extra[@]}"
         ;;
     flash)
         erase=ERASE_ALL

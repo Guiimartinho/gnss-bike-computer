@@ -22,6 +22,7 @@
 #include "rf/ble_hrs_client.h"
 #include "rf/ble_bsc_client.h"
 #include "rf/ble_ancs_client.h"
+#include "rf/ble_lns_client.h"
 #include "rf/ble_cps_client.h"
 #include "rf/ble_fec_client.h"
 #include "rf/ble_komoot_client.h"
@@ -381,6 +382,7 @@ static void connected(struct bt_conn *conn, uint8_t err)
          * the discovery simply finds nothing.
          */
         ble_ancs_client_on_connect(conn);
+        ble_lns_client_on_connect(conn);
     }
 
     if (is_sensor) {
@@ -440,6 +442,7 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
      * the connection it took, so it is told about every one that drops.
      */
     ble_ancs_client_on_disconnect(conn);
+    ble_lns_client_on_disconnect(conn);
 
     LOG_INF("Disconnected (reason %u)", reason);
 

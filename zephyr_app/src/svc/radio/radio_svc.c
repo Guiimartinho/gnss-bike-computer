@@ -20,13 +20,17 @@
 #include "app/app_cmd.h"
 #include "app/app_svc.h"
 #include "rf/ant.h"
+#include "rf/ant_sensors.h"
 #include "rf/power_ant.h"
 #include "rf/radar_ant.h"
 #include "rf/ble_ancs_client.h"
 #include "rf/ble_bsc_client.h"
 #include "rf/ble_cps_client.h"
 #include "rf/ble_fec_client.h"
+#include "model/komoot_turn.h"
 #include "rf/ble_hrs_client.h"
+#include "rf/ble_komoot_client.h"
+#include "rf/ble_lns_client.h"
 #include "rf/ble_manager.h"
 #include "rf/ble_radar_client.h"
 #include "rf/ble_nus.h"
@@ -178,6 +182,28 @@ static void ancs_conn(bool connected)
     LOG_INF("phone notifications %s", connected ? "on" : "off");
 }
 
+/**
+ * One navigation update from the Komoot application on the phone.
+ *
+ * The client was started and connected and nothing ever read it: the
+ * navigation never reached the model, so the turn on the screen only ever
+ * came from a route file. The twenty-four directions of the application
+ * become the nine arrows of this screen in `model/komoot_turn.c`.
+ */
+static void komoot_nav(const komoot_nav_t *nav)
+{
+    struct app_phone_nav msg = {0};
+
+    if ((nav != NULL) && komoot_turn_is_navigation((uint8_t)nav->direction)) {
+        msg.valid = true;
+        msg.turn = komoot_turn_of((uint8_t)nav->direction);
+        msg.dist_m = komoot_turn_distance(nav->distance);
+        (void)strncpy(msg.street, nav->street_name, sizeof(msg.street) - 1U);
+    }
+
+    (void)app_publish(&chan_phone_nav, &msg);
+}
+
 static void bsc_data(uint16_t speed, uint8_t cadence)
 {
     struct app_ext_sensor e = {.uptime_ms = k_uptime_get_32(), .kind = APP_EXT_BSC,
@@ -257,6 +283,13 @@ static void radio_start(void)
     if ((power_ant != 0) && (power_ant != -ENOTSUP)) {
         LOG_WRN("ANT power start failed (%d)", power_ant);
     }
+
+    /* and the two the legacy rode with: the strap and the cadence sensor */
+    int ant_sens = ant_sensors_start();
+
+    if ((ant_sens != 0) && (ant_sens != -ENOTSUP)) {
+        LOG_WRN("ANT sensors start failed (%d)", ant_sens);
+    }
 #endif
     if (ble_manager_init() != APP_OK) {
         LOG_ERR("BLE start failed");
@@ -272,7 +305,9 @@ static void radio_start(void)
     }
     ble_ancs_client_register_callback(ancs_notification);
     ble_ancs_client_register_conn_callback(ancs_conn);
+    (void)ble_komoot_client_register_callback(komoot_nav);
     (void)ble_cps_client_init();
+    (void)ble_lns_client_init();
     ble_cps_client_register_callback(cps_data);
     ble_cps_client_register_conn_callback(cps_conn);
     ble_fec_client_register_callback(fec_data);

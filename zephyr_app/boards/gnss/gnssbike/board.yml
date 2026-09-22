@@ -1,0 +1,6 @@
+board:
+  name: gnssbike
+  full_name: GNSS Bike Computer (custom board)
+  vendor: gnss
+  socs:
+  - name: nrf54lm20a

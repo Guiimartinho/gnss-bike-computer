@@ -304,6 +304,25 @@ static void render_theme(ui_theme_t theme)
     ui_key(UI_KEY_RIGHT, UI_PRESS_SHORT, tick_ms);
     expect_screen(UI_SCREEN_CRS1, "and forward again");
 
+    /* the list the rider picks a session from */
+    ui_go(UI_SCREEN_WORKOUTS);
+    ui_update(&m, tick_ms);
+    snap("40_treinos", theme);
+
+    /* the eight alerts that watch a number, and the four reminders */
+    ui_alerts_group(0U, UI_ALERTS_THRESHOLDS);
+    ui_go(UI_SCREEN_ALERTS);
+    ui_update(&m, tick_ms);
+    snap("41_alertas", theme);
+
+    /* leaving and coming back is what builds the page again */
+    ui_go(UI_SCREEN_SETTINGS);
+    ui_update(&m, tick_ms);
+    ui_alerts_group(UI_ALERTS_THRESHOLDS, UI_ALERTS - UI_ALERTS_THRESHOLDS);
+    ui_go(UI_SCREEN_ALERTS);
+    ui_update(&m, tick_ms);
+    snap("42_lembretes", theme);
+
     /* the structured session, in the middle of a block below its target */
     ui_go(UI_SCREEN_WORKOUT);
     ui_update(&m, tick_ms);

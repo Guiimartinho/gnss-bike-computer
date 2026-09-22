@@ -115,6 +115,9 @@ typedef enum {
     T_STOPPED, T_PRESS_KEY,
     T_CLIMB_N, T_TO_TOP, T_GRADE, T_NEXT_M, T_NO_CLIMB, T_HC,
     T_ALARM, T_CRASH, T_CRASH_Q, T_ANY_KEY, T_ALARM_ARM, T_ALARM_OFF,
+    T_UNLOAD, T_ALERTS, T_REMINDERS, T_A_HR_HI, T_A_HR_LO, T_A_PWR_HI, T_A_PWR_LO,
+    T_A_SPD_HI, T_A_SPD_LO, T_A_CAD_HI, T_A_CAD_LO, T_A_DIST, T_A_TIME,
+    T_A_DRINK, T_A_EAT,
     T_COUNT
 } ui_text_t;
 
@@ -185,6 +188,11 @@ extern const ui_screen_ops_t ui_scr_shutdown;
 extern const ui_screen_ops_t ui_scr_routes;
 extern const ui_screen_ops_t ui_scr_dfu;
 extern const ui_screen_ops_t ui_scr_workout;
+extern const ui_screen_ops_t ui_scr_workouts;
+extern const ui_screen_ops_t ui_scr_alerts;
+
+/** Which group of alerts the screen shows, before going to it */
+void ui_alerts_group(uint8_t first, uint8_t count);
 extern const ui_screen_ops_t ui_scr_profile;
 extern const ui_screen_ops_t ui_scr_lap;
 extern const ui_screen_ops_t ui_scr_climb;

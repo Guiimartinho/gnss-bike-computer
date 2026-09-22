@@ -232,6 +232,18 @@ static void on_action(ui_action_t action, int32_t arg, void *user)
     case UI_ACT_ALARM_TOGGLE:
         app_command(APP_CMD_ALARM_TOGGLE, 0);
         break;
+    case UI_ACT_WORKOUT_SELECT:
+        app_command(APP_CMD_WORKOUT_SELECT, arg);
+        break;
+    case UI_ACT_WORKOUT_START:
+        app_command(APP_CMD_WORKOUT_START, 0);
+        break;
+    case UI_ACT_WORKOUT_STOP:
+        app_command(APP_CMD_WORKOUT_STOP, 0);
+        break;
+    case UI_ACT_SET_ALERT:
+        app_command(APP_CMD_SET_ALERT, arg);
+        break;
     default:
         app_command((enum app_cmd_id)action, arg);
         break;

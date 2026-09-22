@@ -453,7 +453,17 @@ static void on_fix(const struct app_gnss_fix *f)
      * holds the floor for two seconds between its frames, so the receiver
      * cannot slip a position in and make the bike jump.
      */
-    loc_arbiter_feed(&ctx.arb, f->sim ? LOC_ARB_SIM : LOC_ARB_GPS, now);
+    enum loc_arb_src fed = LOC_ARB_GPS;
+
+    if (f->sim) {
+        fed = LOC_ARB_SIM;
+    } else if (f->phone) {
+        /* the phone, over the Location and Navigation service */
+        fed = LOC_ARB_LNS;
+    } else {
+        /* the receiver of this device */
+    }
+    loc_arbiter_feed(&ctx.arb, fed, now);
 
     enum loc_arb_src src = loc_arbiter_pick(&ctx.arb, now, ctx.have_fix_msg && ctx.fix.fix);
 
@@ -478,7 +488,10 @@ static void on_fix(const struct app_gnss_fix *f)
     if (!f->fix) {
         return;
     }
-    ctx.fix_uptime_ms = f->uptime_ms;
+    if (!f->phone) {
+        /* only the receiver's own fix ages the status bar */
+        ctx.fix_uptime_ms = f->uptime_ms;
+    }
     if (!mode_fsm_is_outdoor(&ctx.fsm)) {
         return;
     }

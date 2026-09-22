@@ -76,21 +76,23 @@ flowchart TB
 | Tarefa | Comando (Git Bash, na raiz) |
 |---|---|
 | Build incremental / do zero (nRF54LM20 DK, o alvo) | `bash tools/fw/fw.sh build` / `bash tools/fw/fw.sh build pristine` |
+| Build para a placa própria | `BOARD=gnssbike/nrf54lm20a/cpuapp BUILD_DIR=zephyr_app/build_custom bash tools/fw/fw.sh build` |
+| Conferir o mapa de pinos da placa própria | `python tools/fw/board_check.py` |
 | Build para o nRF52840 DK (não é mais usado) | `BOARD=nrf52840dk/nrf52840 bash tools/fw/fw.sh build` |
 | Build com ANT (add-on em `C:\ncs\sdk-ant`) | `ANT=1 bash tools/fw/fw.sh build pristine` |
 | Gravar no DK (apaga tudo / mantém settings) | `bash tools/fw/fw.sh flash` / `bash tools/fw/fw.sh flash keep` |
 | Desbloquear chip | `bash tools/fw/fw.sh recover` |
 | Placas conectadas | `bash tools/fw/fw.sh devices` |
 | Memória e maiores símbolos | `bash tools/fw/fw.sh size` |
-| Testes de host | `bash tools/fw/host_tests.sh` (50 conjuntos, 667 casos) |
-| Telas da interface no PC (LVGL) | `python tools/ui/render_screens.py` (37 telas em 41 quadros, 2 temas cada, gera `docs/img/telas-lvgl/` e `docs/telas/`) |
+| Testes de host | `bash tools/fw/host_tests.sh` (53 conjuntos, 714 casos) |
+| Telas da interface no PC (LVGL) | `python tools/ui/render_screens.py` (40 telas em 44 quadros, 2 temas cada, gera `docs/img/telas-lvgl/` e `docs/telas/`) |
 | Converter um percurso do Strava para o formato do projeto | `python tools/route_convert.py entrada.gpx saida.RTE` (e `--selftest`) |
 | Diagramas e links da documentação | `python tools/docs/mermaid_check.py` e `python tools/docs/links_check.py` |
 | Ambiente do NCS no shell | `source tools/fw/ncs_env.sh` |
 
 Equivalentes no `cmd`: `build.bat [pristine]`, `flash.bat [keep]`, `recover.bat`, `serial.bat COMx`. Variáveis: `BUILD_DIR`, `NRF_SERIAL`, `NCS_VERSION`, `NCS_TOOLCHAIN`, `NOPAUSE`.
 
-Referência de 2026-09-21, com a interface, a energia, o GNSS, os segmentos, a atualização por BLE, o USB, o percurso pelo telefone (RTE, GPX e o texto do legacy), o perfil, as voltas e o arquivo FIT: nRF54LM20 DK FLASH 632.108 B de 921.456 B do slot (68,6 %), RAM 391.872 B (74,9 %), mais o MCUboot com 45.676 B de FLASH e 22.880 B de RAM; 0 avisos.
+Referência de 2026-09-21, com a interface, a energia, o GNSS, os segmentos, a atualização por BLE, o USB, o percurso pelo telefone (RTE, GPX e o texto do legacy), o perfil, as voltas e o arquivo FIT: nRF54LM20 DK FLASH 636.112 B de 921.456 B do slot (69,0 %), RAM 393.048 B (75,1 %); placa própria FLASH 636.328 B (69,1 %), RAM 369.088 B (70,5 %), mais o MCUboot com 45.676 B de FLASH e 22.880 B de RAM; 0 avisos.
 
 ## 5. Estado e próximos passos
 
@@ -106,7 +108,7 @@ Referência de 2026-09-21, com a interface, a energia, o GNSS, os segmentos, a a
   6. **Comandos do legacy** pelo NUS, com os destrutivos recusados pelo rádio.
   7. **Memória soldada** no lugar do cartão na placa nova (decisão do dono): FatFs sobre `zephyr,flash-disk`, com `/SD:` de sempre.
   8. **USB**: serviço novo com porta serial dos comandos e o disco do ciclista no PC no modo USB.
-- **Em aberto da fase 6:** o `$QRY` (listar e enviar arquivos) e o teste com cabo.
+- **Em aberto da fase 6:** o teste com cabo (o `$QRY` foi respondido em 2026-09-22).
 - **Ordem proposta do que falta:**
 
 ```mermaid
