@@ -414,6 +414,26 @@ typedef struct {
     char name[UI_ROUTE_LIST_MAX][UI_NAME_LEN];
 } ui_routes_t;
 
+/** Alerts the rider set (`model/alerts.h`), in the order of `enum alert_id` */
+#define UI_ALERTS   12U
+
+/**
+ * The first eight watch a number and the last four go off every so much.
+ * They are shown on two screens because `ui_list_create()` draws twelve
+ * rows and does not scroll: Back plus twelve would lose the last line.
+ */
+#define UI_ALERTS_THRESHOLDS    8U
+
+typedef struct {
+    uint16_t value[UI_ALERTS];  /**< 0 means the alert is off */
+} ui_alerts_t;
+
+/** The structured sessions on the storage (`model/workout.h`) */
+typedef struct {
+    char name[UI_ROUTE_LIST_MAX][UI_NAME_LEN];
+    uint8_t n;
+} ui_workouts_t;
+
 /** DBG screen extras */
 typedef struct {
     uint8_t seg_loaded;
@@ -443,6 +463,8 @@ typedef struct {
     ui_pair_t pair;
     ui_settings_t settings;
     ui_routes_t routes;
+    ui_workouts_t workouts;
+    ui_alerts_t alerts;
     ui_debug_t debug;
 } ui_model_t;
 

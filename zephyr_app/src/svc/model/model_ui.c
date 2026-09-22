@@ -25,6 +25,7 @@
 #include "model/parcours.h"
 #include "model/segment.h"
 #include "model/user_settings.h"
+#include "model/alerts.h"
 #include "model/power_metrics.h"
 #include "model/workout.h"
 #include "model_internal.h"
@@ -501,6 +502,18 @@ static void fill_settings(const struct model_ctx *ctx, ui_model_t *m)
                                                              : UI_ROUTE_LIST_MAX;
     for (uint8_t i = 0U; i < m->routes.n; i++) {
         (void)strncpy(m->routes.name[i], ctx->storage.route[i], UI_NAME_LEN - 1U);
+    }
+
+    /* the structured sessions, listed beside the routes (model/workout.h) */
+    m->workouts.n = (ctx->storage.nworkouts < UI_ROUTE_LIST_MAX) ? ctx->storage.nworkouts
+                                                                 : UI_ROUTE_LIST_MAX;
+    for (uint8_t i = 0U; i < m->workouts.n; i++) {
+        (void)strncpy(m->workouts.name[i], ctx->storage.workout[i], UI_NAME_LEN - 1U);
+        m->workouts.name[i][UI_NAME_LEN - 1U] = '\0';
+    }
+    /* what the rider asked to be told about (model/alerts.h) */
+    for (uint8_t i = 0U; (i < UI_ALERTS) && (i < ALERT_COUNT); i++) {
+        m->alerts.value[i] = alerts_get(&ctx->alerts, (enum alert_id)i).value;
     }
     m->debug.seg_loaded = (ctx->storage.segments > 255U) ? 255U : (uint8_t)ctx->storage.segments;
     (void)snprintf(m->debug.version, sizeof(m->debug.version), "%u.%u.%u",

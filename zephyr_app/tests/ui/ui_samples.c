@@ -184,6 +184,16 @@ void ui_sample_ride(ui_model_t *m)
     m->fec.zone = 4U;
     /* what forty-two minutes of that session were worth (model/power_metrics.h) */
     /* a session in the middle of a block (model/workout.h) */
+    /* two sessions on the storage, and some alerts the rider set */
+    m->workouts.n = 3U;
+    (void)strcpy(m->workouts.name[0], "4x5 LIMIAR.WKT");
+    (void)strcpy(m->workouts.name[1], "SWEETSPOT.WKT");
+    (void)strcpy(m->workouts.name[2], "VO2 30-30.WKT");
+    m->alerts.value[0] = 175U;      /* FC alta, bpm */
+    m->alerts.value[3] = 100U;      /* potencia baixa, W */
+    m->alerts.value[8] = 100U;      /* distancia, centenas de metros */
+    m->alerts.value[10] = 20U;      /* beber, min */
+
     m->wk.loaded = true;
     m->wk.running = true;
     (void)strcpy(m->wk.name, "4x5 limiar");
