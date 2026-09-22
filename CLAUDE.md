@@ -84,7 +84,7 @@ flowchart TB
 | Desbloquear chip | `bash tools/fw/fw.sh recover` |
 | Placas conectadas | `bash tools/fw/fw.sh devices` |
 | Memória e maiores símbolos | `bash tools/fw/fw.sh size` |
-| Testes de host | `bash tools/fw/host_tests.sh` (50 conjuntos, 667 casos) |
+| Testes de host | `bash tools/fw/host_tests.sh` (51 conjuntos, 684 casos) |
 | Telas da interface no PC (LVGL) | `python tools/ui/render_screens.py` (40 telas em 44 quadros, 2 temas cada, gera `docs/img/telas-lvgl/` e `docs/telas/`) |
 | Converter um percurso do Strava para o formato do projeto | `python tools/route_convert.py entrada.gpx saida.RTE` (e `--selftest`) |
 | Diagramas e links da documentação | `python tools/docs/mermaid_check.py` e `python tools/docs/links_check.py` |
@@ -108,7 +108,7 @@ Referência de 2026-09-21, com a interface, a energia, o GNSS, os segmentos, a a
   6. **Comandos do legacy** pelo NUS, com os destrutivos recusados pelo rádio.
   7. **Memória soldada** no lugar do cartão na placa nova (decisão do dono): FatFs sobre `zephyr,flash-disk`, com `/SD:` de sempre.
   8. **USB**: serviço novo com porta serial dos comandos e o disco do ciclista no PC no modo USB.
-- **Em aberto da fase 6:** o `$QRY` (listar e enviar arquivos) e o teste com cabo.
+- **Em aberto da fase 6:** o teste com cabo (o `$QRY` foi respondido em 2026-09-22).
 - **Ordem proposta do que falta:**
 
 ```mermaid

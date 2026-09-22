@@ -87,6 +87,7 @@ target_sources(app PRIVATE
     src/model/notif_filter.c
     src/model/cps_parse.c
     src/model/power_metrics.c
+    src/model/qry.c
     src/model/csc_calc.c
     src/model/ftms_parse.c
     src/model/incident.c
