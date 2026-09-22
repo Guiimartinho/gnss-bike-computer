@@ -82,7 +82,7 @@ flowchart TB
 | Desbloquear chip | `bash tools/fw/fw.sh recover` |
 | Placas conectadas | `bash tools/fw/fw.sh devices` |
 | Memória e maiores símbolos | `bash tools/fw/fw.sh size` |
-| Testes de host | `bash tools/fw/host_tests.sh` (43 conjuntos, 514 casos) |
+| Testes de host | `bash tools/fw/host_tests.sh` (44 conjuntos, 528 casos) |
 | Telas da interface no PC (LVGL) | `python tools/ui/render_screens.py` (35 telas em 39 quadros, 2 temas cada, gera `docs/img/telas-lvgl/` e `docs/telas/`) |
 | Converter um percurso do Strava para o formato do projeto | `python tools/route_convert.py entrada.gpx saida.RTE` (e `--selftest`) |
 | Diagramas e links da documentação | `python tools/docs/mermaid_check.py` e `python tools/docs/links_check.py` |

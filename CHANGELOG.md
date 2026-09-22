@@ -8,6 +8,14 @@ Revisão completa de 2026-09-18: análise do legacy e do port, migração para o
 
 ### Corrigido
 
+- Radar traseiro por ANT+ que nunca abriria o canal (`svc/radio/radio_svc.c`). O serviço de rádio sobe a pilha ANT e inicia o radar por BLE, mas ninguém chamava `radar_ant_start()`: a ligação faltava. Neste repositório a chamada responde `-ENOTSUP`, porque os parâmetros do canal do perfil ANT+ Bike Radar não estão aqui (`CONFIG_GNSS_ANT_RADAR_DEV_TYPE` é zero: o perfil está sob licença que proíbe redistribuir e o repositório é público), mas é o gancho que faltava para quem tem o perfil. Achado por uma varredura de módulos sem nenhum chamador em todo o firmware.
+
+- `src/model/kalman.c` e `.h`, 139 linhas de filtro de Kalman escalar e de posição sem nenhum cliente: o único era o `locator.c`, que saiu. O `kalman_altitude.c`, que é o filtro de 3 estados portado do `Attitude.cpp`, não depende dele. O binário não mudou de tamanho, o que confirma que o linker já o descartava.
+
+### Testado
+
+- `test_rr_zone`, 14 casos, contra `legacy/source/model/RRZone.cpp`: a amostra sem relógio, a primeira amostra que só acerta o relógio, os 20 elementos do buffer, o RMSSD com o **denominador do legacy** (a raiz de `soma_dos_quadrados / 20`, o tamanho do buffer, e não as 19 diferenças — se virar 19 o valor sai 40 em vez de 38,99 e o teste cai), cada um dos seis limites de zona, o fato de a zona ser a do batimento da **última** amostra e a média por zona. Fica registrado que o `hrm_info.timestamp = 0` do legacy (`RRZone.cpp:79`) **não** foi portado de propósito: lá o `Model.cpp:378` entrega a mesma struct global a cada volta do laço e o zero é o que impede contar a mesma amostra várias vezes; aqui o chamador monta uma struct nova por notificação. Cinco mutações derrubam o teste — inclusive a que tira a guarda do relógio, que só cai com a amostra zerada chegando **depois** de o sensor já estar rodando.
+
 - Máquina de modos sem guarda nenhuma, e apagando os números do ciclista (`src/model/mode_fsm.c` e `.h`, `svc/model/model_svc.c`, `test_mode_fsm` com 22 casos). Ela morava dentro do serviço, não tinha teste, e o `boucle__change_mode()` do legacy que ela copiava (`legacy/source/model/Boucle.cpp:101-142`) não guarda nada: dava para entrar em qualquer modo a qualquer momento. Agora é um módulo próprio, com as duas famílias (ao ar livre CRS, PRC e DBG; dentro de casa FEC e Zwift) como estados pais do SMF, e três regras — cada uma era um jeito de perder um pedal:
   - **entrar em PRC sem percurso carregado** deixava uma tela de navegação sem navegação; a troca passa a ser recusada com aviso na tela, e um percurso que sai debaixo de quem o segue devolve o modo para CRS;
   - **trocar de família gravando** misturava dado de rolo no arquivo de um pedal de rua; dentro da mesma família a troca continua livre;
