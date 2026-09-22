@@ -3,7 +3,7 @@
 Como o `zephyr_app/` está organizado desde 2026-09-19: um serviço por assunto, cada um com a sua thread, eventos no zbus, máquinas de estado no SMF e o hardware pelas APIs do Zephyr, achado por aliases do devicetree. É a base da arquitetura planejada em [16-arquitetura-firmware.md](16-arquitetura-firmware.md); o que cada serviço já faz, e o que falta, está em [10-status-do-port.md](10-status-do-port.md).
 
 > [!IMPORTANT]
-> Build verificado nos dois alvos (nRF52840 DK e nRF54LM20 DK, com e sem ANT) e testes de host; **nada rodou em placa**.
+> Build verificado em três alvos — `nrf54lm20dk/nrf54lm20a/cpuapp` (o padrão dos scripts), `gnssbike/nrf54lm20a/cpuapp` (a placa do projeto) e `nrf52840dk/nrf52840`, que ainda compila mas **saiu de uso** —, com e sem ANT, e testes de host; **nada rodou em placa**.
 
 **Nesta página:** [Camadas](#camadas) · [Boot](#boot) · [Threads](#threads) · [Eventos](#eventos) · [Máquinas de estado](#máquinas-de-estado) · [Watchdog](#watchdog) · [Fluxo de dados](#fluxo-de-dados) · [Pilhas](#pilhas) · [Tela](#tela) · [Medidor de bateria](#medidor-de-bateria) · [Carregador](#carregador) · [Módulos](#módulos) · [Devicetree e alvos](#devicetree-e-alvos) · [Configuração](#configuração) · [Regras de concorrência](#regras-de-concorrência)
 
@@ -16,12 +16,13 @@ flowchart TB
         CHAN["app_channels.c<br/>canais do zbus"]
         SVCF["app_svc.c<br/>watchdog e caixas de entrada"]
     end
-    subgraph SVC["src/svc: um serviço, uma thread"]
+    subgraph SVC["src/svc: oito serviços, uma thread cada"]
         PWR["power<br/>máquina de sistema"]
         GNS["gnss"]
         SNS["sensors<br/>tilt"]
         RAD["radio"]
         STO["storage"]
+        USBS["usb"]
         MOD["model<br/>máquina de modos"]
         UIS["ui"]
     end
@@ -68,7 +69,7 @@ sequenceDiagram
     M->>M: user_settings_init e enforce (NVS ou ZMS)
     M->>M: task_wdt sobre o watchdog0
     M->>M: model_svc_init (attitude, segmentos, percurso, zonas)
-    M->>S: storage, power, sensors, gnss, radio, model, ui
+    M->>S: storage, usb, power, sensors, gnss, radio, model, ui
     M->>P: power_svc_ready
     P->>S: system_state Ligado
     M-->>M: retorna (a thread main termina)
@@ -135,7 +136,7 @@ As mensagens estão em `zephyr_app/include/app/app_events.h`, em C sem tipos do 
 | Máquina | Arquivo | Estados | Teste |
 |---|---|---|---|
 | Sistema e energia | `src/svc/power/sys_fsm.c` | Partida, Ligado e MSC sob um pai comum que aceita o desligamento; Desligando espera a resposta de cada serviço por até 5 s; Desligado corta a energia (ship mode do nPM1300 sem VBUS, System OFF com VBUS ou sem PMIC) | `test_sys_fsm` (16 casos), com o `lib/smf/smf.c` do Zephyr |
-| Modo | `src/svc/model/model_svc.c` | CRS, PRC, FEC, Zwift, DBG, com as entradas e saídas de `boucle__change_mode()` (`legacy/source/model/Boucle.cpp:101-143`): PRC inicia o percurso carregado e o para ao sair, FEC zera as zonas e o score | pelo build; sem teste de host |
+| Modo | `src/model/mode_fsm.c`, chamada pelo `src/svc/model/model_svc.c` | CRS, PRC, FEC, Zwift, DBG, com as entradas e saídas de `boucle__change_mode()` (`legacy/source/model/Boucle.cpp:101-143`): PRC inicia o percurso carregado e o para ao sair, FEC zera as zonas e o score | `test_mode_fsm` (22 casos) |
 | Carga | `src/svc/power/charge.c` | Bateria, Solar, USB, USB cheia, Pausa térmica, Falha, lidos do nPM1300 e do AEM10900 a cada evento e a cada 10 s: com VBUS, o hardware bloqueia o solar | `test_charge` (11 casos) |
 | Luz da tela | `src/svc/ui/backlight.c` | Apagada, Temporária (10 s depois de uma tecla) e Automática (pouca luz ambiente, com histerese entre 20 e 50 lux); desligada pelo menu, nada a acende; limites a acertar na bancada | `test_backlight` (11 casos) |
 
@@ -143,7 +144,7 @@ O desligamento automático é o do legacy (`legacy/source/scheduling/power_sched
 
 ## Watchdog
 
-O `task_wdt` do Zephyr dá a cada thread de serviço o seu canal de 4 s, o tempo do WDT do legacy (que tinha um canal só, alimentado pelo `boucle` e pelo LCD). São 7 canais (`CONFIG_TASK_WDT_CHANNELS=8`); o WDT do nRF fica por trás e pega um travamento em que nem o timer do kernel roda.
+O `task_wdt` do Zephyr dá a cada thread de serviço o seu canal de 4 s, o tempo do WDT do legacy (que tinha um canal só, alimentado pelo `boucle` e pelo LCD). São 8 canais em uso, um por serviço, de 10 reservados (`CONFIG_TASK_WDT_CHANNELS=10`); o WDT do nRF fica por trás e pega um travamento em que nem o timer do kernel roda.
 
 - Cada thread alimenta o seu canal antes de cada espera na caixa, e a espera dura no máximo 1 s: um serviço preso num evento por mais de 4 s reinicia o aparelho, com o nome dele no log (`LOG_PANIC` no expirar).
 - O armazenamento carrega os segmentos antes de criar o seu canal, porque a carga pode passar de 4 s com muitos arquivos no cartão.
@@ -280,12 +281,14 @@ O nPM1300 usa os drivers do Zephyr (MFD, reguladores e o carregador pela API de 
 | `src/svc/storage/` | `storage_svc.c` | cartão, log, segmentos, percursos |
 | `src/svc/model/` | `model_svc.c`, `model_ui.c` | a thread do modelo e o retrato da tela |
 | `src/svc/ui/` | `ui_svc.c`, `ui_input.c`, `backlight.c` | a thread da tela; as teclas para o zbus; a máquina de estado da luz ([16](16-arquitetura-firmware.md#luz-do-display)) |
-| `src/model/` | `attitude`, `kalman_altitude`, `udmatrix`, `kalman`, `locator`, `loc_source`, `segment`, `liste_points`, `vecteur`, `parcours`, `power_zone`, `suffer_score`, `rr_zone`, `sd_logger`, `crash_recovery`, `user_settings`, `power_scheduler` | os algoritmos do legacy |
-| `src/rf/` | `ble/ble_manager.c`, `ble_nus.c`, `ble_lns.c`, `ble_*_client.c`, `ant/ant.c` | BLE (scan ainda não iniciado) e ANT (só com `ANT=1`) |
+| `src/model/` | `activity`, `alerts`, `attitude`, `climb`, `cmd_parser`, `cps_parse`, `crash_recovery`, `csc_calc`, `dfu_state`, `distance`, `file_policy`, `fit_encode`, `ftms_parse`, `gpx_scan`, `incident`, `kalman_altitude`, `komoot_turn`, `liste_points`, `lns_parse`, `loc_arbiter`, `map_project`, `mode_fsm`, `notif_filter`, `parcours`, `power_estimate`, `power_metrics`, `power_scheduler`, `power_zone`, `qry`, `radar`, `radar_wire`, `route_file`, `route_profile`, `rr_zone`, `sd_logger`, `segment`, `segment_file`, `suffer_score`, `udmatrix`, `user_settings`, `vecteur`, `workout` | os algoritmos do legacy e os que o port acrescentou, em C puro, sem Zephyr, para o teste de host rodar no PC |
+| `src/rf/` | `ble/ble_manager.c`, `ble/ble_nus.c`, `ble/ble_lns.c`, `ble_hrs_client.c`, `ble_bsc_client.c`, `ble_fec_client.c`, `ble_cps_client.c`, `ble_lns_client.c`, `ble_ancs_client.c`, `ble_komoot_client.c`, `ble_radar_client.c`, `dfu.c`, `file_xfer.c`, `ant/ant.c`, `ant/ant_channel.c`, `ant/ant_sensors.c`, `ant/power_ant.c`, `ant/radar_ant.c` | BLE, que anuncia e varre desde 2026-09-20 (`src/svc/radio/radio_svc.c` sobe os dois e registra os clientes), mais a atualização por BLE e o envio de arquivos; e o ANT, só com `ANT=1` e sem nenhum canal aberto de fato ([07](07-radio-ant-ble.md#rádio-no-port)) |
 | `src/ui/`, `include/ui/` | interface LVGL da placa nova ([18](18-interface-telas.md)) | a mesma no firmware e no renderizador de host (`tests/ui`) |
 | `modules/gnss_drivers/` | `drivers/display/memlcd.c`, `memlcd_frame.c`, `include/drivers/display/memlcd*.h`, `drivers/fuel_gauge/max17262.c`, `include/drivers/fuel_gauge/max17262_regs.h`, `drivers/charger/aem10900.c`, `include/drivers/charger/aem10900*.h`, `drivers/gnss/gnss_ublox_m10.c`, `ubx_m10.c`, `include/drivers/gnss/ub*_m10.h`, `dts/bindings/` (com o prefixo `e-peas` em `vendor-prefixes.txt`) | drivers próprios num módulo do Zephyr dentro da aplicação: a tela ([Tela](#tela)), o medidor MAX17262 ([Medidor de bateria](#medidor-de-bateria)), o carregador solar AEM10900 ([Carregador](#carregador)) e os receptores u-blox F10 e M10 ([Receptor GNSS](#receptor-gnss)) |
 
 Saíram em 2026-09-19, substituídos pelas APIs do Zephyr ou pelos serviços: o HAL próprio (`src/hal`), os drivers da V3 (`ls027`, `baro`, `fxos`, `stc3100`, `gps_mgmt`, `nmea_parser`, `gps_epo`, `neopixel`), a interface em paisagem (`src/vue`), a USB da pilha antiga (`src/usb`), os stubs do sistema de arquivos (`src/utils`), o `boucle`, o `model_lock`, o `zwift` (protocolo próprio, não o do legacy) e o `baro_drift` (duplicado).
+
+Saíram em 2026-09-21, porque ninguém os lia: `model/kalman.c` (o filtro de posição; o de altitude, `kalman_altitude.c`, ficou e é usado), `model/locator.c` e `model/loc_source.c`. O árbitro de fontes de posição que o `loc_source.c` prometia virou `model/loc_arbiter.c`, esse sim chamado pelo `model_svc.c` ([06](06-algoritmos.md#fontes-de-posição)).
 
 ## Receptor GNSS
 
@@ -312,6 +315,14 @@ Um driver só atende as duas peças do footprint MAX: o **MAX-F10S** de banda du
 
 A placa vem do `-b` (variável `BOARD` dos scripts); o Zephyr aplica `boards/<placa>.overlay` pelo nome. O código acha os dispositivos pelos aliases abaixo: uma placa nova só precisa defini-los no overlay dela. Um alias ausente deixa o serviço sem aquele dispositivo.
 
+São três alvos:
+
+| Alvo | Papel |
+|---|---|
+| `nrf54lm20dk/nrf54lm20a/cpuapp` | o padrão dos scripts: o DK com que a placa do projeto é desenvolvida, com as placas de avaliação dos periféricos |
+| `gnssbike/nrf54lm20a/cpuapp` | **a placa do projeto**, definida em `zephyr_app/boards/gnss/gnssbike/` (o `board.yml`, o `.dts`, o `defconfig` e o `Kconfig`), com o que só a imagem da aplicação precisa em `boards/gnssbike_nrf54lm20a_cpuapp.overlay` e `.conf`. A pinagem está em [14](14-hardware-placa-nova.md#alocação-de-pinos) e sai do `python tools/fw/board_check.py` |
+| `nrf52840dk/nrf52840` | representava a V3 sobre o DK; **saiu de uso** quando a placa do projeto entrou. Ainda compila, e a tabela abaixo o guarda por isso |
+
 | Alias | Serviço | nRF54LM20 DK (periféricos da placa nova) | nRF52840 DK (pinos da V3) |
 |---|---|---|---|
 | `gnss` | GNSS | u-blox MAX-F10S (`u-blox,max-f10`) no `uart21` a 38400 baud, o valor de fábrica das duas firmwares (TX P1.04, RX P1.05) | `gnss-nmea-generic` no `uart1` (TX P0.05, RX P0.07), o M10578-A3 da V3 |
@@ -335,14 +346,14 @@ A placa vem do `-b` (variável `BOARD` dos scripts); o Zephyr aplica `boards/<pl
 - O JDI quer os sinais no nível do VDD dele (3,0 V; alto acima de VDD − 0,1 V, ficha do LPM027M128B, 3.1): o I/O do DK precisa estar em 3,0 V, ou os sinais precisam de tradutor de nível. Na V3, a Sharp tem EXTMODE e EXTCOMIN em GND por 10 kΩ (R13, R16) e DISP no VCC por 10 kΩ e 0,1 µF (R17, C43), conferido no esquema: o driver inverte o VCOM pelo SPI, como o legacy.
 - Nós do DK desligados no overlay da V3 porque ocupam pinos da placa: `qspi` e `mx25r64`, `spi3`, `pwm0`; o `uart0` perdeu RTS/CTS. Detalhes em [02-hardware.md](02-hardware.md).
 - `boards/nrf54lm20dk_nrf54lm20a_cpuapp.conf` troca o NVS pelo ZMS: a NVM do nRF54L é RRAM, e a Nordic recomenda o ZMS nela.
-- Build do nRF54LM20 DK: `BOARD=nrf54lm20dk/nrf54lm20a/cpuapp bash tools/fw/fw.sh build`.
-- Nada disso rodou num DK: é build verificado, não teste em placa.
+- Build do nRF54LM20 DK: `bash tools/fw/fw.sh build`, que já usa esse alvo. Build da placa do projeto: `BOARD=gnssbike/nrf54lm20a/cpuapp BUILD_DIR=zephyr_app/build_custom bash tools/fw/fw.sh build`.
+- Nada disso rodou num DK nem na placa do projeto: é build verificado, não teste em placa.
 
 ## Configuração
 
 | Arquivo | O que define |
 |---|---|
-| `prj.conf` | zbus e SMF, `task_wdt` com 8 canais, `CONFIG_POWEROFF`, a API de fuel gauge, GNSS com satélites e o workqueue próprio do modem, sensores, tela e LVGL (RGB565, pool de 32 KB, buffer de desenho de 10 % a 16 bits, só os formatos RGB565 e A8 no renderizador, sem log, sem temas e só rótulos, como `tests/ui/lv_conf.h`), entrada com a thread de 2048 B, workqueue do sistema de 2048 B, FatFs com nomes longos em buffer estático, BLE central e periférico (4 conexões, RX do BT com 3072 B), settings em NVS, log por UART, `CONFIG_RESET_ON_FATAL_ERROR`, otimização de tamanho |
+| `prj.conf` | zbus e SMF, `task_wdt` com 10 canais (8 em uso), `CONFIG_POWEROFF`, a API de fuel gauge, GNSS com satélites e o workqueue próprio do modem, sensores, tela e LVGL (RGB565, pool de 32 KB, buffer de desenho de 10 % a 16 bits, só os formatos RGB565 e A8 no renderizador, sem log, sem temas e só rótulos, como `tests/ui/lv_conf.h`), entrada com a thread de 2048 B, workqueue do sistema de 2048 B, FatFs com nomes longos em buffer estático, BLE central e periférico (4 conexões, RX do BT com 3072 B), settings em NVS, log por UART, `CONFIG_RESET_ON_FATAL_ERROR`, otimização de tamanho |
 | `boards/*.conf` | o ZMS, o PWM da luz, os reguladores (`CONFIG_REGULATOR`) e a API de carregadores (`CONFIG_CHARGER`) no nRF54LM20 |
 | `sysbuild.conf` | `SB_CONFIG_PARTITION_MANAGER=n` |
 | `CMakeLists.txt` | fontes por camada, o módulo `modules/gnss_drivers` por `EXTRA_ZEPHYR_MODULES`, `-Wall -Wextra` |

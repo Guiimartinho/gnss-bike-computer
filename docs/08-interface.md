@@ -155,7 +155,7 @@ A interface em paisagem do port (`src/vue`: 9 páginas em fonte 5×7, com o driv
 | CRS página 1, com os arranjos de 0, 1 e 2 segmentos | os mesmos arranjos | igual no PC |
 | CRS páginas 2 (Komoot, RR) e 3 (pitch, bússola) | as mesmas, com seta desenhada, rua, rumo em graus e rugosidade com nome | diferente |
 | troca automática para a tela GPS sem posição | igual, com posição mais velha que 6 s | igual no PC |
-| PRC com mapa, zoom e segmentos | igual; a projeção do mapa pelo modelo ainda não foi portada | parcial |
+| PRC com mapa, zoom e segmentos | igual, **projetado pelo modelo**: `src/svc/model/model_ui.c:556-603` e `:645-676` sobre `src/model/map_project.c` (`test_map_project`, 8 casos) | igual no PC; falta ver num painel |
 | FEC | igual, na grade de 7 linhas | diferente |
 | menu com modos, percursos, pareamento, FTP, peso, calibração, formatação, desligar | igual, com Sensores, Tela e luz e confirmação da formatação | diferente |
 | fila de 10 notificações e produtores | a fila; os produtores chegam com cada serviço | parcial |
@@ -167,9 +167,8 @@ A interface está no firmware desde 2026-09-19, testada no PC e no build, não n
 
 Em ordem de prioridade (P = até 1 dia, M = 2 a 5 dias, G = mais de uma semana):
 
-Feitos em 2026-09-19, no build: o driver próprio da tela (JDI em 3 bits e Sharp em 1 bit, retrato, quantização da interface, só as linhas que mudaram, EXTCOMIN ou VCOM serial), o LVGL na thread `ui` com as ações publicadas como comandos, as teclas pelo subsistema de entrada (`gpio-keys` e `zephyr,input-longpress`) e a máquina da luz. Falta:
+Feitos em 2026-09-19, no build: o driver próprio da tela (JDI em 3 bits e Sharp em 1 bit, retrato, quantização da interface, só as linhas que mudaram, EXTCOMIN ou VCOM serial), o LVGL na thread `ui` com as ações publicadas como comandos, as teclas pelo subsistema de entrada (`gpio-keys` e `zephyr,input-longpress`) e a máquina da luz. Feito em 2026-09-20: os mini-mapas dos segmentos e o mapa do PRC projetados pelo modelo, como `afficheSegment` e `Zoom.cpp`, em `src/model/map_project.c`. Falta:
 
-1. **M** · mini-mapas dos segmentos e mapa do PRC projetados pelo modelo, como `afficheSegment` e `Zoom.cpp`.
-2. **M** · notificações dos serviços (boot, GPS, pareamento, FDIR).
-3. **M** · na placa nova, o centro pelo SHPHLD e pelo GPIO3 do nPM1300, e a luz de verdade (o LPM027M128B não tem luz própria).
-4. **P** · ver tudo num painel: SPI, COM, cores, tempos e legibilidade ao sol.
+1. **M** · notificações dos serviços (boot, GPS, pareamento, FDIR).
+2. **M** · na placa nova, o centro pelo SHPHLD e pelo GPIO3 do nPM1300, e a luz de verdade (o LPM027M128B não tem luz própria).
+3. **P** · ver tudo num painel: SPI, COM, cores, tempos e legibilidade ao sol.

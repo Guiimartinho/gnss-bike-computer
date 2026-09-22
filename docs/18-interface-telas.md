@@ -3,7 +3,7 @@
 Interface gráfica do firmware da placa nova: a tela, o framework de desenho, a implementação, a paleta de 8 cores, a grade, a barra de estado, as fontes, os botões, a luz e o ritmo de atualização, e todas as telas. As telas partem das do legacy ([08-interface.md](08-interface.md)); a navegação entre elas é a máquina de estado de [16](16-arquitetura-firmware.md#interface).
 
 > [!IMPORTANT]
-> As telas estão escritas em LVGL (`zephyr_app/src/ui`) e testadas no PC: o renderizador de host (`zephyr_app/tests/ui`) desenha cada uma nos dois temas e confere as cores, os textos e a navegação, e as imagens desta página saem dele ([Teste no PC](#teste-no-pc)). Desde 2026-09-19 a interface está no firmware, com o driver próprio da tela, a thread `ui`, as teclas e a luz ([Implementação](#implementação)): build verificado nos dois DKs, mas **nada foi visto em tela de verdade, não testado na placa.** As maquetes do plano, feitas antes do código por `tools/docs/screens_drawing.py`, continuam em `docs/img/telas/`.
+> As telas estão escritas em LVGL (`zephyr_app/src/ui`) e testadas no PC: o renderizador de host (`zephyr_app/tests/ui`) desenha cada uma nos dois temas e confere as cores, os textos e a navegação, e as imagens desta página saem dele ([Teste no PC](#teste-no-pc)). Desde 2026-09-19 a interface está no firmware, com o driver próprio da tela, a thread `ui`, as teclas e a luz ([Implementação](#implementação)): build verificado nos dois alvos de hoje, o nRF54LM20 DK (`nrf54lm20dk/nrf54lm20a/cpuapp`) e a placa do projeto (`gnssbike/nrf54lm20a/cpuapp`) — o nRF52840 DK ainda compila, mas saiu de uso. **Nada foi visto em tela de verdade, não testado na placa.** As maquetes do plano, feitas antes do código por `tools/docs/screens_drawing.py`, continuam em `docs/img/telas/`.
 
 **Nesta página:** [Tela](#tela) · [Framework](#framework) · [Implementação](#implementação) · [Teste no PC](#teste-no-pc) · [Paleta](#paleta) · [Grade e barra de estado](#grade-e-barra-de-estado) · [Fontes e textos](#fontes-e-textos) · [Telas](#telas) · [Botões](#botões) · [Atualização e luz](#atualização-e-luz) · [Memória](#memória) · [Diferenças para o legacy](#diferenças-para-o-legacy)
 
@@ -94,7 +94,7 @@ Sem a regra 1, o arredondamento do RGB565 (6 bits de verde, 5 de vermelho e azul
 - um texto sai da caixa que o contém;
 - a navegação não chega à tela esperada ou uma ação não sai: páginas do CRS em anel, notificação fechada por tecla, tela do GNSS com a posição velha, trava do menu, menu, percursos, falta de percurso, ajustes, sensores, pareamento, FTP, zoom do PRC e desligamento pelo toque longo.
 
-Resultado em 2026-09-20: 31 telas em 2 temas, 64 quadros, 0 problemas; pico de 23,9 KB no heap do LVGL, na tela com notificação, e de 7.359 B de pilha (no PC, x86-64, com ponteiros de 64 bits). O `lv_conf.h` do renderizador espelha o Kconfig do firmware: só os formatos RGB565 e A8 no renderizador, a fonte padrão UNSCII 8 e só rótulos; com os outros formatos cortados, as 58 imagens saíram iguais byte a byte. A formatação dos números tem teste de host próprio, `test_ui_fmt` (10 casos), contra a transcrição de `_fmkstr` e `_secjmkstr` em `zephyr_app/tests/host/support/legacy_ref.h` ([12](12-ferramentas-testes.md#testes-de-host-do-port)).
+Resultado em 2026-09-22: 44 telas em 2 temas, 88 quadros, 0 problemas; pico de 23.696 B no heap do LVGL, na tela com notificação, e de 7.359 B de pilha (no PC, x86-64, com ponteiros de 64 bits). O `lv_conf.h` do renderizador espelha o Kconfig do firmware: só os formatos RGB565 e A8 no renderizador, a fonte padrão UNSCII 8 e só rótulos; com os outros formatos cortados, as imagens saíram iguais byte a byte. A formatação dos números tem teste de host próprio, `test_ui_fmt` (10 casos), contra a transcrição de `_fmkstr` e `_secjmkstr` em `zephyr_app/tests/host/support/legacy_ref.h` ([12](12-ferramentas-testes.md#testes-de-host-do-port)).
 
 O teste no PC confere o desenho, não o painel: tempo de SPI, COM, luz e legibilidade ao sol ficam para a bancada.
 
@@ -146,7 +146,9 @@ No tema preto e branco, cada papel vira preto sobre branco (ou branco sobre pret
 
 ## Telas
 
-Todas no tamanho da tela, 240 × 400. As que o legacy tem mantêm o conteúdo e o arranjo; as marcadas "nova" vêm do hardware novo. Em cada seção, a primeira imagem é o tema de 8 cores e a segunda o preto e branco. Cada tela em tamanho real, com o que mostra campo a campo, está em [telas/](telas/README.md).
+Todas no tamanho da tela, 240 × 400. As que o legacy tem mantêm o conteúdo e o arranjo; as marcadas "nova" vêm do hardware novo. Em cada seção, a primeira imagem é o tema de 8 cores e a segunda o preto e branco.
+
+São **44 telas por tema**, 88 imagens em [`docs/telas/`](telas/README.md), onde cada uma aparece em tamanho real com o que mostra campo a campo. As tabelas abaixo cobrem as telas de dados, de menu e de sistema; as que vieram das funções entregues depois de 2026-09-20 — atualização por BLE, perfil do percurso, voltas, subida em curso e próxima subida, radar, queda e alarme, treino, alertas e lembretes — estão todas naquele arquivo, e as folhas de contato desta página não mostram as de número 38 a 42.
 
 ### Ciclismo (CRS)
 
@@ -188,13 +190,18 @@ Todas no tamanho da tela, 240 × 400. As que o legacy tem mantêm o conteúdo e 
 
 | Tela | Quando | Conteúdo | Legacy |
 |---|---|---|---|
-| Menu | centro numa página, depois dos 5 s iniciais | Voltar, Modo FEC, Modo CRS, Modo PRC, Modo Zwift, Modo DBG, Ajustes, Desligar | a árvore de `Menuable.cpp:255-289`, em português |
+| Menu | centro numa página, depois dos 5 s iniciais | 9 itens: Voltar, Modo FEC, Modo CRS, Modo PRC, Modo Zwift, Modo DBG, **Treino**, Ajustes, Desligar (`ui_scr_menus.c:47-61`, `MENU_N 9`) | a árvore de `Menuable.cpp:255-289`, em português, com Treino de acréscimo |
 | Percursos | Menu, Modo PRC | Voltar e os percursos do cartão (até 10); o escolhido abre o PRC; sem percurso, a notificação "Erro: Nenhum percurso" | `Menuable.cpp:46-78` |
-| Ajustes | Menu, Ajustes | Voltar, Sensores, FTP, Peso, Calibrar bússola, Tela e luz, GNSS, Energia, Formatar, com o valor atual à direita | Settings, com Sensores reunindo os pareamentos e os itens novos |
+| Treinos | Menu, Treino | a lista dos `.WKT` do armazenamento e, enquanto houver sessão carregada, **Descarregar** | nova |
+| Treino | Menu, Treino, com uma sessão carregada | o nome da sessão, o passo e o total, o rótulo do passo, quanto falta (tempo, metros ou tecla), o alvo e o valor atual na cor da resposta (verde dentro da faixa, vermelho fora) e a barra com a faixa alvo e a marca do ciclista | nova (o legacy não tem treino estruturado) |
+| Treino sem arquivo | Menu, Treino, sem nenhum `.WKT` | diz que não há sessão e onde pôr o arquivo | nova |
+| Ajustes | Menu, Ajustes | 12 itens: Voltar, Sensores, FTP, Peso, Calibrar bússola, Tela e luz, GNSS, **Alarme** (armar ou desarmar), **Alertas**, **Lembretes**, Energia, Formatar, com o valor atual à direita (`ui_scr_menus.c:460`, `SET_N 12`, e `:479-493`) | Settings, com Sensores reunindo os pareamentos e os itens novos |
 | Sensores | Ajustes, Sensores | Voltar e cada tipo (FC, velocidade e cadência, potência, rolo, radar, luz) com o estado (bolinha verde conectado, vermelha perdido, amarela procurando, vazia sem par), o dispositivo e o último dado; o centro abre o pareamento do tipo | nova |
 | Parear | Sensores, um tipo | "Procurando...", Cancelar e os dispositivos achados, com nome ou ID e RSSI (até 7); regras em [17](17-dispositivos-ble-ant.md#pareamento) | `MenuPagePairing` e `_page1_mode_ant_list`, com o BLE |
 | Editar valor | Ajustes, FTP ou Peso | valor grande, −1, +1 e "gravar" | `MenuPageSetting` |
 | Tela e luz | Ajustes | Voltar, Luz (automática ou desligada), Tela (cores ou preto e branco) | nova |
+| Alertas | Ajustes, Alertas | os 8 alertas que vigiam um número (FC, potência, velocidade e cadência, cada um alto e baixo), com o limite de cada um | nova |
+| Lembretes | Ajustes, Lembretes | os 4 que tocam de tempos em tempos: distância, tempo, beber e comer; os três de tempo contam minutos **em movimento** | nova |
 | Formatar | Ajustes, Formatar | "Formatar o cartão?", Cancelar e "Formatar e apagar" | o legacy formata na hora (`Menuable.cpp:102-110`) |
 
 ### Sistema
@@ -251,7 +258,7 @@ Os três botões e as funções do legacy ([08](08-interface.md#botões)), com o
 | Flash no nRF54LM20 DK | LVGL 92.467 B, telas 28.753 B, fontes 26.904 B, driver 2.972 B | só os formatos RGB565 e A8 no renderizador e sem o log do LVGL |
 | Linha em 3 bits | 150 B de pixels por linha física de 400 pixels, mais os bits de modo e endereço | ficha, seção 6.1 |
 | Quadro inteiro pelo SPI | cerca de 36 KB, perto de 150 ms a 2 MHz | só na troca de tela; nas páginas de dados vão as linhas que mudaram |
-| RAM do nRF54LM20A | 512 KB | o port usa 247.800 B com a interface ([03](03-ambiente-build.md#resultado-de-referência)) |
+| RAM do nRF54LM20A | 512 KB | medida em 2026-09-22, com a interface e o resto do firmware: 393.080 B (75,12 %) no nRF54LM20 DK e 369.120 B (70,54 %) na placa do projeto ([03](03-ambiente-build.md#resultado-de-referência)) |
 
 ## Diferenças para o legacy
 

@@ -1,6 +1,6 @@
 # Armazenamento e USB
 
-Onde e como o stravaV10 guarda segmentos, percursos, logs e EPO, a pilha FatFs sobre SD ou flash NOR, a USB composta (CDC + MSC) e o estado disso no port, onde o sistema de arquivos ainda está em stub.
+Onde e como o stravaV10 guarda segmentos, percursos, logs e EPO, a pilha FatFs sobre SD ou flash NOR, a USB composta (CDC + MSC) e o estado disso no port, onde o sistema de arquivos é FatFs de verdade desde 2026-09-19, mas nunca foi exercitado com cartão nem com cabo.
 
 **Nesta página:** [Arquivos do legacy](#arquivos-do-legacy) · [Arquivo da atividade em FIT](#arquivo-da-atividade-em-fit) · [Pilha de armazenamento](#pilha-de-armazenamento) · [USB](#usb) · [Armazenamento no port](#armazenamento-no-port) · [Estado do SD no port](#estado-do-sd-no-port) · [RAM](#ram)
 
@@ -70,7 +70,7 @@ flowchart TB
 | Percursos | texto `lat lon [alt]` do legacy, `.PAR` e `.CRS`, até 500 pontos | desde 2026-09-20 é o formato do legacy, com CRLF, linhas `<meta>` e ponto sem altitude; um percurso maior que 500 pontos é dividido pela metade enquanto carrega (os dois reais, de 848 e 950 pontos, ficam em 424 e 475), o que o legacy não fazia por usar o heap |
 | Log | `@<data>.txt` na raiz, 19 campos com `;` e CRLF, como o legacy | igual desde 2026-09-19; o ponto leva os ângulos do filtro, a correção do barômetro, a velocidade vertical e as rugosidades do acelerômetro e do barômetro |
 | EPO | `/SD:/MTK14.EPO` | offset de cabeçalho e comandos errados (ver [10](10-status-do-port.md#defeitos-abertos)) |
-| USB | nada: os arquivos da pilha USB antiga saíram em 2026-09-19 | a USB `device_next` (CDC ACM e MSC) é o passo da USB |
+| USB | serviço próprio, `src/svc/usb/usb_svc.c`, no build do alvo que tem a pilha `device_next` (`zephyr_app/CMakeLists.txt:199`): porta serial com os comandos do legacy e, no modo USB, o disco do ciclista no PC ([Estado do SD no port](#estado-do-sd-no-port)). Os arquivos da pilha USB antiga saíram em 2026-09-19 | o legacy usava o `app_usbd` composto do nRF5 SDK; **não testada com cabo** |
 
 Em 2026-09-18 o estouro do `sd_logger` com o cartão indisponível foi corrigido (`test_sd_logger`).
 

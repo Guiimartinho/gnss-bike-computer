@@ -72,7 +72,7 @@ Os números de tipo de dispositivo ANT+ vêm do SDK FIT da Garmin (enum `antplus
 | Oxigenação muscular (Moxy) | Muscle Oxygen, tipo 31 | — | SmO2 e hemoglobina total | não há perfil | P3 |
 | Temperatura ambiente (Garmin Tempe) | Environment, tipo 25 | Environmental Sensing, 0x181A | temperatura | não há perfil nem cliente | P3 (o aparelho já tem barômetro com temperatura) |
 | Controle remoto | Controls, tipo 16 | HID, 0x1812 | botões | ANT: não há perfil; BLE: `hogp` do NCS | P3 |
-| Notificações do iPhone | — | ANCS e AMS da Apple | chamadas, mensagens, mídia | `ancs_client` e `ams_client` do NCS; exigem o papel periférico | P3 |
+| Mídia do iPhone | — | AMS da Apple | faixa, artista e controle de reprodução | `ams_client` do NCS; exige o papel periférico, que o port já tem | P3 (as notificações estão feitas, na linha "Notificações do celular") |
 | Notificações do Android | — | exige aplicativo próprio | — | — | Fora (sem aplicativo) |
 | Pressão do pneu (Quarq TyreWiz) | perfil fora da lista pública | não confirmado | pressão | — | Fora (não confirmado) |
 | Suspensão e canote (RockShox Flight Attendant, Reverb) | há perfis na lista, mas o uso por esses produtos não foi confirmado | fechado | — | — | Fora |
@@ -86,6 +86,7 @@ Rolos do mercado, pelas análises do DC Rainmaker: o Wahoo KICKR CORE 2 e o Elit
 | Camada | Pronto | A escrever |
 |---|---|---|
 | `sdk-ant` v2.1.1 | perfis `ant_hrm`, `ant_bsc`, `ant_bpwr` (parcial) e `ant_common`; amostras de recepção e transmissão; busca em fundo (`ant_bgnd_scan`) | FE-C, radar, luzes, câmbio, LEV, oxigenação e ambiente sobre canais crus (`include/ant_interface.h`), a partir dos documentos de perfil |
+| Port, lado ANT+ | o firmware **abre canais escravos** desde 2026-09-22: `src/rf/ant/ant_channel.c` abre e fecha um canal, e `ant_sensors.c`, `radar_ant.c` e `power_ant.c` pedem um canal para a cinta, o sensor de velocidade e cadência, o radar e o medidor de potência | **nenhum canal abre de fato neste repositório.** Os `CONFIG_GNSS_ANT_*_DEV_TYPE` valem 0 (`zephyr_app/Kconfig:80-172`), e com zero o `ant_ch_open()` devolve `-ENOTSUP`. Falta a decodificação das páginas, em `src/rf/ant/radar_pages.c`, `power_pages.c` e `sensor_pages.c`, que **não existem no repositório nem na máquina do projeto** e estão no `.gitignore:27-29`: os perfis ANT+ estão sob a ANT+ Shared Source License, o ANT+ Adopter Agreement proíbe redistribuí-los e este repositório é público ([07](07-radio-ant-ble.md#decisão-ant-e-ble)). Sem esses arquivos valem as definições fracas de `ant_sensors.c`, que não decodificam nada; o dono escreve os três na máquina dele e liga os `DEV_TYPE` |
 | NCS v3.3.0, clientes BLE | `hrs_client`, `bas_client`, `nus_client`, `cts_client`, `hogp`, `ancs_client`, `ams_client`; `BT_GATT_DM` para descobrir serviços e `BT_SCAN` para filtrar a varredura | CSC, CPS, FTMS, LNS, Komoot (o port tem versões com defeitos conhecidos, [07](07-radio-ant-ble.md#o-que-falta)), Bosch, CORE |
 
 ## Limites do rádio
@@ -102,7 +103,7 @@ Orçamento de partida, a medir no DK:
 
 - **ANT:** HRM, BSC (ou velocidade e cadência separados), potência, FE-C, radar, luz, câmbio e LEV, mais a busca em fundo: 9 a 10 dos 15 canais.
 - **BLE central:** FC, velocidade e cadência, potência, rolo, celular (LNS, Komoot e NUS no mesmo link): 5 a 6 links.
-- **BLE periférico:** 1 a 2 links (Bosch, iPhone, atualização de firmware), se o papel periférico entrar ([16](16-arquitetura-firmware.md#decisões-em-aberto)).
+- **BLE periférico:** 1 a 2 links (Bosch, iPhone, atualização de firmware). O papel entrou: o `prj.conf:185-186` liga `CONFIG_BT_PERIPHERAL=y` e `CONFIG_BT_CENTRAL=y`, com `CONFIG_BT_MAX_CONN=4` ([16](16-arquitetura-firmware.md#decisões-em-aberto)).
 - **Risco:** um central BLE com muitos canais ANT no nRF54LM20A não foi testado pela Garmin; o teste de convivência no DK vem antes de prometer o catálogo inteiro.
 
 ## Pareamento
@@ -118,7 +119,7 @@ Orçamento de partida, a medir no DK:
 |---|---|---|
 | Ordem | P1 na fase 4 do roteiro, P2 logo depois, P3 sob demanda | paridade com o legacy primeiro ([10](10-status-do-port.md#roteiro)) |
 | Radar | P2, pelo ANT+ | é o acessório de segurança mais pedido e só abre pelo ANT+ |
-| Papel periférico | incluir | abre a e-bike Bosch, as notificações do iPhone e a atualização sem cabo; depende da decisão em [16](16-arquitetura-firmware.md#decisões-em-aberto) |
+| Papel periférico | **feito** | abre a e-bike Bosch, as notificações do iPhone e a atualização sem cabo; ligado no `prj.conf:185-186` e exigido pelo `rf/ble_ancs_client.c`. Não testado com nenhum celular |
 | Licença ANT | chave de avaliação no desenvolvimento; comercial antes de vender | a chave de avaliação proíbe uso comercial |
 
 ## Referências

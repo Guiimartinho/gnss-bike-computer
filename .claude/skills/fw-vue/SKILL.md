@@ -28,6 +28,8 @@ Referência: `docs/08-interface.md` (telas do legacy, imagens em `docs/img/`, es
 
 A interface da placa nova está em `zephyr_app/src/ui` e `zephyr_app/include/ui` (`docs/18-interface-telas.md`): C puro sobre o LVGL 9.5 do NCS, sem Zephyr, testada no PC e compilada no firmware desde 2026-09-19.
 
+As telas vivem no enum `UI_SCREEN_*` de `include/ui/ui.h` e na tabela de `src/ui/ui_core.c`. As últimas a entrar foram `UI_SCREEN_WORKOUT`, `UI_SCREEN_WORKOUTS` e `UI_SCREEN_ALERTS` (`ui_core.c:62-64`), esta última desenhada por `ui_alerts_group()` (`ui_scr_menus.c:343`), que serve tanto os limiares (Alertas) quanto os lembretes. Com isso o menu principal passou a **9** itens, com **Treino** entre o modo de depuração e os Ajustes (`MENU_N` em `ui_scr_menus.c:46-63`), e os Ajustes chegaram a **12**, com **Alertas** e **Lembretes** (`SET_N` em `ui_scr_menus.c:460-497`).
+
 1. **Legacy primeiro:** antes de mexer numa tela, leia a função original (`VueCRS.cpp`, `VuePRC.cpp`, `VueFEC.cpp`, `VueGPS.cpp`, `VueDebug.cpp`, `Menuable.cpp`, `MenuObjects.cpp`) e cite a linha no comentário. Campo, ordem, formato e limite seguem o legacy; diferença nova entra na tabela "Diferenças para o legacy" do `docs/18`.
 2. **Dados só pelo retrato:** a tela lê `ui_ctx.m` (`ui_model_t`), nunca o modelo nem drivers; pedidos saem por `ui_action()`. Mapas chegam projetados em milésimos da janela (`UI_PM`).
 3. **Nada só por cor:** o tema preto e branco precisa dizer o mesmo, pelo sinal, pela palavra ou pela forma.
@@ -38,7 +40,7 @@ A interface da placa nova está em `zephyr_app/src/ui` e `zephyr_app/include/ui`
 
 ## Verificar
 
-- Build sem aviso nos dois DKs; `test_memlcd` e `test_backlight` verdes se mexeu no driver ou na luz.
+- Build sem aviso nos dois alvos de hoje, o nRF54LM20 DK (padrão) e a placa `gnssbike/nrf54lm20a/cpuapp`; `test_memlcd` e `test_backlight` verdes se mexeu no driver ou na luz.
 - Interface nova: `python tools/ui/render_screens.py` precisa terminar com `0 problems`; olhe as folhas de `docs/img/telas-lvgl/` nos dois temas. Tela nova ganha um `snap()` e, se tiver navegação, `expect_screen` e `expect_action` em `zephyr_app/tests/ui/ui_render.c`, e entra numa folha de `tools/ui/render_screens.py`.
 - A interface em paisagem do port (`src/vue`) saiu em 2026-09-19. Sem painel ligado, a tela só se vê no PC (`render_screens.py`); o simulador do legacy (`tools/TDD` + `LS027simulator.jar`) não compila aqui.
 - Diga o que não foi visto na tela de verdade.

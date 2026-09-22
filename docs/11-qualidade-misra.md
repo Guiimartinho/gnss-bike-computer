@@ -21,11 +21,11 @@ Regras de código do port, o que a análise estática encontra hoje e o que foi 
 
 ## Estado atual
 
-| Item | Situação em 2026-09-19 |
+| Item | Situação em 2026-09-22 |
 |---|---|
 | Flags do compilador | `-Wall -Wextra -Werror=implicit-function-declaration -Werror=return-type -Wno-unused-parameter` (`zephyr_app/CMakeLists.txt`); sem `-Werror` geral |
-| Avisos no build | 0 nos dois alvos; com `ANT=1`, só o do símbolo obsoleto do `sdk-ant` |
-| Testes de host | 8 conjuntos, 65 casos, com `-Werror` ([12](12-ferramentas-testes.md)) |
+| Avisos no build | 0 nos dois alvos (`nrf54lm20dk/nrf54lm20a/cpuapp` e `gnssbike/nrf54lm20a/cpuapp`); com `ANT=1`, só o do símbolo obsoleto do `sdk-ant` |
+| Testes de host | 53 conjuntos, 714 casos, com `-Werror` ([12](12-ferramentas-testes.md)) |
 | cppcheck 2.20 | achados reais abaixo; os `syntaxError` dos `ble_*.c` são falsos positivos das macros do Zephyr |
 | MISRA formal | não verificado: não há ferramenta MISRA configurada |
 | Formatação | `.editorconfig` na raiz (4 espaços, LF, 100 colunas no C); sem `.clang-format` ainda |
@@ -39,13 +39,17 @@ cppcheck --enable=warning,style,performance,portability --std=c11 --inline-suppr
   -I zephyr_app/include zephyr_app/src/app zephyr_app/src/svc zephyr_app/src/model zephyr_app/src/rf
 ```
 
-As duas definições `-D` dão ao cppcheck os macros de devicetree dos `#if` dos serviços; sem elas, cada `#if DT_...` vira um `syntaxError`. A interface (`src/ui`) passa com o LVGL no caminho ([12](12-ferramentas-testes.md#renderizador-de-telas)).
+As duas definições `-D` dão ao cppcheck os macros de devicetree dos `#if` dos serviços; sem elas, cada `#if DT_...` vira um `syntaxError`. Elas não cobrem tudo: `DT_NODE_HAS_STATUS_OKAY` e `DT_NODE_HAS_COMPAT` continuam sem definição e ainda rendem um `syntaxError` cada em `svc/gnss/gnss_svc.c`, `svc/power/power_svc.c`, `svc/ui/ui_input.c` e `svc/ui/ui_svc.c`. A interface (`src/ui`) passa com o LVGL no caminho ([12](12-ferramentas-testes.md#renderizador-de-telas)).
+
+Achados da execução de 2026-09-22 (cppcheck 2.20.0), fora os 7 `syntaxError` falsos positivos (os 4 de devicetree acima e os 3 das macros `BT_GATT_*` em `src/rf/ble/ble_lns.c`, `ble_manager.c` e `ble_nus.c`):
 
 | Achado | Onde | Situação |
 |---|---|---|
-| variável possivelmente não inicializada (`seg_dists`) | `src/model/segment.c:655` | aberto |
-| shift de valor negativo | `src/rf/ble_fec_client.c:508` | aberto |
-| inicializações redundantes, escopo reduzível, ponteiros que podiam ser `const` | vários | estilo |
+| shift de valor negativo (`grade_ftms >> 8`, `int16_t`) | `src/rf/ble_fec_client.c:449` | aberto |
+| condição sempre verdadeira (`i < ALERT_COUNT`, com `UI_ALERTS` já menor) | `src/svc/model/model_ui.c:515` | aberto, inofensivo |
+| ponteiros que podiam ser `const`: 8 `constParameterPointer` (`model/user_settings.c:162` e os `..._on_disconnect()` de sete clientes BLE) e 2 `constParameterCallback` (`ble_fec_client.c:163` e `:164`, num ponteiro de função do GATT) | vários | estilo |
+
+A variável possivelmente não inicializada `seg_dists` saiu: ela é declarada com `= {0}` em `src/model/segment.c:710`.
 
 Também disponível nesta máquina e ainda não aplicado ao projeto: o analisador do GCC pelo Zephyr (`-DZEPHYR_SCA_VARIANT=gcc`), o `checkpatch.pl` do Zephyr, o clang-tidy do LLVM (sobre o `compile_commands.json` dos testes de host) e o addon `misra.py` do cppcheck.
 
@@ -56,11 +60,11 @@ A revisão de novembro de 2025 contou no legacy 12 violações críticas, 28 alt
 | Problema do legacy | Situação no port |
 |---|---|
 | `String` do Arduino e alocação dinâmica (`std::vector`, `new`, `std::list`) | eliminados: C puro com buffers estáticos |
-| mutex do LCD por espera ativa com condição de corrida | a tela é só da thread `ui`; o driver novo ainda não existe |
+| mutex do LCD por espera ativa com condição de corrida | eliminado: a tela é só da thread `ui`, e o driver novo (`modules/gnss_drivers/drivers/display/memlcd_frame.c`, com `test_memlcd`) não tem trava nenhuma. Não testado em painel |
 | variáveis `static` de função guardando estado (`Attitude.cpp`) | parcialmente: o port concentra estado em `static` de arquivo, escrito só pela thread `model`; as outras recebem cópias pelo zbus |
-| conversões com perda sem saturação | continuam: `attitude.c:179`, `attitude.c:286` |
+| conversões com perda sem saturação | continuam: `attitude.c:238` (a rampa em `int8_t`) e `attitude.c:544` (os segundos em movimento em `uint16_t`) |
 | funções longas (`computeFusion`, `run_internal`, `majPerformance`) | continuam longas em partes do modelo (`segment.c`, `attitude.c`) |
-| sem testes | 65 casos de host cobrindo vetores, zonas, suffer score, log, desligamento automático, a máquina de sistema, a inclinação e o rumo, e a formatação dos números da interface, e o renderizador das telas no PC |
+| sem testes | 714 casos em 53 conjuntos de host, cobrindo vetores, listas e segmentos, distância, Kalman e inclinação, zonas de potência e de FC, suffer score, log e recuperação de falha, desligamento automático, as máquinas de sistema e de modo, os quadros UBX e a energia do GNSS, o arquivo FIT, percursos e perfil, mapa, subidas, voltas, radar, queda, treino, alertas, potência (estimativa e métricas de Coggan), LNS, Komoot, `$QRY` e o resto dos comandos, a tela e a luz, os medidores de carga e a formatação dos números da interface; mais o renderizador das telas no PC |
 
 ## Próximos passos
 

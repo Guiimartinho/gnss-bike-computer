@@ -118,7 +118,7 @@ Estado `X = [h, α_bar, α0]`: elevação, pitch medido e offset de montagem do 
 ## Distância acumulada e log
 
 - Legacy (`Attitude::computeDistance`, `Attitude.cpp:431-490`): soma a distância entre posições brutas; descarta os primeiros 25 m; a cada 15 m guarda um snapshot e, com 5 snapshots, grava no SD e atualiza o estado salvo para FDIR (CRC-8).
-- Port: igual ao legacy desde 2026-09-19 (`distance.c`): posições brutas, sem porta de velocidade, com o descarte dos primeiros 25 m e o instantâneo a cada 15 m, que agora é quem salva o estado da recuperação de falha (antes era a cada segundo). O `sd_logger` mantém os mesmos 15 m e lotes de 5 do legacy, e a distância filtrada do `locator.c` continua disponível para quem quiser.
+- Port: igual ao legacy desde 2026-09-19 (`distance.c`): posições brutas, sem porta de velocidade, com o descarte dos primeiros 25 m e o instantâneo a cada 15 m, que agora é quem salva o estado da recuperação de falha (antes era a cada segundo). O `sd_logger` mantém os mesmos 15 m e lotes de 5 do legacy.
 
 ## Cronômetro, pausa automática e voltas
 
@@ -196,7 +196,9 @@ Legacy: `legacy/source/sensors/fxos.cpp`. Port: `zephyr_app/src/svc/sensors/tilt
 
 ## Fontes de posição
 
-Legacy (`legacy/source/model/Locator.cpp:111-134`): a simulada (`$LOC`) vence e bloqueia as outras por 2 s; o GPS vence e bloqueia por 1,5 s; o LNS (celular via BLE) só é aceito sem fix no pino FIX. Depois de 5 posições LNS seguidas, envia host aiding (`$PMTK741`) ao GPS. O port tem o árbitro em `loc_source.c`, sem chamador.
+Legacy (`legacy/source/model/Locator.cpp:111-134`): a simulada (`$LOC`) vence e bloqueia as outras por 2 s; o GPS vence e bloqueia por 1,5 s; o LNS (celular via BLE) só é aceito sem fix no pino FIX. Depois de 5 posições LNS seguidas, envia host aiding (`$PMTK741`) ao GPS.
+
+O port tem o árbitro em `src/model/loc_arbiter.c`, e ele **é chamado**: o serviço do modelo alimenta a fonte e escolhe a cada época (`src/svc/model/model_svc.c:466-468`, com `loc_arbiter_init()` no começo do passeio, `:1087`). O `loc_source.c` que este documento citava foi apagado em 2026-09-21, junto com o `locator.c` ([05](05-arquitetura-zephyr.md#módulos)). A fonte do celular já chega ao árbitro: `src/rf/ble_lns_client.c` recebe a notificação do LNS e `src/model/lns_parse.c` a interpreta. Não testado com celular nenhum.
 
 ### Do MAX-F10S (placa nova)
 

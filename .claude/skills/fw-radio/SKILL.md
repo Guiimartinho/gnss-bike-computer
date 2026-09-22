@@ -1,24 +1,24 @@
 ---
 name: fw-radio
-description: Trabalhar com o rádio do GNSS Bike Computer no port Zephyr - BLE central (clientes HRS, CSC, FTMS, CPS, LNS, Komoot) e periférico (NUS, LNS, BAS, DIS), scan, conexões, descoberta e inscrição GATT, pareamento, levar dados de sensores ao modelo, stravaAP e comandos por NUS, e a decisão sobre ANT+. Use ao mexer em zephyr_app/src/rf/ ou em prj.conf de Bluetooth.
+description: Trabalhar com o rádio do GNSS Bike Computer no port Zephyr - BLE central (clientes HRS, CSC, FTMS, CPS, LNS, Komoot, radar e ANCS) e periférico (NUS, LNS, BAS, DIS), scan, conexões, descoberta e inscrição GATT, pareamento, levar dados de sensores ao modelo, stravaAP e comandos por NUS, e os canais ANT+. Use ao mexer em zephyr_app/src/rf/ ou em prj.conf de Bluetooth.
 ---
 
 # Rádio: BLE e ANT+
 
-Referências: `docs/07-radio-ant-ble.md` e o catálogo de dispositivos com prioridades e limites do rádio em `docs/17-dispositivos-ble-ant.md`. Topologia do legacy: BLE **só central** (NUS para o stravaAP, LNS, Cycling Power, Komoot) + ANT+ (HRM, BSC, FE-C). O port é periférico + central; com `ANT=1` a pilha ANT sobe no boot, ainda sem perfis.
+Referências: `docs/07-radio-ant-ble.md` e o catálogo de dispositivos com prioridades e limites do rádio em `docs/17-dispositivos-ble-ant.md`. Topologia do legacy: BLE **só central** (NUS para o stravaAP, LNS, Cycling Power, Komoot) + ANT+ (HRM, BSC, FE-C). O port é periférico + central; com `ANT=1` a pilha ANT sobe no boot e há código de canal escravo em `src/rf/ant/ant_channel.c` e `ant_sensors.c`, mas ainda sem perfil que abra canal (ver a tabela abaixo).
 
-## Estado no port (2026-09-18)
+Clientes BLE no repositório: `ble_hrs_client.c` (cinta), `ble_bsc_client.c` (velocidade e cadência), `ble_fec_client.c` (rolo, FTMS), `ble_cps_client.c` (medidor de potência), `ble_lns_client.c` (posição do celular), `ble_komoot_client.c` (navegação), `ble_radar_client.c` (radar traseiro) e `ble_ancs_client.c` (notificações do iPhone). O lado periférico e o gerente estão em `src/rf/ble/` (`ble_manager.c`, `ble_nus.c`, `ble_lns.c`).
+
+## Estado no port (2026-09-22)
 
 | Problema | Onde | Correção esperada |
 |---|---|---|
-| scan nunca iniciado | `ble_manager.c` (só chamado nos próprios callbacks) | iniciar depois do advertising, parar quando os sensores configurados conectarem |
-| `bt_gatt_subscribe` com `ccc_handle=0` + `CONFIG_BT_GATT_AUTO_DISCOVER_CCC=y` e sem `disc_params` | `ble_hrs_client.c:160`, `ble_bsc_client.c:268`, `ble_fec_client.c:270` | preencher `subscribe_params.end_handle` e `disc_params` (estático), ou descobrir o CCC antes; **corrija antes de ligar o scan**, senão `memset(NULL)` |
-| `bt_conn_le_create` sem `bt_conn_unref` | `ble_manager.c:218` | soltar a referência do create; o callback `connected` recebe a sua |
-| classificação por endereço pendente | `ble_manager.c:299-342` | usar `bt_conn_get_info()` e `info.role` |
-| velocidade CSC 3600× menor, flags do FTMS, 1 RR só | clientes | parsers pela especificação (FTMS Indoor Bike Data: cadência bit 2, tempo bit 11, energia 5 B) |
-| dados do sensor | clientes → callbacks do `radio_svc.c` → `ext_sensor` e `link_status` → modelo (feito em 2026-09-19) | com o scan e o CCC corrigidos, chegam ao modelo e às zonas |
+| velocidade CSC 3600× menor, flags do FTMS, 1 RR só | clientes | a velocidade CSC saiu para `model/csc_calc.c` e o FTMS para `model/ftms_parse.c`; **falta o RR**: `ble_hrs_client.c:118-124` guarda só o primeiro intervalo do pacote |
 | Komoot com UUID de característica, layout e papel errados | `ble_komoot_client.c` | central, característica `503DD605-9BCB-4F6E-B235-270A57483026`, pacote id(4) direção(1) distância(4 LE) rua(UTF-8), leitura depois da notificação |
-| sem SMP | `prj.conf` | LESC com passkey no display, lista de permitidos |
+| perfis ANT+ sem decodificador de páginas | `src/rf/ant/ant_sensors.c`, `radar_ant.c`, `power_ant.c` | as funções de página são `__weak` e devolvem falso; os `CONFIG_GNSS_ANT_*_DEV_TYPE` valem 0 (`zephyr_app/Kconfig:80-172`), então `ant_ch_open()` devolve `-ENOTSUP` e **nenhum canal abre de fato**. Os arquivos fortes (`radar_pages.c`, `power_pages.c`, `sensor_pages.c`) não estão no repositório nem nesta máquina: o dono os escreve na máquina dele, porque os perfis estão sob a ANT+ Shared Source License e o repositório é público |
+| pareamento sem endurecimento | `prj.conf`, `src/rf/ble/` | o SMP está ligado (o ANCS pede vínculo e link cifrado), mas não há `bt_conn_auth_cb_register()`, nem LESC obrigatório, nem lista de permitidos: LESC com passkey no display e lista de permitidos continuam por fazer |
+
+Corrigido desde então, confirmado no código: o scan começa em `bt_le_scan_start()` numa função pública (`ble_manager.c:662`); a inscrição GATT tem `end_handle` e `disc_params` estáticos (`ble_hrs_client.c:169-171`, `ble_bsc_client.c:176-178`, `ble_fec_client.c:208-210`); a referência do `bt_conn_le_create` é solta (`ble_manager.c:291`); a classificação usa `bt_conn_get_info()` (`ble_manager.c:361`); e o SMP está ligado (`prj.conf:191-192`, `CONFIG_BT_SMP=y` e `CONFIG_BT_BONDABLE=y`). O dado do sensor vai dos clientes aos callbacks do `radio_svc.c` e de lá ao modelo e às zonas, por `ext_sensor` e `link_status`. Nada disso foi testado com rádio de verdade.
 
 ## Regras
 
@@ -43,7 +43,7 @@ Referências: `docs/07-radio-ant-ble.md` e o catálogo de dispositivos com prior
 
 ## stravaAP e comandos
 
-O legacy aceita `$LOC`, `$DWN` e `$QRY` pelo NUS (vindo do dongle stravaAP) e pela USB CDC; as respostas de `$QRY` saem pelo NUS. No port o NUS é servidor e descarta o RX. Para trazer os comandos de volta: parser de linhas estilo VParser numa thread, comandos destrutivos (`$DWN,13`, `$QRY,3`) só com conexão autenticada, e streaming com controle de fluxo e MTU 247 (`CONFIG_BT_L2CAP_TX_MTU=247`, buffers ACL de 251).
+O legacy aceita `$LOC`, `$DWN` e `$QRY` pelo NUS (vindo do dongle stravaAP) e pela USB CDC; as respostas de `$QRY` saem pelo NUS. No port o NUS é servidor e **entrega o RX ao `cmd_parser`**: o `radio_svc.c:244-251,317-318` registra o callback do NUS, alimenta um `struct cmd_parser` byte a byte e chama `app_cmd_handle()` (`src/app/app_cmd.c`); as respostas de `$QRY` são montadas por `src/model/qry.c`. Os comandos destrutivos são recusados pelo rádio. Ao mexer nisso: parser de linhas estilo VParser fora da thread RX do host, e streaming com controle de fluxo e MTU 247 (`CONFIG_BT_L2CAP_TX_MTU=247`, buffers ACL de 251).
 
 ## Antes de terminar
 

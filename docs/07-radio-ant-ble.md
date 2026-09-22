@@ -88,11 +88,14 @@ Sem autenticação: qualquer periférico chamado "stravaAP" pode formatar a mem�
 | `$BTN` | aperta uma tecla, para testar a interface do PC |
 | `$ANCS`, `$DBG` | viram notificação na tela |
 | `$DWN` | **só 16 (modo USB) e 18 (calibrar a bússola)**; formatar (13), `mkfs` (15), o teste de hardfault (12) e o de memória (14) são recusados e avisados na tela: esses só saem do menu, onde o ciclista confirma |
-| `$QRY` | ainda não responde: listar e enviar arquivos em blocos falta |
+| `$QRY` | **responde desde 2026-09-22** (`src/model/qry.c`, com `test_qry`, e `src/app/app_cmd.c`): `1` lista os arquivos da raiz com o tamanho; `2` é **recusado de propósito**, com `ERR,USESMP`, porque o mcumgr sobre SMP já baixa melhor, com deslocamento, soma de verificação e retomada ([Arquivos pelo telefone](09-armazenamento-usb.md#arquivos-pelo-telefone)); `3` apaga, mas passando pela política de `model/file_policy.h`, que só deixa escrever percurso e segmento — logo **uma atividade não pode ser apagada pela serial** |
 
 ## Komoot
 
-- O celular com o app Komoot é periférico; o aparelho conecta, recebe notificação e lê a característica de navegação (`503DD605-9BCB-4F6E-B235-270A57483026`, segundo a documentação do Komoot BLE Connect).
+- O celular com o app Komoot é periférico; o aparelho conecta, recebe notificação e lê a característica de navegação, dentro do serviço de base `71C1E128-D92F-4FA8-A2B2-0F171DB3436C`.
+
+> [!WARNING]
+> **O UUID da característica de navegação está em dúvida.** Este documento vinha registrando `503DD605-9BCB-4F6E-B235-270A57483026`, "segundo a documentação do Komoot BLE Connect", e o código usa `503DD605-9BCB-4F6E-B235-FAFABE2A35ED` (`zephyr_app/src/rf/ble_komoot_client.c:37`). Os 96 bits da frente são iguais e os 48 finais não. **Não foi possível decidir aqui qual está certo:** o legacy não resolve, porque os UUID dele ficam no submódulo `libraries/ble_services`, que não está neste repositório, e a especificação do Komoot não foi consultada. Se o errado for o do código, o aparelho conecta no celular, descobre o serviço e **nunca acha a característica**, de modo que a navegação some sem erro nenhum. Conferir contra a documentação do Komoot, ou contra um celular, antes de confiar na tela de navegação.
 - Pacote: identificador (4 B), direção (1 B), distância (4 B, little endian), nome da rua (UTF-8).
 - O legacy mostra "Next turn" e um ícone de 110 × 110 (30 bitmaps em `libraries/komoot/komoot_icons.h`, códigos 1 a 30 mapeados em `komoot_nav.c`).
 
@@ -100,19 +103,24 @@ Sem autenticação: qualquer periférico chamado "stravaAP" pode formatar a mem�
 
 | Arquivo | Papel | Estado |
 |---|---|---|
-| `rf/ble/ble_manager.c` | periférico (advertising com BAS e DIS) e central (HRS 0x180D, CSC 0x1816, FTMS 0x1826) | scan **nunca iniciado**; `bt_conn_le_create` vaza referências |
-| `rf/ble/ble_nus.c` | **servidor** NUS | papel invertido em relação ao legacy; RX descartado |
-| `rf/ble/ble_lns.c` | **servidor** LNS | sem chamador; falta a característica LN Feature |
-| `rf/ble_hrs_client.c` | cliente de frequência cardíaca | inscrição com `ccc_handle=0`: `memset(NULL)` no Zephyr 4.3; só o 1º RR |
-| `rf/ble_bsc_client.c` | cliente CSC | mesma inscrição; velocidade 3600 vezes menor |
-| `rf/ble_fec_client.c` | cliente FTMS (substitui o FE-C) | mesma inscrição; flags e offsets errados; control point sem indicações |
+| `rf/ble/ble_manager.c` | periférico (advertising com BAS e DIS) e central (HRS 0x180D, CSC 0x1816, FTMS 0x1826) | **corrigido em 2026-09-20**: a varredura começa de verdade (`ble_manager.c:662`) e a referência que o `bt_conn_le_create()` devolve é solta (`:291`), então o pool de quatro conexões não esgota mais. Falta classificar as conexões por papel |
+| `rf/ble/ble_nus.c` | **servidor** NUS | papel invertido em relação ao legacy; o RX **chega ao firmware**: `ble_nus_register_callback()` (`ble_nus.c:163-169`) é registrado pelo serviço de rádio (`radio_svc.c:317-318`), que passa os bytes ao `cmd_parser` e o comando pronto ao `app_cmd_handle()` |
+| `rf/ble/ble_lns.c` | **servidor** LNS | `ble_lns_init()` é chamado pelo `ble_manager.c:542`; ainda falta a característica LN Feature |
+| `rf/ble_hrs_client.c` | cliente de frequência cardíaca | inscrição corrigida (`ble_hrs_client.c:169-171`: `BT_GATT_AUTO_DISCOVER_CCC_HANDLE` com `end_handle` e `disc_params`); ainda só o 1º RR de cada notificação |
+| `rf/ble_bsc_client.c` | cliente CSC | mesma correção na inscrição; a conta da velocidade saiu para `src/model/csc_calc.c`, com `test_csc_calc` (13 casos), e o fator 3600 foi resolvido lá |
+| `rf/ble_fec_client.c` | cliente FTMS (substitui o FE-C) | mesma correção na inscrição; a leitura dos campos saiu para `src/model/ftms_parse.c`, com `test_ftms_parse` (10 casos); o control point continua sem indicações |
 | `rf/ble_komoot_client.c` | cliente Komoot | UUID de característica, layout e papel errados |
-| `rf/ant/ant.c`, `include/rf/ant.h` | `rf_ant_init()`: sobe a pilha ANT e grava a chave ANT+, antes do BLE (só com `ANT=1`) | compila; sem perfis; não testado em placa |
+| `rf/ant/ant.c`, `include/rf/ant.h` | `rf_ant_init()`: sobe a pilha ANT e grava a chave ANT+, antes do BLE (só com `ANT=1`) | compila; não testado em placa |
+| `rf/ant/ant_channel.c`, `ant_sensors.c` | canal escravo com busca limitada a 30 s e travamento no número de série do sensor; `ant_sensors.c` liga os canais aos dados do modelo | compila; **nenhum canal abre de fato**, ver abaixo |
 
-- Os dados dos sensores BLE chegam só à tela; o modelo (log, suffer score, zonas) não recebe BPM, cadência nem potência medida.
+- Os dados dos sensores BLE **chegam ao modelo**: o serviço de rádio publica em `chan_ext_sensor` e o `model_svc.c` os consome (`:589`), alimentando as zonas de RR (`:604`) e de potência (`:615`, `:625`), o suffer score e o log.
 - `CONFIG_BT_MAX_CONN=4` dá 1 conexão periférica e 3 centrais no SoftDevice Controller: exatamente o que o código tenta (1 celular, HRS, CSC, FTMS), sem folga.
 - APIs conferidas no Zephyr 4.3: `bt_le_scan_start` (o `timeout = 30` vale 300 ms, não 30 s), `BT_LE_ADV_OPT_CONN` (o advertising para ao conectar), `BT_CONN_CB_DEFINE` sem `recycled`.
 - Sem `CONFIG_BT_SMP`: servidores abertos e endereço fixo.
+- Nada disso foi testado com sensor nenhum, nem com celular: é build verificado e teste de host.
+
+> [!WARNING]
+> **Nenhum canal ANT+ abre de fato.** `ant_ch_open()` (`src/rf/ant/ant_channel.c:55-71`) recusa com `-ENOTSUP` quando o tipo de dispositivo é zero, e os quatro valores são zero de fábrica: `CONFIG_GNSS_ANT_RADAR_DEV_TYPE`, `..._POWER_DEV_TYPE`, `..._HRM_DEV_TYPE` e `..._BSC_DEV_TYPE` (`zephyr_app/Kconfig:80`, `:105`, `:130`, `:154`). Os arquivos que dariam as páginas de cada perfil — `radar_pages.c`, `power_pages.c` e `sensor_pages.c` — **não existem neste repositório nem na máquina do dono**: os perfis de dispositivo ANT+ caem na cláusula (c) do ANT+ Adopter Agreement, que proíbe distribuir, e este repositório é público ([Decisão: ANT+ e BLE](#decisão-ant-e-ble)). O que está aqui é a moldura: canal escravo, busca limitada a 30 s (`ANT_SEARCH_S`), travamento no número de série do sensor e a ligação com o modelo. Com os tipos em zero, tudo segue pelo Bluetooth e nada se perde no build.
 
 ## Decisão: ANT+ e BLE
 
@@ -241,11 +249,11 @@ Nada disso foi testado em placa: não há hardware ainda.
 ## O que falta
 
 1. **Feito em 2026-09-20:** o serviço de rádio inicia o anúncio e a varredura; a inscrição leva `disc_params` e `end_handle` (descoberta automática do CCC); o `bt_conn_unref` depois do create. **Falta:** classificar conexões por papel e tratar sensores com vários serviços.
-2. **Crítico:** corrigir os parsers (velocidade CSC, flags do FTMS, vários RR) e levar os dados ao modelo (`boucle_update_hrm/bsc`, zonas, log).
-3. **Importante:** ANT+ pelo `sdk-ant` (HRM, BSC, FE-C, busca em background); pareamento com lista de sensores ANT+ e BLE e identificadores salvos (número do dispositivo ANT, `bt_addr_le_t`).
-4. **Importante:** canal de comandos (`$LOC`, `$DWN`, `$QRY`) por NUS e USB, com o papel NUS de volta a cliente ou com uma ponte nova no PC.
-5. **Importante:** cliente LNS (fonte de posição e host aiding), cliente CPS, Komoot como central com os 30 ícones do legacy.
-6. **Segurança e consumo:** LESC com passkey no display, lista de permitidos, comandos destrutivos protegidos; intervalos de conexão de 100 a 500 ms e scan de baixo ciclo.
+2. **Feito:** a velocidade CSC saiu para `model/csc_calc.c` e as flags do FTMS para `model/ftms_parse.c`, os dois com teste de host, e os dados chegam ao modelo pelo `chan_ext_sensor` (zonas, suffer score, log). **Falta:** os RR seguintes ao primeiro de cada notificação da cinta.
+3. **Importante:** os perfis ANT+ pelo `sdk-ant` (HRM, BSC, FE-C, busca em background), que não podem entrar neste repositório; pareamento com lista de sensores ANT+ e BLE e identificadores salvos (número do dispositivo ANT, `bt_addr_le_t`).
+4. **Segurança e consumo:** LESC com passkey no display, lista de permitidos, comandos destrutivos protegidos; intervalos de conexão de 100 a 500 ms e scan de baixo ciclo.
+
+Saíram desta lista em 2026-09-22, porque estão feitos: o canal de comandos (`$LOC`, `$DWN`, `$QRY`) por NUS e USB (`src/model/cmd_parser.c`, `src/app/app_cmd.c` e `src/svc/usb/usb_svc.c`) e os clientes de celular e de potência — `src/rf/ble_lns_client.c`, `src/rf/ble_cps_client.c` e `src/rf/ble_komoot_client.c` com `src/model/komoot_turn.c`. Nada disso foi testado com sensor, celular ou cabo.
 
 ## Referências
 

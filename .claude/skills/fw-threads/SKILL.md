@@ -1,13 +1,13 @@
 ---
 name: fw-threads
-description: Trabalhar com threads, interrupções, pilhas, prioridades e concorrência no port Zephyr do GNSS Bike Computer - criar ou mudar threads, mover trabalho para fora de ISR, dimensionar e medir pilhas com CONFIG_STACK_USAGE, proteger estado compartilhado, callbacks do BT. Use em qualquer mudança em zephyr_app/src/main.c, em callbacks de ISR ou do Bluetooth, ou quando algo roda em mais de uma thread.
+description: Trabalhar com threads, interrupções, pilhas, prioridades e concorrência no port Zephyr do GNSS Bike Computer - criar ou mudar threads, mover trabalho para fora de ISR, dimensionar e medir pilhas com CONFIG_STACK_USAGE, proteger estado compartilhado, callbacks do BT. Use em qualquer mudança em zephyr_app/src/app/main.c ou nas threads de zephyr_app/src/svc/, em callbacks de ISR ou do Bluetooth, ou quando algo roda em mais de uma thread.
 ---
 
 # Threads, ISR e pilhas
 
 ## Mapa de execução
 
-Desde 2026-09-19 (`docs/05-arquitetura-zephyr.md`): um serviço por assunto, cada um com a sua thread, que dorme na sua caixa de entrada (uma `k_msgq` enchida por listeners do zbus) com espera máxima de 1 s.
+Desde 2026-09-19 (`docs/05-arquitetura-zephyr.md`): um serviço por assunto, cada um com a sua thread, que dorme na sua caixa de entrada (uma `k_msgq` enchida por listeners do zbus) com espera máxima de 1 s. São **oito** serviços, iniciados nesta ordem por `zephyr_app/src/app/main.c:48-57`: `storage`, `usb`, `power`, `sensors`, `gnss`, `radio`, `model` e `ui`. O `usb` só entra com `CONFIG_USB_DEVICE_STACK_NEXT` (ligado nos dois alvos nRF54LM20A).
 
 | Contexto | Prioridade | Pilha | Acorda com | Pode |
 |---|---|---|---|---|
@@ -17,7 +17,8 @@ Desde 2026-09-19 (`docs/05-arquitetura-zephyr.md`): um serviço por assunto, cad
 | `radio` | 6 | 3072 B | caixa de entrada | subir ANT e BLE, atualizar o BAS |
 | `ui` | 7 | 6144 B | caixa de entrada, timer do LVGL, 1 s | a única que chama o LVGL e as funções `ui_*`; luz e COM |
 | `storage` | 8 | 3584 B | caixa de entrada | FatFs, log, segmentos, percursos |
-| `power` | 9 | 2048 B | caixa de entrada, 1 s | máquina de sistema, desligamento |
+| `usb` | 8 | 2048 B | caixa de entrada, 1 s | pilha USB, serial dos comandos (`cmd_parser`) e disco do ciclista no modo MSC |
+| `power` | 9 | 3072 B | caixa de entrada, 1 s | máquina de sistema, desligamento |
 | workqueue do modem | do sistema | 2048 B | bytes do receptor | driver GNSS; os callbacks do serviço só convertem e publicam |
 | RX do BT | cooperativa | 3072 B | rádio | clientes BLE; os callbacks só publicam |
 | entrada | 0 | 2048 B | teclas | o callback de `ui_input.c` só publica `input` |
