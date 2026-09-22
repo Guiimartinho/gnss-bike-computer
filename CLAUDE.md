@@ -164,7 +164,8 @@ flowchart LR
 | Mermaid: `;` numa mensagem de `sequenceDiagram` | é separador de comandos; escreva "e" |
 | Gerbers em `hardware/myStravaB_V3_2018-12-12/` | são da V2; não fabrique a V3 com eles |
 | Shunt do STC3100 | esquema: 20 mΩ; código: 100 mΩ; confirme na placa antes de confiar em corrente e carga |
-| `git push`, `git remote` e `gh repo edit` bloqueados pelo classificador do auto mode, mesmo com o dono autorizando no chat | o dono roda no prompt do Claude Code, no modo bash, um comando por vez (`! git push`); não crie regra de permissão para você |
+| `git push` já foi bloqueado pelo classificador do auto mode; em 2026-09-22 passou a funcionar | tente o push quando o dono pedir, com o ramo explícito (`git push origin develop`); se voltar a ser recusado, peça a ele que rode no prompt, no modo bash, um comando por vez (`! git push origin develop`). Nunca crie regra de permissão para você, nunca use `--force` |
+| A `main` do GitHub pode ter merge de pull request feito pela interface, que a `main` local não tem, e o push é recusado como non-fast-forward | `git fetch origin` e confira com `git log --oneline --no-merges origin/main --not main`: se não sair nada, o commit remoto não traz conteúdo novo e um `git merge origin/main` junta as histórias sem mexer em arquivo nenhum (compare `main^{tree}` antes e depois). Nunca resolva com `--force` |
 | `legacy/` não compila aqui | faltam o nRF5 SDK 16, o S340 e os submódulos `libraries/ant_profiles` e `ble_services` |
 
 ## 7. Skills do projeto
