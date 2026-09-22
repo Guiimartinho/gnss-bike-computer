@@ -243,6 +243,14 @@ static struct bt_gatt_discover_params discover_params;
 /** Subscribe parameters */
 static struct bt_gatt_subscribe_params subscribe_params;
 
+/*
+ * The host finds the CCC descriptor itself, but only when it is given a
+ * place to do it and where the service ends; without them bt_gatt_subscribe()
+ * writes through a null pointer. The same trap the other clients fell into.
+ */
+static struct bt_gatt_discover_params ccc_disc_params;
+static uint16_t service_end_handle;
+
 /** Characteristic handle */
 static uint16_t nav_handle;
 
@@ -353,8 +361,13 @@ static uint8_t discover_func(struct bt_conn *conn,
         /* Found service, now find characteristic */
         LOG_INF("Komoot service found");
 
+        const struct bt_gatt_service_val *svc = attr->user_data;
+
+        service_end_handle = svc->end_handle;
+
         discover_params.uuid = (struct bt_uuid *)&komoot_nav_uuid;
         discover_params.start_handle = attr->handle + 1U;
+        discover_params.end_handle = svc->end_handle;
         discover_params.type = BT_GATT_DISCOVER_CHARACTERISTIC;
 
         int err = bt_gatt_discover(conn, &discover_params);
@@ -367,9 +380,18 @@ static uint8_t discover_func(struct bt_conn *conn,
 
         nav_handle = bt_gatt_attr_value_handle(attr);
 
+        /*
+         * The CCC is not "the next handle": that is the usual layout, not a
+         * rule, and a phone that lays the service out any other way would
+         * have this client writing the subscription into whatever attribute
+         * happens to be there. The host discovers it, as it does for every
+         * other client here.
+         */
         subscribe_params.notify = notify_func;
         subscribe_params.value_handle = nav_handle;
-        subscribe_params.ccc_handle = nav_handle + 1U;  /* CCC is typically next handle */
+        subscribe_params.ccc_handle = BT_GATT_AUTO_DISCOVER_CCC_HANDLE;
+        subscribe_params.end_handle = service_end_handle;
+        subscribe_params.disc_params = &ccc_disc_params;
         subscribe_params.value = BT_GATT_CCC_NOTIFY;
 
         int err = bt_gatt_subscribe(conn, &subscribe_params);
