@@ -20,8 +20,10 @@
 #include "app/app_cmd.h"
 #include "app/app_svc.h"
 #include "rf/ant.h"
+#include "rf/power_ant.h"
 #include "rf/radar_ant.h"
 #include "rf/ble_bsc_client.h"
+#include "rf/ble_cps_client.h"
 #include "rf/ble_fec_client.h"
 #include "rf/ble_hrs_client.h"
 #include "rf/ble_manager.h"
@@ -128,6 +130,38 @@ static void radar_link(bool linked)
     (void)app_publish(&chan_radar, &msg);
 }
 
+/**
+ * One notification from the rider's power meter.
+ *
+ * The speed and the cadence of the meter ride along: many meters count the
+ * crank, and a hub meter counts the wheel, so a rider with one may not need
+ * a separate cadence sensor at all. A zero means the meter does not count
+ * that thing, and the model keeps whatever the other sensors gave.
+ */
+static void cps_data(const cps_info_t *info)
+{
+    /*
+     * The meter reports signed watts and the event carries unsigned ones.
+     * A negative reading means the rider is not driving the pedals — a
+     * freewheel going downhill, or the meter's own drift around zero — and
+     * counts as no power, which is what the zones and the normalised power
+     * would do with it anyway.
+     */
+    uint16_t watts = (info->power_w > 0) ? (uint16_t)info->power_w : 0U;
+
+    struct app_ext_sensor e = {.uptime_ms = k_uptime_get_32(), .kind = APP_EXT_POWER,
+                               .power_w = watts,
+                               .cadence_rpm = info->cadence_rpm,
+                               .speed_kmh100 = info->speed_kmh100};
+
+    (void)app_publish(&chan_ext_sensor, &e);
+}
+
+static void cps_conn(bool connected)
+{
+    publish_link(APP_EXT_POWER, connected);
+}
+
 static void bsc_data(uint16_t speed, uint8_t cadence)
 {
     struct app_ext_sensor e = {.uptime_ms = k_uptime_get_32(), .kind = APP_EXT_BSC,
@@ -200,6 +234,13 @@ static void radio_start(void)
     if ((radar_ant != 0) && (radar_ant != -ENOTSUP)) {
         LOG_WRN("ANT radar start failed (%d)", radar_ant);
     }
+
+    /* and the rider's power meter, on the same terms (`rf/power_ant.h`) */
+    int power_ant = power_ant_start();
+
+    if ((power_ant != 0) && (power_ant != -ENOTSUP)) {
+        LOG_WRN("ANT power start failed (%d)", power_ant);
+    }
 #endif
     if (ble_manager_init() != APP_OK) {
         LOG_ERR("BLE start failed");
@@ -210,6 +251,9 @@ static void radio_start(void)
     (void)ble_radar_client_init(radar_frame, radar_link);
     ble_bsc_client_register_callback(bsc_data);
     ble_bsc_client_register_conn_callback(bsc_conn);
+    (void)ble_cps_client_init();
+    ble_cps_client_register_callback(cps_data);
+    ble_cps_client_register_conn_callback(cps_conn);
     ble_fec_client_register_callback(fec_data);
     ble_fec_client_register_conn_callback(fec_conn);
 

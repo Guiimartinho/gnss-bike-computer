@@ -86,6 +86,7 @@ static uint32_t act_last_ms;
 
 static void update_activity(const attitude_t *att, const loc_data_t *loc);
 static void publish_activity(enum activity_event ev, bool finished);
+static uint16_t ride_power_w(const attitude_t *att);
 
 /* The thinned copy of the route the climb scan walks (model_internal.h) */
 static struct {
@@ -425,7 +426,7 @@ static void on_fix(const struct app_gnss_fix *f)
         struct app_log_point p = {
             .loc = loc,
             .date = att.date,
-            .power_w = att.pwr,
+            .power_w = ride_power_w(&att),
             .hr_bpm = ctx.ext[APP_EXT_HR].hr_bpm,
             .cadence_rpm = ctx.ext[APP_EXT_BSC].cadence_rpm,
             .filt_alt = attitude_get_elevation(),
@@ -475,6 +476,17 @@ static void on_ext(const struct app_ext_sensor *e)
 
             rr_zone_add_data(&ctx.rr, &hrm);
         }
+        break;
+    case APP_EXT_POWER:
+        /*
+         * The rider's own power meter, outdoors. It wins over the estimate
+         * of `model/power_estimate.c`, which guesses watts from speed,
+         * slope and weight and cannot know the wind or what gear is
+         * turning. `ride_power_w()` below is what picks between the two.
+         * The zones take it as they take the trainer's.
+         */
+        power_zone_add_data(&ctx.zones, e->power_w, e->uptime_ms);
+        publish_state();
         break;
     case APP_EXT_FEC:
         /*
@@ -618,7 +630,7 @@ static void update_activity(const attitude_t *att, const loc_data_t *loc)
         .dist_m = att->dist,
         .climb_m = att->climb,
         .alt_m = attitude_get_elevation(),
-        .power_w = att->pwr,
+        .power_w = ride_power_w(att),
         .hr_bpm = ctx.ext[APP_EXT_HR].hr_bpm,
         .cadence_rpm = ctx.ext[APP_EXT_BSC].cadence_rpm,
     };
@@ -786,6 +798,41 @@ static void handle(struct model_msg *msg)
     } else {
         /* a channel added to the listener without a handler */
     }
+}
+
+/**
+ * @brief The power of the ride: the meter when there is one, else the guess
+ *
+ * A rider with a power meter gets what the meter says. Without one — or
+ * when it has gone quiet for more than `MODEL_EXT_MAX_AGE_MS` — the ride
+ * falls back to the estimate of `model/power_estimate.c`, the formula of
+ * the legacy over speed, slope and rider weight, which is the best that can
+ * be done without a sensor but cannot know the wind or the gear.
+ *
+ * Indoors the trainer is the meter, and it already reports through
+ * `APP_EXT_FEC`; a separate crank meter, if the rider has one, wins over
+ * the trainer because it measures the rider and not the flywheel.
+ */
+static uint16_t ride_power_w(const attitude_t *att)
+{
+    uint32_t now = k_uptime_get_32();
+
+    if ((ctx.link[APP_EXT_POWER].link == APP_LINK_CONNECTED) &&
+        ((now - ctx.ext_uptime_ms[APP_EXT_POWER]) <= MODEL_EXT_MAX_AGE_MS)) {
+        return ctx.ext[APP_EXT_POWER].power_w;
+    }
+
+    if ((ctx.link[APP_EXT_FEC].link == APP_LINK_CONNECTED) &&
+        ((now - ctx.ext_uptime_ms[APP_EXT_FEC]) <= MODEL_EXT_MAX_AGE_MS)) {
+        return ctx.ext[APP_EXT_FEC].power_w;
+    }
+
+    /* the estimate is signed too: going downhill it is below zero */
+    if ((att == NULL) || (att->pwr <= 0)) {
+        return 0U;
+    }
+
+    return (uint16_t)att->pwr;
 }
 
 /** Heart rate of a connected strap with fresh data, else 0 */
