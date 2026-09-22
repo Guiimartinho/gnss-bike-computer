@@ -98,6 +98,7 @@ typedef enum {
     UI_SCREEN_LAP,
     UI_SCREEN_CLIMB,
     UI_SCREEN_INCIDENT,
+    UI_SCREEN_WORKOUT,
     UI_SCREEN_COUNT
 } ui_screen_t;
 

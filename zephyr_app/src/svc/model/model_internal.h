@@ -102,6 +102,19 @@ struct model_ctx {
 /**
  * @brief Fill the snapshot the interface draws
  */
+/**
+ * @brief The power of the ride: the meter when there is one, else the guess
+ *
+ * A rider with a power meter sees what the meter says; without one — or
+ * when it has gone quiet — the screen falls back to the estimate of
+ * `model/power_estimate.c`. Both the screens and the recording go through
+ * here, so they can never disagree about what the ride was doing.
+ */
+uint16_t model_ride_power_w(const struct model_ctx *ctx, const attitude_t *att);
+
+/** Cadence of whichever sensor is reporting it: the meter, or the sensor */
+uint8_t model_ride_cadence_rpm(const struct model_ctx *ctx);
+
 void model_ui_fill(const struct model_ctx *ctx, ui_model_t *m);
 
 /**

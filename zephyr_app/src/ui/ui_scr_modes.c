@@ -783,6 +783,196 @@ static void lap_update(lv_obj_t *scr)
 const ui_screen_ops_t ui_scr_lap = {lap_create, lap_update, NULL};
 
 /* ==========================================================================
+ * The structured session (`model/workout.h`)
+ *
+ * What a rider needs while a session runs, and nothing else: which step
+ * they are on and of how many, what it is called, how much of it is left,
+ * what they were asked to hold, and whether they are holding it. The value
+ * is drawn in the colour of the answer, so it can be read at a glance from
+ * the bars without counting digits.
+ * ========================================================================== */
+
+static lv_obj_t *wk_name;
+static lv_obj_t *wk_step;
+static lv_obj_t *wk_label;
+static ui_field_t wk_left;
+static ui_field_t wk_target;
+static ui_field_t wk_value;
+static lv_obj_t *wk_bar;
+static uint8_t wk_kind;     /**< target of the step the fields were built for */
+static bool wk_had_file;    /**< whether a session existed when it was built */
+
+static void wk_update(lv_obj_t *scr);
+
+/** Unit of each kind of target, for the corner of the field */
+static const char *wk_unit(uint8_t kind)
+{
+    switch (kind) {
+    case 1U:
+        return "W";
+    case 2U:
+        return "bpm";
+    case 3U:
+        return "rpm";
+    default:
+        return "";
+    }
+}
+
+/** The band of the target, with a mark where the rider is */
+static void wk_bar_draw(lv_event_t *e)
+{
+    lv_layer_t *layer = lv_event_get_layer(e);
+    const lv_obj_t *obj = lv_event_get_target_obj(e);
+    const ui_workout_t *w = &ui_ctx.m.wk;
+    lv_area_t a;
+
+    lv_obj_get_coords(obj, &a);
+
+    if ((w->target == 0U) || (w->hi == 0U)) {
+        return;
+    }
+
+    int32_t full = a.x2 - a.x1 - 8;
+    int32_t y = a.y1 + 4;
+
+    /*
+     * The band runs from half the bottom of the range to one and a half
+     * times the top, so that being far outside still has somewhere to be
+     * drawn instead of pinning to an edge and looking like being close.
+     */
+    uint32_t span_lo = (uint32_t)w->lo / 2U;
+    uint32_t span_hi = ((uint32_t)w->hi * 3U) / 2U;
+    uint32_t span = (span_hi > span_lo) ? (span_hi - span_lo) : 1U;
+
+    int32_t x_lo = (int32_t)(((uint32_t)(w->lo - span_lo) * (uint32_t)full) / span);
+    int32_t x_hi = (int32_t)(((uint32_t)(w->hi - span_lo) * (uint32_t)full) / span);
+
+    /* the range itself */
+    ui_draw_fill(layer, a.x1 + 4 + x_lo, y, (x_hi - x_lo) + 1, 8, ui_col_fill(UI_C_GOOD));
+
+    /* and where the rider is */
+    uint32_t v = w->value;
+
+    if (v < span_lo) {
+        v = span_lo;
+    }
+    if (v > span_hi) {
+        v = span_hi;
+    }
+
+    int32_t x = (int32_t)(((v - span_lo) * (uint32_t)full) / span);
+
+    ui_draw_fill(layer, a.x1 + 2 + x, y - 3, 3, 14, ui_col_fill(UI_C_FG));
+}
+
+static void wk_create(lv_obj_t *scr)
+{
+    const ui_workout_t *w = &ui_ctx.m.wk;
+
+    ui_statusbar_create(scr);
+
+    wk_had_file = w->loaded;
+    if (!w->loaded) {
+        wk_name = ui_label(scr, UI_FONT_LARGE, ui_col(UI_C_FG), ui_txt(T_WORKOUT));
+        lv_obj_set_pos(wk_name, 10, 60);
+        wk_label = ui_label(scr, UI_FONT_SMALL, ui_col(UI_C_FG), ui_txt(T_NO_WORKOUT));
+        lv_obj_set_pos(wk_label, 10, 90);
+        wk_step = NULL;
+        wk_bar = NULL;
+        return;
+    }
+
+    wk_name = ui_label(scr, UI_FONT_SMALL, ui_col(UI_C_FG), w->name);
+    lv_obj_align(wk_name, LV_ALIGN_TOP_LEFT, 4, ui_row_y(0) + 2);
+
+    wk_step = ui_label(scr, UI_FONT_SMALL_B, ui_col(UI_C_FG), "");
+    lv_obj_align(wk_step, LV_ALIGN_TOP_RIGHT, -4, ui_row_y(0) + 2);
+
+    wk_label = ui_label(scr, UI_FONT_MEDIUM, ui_col(UI_C_FG), "");
+    lv_obj_align(wk_label, LV_ALIGN_TOP_LEFT, 4, ui_row_y(1) + 2);
+
+    /*
+     * The unit belongs in the corner of the field and the value is a bare
+     * number: the big font of a value carries digits only, so a letter in
+     * it comes out as a box, and anything past six characters is cut to
+     * `---` by `ui_fmt_cadran()`. The range of the step is the green band
+     * of the bar below, which is where a range reads best anyway.
+     */
+    wk_kind = w->target;
+    ui_field_create(&wk_left, scr, 0, 2, 2, ui_txt(T_REMAINING), "", UI_C_FG);
+    ui_field_create(&wk_target, scr, 0, 4, 1, ui_txt(T_TARGET), wk_unit(wk_kind), UI_C_FG);
+    ui_field_create(&wk_value, scr, 1, 4, 1, ui_txt(T_NOW), wk_unit(wk_kind), UI_C_FG);
+
+    wk_bar = ui_plot(scr, 0, ui_row_y(5), UI_WIDTH, ui_rows_h(5, 1), wk_bar_draw, NULL);
+
+    wk_update(scr);
+}
+
+static void wk_update(lv_obj_t *scr)
+{
+    const ui_workout_t *w = &ui_ctx.m.wk;
+    char v[20];
+
+    (void)scr;
+    ui_statusbar_update();
+
+    /* a session arriving or going away changes the whole page */
+    if (w->loaded != wk_had_file) {
+        ui_rebuild();
+        return;
+    }
+    if (!w->loaded || (wk_step == NULL)) {
+        return;
+    }
+
+    (void)snprintf(v, sizeof(v), "%u/%u", (unsigned int)w->step, (unsigned int)w->steps);
+    lv_label_set_text(wk_step, v);
+    lv_label_set_text(wk_label, (w->label[0] != (char)0) ? w->label : ui_txt(T_STEP));
+
+    if (!w->running) {
+        ui_field_set(&wk_left, ui_txt(T_STOPPED), UI_C_FG);
+    } else if (w->by_key) {
+        ui_field_set(&wk_left, ui_txt(T_PRESS_KEY), UI_C_FG);
+    } else if (w->by_distance) {
+        (void)snprintf(v, sizeof(v), "%u m", (unsigned int)w->remaining);
+        ui_field_set(&wk_left, v, UI_C_FG);
+    } else {
+        ui_field_set(&wk_left, ui_fmt_hms(v, sizeof(v), w->remaining, ':'), UI_C_FG);
+    }
+
+    /* the unit is part of the field, so a step of another kind rebuilds */
+    if (w->target != wk_kind) {
+        ui_rebuild();
+        return;
+    }
+
+    if (w->target == 0U) {
+        ui_field_set(&wk_target, "-", UI_C_FG);
+        ui_field_set(&wk_value, "-", UI_C_FG);
+    } else {
+        /* the middle of the range is what the trainer is asked to hold */
+        ui_field_set(&wk_target,
+                     ui_fmt_int(v, sizeof(v), (int32_t)(((uint32_t)w->lo + w->hi) / 2U)),
+                     UI_C_FG);
+
+        /*
+         * The colour is the answer: green inside the range, red outside.
+         * A rider on the bars reads a colour long before a number.
+         */
+        ui_role_t col = (w->zone == 0) ? UI_C_GOOD : UI_C_BAD;
+
+        ui_field_set(&wk_value, ui_fmt_int(v, sizeof(v), (int32_t)w->value), col);
+    }
+
+    if (wk_bar != NULL) {
+        lv_obj_invalidate(wk_bar);
+    }
+}
+
+const ui_screen_ops_t ui_scr_workout = {wk_create, wk_update, NULL};
+
+/* ==========================================================================
  * Climb page: the climb being ridden, not the whole route
  *
  * On a pass the profile of the route is a flat line with a bump in it, and

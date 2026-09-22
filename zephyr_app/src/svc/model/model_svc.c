@@ -90,7 +90,6 @@ static uint32_t act_last_ms;
 
 static void update_activity(const attitude_t *att, const loc_data_t *loc);
 static void publish_activity(enum activity_event ev, bool finished);
-static uint16_t ride_power_w(const attitude_t *att);
 static uint8_t current_hr(void);
 static void publish_state(void);
 
@@ -541,7 +540,7 @@ static void on_fix(const struct app_gnss_fix *f)
         struct app_log_point p = {
             .loc = loc,
             .date = att.date,
-            .power_w = ride_power_w(&att),
+            .power_w = model_ride_power_w(&ctx, &att),
             .hr_bpm = ctx.ext[APP_EXT_HR].hr_bpm,
             .cadence_rpm = ctx.ext[APP_EXT_BSC].cadence_rpm,
             .filt_alt = attitude_get_elevation(),
@@ -597,7 +596,7 @@ static void on_ext(const struct app_ext_sensor *e)
          * The rider's own power meter, outdoors. It wins over the estimate
          * of `model/power_estimate.c`, which guesses watts from speed,
          * slope and weight and cannot know the wind or what gear is
-         * turning. `ride_power_w()` below is what picks between the two.
+         * turning. `model_ride_power_w()` is what picks between the two.
          * The zones take it as they take the trainer's.
          */
         power_zone_add_data(&ctx.zones, e->power_w, e->uptime_ms);
@@ -758,7 +757,7 @@ static void run_alerts(const attitude_t *att, const loc_data_t *loc, uint32_t no
 {
     struct alert_sample as = {
         .hr_bpm = current_hr(),
-        .power_w = ride_power_w(att),
+        .power_w = model_ride_power_w(&ctx, att),
         .speed_kmh10 = (uint16_t)((loc->speed * 10.0f) + 0.5f),
         .cadence_rpm = ctx.ext[APP_EXT_BSC].cadence_rpm,
         .dist_m = att->dist,
@@ -787,7 +786,7 @@ static void update_activity(const attitude_t *att, const loc_data_t *loc)
         .dist_m = att->dist,
         .climb_m = att->climb,
         .alt_m = attitude_get_elevation(),
-        .power_w = ride_power_w(att),
+        .power_w = model_ride_power_w(&ctx, att),
         .hr_bpm = ctx.ext[APP_EXT_HR].hr_bpm,
         .cadence_rpm = ctx.ext[APP_EXT_BSC].cadence_rpm,
     };
@@ -994,18 +993,20 @@ static void handle(struct model_msg *msg)
  * `APP_EXT_FEC`; a separate crank meter, if the rider has one, wins over
  * the trainer because it measures the rider and not the flywheel.
  */
-static uint16_t ride_power_w(const attitude_t *att)
+uint16_t model_ride_power_w(const struct model_ctx *c, const attitude_t *att)
 {
     uint32_t now = k_uptime_get_32();
 
-    if ((ctx.link[APP_EXT_POWER].link == APP_LINK_CONNECTED) &&
-        ((now - ctx.ext_uptime_ms[APP_EXT_POWER]) <= MODEL_EXT_MAX_AGE_MS)) {
-        return ctx.ext[APP_EXT_POWER].power_w;
-    }
+    if (c != NULL) {
+        if ((c->link[APP_EXT_POWER].link == APP_LINK_CONNECTED) &&
+            ((now - c->ext_uptime_ms[APP_EXT_POWER]) <= MODEL_EXT_MAX_AGE_MS)) {
+            return c->ext[APP_EXT_POWER].power_w;
+        }
 
-    if ((ctx.link[APP_EXT_FEC].link == APP_LINK_CONNECTED) &&
-        ((now - ctx.ext_uptime_ms[APP_EXT_FEC]) <= MODEL_EXT_MAX_AGE_MS)) {
-        return ctx.ext[APP_EXT_FEC].power_w;
+        if ((c->link[APP_EXT_FEC].link == APP_LINK_CONNECTED) &&
+            ((now - c->ext_uptime_ms[APP_EXT_FEC]) <= MODEL_EXT_MAX_AGE_MS)) {
+            return c->ext[APP_EXT_FEC].power_w;
+        }
     }
 
     /* the estimate is signed too: going downhill it is below zero */
@@ -1014,6 +1015,38 @@ static uint16_t ride_power_w(const attitude_t *att)
     }
 
     return (uint16_t)att->pwr;
+}
+
+uint8_t model_ride_cadence_rpm(const struct model_ctx *c)
+{
+    uint32_t now = k_uptime_get_32();
+
+    if (c == NULL) {
+        return 0U;
+    }
+
+    /*
+     * A crank power meter counts the pedals too, so a rider with one needs
+     * no separate cadence sensor. The dedicated sensor wins when both are
+     * there, because that is what the rider fitted it for.
+     */
+    if ((c->link[APP_EXT_BSC].link == APP_LINK_CONNECTED) &&
+        ((now - c->ext_uptime_ms[APP_EXT_BSC]) <= MODEL_EXT_MAX_AGE_MS) &&
+        (c->ext[APP_EXT_BSC].cadence_rpm > 0U)) {
+        return c->ext[APP_EXT_BSC].cadence_rpm;
+    }
+
+    if ((c->link[APP_EXT_POWER].link == APP_LINK_CONNECTED) &&
+        ((now - c->ext_uptime_ms[APP_EXT_POWER]) <= MODEL_EXT_MAX_AGE_MS)) {
+        return c->ext[APP_EXT_POWER].cadence_rpm;
+    }
+
+    if ((c->link[APP_EXT_FEC].link == APP_LINK_CONNECTED) &&
+        ((now - c->ext_uptime_ms[APP_EXT_FEC]) <= MODEL_EXT_MAX_AGE_MS)) {
+        return c->ext[APP_EXT_FEC].cadence_rpm;
+    }
+
+    return 0U;
 }
 
 /** Heart rate of a connected strap with fresh data, else 0 */
