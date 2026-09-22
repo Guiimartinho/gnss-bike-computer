@@ -16,6 +16,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "app_types.h"
+#include "model/alerts.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,7 +30,7 @@ extern "C" {
 #define SETTINGS_STORAGE_ADDRESS    0x0000U
 
 /** Current settings version - increment when structure changes */
-#define SETTINGS_VERSION            0x0003U
+#define SETTINGS_VERSION            0x0004U
 
 /** Default FTP value in watts */
 #define DEFAULT_FTP                 240U
@@ -77,6 +78,14 @@ typedef union {
         uint16_t ftp;           /**< Functional Threshold Power (watts) */
         uint16_t weight;        /**< Weight in hectograms */
         uint16_t version;       /**< Settings version number */
+        /**
+         * The alerts the rider set (`model/alerts.h`), one value each in
+         * the unit of its alert; **zero means the alert is off**, which is
+         * why no separate flag is stored. Added in version 4, and the
+         * version check is what throws away a block saved by an earlier
+         * one rather than reading these bytes as whatever was there.
+         */
+        uint16_t alerts[ALERT_COUNT];
         mag_cal_t mag_cal;      /**< Magnetometer calibration */
         uint16_t crc;           /**< CRC-8 checksum (stored as uint16 for alignment) */
     };
@@ -186,6 +195,18 @@ void user_settings_set_fec_devid(user_settings_t *settings, uint16_t devid);
  * @return FTP in watts or 0 if settings NULL
  */
 uint16_t user_settings_get_ftp(const user_settings_t *settings);
+
+/**
+ * @brief The value of one alert, 0 when the rider turned it off
+ * @param id enum alert_id
+ */
+uint16_t user_settings_get_alert(const user_settings_t *settings, uint8_t id);
+
+/**
+ * @brief Set one alert; 0 turns it off
+ * @param id enum alert_id
+ */
+void user_settings_set_alert(user_settings_t *settings, uint8_t id, uint16_t value);
 
 /**
  * @brief Set FTP value

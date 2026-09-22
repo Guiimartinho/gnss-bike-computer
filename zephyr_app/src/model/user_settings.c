@@ -360,6 +360,27 @@ void user_settings_set_fec_devid(user_settings_t *settings, uint16_t devid)
     }
 }
 
+uint16_t user_settings_get_alert(const user_settings_t *settings, uint8_t id)
+{
+    if ((settings == NULL) || (id >= ALERT_COUNT)) {
+        return 0U;
+    }
+
+    return settings->params.alerts[id];
+}
+
+void user_settings_set_alert(user_settings_t *settings, uint8_t id, uint16_t value)
+{
+    if ((settings == NULL) || (id >= ALERT_COUNT)) {
+        return;
+    }
+
+    if (settings->params.alerts[id] != value) {
+        settings->params.alerts[id] = value;
+        settings->is_dirty = true;
+    }
+}
+
 uint16_t user_settings_get_ftp(const user_settings_t *settings)
 {
     if (settings == NULL) {

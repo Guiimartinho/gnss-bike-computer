@@ -25,6 +25,7 @@
 #include "app/app_channels.h"
 #include "app/app_svc.h"
 #include "model/activity.h"
+#include "model/alerts.h"
 #include "model/attitude.h"
 #include "model/climb.h"
 #include "model/incident.h"
@@ -87,6 +88,7 @@ static uint32_t act_last_ms;
 static void update_activity(const attitude_t *att, const loc_data_t *loc);
 static void publish_activity(enum activity_event ev, bool finished);
 static uint16_t ride_power_w(const attitude_t *att);
+static uint8_t current_hr(void);
 
 /* The thinned copy of the route the climb scan walks (model_internal.h) */
 static struct {
@@ -617,6 +619,48 @@ static void publish_activity(enum activity_event ev, bool finished)
 }
 
 /** One epoch of the ride: totals, auto-pause and the automatic lap */
+/** What the screen says for each alert the rider set */
+static const char *const alert_text[ALERT_COUNT] = {
+    [ALERT_HR_HIGH] = "FC alta",
+    [ALERT_HR_LOW] = "FC baixa",
+    [ALERT_POWER_HIGH] = "Potencia alta",
+    [ALERT_POWER_LOW] = "Potencia baixa",
+    [ALERT_SPEED_HIGH] = "Velocidade alta",
+    [ALERT_SPEED_LOW] = "Velocidade baixa",
+    [ALERT_CADENCE_HIGH] = "Cadencia alta",
+    [ALERT_CADENCE_LOW] = "Cadencia baixa",
+    [ALERT_DISTANCE] = "Distancia",
+    [ALERT_TIME] = "Tempo",
+    [ALERT_DRINK] = "Beba agua",
+    [ALERT_EAT] = "Coma algo",
+};
+
+/**
+ * @brief Run the rider's alerts over this epoch
+ *
+ * The interval alerts are fed **moving** time, so an hour at a cafe does
+ * not bring the next reminder any closer (`model/alerts.h`).
+ */
+static void run_alerts(const attitude_t *att, const loc_data_t *loc, uint32_t now)
+{
+    struct alert_sample as = {
+        .hr_bpm = current_hr(),
+        .power_w = ride_power_w(att),
+        .speed_kmh10 = (uint16_t)((loc->speed * 10.0f) + 0.5f),
+        .cadence_rpm = ctx.ext[APP_EXT_BSC].cadence_rpm,
+        .dist_m = att->dist,
+        .moving_s = activity_ride(&act)->timer_ms / 1000U,
+    };
+
+    uint32_t fired = alerts_update(&ctx.alerts, &as, now);
+
+    for (unsigned int i = 0U; (fired != 0U) && (i < ALERT_COUNT); i++) {
+        if ((fired & (1U << i)) != 0U) {
+            app_notify("Alerta", alert_text[i], NULL, false, 0U);
+        }
+    }
+}
+
 static void update_activity(const attitude_t *att, const loc_data_t *loc)
 {
     uint32_t now = k_uptime_get_32();
@@ -662,6 +706,7 @@ static void update_activity(const attitude_t *att, const loc_data_t *loc)
     if (ev == ACTIVITY_EVENT_LAP) {
         app_notify("Volta", NULL, NULL, false, 0U);
     }
+    run_alerts(att, loc, now);
     publish_activity(ev, false);
 }
 
@@ -677,6 +722,14 @@ static void on_command(const struct app_system_cmd *cmd)
         ctx.route_sel = (int8_t)cmd->arg;
         load_selected_route();
         break;
+    case APP_CMD_SET_ALERT: {
+        uint8_t id = (uint8_t)(((uint32_t)cmd->arg >> 16) & 0xFFU);
+        uint16_t value = (uint16_t)((uint32_t)cmd->arg & 0xFFFFU);
+
+        alerts_set(&ctx.alerts, (enum alert_id)id, value, value > 0U);
+        user_settings_set_alert(settings, id, value);
+        break;
+    }
     case APP_CMD_SET_FTP:
         user_settings_set_ftp(settings, (uint16_t)cmd->arg);
         power_zone_set_ftp(&ctx.zones, (uint16_t)cmd->arg);
@@ -909,6 +962,12 @@ void model_svc_init(void)
      * made-up default would give them a number that means nothing.
      */
     power_metrics_init(&ctx.pm, ftp);
+    alerts_init(&ctx.alerts);
+    for (uint8_t i = 0U; i < ALERT_COUNT; i++) {
+        uint16_t v = user_settings_get_alert(settings, i);
+
+        alerts_set(&ctx.alerts, (enum alert_id)i, v, v > 0U);
+    }
     ctx.pm_last_s = 0U;
     suffer_score_init(&ctx.suffer);
     rr_zone_init(&ctx.rr);

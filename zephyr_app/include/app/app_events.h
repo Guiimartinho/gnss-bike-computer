@@ -262,7 +262,13 @@ enum app_cmd_id {
     APP_CMD_MSC,                /**< expose the card over USB */
     APP_CMD_STORAGE_RESCAN,     /**< a file arrived: list the storage again */
     APP_CMD_LAP,                /**< close the lap being ridden and start another */
-    APP_CMD_ALARM_TOGGLE        /**< arm or disarm the bike alarm */
+    APP_CMD_ALARM_TOGGLE,       /**< arm or disarm the bike alarm */
+    /**
+     * One of the rider's alerts (`model/alerts.h`). The identifier and the
+     * value travel in one argument because the channel carries one:
+     * `(enum alert_id << 16) | value`, and a value of zero turns it off.
+     */
+    APP_CMD_SET_ALERT
 };
 
 /** Channel system_cmd */

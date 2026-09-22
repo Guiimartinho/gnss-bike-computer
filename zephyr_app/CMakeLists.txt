@@ -83,6 +83,7 @@ target_sources(app PRIVATE
     src/model/climb.c
     src/model/loc_arbiter.c
     src/model/mode_fsm.c
+    src/model/alerts.c
     src/model/cps_parse.c
     src/model/power_metrics.c
     src/model/csc_calc.c
