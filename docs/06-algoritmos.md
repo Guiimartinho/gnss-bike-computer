@@ -12,7 +12,7 @@ Os cálculos do stravaV10 original, com fórmulas, constantes e a origem no cód
 | Raio | 6.371.008 m | o mesmo |
 | Custo | 1 cosseno e 1 raiz | o mesmo |
 
-O port usava haversine com 6.371.000 m até 2026-09-19 (diferença abaixo de 0,5 % em trechos de 5 km, mas 4 senos e cossenos, 2 raízes e um `atan2f`); o `locator_calc_distance()` agora chama a mesma função, e não há duas implementações. Latitude e longitude são `float` nos dois firmwares: cerca de 0,4 m de resolução em latitudes médias.
+O port usava haversine com 6.371.000 m em dois lugares (diferença abaixo de 0,5 % em trechos de 5 km, mas 4 senos e cossenos, 2 raízes e um `atan2f`): no `locator.c`, que saiu em 2026-09-21, e no `parcours.c`, que media o percurso com uma fórmula e um raio diferentes dos da distância pedalada — num percurso de 100 km o progresso e o total discordavam em até 500 m. Hoje existe **uma** implementação, `distance_between()` do `vecteur.c`, e todo mundo a chama. Latitude e longitude são `float` nos dois firmwares: cerca de 0,4 m de resolução em latitudes médias.
 
 **Acúmulo** (`legacy/source/model/Attitude.cpp:431-490`, port em `src/model/distance.c` com `test_distance`): soma a distância entre posições **brutas**, qualquer que seja a velocidade; enquanto não começou, o primeiro salto acima de 25 m joga o total fora (a posição anterior à primeira é (0, 0)) e liga a contagem; daí em diante, cada 15 m é um instantâneo, que salva o ponto e o estado para a recuperação de falha. Com épocas de 8 m (30 km/h a 1 Hz) o instantâneo sai a cada duas épocas, isto é, a cada 16 m: a regra pede **mais** de 15 m desde o último.
 

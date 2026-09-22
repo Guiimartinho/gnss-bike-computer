@@ -21,9 +21,6 @@ LOG_MODULE_REGISTER(parcours, CONFIG_LOG_DEFAULT_LEVEL);
  * Private Definitions
  * ========================================================================== */
 
-/** Earth radius in meters */
-#define EARTH_RADIUS_M      6371000.0f
-
 /** Degrees to radians */
 #define DEG_TO_RAD(x)       ((x) * 0.017453292519943295f)
 
@@ -91,20 +88,6 @@ static K_MUTEX_DEFINE(parcours_mutex);
  * ========================================================================== */
 
 /**
- * @brief Calculate distance between two GPS points (Haversine)
- */
-static float calc_distance(float lat1, float lon1, float lat2, float lon2)
-{
-    float dlat = DEG_TO_RAD(lat2 - lat1);
-    float dlon = DEG_TO_RAD(lon2 - lon1);
-    float a = sinf(dlat / 2.0f) * sinf(dlat / 2.0f) +
-              cosf(DEG_TO_RAD(lat1)) * cosf(DEG_TO_RAD(lat2)) *
-              sinf(dlon / 2.0f) * sinf(dlon / 2.0f);
-    float c = 2.0f * atan2f(sqrtf(a), sqrtf(1.0f - a));
-    return EARTH_RADIUS_M * c;
-}
-
-/**
  * @brief Calculate bearing between two GPS points
  */
 static float calc_bearing(float lat1, float lon1, float lat2, float lon2)
@@ -132,7 +115,7 @@ static void calc_route_stats(void)
 
     for (uint16_t i = 1U; i < num_points; i++) {
         /* Distance */
-        total_distance += calc_distance(
+        total_distance += distance_between(
             points[i - 1U].lat, points[i - 1U].lon,
             points[i].lat, points[i].lon
         );
@@ -161,7 +144,7 @@ static uint16_t find_nearest_point(float lat, float lon)
     uint16_t end = (current_idx + 50U < num_points) ? (current_idx + 50U) : num_points;
 
     for (uint16_t i = start; i < end; i++) {
-        float dist = calc_distance(lat, lon, points[i].lat, points[i].lon);
+        float dist = distance_between(lat, lon, points[i].lat, points[i].lon);
         if (dist < min_dist) {
             min_dist = dist;
             nearest = i;
@@ -655,7 +638,7 @@ bool parcours_get_next_cue(parcours_cue_t *out, float *dist_m)
             float d = 0.0f;
 
             for (uint16_t k = current_idx; (k + 1U) <= cues[i].point; k++) {
-                d += calc_distance(points[k].lat, points[k].lon, points[k + 1U].lat,
+                d += distance_between(points[k].lat, points[k].lon, points[k + 1U].lat,
                                    points[k + 1U].lon);
             }
             *dist_m = d;
@@ -756,7 +739,7 @@ void parcours_update(float lat, float lon, float alt)
     if (nearest > current_idx) {
         /* Calculate distance covered */
         for (uint16_t i = current_idx; i < nearest; i++) {
-            dist_completed += calc_distance(
+            dist_completed += distance_between(
                 points[i].lat, points[i].lon,
                 points[i + 1U].lat, points[i + 1U].lon
             );

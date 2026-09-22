@@ -9,9 +9,9 @@
  * copy of what the screens show on chan_model_state, once per epoch and at
  * least once a second.
  *
- * The mode machine (CRS, PRC, FEC, Zwift, DBG) follows
- * boucle__change_mode() (legacy/source/model/Boucle.cpp:101-143): leaving a
- * mode invalidates it, and each mode starts on demand.
+ * The mode machine (CRS, PRC, FEC, Zwift, DBG) lives apart, in
+ * `model/mode_fsm.c`, so that its rules run in the host tests; this file
+ * only lends it the four operations it needs.
  */
 
 #include <math.h>
@@ -28,6 +28,7 @@
 #include "model/attitude.h"
 #include "model/climb.h"
 #include "model/incident.h"
+#include "model/loc_arbiter.h"
 #include "model/radar.h"
 #include "model/vecteur.h"
 #include "model/fit_encode.h"
@@ -123,15 +124,8 @@ ZBUS_CHAN_ADD_OBS(chan_system_state, model_lis, 3);
 ZBUS_CHAN_ADD_OBS(chan_storage_info, model_lis, 3);
 
 /* ==========================================================================
- * Mode machine (legacy Boucle modes, plus the DBG screen on the CRS loop)
+ * Mode machine: the rules in model/mode_fsm.c, the effects here
  * ========================================================================== */
-
-static const struct smf_state mode_states[APP_MODE_ID_DBG + 1];
-
-static bool rides_outdoors(uint8_t mode)
-{
-    return (mode == APP_MODE_ID_CRS) || (mode == APP_MODE_ID_PRC) || (mode == APP_MODE_ID_DBG);
-}
 
 static void publish_mode(void)
 {
@@ -141,69 +135,55 @@ static void publish_mode(void)
     (void)app_publish(&chan_mode, &m);
 }
 
-static void mode_crs_entry(void *o)
+/* ---- what the machine of model/mode_fsm.c asks of this service ---- */
+
+static void mode_op_publish(enum app_mode mode, void *user)
 {
-    ARG_UNUSED(o);
-    ctx.mode = APP_MODE_ID_CRS;
+    ARG_UNUSED(user);
+    ctx.mode = (uint8_t)mode;
     publish_mode();
 }
 
-static void mode_prc_entry(void *o)
+static void mode_op_route_start(void *user)
 {
-    ARG_UNUSED(o);
-    ctx.mode = APP_MODE_ID_PRC;
-    if (parcours_is_loaded()) {
-        (void)parcours_start();
-    }
-    publish_mode();
+    ARG_UNUSED(user);
+    (void)parcours_start();
 }
 
-static void mode_prc_exit(void *o)
+static void mode_op_route_stop(void *user)
 {
-    ARG_UNUSED(o);
+    ARG_UNUSED(user);
     parcours_stop();
 }
 
-static void mode_fec_entry(void *o)
+static void mode_op_refused(enum app_mode wanted, enum mode_refusal why, void *user)
 {
-    ARG_UNUSED(o);
-    ctx.mode = APP_MODE_ID_FEC;
-    /* the legacy BoucleFEC starts its own zones and score (BoucleFEC.cpp) */
-    power_zone_reset(&ctx.zones);
-    suffer_score_reset(&ctx.suffer);
-    publish_mode();
+    ARG_UNUSED(user);
+    ARG_UNUSED(wanted);
+
+    /* the rider is told why the key did nothing, instead of nothing happening */
+    switch (why) {
+    case MODE_REFUSED_NO_ROUTE:
+        app_notify("MODO", "Carregue um percurso", NULL, false, 0U);
+        break;
+    case MODE_REFUSED_RECORDING:
+        app_notify("MODO", "Termine o pedal antes", NULL, false, 0U);
+        break;
+    default:
+        break;      /* the same mode, or one that does not exist: stay quiet */
+    }
 }
 
-static void mode_zwift_entry(void *o)
-{
-    ARG_UNUSED(o);
-    ctx.mode = APP_MODE_ID_ZWIFT;
-    publish_mode();
-}
-
-static void mode_dbg_entry(void *o)
-{
-    ARG_UNUSED(o);
-    /* legacy _page0_mode_debug(): the DBG screen over the CRS loop */
-    ctx.mode = APP_MODE_ID_DBG;
-    publish_mode();
-}
-
-static const struct smf_state mode_states[APP_MODE_ID_DBG + 1] = {
-    [APP_MODE_ID_CRS] = SMF_CREATE_STATE(mode_crs_entry, NULL, NULL, NULL, NULL),
-    [APP_MODE_ID_PRC] = SMF_CREATE_STATE(mode_prc_entry, NULL, mode_prc_exit, NULL, NULL),
-    [APP_MODE_ID_FEC] = SMF_CREATE_STATE(mode_fec_entry, NULL, NULL, NULL, NULL),
-    [APP_MODE_ID_ZWIFT] = SMF_CREATE_STATE(mode_zwift_entry, NULL, NULL, NULL, NULL),
-    [APP_MODE_ID_DBG] = SMF_CREATE_STATE(mode_dbg_entry, NULL, NULL, NULL, NULL),
+static const struct mode_fsm_ops mode_ops = {
+    .publish = mode_op_publish,
+    .route_start = mode_op_route_start,
+    .route_stop = mode_op_route_stop,
+    .refused = mode_op_refused,
 };
 
 static void set_mode(int32_t mode)
 {
-    if ((mode < 0) || (mode > (int32_t)APP_MODE_ID_DBG) || ((uint8_t)mode == ctx.mode)) {
-        return;
-    }
-    LOG_INF("mode %u -> %d", ctx.mode, (int)mode);
-    smf_set_state(SMF_CTX(&ctx), &mode_states[mode]);
+    (void)mode_fsm_select(&ctx.fsm, mode);
 }
 
 /* ==========================================================================
@@ -300,11 +280,18 @@ static void load_selected_route(void)
     if (parcours_load(path) != APP_OK) {
         LOG_WRN("route %s did not load", path);
         app_notify("PRC", "Percurso nao abriu", NULL, false, 0U);
+        /*
+         * A failed load may have taken the route that was there with it, so
+         * the machine hears the truth and not an assumption: with no route
+         * left it drops a rider who was in PRC back to the free ride.
+         */
+        mode_fsm_set_route_loaded(&ctx.fsm, parcours_is_loaded());
         return;
     }
 
     LOG_INF("route %s loaded", path);
     find_climbs();
+    mode_fsm_set_route_loaded(&ctx.fsm, true);
     if (ctx.mode == APP_MODE_ID_PRC) {
         (void)parcours_start();
     }
@@ -323,6 +310,8 @@ static void publish_state(void)
      */
     if (snapshot.status.recording != ctx.recording) {
         ctx.recording = snapshot.status.recording;
+        /* rule 2 of model/mode_fsm.h needs to know a ride is under way */
+        mode_fsm_set_recording(&ctx.fsm, ctx.recording);
         publish_mode();
     }
 }
@@ -343,17 +332,19 @@ static void on_fix(const struct app_gnss_fix *f)
     uint32_t now = k_uptime_get_32();
 
     /*
-     * A position given by a PC wins over the receiver while it keeps
-     * coming, which is the SIM source of the legacy
-     * (`legacy/source/model/Locator.cpp`, eLocationSourceSIM first).
+     * Which source the model listens to is the rule of the legacy, in
+     * `model/loc_arbiter.c` with its own tests: a simulated ride wins and
+     * holds the floor for two seconds between its frames, so the receiver
+     * cannot slip a position in and make the bike jump.
      */
-    if (f->sim) {
-        ctx.sim_uptime_ms = now;
-    } else if ((ctx.sim_uptime_ms != 0U) && ((now - ctx.sim_uptime_ms) < POS_MAX_AGE_MS)) {
+    loc_arbiter_feed(&ctx.arb, f->sim ? LOC_ARB_SIM : LOC_ARB_GPS, now);
+
+    enum loc_arb_src src = loc_arbiter_pick(&ctx.arb, now, ctx.have_fix_msg && ctx.fix.fix);
+
+    if (src == LOC_ARB_NONE) {
         return;
-    } else {
-        ctx.sim_uptime_ms = 0U;
     }
+    ctx.sim_uptime_ms = (src == LOC_ARB_SIM) ? now : 0U;
 
     ctx.fix = *f;
     ctx.have_fix_msg = true;
@@ -372,7 +363,7 @@ static void on_fix(const struct app_gnss_fix *f)
         return;
     }
     ctx.fix_uptime_ms = f->uptime_ms;
-    if (!rides_outdoors(ctx.mode)) {
+    if (!mode_fsm_is_outdoor(&ctx.fsm)) {
         return;
     }
 
@@ -793,8 +784,9 @@ static void model_thread(void *p1, void *p2, void *p3)
     uint32_t last_state_ms = 0U;
 
     /* CRS, as the legacy after the boot (main.cpp: boucle__change_mode) */
-    smf_set_initial(SMF_CTX(&ctx), &mode_states[APP_MODE_ID_CRS]);
+    mode_fsm_init(&ctx.fsm, &mode_ops);
 
+    loc_arbiter_init(&ctx.arb);
     activity_init(&act, (uint32_t)CONFIG_GNSS_AUTOLAP_M,
                   IS_ENABLED(CONFIG_GNSS_AUTO_PAUSE));
     incident_init(&ctx.inc, IS_ENABLED(CONFIG_GNSS_CRASH_DETECT));

@@ -26,7 +26,7 @@ flowchart TB
         UIS["ui"]
     end
     subgraph MODEL["src/model: algoritmos do legacy"]
-        ALG["attitude, Kalman, locator, segmentos,<br/>percurso, zonas, log, FDIR, configurações"]
+        ALG["attitude, Kalman, máquina de modos, segmentos,<br/>percurso, zonas, log, FDIR, configurações"]
     end
     subgraph RF["src/rf"]
         BLE["ble_manager e clientes"]

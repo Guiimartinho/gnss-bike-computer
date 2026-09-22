@@ -48,7 +48,7 @@ flowchart TB
         FSM["máquinas de estado (SMF)<br/>sistema, modo, gravação, interface"]
     end
     subgraph MODEL["modelo (port do legacy)"]
-        BOU["boucle por modo<br/>attitude, Kalman, locator"]
+        BOU["boucle por modo<br/>attitude, Kalman, mode_fsm"]
         SEG["segmentos, percurso,<br/>zonas, suffer score, RR"]
     end
     subgraph SVC["serviços"]
@@ -147,7 +147,7 @@ Todas no SMF do Zephyr, com estados hierárquicos e ações de entrada, execuç�
 | Máquina | Dono | Origem |
 |---|---|---|
 | Sistema e energia | serviço de energia | nova; desligamento automático do legacy (`legacy/source/scheduling/power_scheduler.cpp:16-46`) |
-| Modo | modelo | `boucle__change_mode()` (`legacy/source/model/Boucle.cpp:101-143`) |
+| Modo | modelo | desenho próprio em `model/mode_fsm.c`, com as famílias e as três regras abaixo |
 | Gravação | modelo | log do legacy (`Attitude::computeDistance`, `legacy/source/model/Attitude.cpp:431-490`) |
 | GNSS | serviço GNSS | `GPS_MGMT` (`legacy/source/sensors/GPSMGMT.cpp:143-265`), refeita para UBX |
 | Sensor externo | serviço de rádio, uma por sensor | pareamento do `ant_device_manager` e reaberturas do HRM ([07](07-radio-ant-ble.md#ant-no-legacy)) |
@@ -189,27 +189,45 @@ stateDiagram-v2
 
 ### Modo
 
+Os cinco modos vivem em duas famílias, e a família é um estado pai de verdade, não uma função auxiliar: ao ar livre a posição vem do receptor e alimenta a distância; dentro de casa ela vem do rolo ou do PC, e um fix não quer dizer nada.
+
 ```mermaid
 stateDiagram-v2
     [*] --> CRS
-    CRS --> PRC: menu, com percurso escolhido
-    PRC --> CRS: menu
-    CRS --> FEC: menu
-    FEC --> CRS: menu
-    CRS --> Zwift: menu
-    Zwift --> CRS: menu
-    note right of CRS
+    state "Ao ar livre" as Outdoor {
+        CRS
+        PRC
+        DBG
+    }
+    state "Dentro de casa" as Indoor {
+        FEC
+        Zwift
+    }
+    CRS --> PRC: menu, com percurso carregado
+    PRC --> CRS: menu, ou o percurso saiu
+    CRS --> DBG: menu
+    DBG --> CRS: menu
+    Outdoor --> Indoor: menu, fora de uma gravação
+    Indoor --> Outdoor: menu, fora de uma gravação
+    note right of Outdoor
         GNSS ligado, barômetro a 10 Hz
         ciclo a cada localização
     end note
-    note right of FEC
+    note right of Indoor
         GNSS em backup, canal FE-C aberto
         ciclo a cada dado do rolo
     end note
 ```
 
-- A troca repete o legacy: libera a espera, invalida o modo antigo e inicia o novo sob demanda (`legacy/source/model/Boucle.cpp:101-143`).
-- O GNSS segue o modo: acorda em CRS e PRC (`legacy/source/model/BoucleCRS.cpp:38`) e dorme em FEC e Zwift (`legacy/source/model/BoucleFEC.cpp:45`). No u-blox, dormir é mandar `UBX-RXM-PMREQ` e desligar o BUCK1, com o backup mantido.
+A máquina é `model/mode_fsm.c`, com teste de host próprio (`test_mode_fsm`). Ela **não** é o `boucle__change_mode()` do legacy (`legacy/source/model/Boucle.cpp:101-142`), que não guarda nada e deixa entrar em qualquer modo a qualquer momento. Três regras foram acrescentadas, e cada uma era um jeito de perder um pedal:
+
+1. **Modo de percurso pede percurso.** Entrar em PRC sem nada carregado deixava o ciclista numa tela de navegação sem navegação; agora a troca é recusada e a tela diz o porquê. Se o percurso sair debaixo de quem está seguindo, o modo volta sozinho para CRS.
+2. **Pedal gravando não muda de família.** Sair da rua para o rolo no meio de uma gravação misturava dado de rolo no arquivo de um pedal de verdade. Dentro da mesma família a troca é livre: quem grava na rua pode querer o percurso ou a tela de diagnóstico, e nenhum dos dois muda de onde vêm os números.
+3. **Os números da sessão são da atividade, não do modo.** A máquina não encosta nas zonas de potência nem no suffer score. Até 2026-09-21 entrar em FEC chamava `power_zone_reset()` e `suffer_score_reset()`, e quem punha a bicicleta no rolo perdia as zonas do pedal inteiro — e eram as duas únicas chamadas de reset no firmware, de modo que fora desse caminho as zonas nunca zeravam.
+
+Duas coisas do legacy ficaram **de fora** de propósito: invalidar o modo antigo para liberar os pontos do percurso (aqui eles moram num vetor estático, não há o que liberar) e o `stc.resetCharge()` a cada troca (o medidor de carga do legacy não existe na placa nova).
+
+- O GNSS segue a família: acorda ao ar livre (`legacy/source/model/BoucleCRS.cpp:38`) e dorme dentro de casa (`legacy/source/model/BoucleFEC.cpp:45`). No u-blox, dormir é mandar `UBX-RXM-PMREQ` e desligar o BUCK1, com o backup mantido.
 - O MSC fica na máquina de sistema, porque desmonta o FatFs e para o modelo.
 
 ### Gravação

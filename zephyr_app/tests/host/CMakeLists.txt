@@ -105,6 +105,7 @@ gnss_add_test(test_activity SOURCES model/activity.c)
 gnss_add_test(test_climb SOURCES model/climb.c)
 gnss_add_test(test_radar SOURCES model/radar.c model/radar_wire.c)
 gnss_add_test(test_incident SOURCES model/incident.c)
+gnss_add_test(test_loc_arbiter SOURCES model/loc_arbiter.c)
 gnss_add_test(test_csc_calc SOURCES model/csc_calc.c)
 gnss_add_test(test_ftms_parse SOURCES model/ftms_parse.c)
 gnss_add_test(test_e2e_activity SOURCES model/activity.c model/fit_encode.c)
@@ -143,6 +144,9 @@ if(EXISTS ${ZEPHYR_SMF})
         SOURCES svc/power/sys_fsm.c model/power_scheduler.c
         SUPPORT host_kernel.c
         ZEPHYR ${ZEPHYR_SMF})
+    gnss_add_test(test_mode_fsm
+        SOURCES model/mode_fsm.c
+        ZEPHYR ${ZEPHYR_SMF})
 else()
-    message(WARNING "Zephyr SMF not found in ${ZEPHYR_BASE}: test_sys_fsm skipped (pass -DZEPHYR_BASE=...)")
+    message(WARNING "Zephyr SMF not found in ${ZEPHYR_BASE}: test_sys_fsm and test_mode_fsm skipped (pass -DZEPHYR_BASE=...)")
 endif()

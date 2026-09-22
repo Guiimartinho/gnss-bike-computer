@@ -80,10 +80,10 @@ target_sources(app PRIVATE
     src/model/gpx_scan.c
     src/model/route_file.c
     src/model/route_profile.c
-    src/model/loc_source.c
-    src/model/locator.c
     src/model/activity.c
     src/model/climb.c
+    src/model/loc_arbiter.c
+    src/model/mode_fsm.c
     src/model/csc_calc.c
     src/model/ftms_parse.c
     src/model/incident.c

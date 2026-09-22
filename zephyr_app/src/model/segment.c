@@ -15,7 +15,6 @@
 #include "model/segment.h"
 #include "model/segment_file.h"
 
-#include "model/locator.h"
 #include "model/vecteur.h"
 #include "model/liste_points.h"
 #include <math.h>

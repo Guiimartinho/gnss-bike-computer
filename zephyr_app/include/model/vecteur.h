@@ -79,6 +79,19 @@ void point_init(point_t *pt, float lat, float lon, float alt, float rtime);
 void point2d_init(point2d_t *pt, float lat, float lon);
 
 /**
+ * @brief Whether a pair of coordinates is usable
+ *
+ * The rule of the legacy, `legacy/source/routes/Points.cpp:37-42`
+ * (`Location::isValid()`): a zero in either coordinate, a latitude past
+ * 89 degrees or a longitude past 189 are what a receiver produces when it
+ * has nothing, not a place a bicycle can be. Every position entering the
+ * model goes through here, so there is one rule and not several.
+ *
+ * @return true if the coordinates can be used
+ */
+bool latlon_is_valid(float lat, float lon);
+
+/**
  * @brief Check if point is valid
  * @param pt Pointer to point
  * @return true if valid coordinates
