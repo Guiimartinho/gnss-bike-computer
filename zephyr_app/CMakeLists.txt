@@ -160,6 +160,8 @@ target_sources_ifdef(CONFIG_LVGL app PRIVATE
 # ANT on the sdk-ant add-on, only in ANT builds (ANT=1 in tools/fw/fw.sh)
 target_sources_ifdef(CONFIG_ANT app PRIVATE
     src/rf/ant/ant.c
+    src/rf/ant/ant_channel.c
+    src/rf/ant/ant_sensors.c
     src/rf/ant/radar_ant.c
     src/rf/ant/power_ant.c
 )
@@ -172,6 +174,9 @@ if(CONFIG_ANT AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/src/rf/ant/radar_pages.c)
 endif()
 if(CONFIG_ANT AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/src/rf/ant/power_pages.c)
     target_sources(app PRIVATE src/rf/ant/power_pages.c)
+endif()
+if(CONFIG_ANT AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/src/rf/ant/sensor_pages.c)
+    target_sources(app PRIVATE src/rf/ant/sensor_pages.c)
     message(STATUS "ANT+ radar: local profile found")
 endif()
 

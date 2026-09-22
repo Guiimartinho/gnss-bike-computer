@@ -12,6 +12,7 @@
 #include <zephyr/logging/log.h>
 
 #include "app/app_channels.h"
+#include "rf/ant_channel.h"
 #include "rf/radar_ant.h"
 
 LOG_MODULE_REGISTER(radar_ant, CONFIG_LOG_DEFAULT_LEVEL);
@@ -62,28 +63,34 @@ void radar_ant_on_broadcast(const uint8_t *data, size_t len)
     (void)app_publish(&chan_radar, &msg);
 }
 
+/** A broadcast on the radar channel, handed on to the page decoder */
+static void radar_ant_rx(enum ant_channel_use use, const uint8_t *data, size_t len)
+{
+    ARG_UNUSED(use);
+    radar_ant_on_broadcast(data, len);
+}
+
 int radar_ant_start(void)
 {
     /*
-     * The channel is opened by the ANT code of the owner, which knows the
-     * device type, the period and the RF channel from the profile. What is
-     * here is only the place it reports into.
+     * The channel itself is opened by `rf/ant_channel.h`, which carries no
+     * number of the profile; the three below come from Kconfig, where the
+     * owner puts them from the profile document.
      */
-    LOG_INF("radar: ANT channel type %d, period %d, rf %d",
-            CONFIG_GNSS_ANT_RADAR_DEV_TYPE, CONFIG_GNSS_ANT_RADAR_PERIOD,
-            CONFIG_GNSS_ANT_RADAR_RF);
-
-    return 0;
+    return ant_ch_open(ANT_CH_RADAR, (uint8_t)CONFIG_GNSS_ANT_RADAR_DEV_TYPE,
+                       (uint16_t)CONFIG_GNSS_ANT_RADAR_PERIOD,
+                       (uint8_t)CONFIG_GNSS_ANT_RADAR_RF, radar_ant_rx);
 }
 
 void radar_ant_stop(void)
 {
     linked = false;
+    (void)ant_ch_close(ANT_CH_RADAR);
 }
 
 bool radar_ant_is_linked(void)
 {
-    return linked;
+    return linked && ant_ch_is_linked(ANT_CH_RADAR);
 }
 
 #else

@@ -20,6 +20,7 @@
 #include "app/app_cmd.h"
 #include "app/app_svc.h"
 #include "rf/ant.h"
+#include "rf/ant_sensors.h"
 #include "rf/power_ant.h"
 #include "rf/radar_ant.h"
 #include "rf/ble_ancs_client.h"
@@ -256,6 +257,13 @@ static void radio_start(void)
 
     if ((power_ant != 0) && (power_ant != -ENOTSUP)) {
         LOG_WRN("ANT power start failed (%d)", power_ant);
+    }
+
+    /* and the two the legacy rode with: the strap and the cadence sensor */
+    int ant_sens = ant_sensors_start();
+
+    if ((ant_sens != 0) && (ant_sens != -ENOTSUP)) {
+        LOG_WRN("ANT sensors start failed (%d)", ant_sens);
     }
 #endif
     if (ble_manager_init() != APP_OK) {

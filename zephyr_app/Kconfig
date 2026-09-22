@@ -127,6 +127,50 @@ config GNSS_ANT_POWER_RF
 	range 0 124
 	depends on GNSS_ANT_POWER_DEV_TYPE > 0
 
+config GNSS_ANT_HRM_DEV_TYPE
+	int "ANT+ device type of the heart rate strap"
+	default 0
+	range 0 255
+	help
+	  Zero leaves the strap over ANT+ turned off, which is how this
+	  repository ships: the Heart Rate profile is under the ANT+ Shared
+	  Source License and cannot be redistributed here. The owner sets
+	  this, the two below and writes `src/rf/ant/sensor_pages.c` on their
+	  own machine; `.gitignore` keeps that file out. A strap over
+	  **Bluetooth** needs none of this (`rf/ble_hrs_client.h`).
+
+config GNSS_ANT_HRM_PERIOD
+	int "Channel period of the strap, in 1/32768 s"
+	default 0
+	range 0 65535
+	depends on GNSS_ANT_HRM_DEV_TYPE > 0
+
+config GNSS_ANT_HRM_RF
+	int "RF channel of the strap"
+	default 0
+	range 0 124
+	depends on GNSS_ANT_HRM_DEV_TYPE > 0
+
+config GNSS_ANT_BSC_DEV_TYPE
+	int "ANT+ device type of the speed and cadence sensor"
+	default 0
+	range 0 255
+	help
+	  Zero leaves it off, on the same terms as the strap above. A sensor
+	  over **Bluetooth** needs none of this (`rf/ble_bsc_client.h`).
+
+config GNSS_ANT_BSC_PERIOD
+	int "Channel period of the speed and cadence sensor, in 1/32768 s"
+	default 0
+	range 0 65535
+	depends on GNSS_ANT_BSC_DEV_TYPE > 0
+
+config GNSS_ANT_BSC_RF
+	int "RF channel of the speed and cadence sensor"
+	default 0
+	range 0 124
+	depends on GNSS_ANT_BSC_DEV_TYPE > 0
+
 endmenu
 
 source "Kconfig.zephyr"

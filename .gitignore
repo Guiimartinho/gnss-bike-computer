@@ -26,3 +26,4 @@ node_modules/
 # Bike Radar lives on the owner's machine (zephyr_app/include/rf/radar_ant.h).
 zephyr_app/src/rf/ant/radar_pages.c
 zephyr_app/src/rf/ant/power_pages.c
+zephyr_app/src/rf/ant/sensor_pages.c
