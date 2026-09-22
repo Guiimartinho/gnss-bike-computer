@@ -32,6 +32,24 @@ static __noinit crash_descriptor_t g_crash_desc;
 /** Reset cause read at start-up; hwinfo only gives it once */
 static reset_reason_t latched_reason = RESET_REASON_UNKNOWN;
 
+/**
+ * The ride found in retained RAM at boot, taken out of the way.
+ *
+ * `g_crash_desc.saved` is the **live** block: the ride under way writes it
+ * every 15 m so that the next reset has something to come back to. The
+ * restore, though, only happens once the receiver has given more than
+ * fifteen positions and the sea level reference is taken, which is a
+ * minute or two into the ride — by then the new ride has overwritten the
+ * block a dozen times, and what came back was the ride that was already
+ * running.
+ *
+ * `legacy/source/model/Attitude.cpp:393-416` reads the live block at that
+ * late moment and has the same hole. Here the block is copied at boot,
+ * before anything can write it, and the restore reads the copy.
+ */
+static saved_data_t latched_ride;
+static bool latched_ride_valid;
+
 /* ==========================================================================
  * Private Definitions
  * ========================================================================== */
@@ -208,12 +226,35 @@ app_err_t crash_recovery_init(void)
         } else if (g_crash_desc.fault_type == 2U) {
             LOG_ERR("Previous session ended with ERROR");
         }
+
+        /*
+         * Take the ride of the previous run out of the way now, before the
+         * new one starts writing over it every 15 m. Whoever asks later
+         * gets this copy.
+         */
+        if (verify_saved_crc(&g_crash_desc.saved)) {
+            (void)memcpy(&latched_ride, &g_crash_desc.saved, sizeof(latched_ride));
+            latched_ride_valid = true;
+            LOG_WRN("FDIR: a ride of %.1f m was left behind", (double)latched_ride.dist);
+        }
     } else {
         /* No valid crash data - initialize */
         (void)memset(&g_crash_desc, 0, sizeof(crash_descriptor_t));
         g_crash_desc.magic = CRASH_MAGIC;
         g_crash_desc.reset_count = 0U;
         g_crash_desc.fault_type = 0U;
+
+        /*
+         * And the sentinel over the saved ride, for the same reason
+         * `crash_recovery_clear_saved_state()` writes it: the CRC-8 of a
+         * block of zeros is zero, so the block this memset just wrote would
+         * pass `verify_saved_crc()` and `crash_recovery_has_data()` would
+         * answer true. A device booting for the first time then told the
+         * rider a ride had been recovered and restored a ride of nothing.
+         */
+        (void)memset(&latched_ride, 0, sizeof(latched_ride));
+        latched_ride_valid = false;
+        g_crash_desc.saved.crc = 0xFFU;
 
         LOG_INF("Crash recovery initialized (fresh start)");
     }
@@ -225,17 +266,13 @@ app_err_t crash_recovery_init(void)
 
 bool crash_recovery_has_data(void)
 {
-    if (g_crash_desc.magic != CRASH_MAGIC) {
-        return false;
-    }
-
     /*
-     * The legacy restores whenever the CRC of the block matches
-     * (`legacy/source/model/Attitude.cpp:393`), not only after a fault: a
-     * reset by the watchdog or a flat battery also leaves a ride to pick
-     * up. Asking for fault_type here meant the state was never restored.
+     * The ride of the **previous** run, latched at boot, not the block the
+     * ride under way keeps rewriting. A reset by the watchdog or a flat
+     * battery leaves a ride to pick up just as a fault does, so this does
+     * not ask for a fault_type (`legacy/source/model/Attitude.cpp:393`).
      */
-    return verify_saved_crc(&g_crash_desc.saved);
+    return latched_ride_valid;
 }
 
 const crash_descriptor_t *crash_recovery_get_descriptor(void)
@@ -292,20 +329,12 @@ void crash_recovery_save_state(const loc_data_t *loc,
 
 bool crash_recovery_get_saved_state(saved_data_t *data)
 {
-    if (data == NULL) {
+    if ((data == NULL) || !latched_ride_valid) {
         return false;
     }
 
-    if (g_crash_desc.magic != CRASH_MAGIC) {
-        return false;
-    }
+    (void)memcpy(data, &latched_ride, sizeof(saved_data_t));
 
-    if (!verify_saved_crc(&g_crash_desc.saved)) {
-        LOG_WRN("Saved state CRC invalid");
-        return false;
-    }
-
-    (void)memcpy(data, &g_crash_desc.saved, sizeof(saved_data_t));
     return true;
 }
 
@@ -350,6 +379,10 @@ void crash_recovery_clear(void)
 
 void crash_recovery_clear_saved_state(void)
 {
+    /* the ride of the previous run is used up, or was refused */
+    (void)memset(&latched_ride, 0, sizeof(latched_ride));
+    latched_ride_valid = false;
+
     (void)memset(&g_crash_desc.saved, 0, sizeof(g_crash_desc.saved));
 
     /*

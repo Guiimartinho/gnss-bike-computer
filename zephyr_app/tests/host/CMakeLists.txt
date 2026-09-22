@@ -121,7 +121,12 @@ gnss_add_test(test_distance SOURCES model/distance.c model/vecteur.c)
 gnss_add_test(test_udmatrix SOURCES model/udmatrix.c)
 gnss_add_test(test_kalman_altitude SOURCES model/kalman_altitude.c model/udmatrix.c)
 gnss_add_test(test_crash_recovery SOURCES model/crash_recovery.c SUPPORT host_kernel.c)
+gnss_add_test(test_attitude
+    SOURCES model/attitude.c model/distance.c model/vecteur.c model/power_estimate.c
+            model/kalman_altitude.c model/udmatrix.c model/crash_recovery.c
+    SUPPORT host_kernel.c)
 gnss_add_test(test_power_estimate SOURCES model/power_estimate.c)
+gnss_add_test(test_rr_zone SOURCES model/rr_zone.c)
 gnss_add_test(test_power_zone SOURCES model/power_zone.c)
 gnss_add_test(test_suffer_score SOURCES model/suffer_score.c)
 gnss_add_test(test_sd_logger SOURCES model/sd_logger.c SUPPORT host_kernel.c host_fs.c)

@@ -73,7 +73,6 @@ target_sources(app PRIVATE
     src/model/crash_recovery.c
     src/model/file_policy.c
     src/model/dfu_state.c
-    src/model/kalman.c
     src/model/kalman_altitude.c
     src/model/liste_points.c
     src/model/map_project.c

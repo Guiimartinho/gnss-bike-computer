@@ -9,6 +9,7 @@
  * receive thread: they only copy and publish.
  */
 
+#include <errno.h>
 #include <string.h>
 
 #include <zephyr/kernel.h>
@@ -19,6 +20,7 @@
 #include "app/app_cmd.h"
 #include "app/app_svc.h"
 #include "rf/ant.h"
+#include "rf/radar_ant.h"
 #include "rf/ble_bsc_client.h"
 #include "rf/ble_fec_client.h"
 #include "rf/ble_hrs_client.h"
@@ -183,6 +185,20 @@ static void radio_start(void)
     /* ANT before bt_enable(), as the sdk-ant sample with BLE and ANT */
     if (rf_ant_init() != APP_OK) {
         LOG_ERR("ANT start failed");
+    }
+
+    /*
+     * The rear radar over ANT+. In this repository it answers -ENOTSUP,
+     * because the channel parameters of the ANT+ Bike Radar profile are not
+     * here and `CONFIG_GNSS_ANT_RADAR_DEV_TYPE` is zero: the profile is
+     * under a licence that forbids redistributing it and this repository is
+     * public (`rf/radar_ant.h`). The call is the hook the owner needs, and
+     * the radar over BLE below works either way.
+     */
+    int radar_ant = radar_ant_start();
+
+    if ((radar_ant != 0) && (radar_ant != -ENOTSUP)) {
+        LOG_WRN("ANT radar start failed (%d)", radar_ant);
     }
 #endif
     if (ble_manager_init() != APP_OK) {
