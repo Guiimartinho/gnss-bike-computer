@@ -21,6 +21,7 @@
 #include "rf/ble_lns.h"
 #include "rf/ble_hrs_client.h"
 #include "rf/ble_bsc_client.h"
+#include "rf/ble_ancs_client.h"
 #include "rf/ble_cps_client.h"
 #include "rf/ble_fec_client.h"
 #include "rf/ble_komoot_client.h"
@@ -372,6 +373,16 @@ static void connected(struct bt_conn *conn, uint8_t err)
         }
     }
 
+    if (!is_sensor) {
+        /*
+         * Not one of the rider's sensors, so it is the phone: the one that
+         * connects to us rather than the other way round. It may carry the
+         * notification service (`rf/ble_ancs_client.h`); if it does not,
+         * the discovery simply finds nothing.
+         */
+        ble_ancs_client_on_connect(conn);
+    }
+
     if (is_sensor) {
         /* Sensor connection */
         if ((sensor_type & SENSOR_TYPE_HRS) != 0U) {
@@ -424,6 +435,12 @@ static void connected(struct bt_conn *conn, uint8_t err)
 
 static void disconnected(struct bt_conn *conn, uint8_t reason)
 {
+    /*
+     * The notification client keeps its own reference and answers only for
+     * the connection it took, so it is told about every one that drops.
+     */
+    ble_ancs_client_on_disconnect(conn);
+
     LOG_INF("Disconnected (reason %u)", reason);
 
     /* Check which connection was lost */

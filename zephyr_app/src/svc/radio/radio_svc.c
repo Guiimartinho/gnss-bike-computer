@@ -22,6 +22,7 @@
 #include "rf/ant.h"
 #include "rf/power_ant.h"
 #include "rf/radar_ant.h"
+#include "rf/ble_ancs_client.h"
 #include "rf/ble_bsc_client.h"
 #include "rf/ble_cps_client.h"
 #include "rf/ble_fec_client.h"
@@ -162,6 +163,21 @@ static void cps_conn(bool connected)
     publish_link(APP_EXT_POWER, connected);
 }
 
+/** A notification from the phone that got past the filter */
+static void ancs_notification(const struct ancs_notification *n)
+{
+    /*
+     * A call is marked good so the screen gives it the colour it gives a
+     * personal record: it is the one worth taking a hand off the bars for.
+     */
+    app_notify(n->title, n->message, NULL, n->is_call, 0U);
+}
+
+static void ancs_conn(bool connected)
+{
+    LOG_INF("phone notifications %s", connected ? "on" : "off");
+}
+
 static void bsc_data(uint16_t speed, uint8_t cadence)
 {
     struct app_ext_sensor e = {.uptime_ms = k_uptime_get_32(), .kind = APP_EXT_BSC,
@@ -251,6 +267,11 @@ static void radio_start(void)
     (void)ble_radar_client_init(radar_frame, radar_link);
     ble_bsc_client_register_callback(bsc_data);
     ble_bsc_client_register_conn_callback(bsc_conn);
+    if (ble_ancs_client_init() != APP_OK) {
+        LOG_WRN("phone notifications not available");
+    }
+    ble_ancs_client_register_callback(ancs_notification);
+    ble_ancs_client_register_conn_callback(ancs_conn);
     (void)ble_cps_client_init();
     ble_cps_client_register_callback(cps_data);
     ble_cps_client_register_conn_callback(cps_conn);
