@@ -121,12 +121,13 @@ static void list_routes(void)
     struct fs_dirent entry;
 
     info.nroutes = 0U;
+    info.nworkouts = 0U;
     fs_dir_t_init(&dir);
     if (fs_opendir(&dir, MOUNT_POINT "/") != 0) {
         return;
     }
-    while ((info.nroutes < APP_ROUTE_LIST_MAX) && (fs_readdir(&dir, &entry) == 0) &&
-           (entry.name[0] != '\0')) {
+    while (((info.nroutes < APP_ROUTE_LIST_MAX) || (info.nworkouts < APP_ROUTE_LIST_MAX)) &&
+           (fs_readdir(&dir, &entry) == 0) && (entry.name[0] != '\0')) {
         size_t len = strlen(entry.name);
 
         if ((entry.type != FS_DIR_ENTRY_FILE) || (len < 5U)) {
@@ -134,14 +135,23 @@ static void list_routes(void)
         }
         const char *ext = &entry.name[len - 4U];
 
-        if ((strcmp(ext, ".RTE") == 0) || (strcmp(ext, ".rte") == 0) ||
-            (strcmp(ext, ".GPX") == 0) || (strcmp(ext, ".gpx") == 0) ||
-            (strcmp(ext, ".PAR") == 0) || (strcmp(ext, ".par") == 0) ||
-            (strcmp(ext, ".CRS") == 0) || (strcmp(ext, ".crs") == 0)) {
+        if ((info.nroutes < APP_ROUTE_LIST_MAX) &&
+            ((strcmp(ext, ".RTE") == 0) || (strcmp(ext, ".rte") == 0) ||
+             (strcmp(ext, ".GPX") == 0) || (strcmp(ext, ".gpx") == 0) ||
+             (strcmp(ext, ".PAR") == 0) || (strcmp(ext, ".par") == 0) ||
+             (strcmp(ext, ".CRS") == 0) || (strcmp(ext, ".crs") == 0))) {
             /* the whole name, extension and all: it is what opens the file */
             (void)snprintf(info.route[info.nroutes], sizeof(info.route[0]), "%.*s",
                            (int)(sizeof(info.route[0]) - 1U), entry.name);
             info.nroutes++;
+        } else if ((info.nworkouts < APP_ROUTE_LIST_MAX) &&
+                   ((strcmp(ext, ".WKT") == 0) || (strcmp(ext, ".wkt") == 0))) {
+            /* a structured session (`model/workout.h`) */
+            (void)snprintf(info.workout[info.nworkouts], sizeof(info.workout[0]), "%.*s",
+                           (int)(sizeof(info.workout[0]) - 1U), entry.name);
+            info.nworkouts++;
+        } else {
+            /* anything else on the card is not ours */
         }
     }
     (void)fs_closedir(&dir);

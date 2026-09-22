@@ -105,6 +105,7 @@ target_sources(app PRIVATE
     src/model/udmatrix.c
     src/model/user_settings.c
     src/model/vecteur.c
+    src/model/workout.c
 )
 
 # =============================================================================

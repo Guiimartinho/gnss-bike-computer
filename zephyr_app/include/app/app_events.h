@@ -268,7 +268,10 @@ enum app_cmd_id {
      * value travel in one argument because the channel carries one:
      * `(enum alert_id << 16) | value`, and a value of zero turns it off.
      */
-    APP_CMD_SET_ALERT
+    APP_CMD_SET_ALERT,
+    APP_CMD_WORKOUT_SELECT,     /**< arg: index in the workout list, -1 to unload */
+    APP_CMD_WORKOUT_START,      /**< begin the loaded session */
+    APP_CMD_WORKOUT_STOP
 };
 
 /** Channel system_cmd */
@@ -435,6 +438,8 @@ struct app_storage_info {
     uint16_t segments;          /**< segments loaded */
     uint8_t nroutes;
     char route[APP_ROUTE_LIST_MAX][20];
+    uint8_t nworkouts;          /**< structured sessions on the card (.WKT) */
+    char workout[APP_ROUTE_LIST_MAX][20];
 };
 
 #ifdef __cplusplus

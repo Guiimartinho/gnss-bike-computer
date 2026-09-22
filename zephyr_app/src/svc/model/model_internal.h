@@ -21,6 +21,7 @@
 #include "model/loc_arbiter.h"
 #include "model/alerts.h"
 #include "model/mode_fsm.h"
+#include "model/workout.h"
 #include "model/power_metrics.h"
 #include "model/radar.h"
 
@@ -72,6 +73,9 @@ struct model_ctx {
     struct loc_arbiter arb;         /**< which position source wins (model/loc_arbiter.h) */
     struct power_metrics pm;        /**< NP, IF and TSS of the ride (model/power_metrics.h) */
     struct alerts alerts;           /**< what the rider asked to be told (model/alerts.h) */
+    struct workout wk;              /**< the structured session (model/workout.h) */
+    int32_t wk_sel;                 /**< index of the session loaded, -1 for none */
+    uint16_t wk_target_w;           /**< watts last asked of the trainer */
     uint32_t pm_last_s;             /**< moving seconds already fed to it */
     float heading_deg;
     bool heading_valid;

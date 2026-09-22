@@ -15,6 +15,7 @@
  */
 
 #include <math.h>
+#include <zephyr/fs/fs.h>
 #include <string.h>
 
 #include <zephyr/kernel.h>
@@ -38,6 +39,8 @@
 #include "model/parcours.h"
 #include "model/segment.h"
 #include "model/user_settings.h"
+#include "model/workout.h"
+#include "rf/ble_fec_client.h"
 #include "model_internal.h"
 
 LOG_MODULE_REGISTER(model_svc, CONFIG_LOG_DEFAULT_LEVEL);
@@ -89,6 +92,7 @@ static void update_activity(const attitude_t *att, const loc_data_t *loc);
 static void publish_activity(enum activity_event ev, bool finished);
 static uint16_t ride_power_w(const attitude_t *att);
 static uint8_t current_hr(void);
+static void publish_state(void);
 
 /* The thinned copy of the route the climb scan walks (model_internal.h) */
 static struct {
@@ -269,6 +273,115 @@ static void find_climbs(void)
     uint8_t found = climb_find(&ctx.climbs, climb_scan.n, climb_scan_point, NULL);
 
     LOG_INF("route: %u climbs over %u m", (unsigned int)found, (unsigned int)total);
+}
+
+/**
+ * @brief Open the structured session the interface chose
+ *
+ * Read line by line into `model/workout.c`, which flattens the repeats and
+ * refuses the file whole if any line is wrong: a rider given half the plan
+ * they wrote would ride the wrong session without knowing.
+ */
+static void load_selected_workout(int32_t index)
+{
+    char path[48];
+    struct fs_file_t f;
+    char line[80];
+    size_t len = 0U;
+
+    workout_init(&ctx.wk);
+    ctx.wk_sel = -1;
+
+    if ((index < 0) || ((uint8_t)index >= ctx.storage.nworkouts)) {
+        publish_state();
+        return;     /* the rider unloaded it */
+    }
+
+    (void)snprintf(path, sizeof(path), "/SD:/%s", ctx.storage.workout[index]);
+    fs_file_t_init(&f);
+    if (fs_open(&f, path, FS_O_READ) != 0) {
+        app_notify("Treino", "Arquivo nao abriu", NULL, false, 0U);
+        return;
+    }
+
+    char buf[128];
+    ssize_t got;
+    bool ok = true;
+
+    while (ok && ((got = fs_read(&f, buf, sizeof(buf))) > 0)) {
+        for (ssize_t i = 0; ok && (i < got); i++) {
+            char c = buf[i];
+
+            if ((c == '\n') || (c == '\r')) {
+                if (len > 0U) {
+                    line[len] = '\0';
+                    ok = workout_parse_line(&ctx.wk, line);
+                    len = 0U;
+                }
+            } else if (len < (sizeof(line) - 1U)) {
+                line[len] = c;
+                len++;
+            } else {
+                ok = false;     /* a line longer than any session needs */
+            }
+        }
+        model_feed_wdt();
+    }
+    if (ok && (len > 0U)) {
+        line[len] = '\0';
+        ok = workout_parse_line(&ctx.wk, line);
+    }
+    (void)fs_close(&f);
+
+    if (!ok || !workout_parse_end(&ctx.wk)) {
+        workout_init(&ctx.wk);
+        app_notify("Treino", "Arquivo invalido", NULL, false, 0U);
+        return;
+    }
+
+    ctx.wk_sel = index;
+    LOG_INF("workout %s loaded, %u steps", workout_name(&ctx.wk), workout_steps(&ctx.wk));
+    app_notify("Treino", workout_name(&ctx.wk), NULL, true, 0U);
+    publish_state();
+}
+
+/**
+ * @brief Run the session over this epoch, and drive the trainer
+ *
+ * ERG only while the device is indoors: asking a trainer for watts while
+ * the rider is on the road would be asking a machine that is not there,
+ * and a session by heart rate or cadence sets no watts at all.
+ */
+static void run_workout(const attitude_t *att, uint32_t ride_s)
+{
+    if (!workout_is_loaded(&ctx.wk)) {
+        return;
+    }
+
+    enum wk_event ev = workout_update(&ctx.wk, ride_s, att->dist);
+
+    if (ev == WK_EVENT_DONE) {
+        app_notify("Treino", "Terminado", NULL, true, 0U);
+        (void)ble_fec_client_set_target_power(0U);
+        return;
+    }
+    if (ev == WK_EVENT_STEP) {
+        const struct workout_step *st = workout_current(&ctx.wk);
+
+        app_notify("Treino", (st != NULL) ? st->label : NULL, NULL, true, 0U);
+    }
+
+    if (mode_fsm_is_outdoor(&ctx.fsm)) {
+        return;
+    }
+
+    uint16_t target = workout_target_power(&ctx.wk);
+
+    if ((target != 0U) && (target != ctx.wk_target_w)) {
+        ctx.wk_target_w = target;
+        (void)ble_fec_client_set_target_power(target);
+        LOG_INF("ERG: asking the trainer for %u W", target);
+    }
 }
 
 static void load_selected_route(void)
@@ -707,6 +820,7 @@ static void update_activity(const attitude_t *att, const loc_data_t *loc)
         app_notify("Volta", NULL, NULL, false, 0U);
     }
     run_alerts(att, loc, now);
+    run_workout(att, activity_ride(&act)->timer_ms / 1000U);
     publish_activity(ev, false);
 }
 
@@ -721,6 +835,20 @@ static void on_command(const struct app_system_cmd *cmd)
     case APP_CMD_ROUTE_SELECT:
         ctx.route_sel = (int8_t)cmd->arg;
         load_selected_route();
+        break;
+    case APP_CMD_WORKOUT_SELECT:
+        load_selected_workout(cmd->arg);
+        break;
+    case APP_CMD_WORKOUT_START:
+        workout_start(&ctx.wk, activity_ride(&act)->timer_ms / 1000U, attitude_get_distance());
+        ctx.wk_target_w = 0U;
+        publish_state();
+        break;
+    case APP_CMD_WORKOUT_STOP:
+        workout_stop(&ctx.wk);
+        ctx.wk_target_w = 0U;
+        (void)ble_fec_client_set_target_power(0U);
+        publish_state();
         break;
     case APP_CMD_SET_ALERT: {
         uint8_t id = (uint8_t)(((uint32_t)cmd->arg >> 16) & 0xFFU);
