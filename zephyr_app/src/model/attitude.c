@@ -61,9 +61,6 @@ static attitude_ext_t current_ext;
 /** Start timestamp */
 static uint32_t start_time;
 
-/** Last update timestamp */
-static uint32_t last_update;
-
 /** Elapsed time counters */
 static uint32_t elapsed_seconds;
 static uint32_t moving_seconds;
@@ -326,6 +323,11 @@ static void restore_from_crash(void)
     current_att.climb = saved.climb;
     accumulated_climb = saved.climb;
     current_att.nbsec_act = saved.nbsec_act;
+    /*
+     * And the counter behind it, or the first epoch ridden after the
+     * restore would write 1 over the seconds of the whole ride.
+     */
+    moving_seconds = saved.nbsec_act;
     current_att.pr = saved.pr;
 
     crash_recovery_clear_saved_state();
@@ -374,7 +376,6 @@ app_err_t attitude_init(void)
     (void)memset(&altitude_kf, 0, sizeof(altitude_kf));
 
     start_time = 0U;
-    last_update = 0U;
     elapsed_seconds = 0U;
     moving_seconds = 0U;
     speed_sum = 0.0f;
@@ -471,9 +472,21 @@ app_err_t attitude_update_gps(const loc_data_t *loc)
             sea_level_pressure = current_ext.pressure / powf(factor, 5.255f);
             has_sea_level_ref = true;
 
-            /* Initialize altitude */
+            /*
+             * Start the climb machinery from this altitude. The legacy
+             * does the same by clearing `m_is_alt_init` and calling
+             * `filterElevation()` **before** it restores
+             * (`legacy/source/model/Attitude.cpp:390-416`), and the order
+             * is the whole point: the reset is what zeroes the climb, so
+             * it has to happen first. Here the reset used to be left for
+             * `update_climb()` further down the same epoch, which ran
+             * after the restore and wiped the climb that had just come
+             * back — every recovered ride returned with zero of it.
+             */
             current_elevation = alt;
-            is_altitude_initialized = false;
+            last_stored_elevation = alt;
+            accumulated_climb = 0.0f;
+            is_altitude_initialized = true;
 
             LOG_INF("Sea level pressure initialized: %.1f Pa (GPS alt: %.1f m)",
                     (double)sea_level_pressure, (double)alt);
@@ -508,15 +521,27 @@ app_err_t attitude_update_gps(const loc_data_t *loc)
         start_time = now;
     }
 
-    if ((now - last_update) >= 1000U) {  /* 1 second elapsed */
-        elapsed_seconds++;
-
-        if (loc->speed > MOVING_SPEED_THRESHOLD) {
-            moving_seconds++;
-            current_att.nbsec_act = (uint16_t)moving_seconds;
-        }
-
-        last_update = now;
+    /*
+     * One active second per epoch that was ridden, which is what
+     * `legacy/source/model/Attitude.cpp:509` counts: `if (loc_.speed > 7.f)
+     * att.nbsec_act++;`, once per location, with the receiver at 1 Hz.
+     *
+     * This used to be gated on `(now - last_update) >= 1000`, measured on
+     * the uptime at the moment the thread got round to the epoch. An epoch
+     * landing 998 ms after the last counted one failed the test and did not
+     * move `last_update`, so the next one passed with a two-epoch gap and
+     * still counted **one**: a few milliseconds of scheduling jitter turned
+     * into a steady count-miss-count-miss and halved the number. The
+     * average speed of page 1 is `dist x 3,6 / nbsec_act`, so halving the
+     * denominator doubled the speed on the screen.
+     *
+     * Counting per epoch also does the right thing when the receiver goes
+     * quiet: no position means no evidence of movement, so nothing is
+     * counted, which is the legacy's behaviour as well.
+     */
+    if (loc->speed > MOVING_SPEED_THRESHOLD) {
+        moving_seconds++;
+        current_att.nbsec_act = (uint16_t)moving_seconds;
     }
 
     /* the legacy saves the state every 15 m, not every second */
@@ -710,7 +735,6 @@ void attitude_reset(void)
     (void)memset(&altitude_kf, 0, sizeof(altitude_kf));
 
     start_time = 0U;
-    last_update = 0U;
     elapsed_seconds = 0U;
     moving_seconds = 0U;
     speed_sum = 0.0f;

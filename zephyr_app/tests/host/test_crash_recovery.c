@@ -8,10 +8,19 @@
  * appears, only if the block carries the same date. Then it clears the
  * block, so one reset restores once.
  *
- * Two defects of the port died here: the CRC covered its own field, so it
- * never matched what it protected, and `crash_recovery_has_data()` asked
- * for a logged fault, which a reset by the watchdog or a flat battery does
- * not leave.
+ * Three defects died here. The CRC covered its own field, so it never
+ * matched what it protected. `crash_recovery_has_data()` asked for a
+ * logged fault, which a reset by the watchdog or a flat battery does not
+ * leave. And the block the restore read was the **live** one, which the
+ * ride under way rewrites every 15 m: by the time the sea level reference
+ * appeared, a minute or two in, the new ride had overwritten the old one
+ * and what came back was the ride that was already running. The legacy
+ * reads the live block at that late moment too and has the same hole.
+ *
+ * So the block is now copied at boot, inside `crash_recovery_init()`, and
+ * what the module answers with is that copy. `reboot()` below is what a
+ * reset looks like from here: the retained block survives, and the init
+ * runs again.
  */
 
 #include <stddef.h>
@@ -34,6 +43,12 @@ void setUp(void)
 
 void tearDown(void) {}
 
+/** A reset: the retained block survives it, and the init runs again */
+static void reboot(void)
+{
+    (void)crash_recovery_init();
+}
+
 static void test_a_fresh_start_has_nothing_to_restore(void)
 {
     TEST_ASSERT_FALSE(crash_recovery_has_data());
@@ -42,6 +57,7 @@ static void test_a_fresh_start_has_nothing_to_restore(void)
 static void test_a_saved_ride_comes_back_whole(void)
 {
     crash_recovery_save_state(&loc, &date, 12345.5f, 678.25f, 4321U, 2500U, 1U);
+    reboot();
 
     TEST_ASSERT_TRUE(crash_recovery_has_data());
 
@@ -62,6 +78,7 @@ static void test_a_saved_ride_does_not_need_a_logged_fault(void)
     /* a reset by the watchdog leaves no fault behind, and the ride must survive */
     crash_recovery_save_state(&loc, &date, 900.0f, 30.0f, 100U, 60U, 0U);
     crash_recovery_clear(); /* clears the fault, not the ride */
+    reboot();
 
     TEST_ASSERT_TRUE(crash_recovery_has_data());
 }
@@ -69,6 +86,7 @@ static void test_a_saved_ride_does_not_need_a_logged_fault(void)
 static void test_a_changed_byte_breaks_the_check(void)
 {
     crash_recovery_save_state(&loc, &date, 900.0f, 30.0f, 100U, 60U, 0U);
+    reboot();
 
     saved_data_t saved;
 
@@ -85,8 +103,45 @@ static void test_clearing_the_block_leaves_nothing_to_restore(void)
 {
     crash_recovery_save_state(&loc, &date, 900.0f, 30.0f, 100U, 60U, 0U);
     crash_recovery_clear_saved_state();
+    reboot();
 
     /* a block of zeros has a CRC of zero: the sentinel has to say no */
+    TEST_ASSERT_FALSE(crash_recovery_has_data());
+}
+
+static void test_the_ride_under_way_does_not_overwrite_the_one_being_restored(void)
+{
+    /*
+     * The defect this file now guards. After the reset the model rides on,
+     * and from 25 m of movement it saves its own state every 15 m — long
+     * before the restore, which waits for the sea level reference. The
+     * block that comes back has to be the one from before the reset.
+     */
+    crash_recovery_save_state(&loc, &date, 12345.0f, 456.0f, 900U, 800U, 0U);
+    reboot();
+
+    /* the new ride, writing over the live block again and again */
+    for (unsigned int i = 1U; i <= 12U; i++) {
+        crash_recovery_save_state(&loc, &date, (float)i * 15.0f, 0.0f,
+                                  (uint16_t)i, (uint16_t)i, 0U);
+    }
+
+    saved_data_t saved;
+
+    TEST_ASSERT_TRUE(crash_recovery_has_data());
+    TEST_ASSERT_TRUE(crash_recovery_get_saved_state(&saved));
+    TEST_ASSERT_EQUAL_FLOAT(12345.0f, saved.dist);
+    TEST_ASSERT_EQUAL_UINT16(800U, saved.nbsec_act);
+}
+
+static void test_a_ride_is_restored_once(void)
+{
+    crash_recovery_save_state(&loc, &date, 900.0f, 30.0f, 100U, 60U, 0U);
+    reboot();
+    TEST_ASSERT_TRUE(crash_recovery_has_data());
+
+    /* the model took it and said so */
+    crash_recovery_clear_saved_state();
     TEST_ASSERT_FALSE(crash_recovery_has_data());
 }
 
@@ -94,6 +149,7 @@ static void test_saving_twice_keeps_the_last_ride(void)
 {
     crash_recovery_save_state(&loc, &date, 100.0f, 10.0f, 10U, 5U, 0U);
     crash_recovery_save_state(&loc, &date, 200.0f, 20.0f, 20U, 10U, 0U);
+    reboot();
 
     saved_data_t saved;
 
@@ -109,6 +165,8 @@ int main(void)
     RUN_TEST(test_a_saved_ride_does_not_need_a_logged_fault);
     RUN_TEST(test_a_changed_byte_breaks_the_check);
     RUN_TEST(test_clearing_the_block_leaves_nothing_to_restore);
+    RUN_TEST(test_the_ride_under_way_does_not_overwrite_the_one_being_restored);
+    RUN_TEST(test_a_ride_is_restored_once);
     RUN_TEST(test_saving_twice_keeps_the_last_ride);
 
     return UNITY_END();
