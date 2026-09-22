@@ -1,0 +1,517 @@
+/*
+ * GNSS Bike Computer: the board of the project, with the nRF54LM20A on the
+ * Fanstel BM20C module.
+ *
+ * Until now the firmware only had an overlay for the nRF54LM20 DK, which
+ * puts the peripherals of this board on free pins of a development kit so
+ * evaluation boards can be wired to them. This is the board itself: every
+ * device the rider's computer carries, on the pins it carries them on.
+ *
+ * The specification it follows is `docs/14-hardware-placa-nova.md`; the pin
+ * map and the two rules of the part that shape it are in
+ * `gnssbike-pinctrl.dtsi`.
+ *
+ * > **Nothing here has been built.** The board has no schematic yet and no
+ * > unit exists. What this file gives is a target that compiles and a pin
+ * > map that satisfies every rule of the silicon, to be reconciled with the
+ * > pinout of the BM20C module when that arrives: the module either brings
+ * > a pin out or it does not, and only its own drawing says which.
+ */
+
+/dts-v1/;
+
+#include <nordic/nrf54lm20a_cpuapp.dtsi>
+#include <vendor/nordic/nrf54lm20a_cpuapp_partition.dtsi>
+#include <zephyr/dt-bindings/input/input-event-codes.h>
+#include <zephyr/dt-bindings/regulator/npm13xx.h>
+#include <zephyr/dt-bindings/sensor/bmp581.h>
+#include <zephyr/dt-bindings/pwm/pwm.h>
+#include "gnssbike-pinctrl.dtsi"
+
+/ {
+	compatible = "gnss,gnssbike-nrf54lm20a-cpuapp";
+	model = "GNSS Bike Computer (nRF54LM20A)";
+
+	chosen {
+		zephyr,code-partition = &slot0_partition;
+		zephyr,sram = &cpuapp_sram;
+		zephyr,flash-controller = &rram_controller;
+		zephyr,flash = &cpuapp_rram;
+		/*
+		 * The console lives on two test pads and nothing else: there is
+		 * no connector on the case, and a rider never sees it.
+		 */
+		zephyr,console = &uart20;
+		zephyr,shell-uart = &uart20;
+		zephyr,uart-mcumgr = &uart20;
+		zephyr,display = &display;
+	};
+
+	/*
+	 * The services find their hardware by these names and leave out
+	 * whatever does not answer (docs/16, Serviços).
+	 */
+	aliases {
+		gnss = &gnss;
+		baro0 = &bmp585;
+		imu0 = &bmi270;
+		mag0 = &mmc5633;
+		light0 = &opt3001;
+		backlight = &light_pwm;
+		backlight-supply = &npm1300_ldo2;
+		fuel-gauge0 = &max17262;
+		pmic = &npm1300_pmic;
+		pmic-charger = &npm1300_charger;
+		pmic-regulators = &npm1300_regulators;
+		solar-charger = &aem10900;
+		watchdog0 = &wdt31;
+		buzzer = &buzzer_pwm;
+		led-rgb = &rgb_pwm;
+	};
+
+	/*
+	 * The three keys of the case. The centre one also reaches the SHPHLD
+	 * of the nPM1300, which is what turns the device on out of ship mode
+	 * and is therefore the only wake source the case needs; these GPIOs
+	 * are how the firmware reads the keys while it is running.
+	 */
+	keys: gpio_keys {
+		compatible = "gpio-keys";
+
+		key_left: key_left {
+			gpios = <&gpio1 26 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+			label = "Left";
+			zephyr,code = <INPUT_KEY_0>;
+		};
+
+		key_centre: key_centre {
+			gpios = <&gpio1 27 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+			label = "Centre";
+			zephyr,code = <INPUT_KEY_1>;
+		};
+
+		key_right: key_right {
+			gpios = <&gpio1 30 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+			label = "Right";
+			zephyr,code = <INPUT_KEY_2>;
+		};
+	};
+
+	/*
+	 * Short on release before 1 s, long after 1 s held (docs/18, Botões);
+	 * the interface reads the codes of this node only.
+	 */
+	longpress: longpress {
+		compatible = "zephyr,input-longpress";
+		input = <&keys>;
+		input-codes = <INPUT_KEY_0>, <INPUT_KEY_1>, <INPUT_KEY_2>;
+		short-codes = <INPUT_KEY_LEFT>, <INPUT_KEY_ENTER>, <INPUT_KEY_RIGHT>;
+		long-codes = <INPUT_KEY_HOME>, <INPUT_KEY_MENU>, <INPUT_KEY_END>;
+		long-delay-ms = <1000>;
+	};
+
+	/* Front light of the display, dimmed by the light service */
+	pwmleds {
+		compatible = "pwm-leds";
+
+		light_pwm: light_pwm {
+			pwms = <&pwm20 0 PWM_MSEC(1) PWM_POLARITY_NORMAL>;
+			label = "Display light";
+		};
+
+		rgb_pwm: rgb_pwm {
+			pwms = <&pwm22 0 PWM_MSEC(1) PWM_POLARITY_NORMAL>;
+			label = "RGB indicator";
+		};
+
+		buzzer_pwm: buzzer_pwm {
+			pwms = <&pwm21 0 PWM_USEC(250) PWM_POLARITY_NORMAL>;
+			label = "Buzzer";
+		};
+	};
+
+};
+
+&cpuapp_sram {
+	status = "okay";
+};
+
+&hfpll {
+	clock-frequency = <DT_FREQ_M(128)>;
+};
+
+/* The module carries the two crystals; load capacitors are internal */
+&lfxo {
+	load-capacitors = "internal";
+	load-capacitance-femtofarad = <17000>;
+};
+
+&hfxo {
+	load-capacitors = "internal";
+	load-capacitance-femtofarad = <15000>;
+};
+
+&vregmain {
+	status = "okay";
+	regulator-initial-mode = <NRF5X_REG_MODE_DCDC>;
+};
+
+&vregusb {
+	status = "okay";
+};
+
+&grtc {
+	owned-channels = <0 1 2 3 4 5 6 7 8 9 10 11>;
+	child-owned-channels = <3 4 7 8 9 10 11>;
+	status = "okay";
+};
+
+&clock {
+	status = "okay";
+};
+
+&radio {
+	status = "okay";
+};
+
+&gpio0 {
+	status = "okay";
+};
+
+&gpio1 {
+	status = "okay";
+};
+
+&gpio2 {
+	status = "okay";
+};
+
+&gpio3 {
+	status = "okay";
+};
+
+&gpiote20 {
+	status = "okay";
+};
+
+&gpiote30 {
+	status = "okay";
+};
+
+temp_sensor: &temp {
+	status = "okay";
+};
+
+/* Hardware watchdog behind the task watchdog of the services */
+&wdt31 {
+	status = "okay";
+};
+
+/*
+ * ---- Console on the test pads ----
+ *
+ * Block 20, not block 30: each serial block of this part holds one
+ * peripheral, and block 30 is the I2C of the power path below.
+ */
+&uart20 {
+	status = "okay";
+	current-speed = <115200>;
+	pinctrl-0 = <&uart20_default>;
+	pinctrl-1 = <&uart20_sleep>;
+	pinctrl-names = "default", "sleep";
+};
+
+/*
+ * ---- GNSS ----
+ *
+ * u-blox MAX-F10S, L1 and L5 at the same time (docs/15). The receiver runs
+ * at 1.8 V and the MCU at 3.0 V, so a TXU0204 sits between them with its OE
+ * tied to VCCA. The part leaves the factory at 38400 baud; the driver turns
+ * NMEA off and asks for one UBX-NAV-PVT and one UBX-NAV-SAT a second. The
+ * footprint also takes the MAX-M10N-10B, which has LEAP; the compatible is
+ * what tells the two apart.
+ *
+ * P1.08 (EXTINT) and P1.09 (TIMEPULSE) are wired on the board and left out
+ * of this node: the driver has no property for either, and a pin that the
+ * firmware cannot reach does not belong in a devicetree. They are reserved
+ * so a later revision can use them without moving anything.
+ */
+&uart21 {
+	status = "okay";
+	current-speed = <38400>;
+	pinctrl-0 = <&uart21_default>;
+	pinctrl-1 = <&uart21_sleep>;
+	pinctrl-names = "default", "sleep";
+
+	gnss: gnss {
+		compatible = "u-blox,max-f10";
+		fix-rate-ms = <1000>;
+		dynamic-model = "portable";
+		satellites-rate = <1>;
+		/*
+		 * RESET_N, open drain and active low. A reset clears the
+		 * backup memory of the receiver, so the driver only holds
+		 * the line and never pulses it on its own.
+		 */
+		reset-gpios = <&gpio1 6 (GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN)>;
+		vcc-supply = <&npm1300_buck1>;
+	};
+};
+
+/*
+ * ---- Sensors ----
+ *
+ * No address collides and nothing scans the bus: 0x7E would put the
+ * MMC5633NJL into I3C (docs/14, Barramentos e endereços).
+ */
+&i2c23 {
+	status = "okay";
+	clock-frequency = <I2C_BITRATE_FAST>;
+	pinctrl-0 = <&i2c23_default>;
+	pinctrl-1 = <&i2c23_sleep>;
+	pinctrl-names = "default", "sleep";
+
+	/* Bosch BMP585 (the BMP581 driver takes its chip ID); SDO high: 0x47 */
+	bmp585: bmp585@47 {
+		compatible = "bosch,bmp581";
+		reg = <0x47>;
+		power-mode = <BMP581_DT_MODE_NORMAL>;
+		odr = <BMP581_DT_ODR_10_HZ>;
+		press-osr = <BMP581_DT_OVERSAMPLING_8X>;
+		temp-osr = <BMP581_DT_OVERSAMPLING_2X>;
+		int-gpios = <&gpio1 12 GPIO_ACTIVE_HIGH>;
+	};
+
+	/* Bosch BMI270, SDO low: 0x68. The footprint also takes an LSM6DSV16X */
+	bmi270: bmi270@68 {
+		compatible = "bosch,bmi270";
+		reg = <0x68>;
+		irq-gpios = <&gpio1 10 GPIO_ACTIVE_HIGH>;
+	};
+
+	/* Memsic MMC5633NJL, fixed address; one measurement per fetch */
+	mmc5633: mmc5633@30 {
+		compatible = "memsic,mmc56x3";
+		reg = <0x30>;
+		magn-odr = <0>;
+	};
+
+	/* TI OPT3001 ambient light, ADDR low: 0x44 */
+	opt3001: opt3001@44 {
+		compatible = "ti,opt3001";
+		reg = <0x44>;
+	};
+};
+
+/*
+ * ---- Energy ----
+ *
+ * The three parts of the power path share one bus on port P0: the nPM1300
+ * at 0x6B, the MAX17262 gauge on the cell at 0x36 and the AEM10900 solar
+ * harvester at 0x41 (docs/14, Alimentação). The USB blocks the solar charge
+ * in hardware, through VBUSOUT, so no pin of the MCU is spent on it.
+ */
+&i2c30 {
+	status = "okay";
+	clock-frequency = <I2C_BITRATE_FAST>;
+	pinctrl-0 = <&i2c30_default>;
+	pinctrl-1 = <&i2c30_sleep>;
+	pinctrl-names = "default", "sleep";
+
+	/*
+	 * MAX17262 on the 2000 mAh cell: the nPM1300 charges at 600 mA and
+	 * ends at 10 % of it. TH is tied to BATT, so the temperature comes
+	 * from the die and no thermistor is read here.
+	 */
+	max17262: fuel-gauge@36 {
+		compatible = "adi,max17262";
+		reg = <0x36>;
+		design-capacity-mah = <2000>;
+		charge-term-current-ma = <60>;
+		charge-voltage-mv = <4200>;
+	};
+
+	/*
+	 * AEM10900, I2C_ADDR tied to I2C_VDD. Its pins alone charge to 3.90 V;
+	 * with the board running, this configuration takes it to 4.05 V.
+	 */
+	aem10900: charger@41 {
+		compatible = "e-peas,aem10900";
+		reg = <0x41>;
+		charge-voltage-mv = <4050>;
+	};
+
+	npm1300_pmic: pmic@6b {
+		compatible = "nordic,npm1300";
+		reg = <0x6b>;
+		host-int-gpios = <&gpio0 0 GPIO_ACTIVE_HIGH>;
+		pmic-int-pin = <3>;
+
+		npm1300_regulators: regulators {
+			compatible = "nordic,npm1300-regulator";
+
+			/*
+			 * 1V8: the GNSS VCC and its V_IO. The V_IO absolute
+			 * maximum is 1.98 V, so the voltage is locked.
+			 */
+			npm1300_buck1: BUCK1 {
+				regulator-min-microvolt = <1800000>;
+				regulator-max-microvolt = <1800000>;
+				regulator-boot-on;
+			};
+
+			/* 3V0: the MCU, the display and the sensors */
+			npm1300_buck2: BUCK2 {
+				regulator-min-microvolt = <3000000>;
+				regulator-max-microvolt = <3000000>;
+				regulator-always-on;
+			};
+
+			/* Load switch of the microSD, on the prototype only */
+			npm1300_ldo1: LDO1 {
+				regulator-initial-mode = <NPM13XX_LDSW_MODE_LDSW>;
+			};
+
+			/* 3V3BL: the display light, on only while it is lit */
+			npm1300_ldo2: LDO2 {
+				regulator-initial-mode = <NPM13XX_LDSW_MODE_LDO>;
+				regulator-min-microvolt = <3300000>;
+				regulator-max-microvolt = <3300000>;
+			};
+		};
+
+		/*
+		 * 600 mA (0.3C of the cell), end at 4.20 V and at 60 mA, 500 mA
+		 * from VBUS until the USB-C source says it can give more, JEITA
+		 * with the 10k B3380 thermistor of the pack.
+		 */
+		npm1300_charger: charger {
+			compatible = "nordic,npm1300-charger";
+			term-microvolt = <4200000>;
+			current-microamp = <600000>;
+			dischg-limit-microamp = <1000000>;
+			vbus-limit-microamp = <500000>;
+			thermistor-ohms = <10000>;
+			thermistor-beta = <3380>;
+			charging-enable;
+		};
+	};
+};
+
+/*
+ * ---- Display ----
+ *
+ * Sharp LS027B7DH01A, 400 x 240 monochrome, drawn in portrait by the driver
+ * of `modules/gnss_drivers`. It runs from 5 V, made by a REG710 that this
+ * pin enables. The same connector takes the JDI LPM027M128C in eight
+ * colours at 3.0 V, whose compatible is "jdi,lpm027m128b" and which needs
+ * no regulator: changing the panel is changing these two lines.
+ *
+ * EXTMODE is high on the panel side, so the COM inverts on the rising edges
+ * of EXTCOMIN. Timing (datasheet 4.2): 1 MHz typical and 2 MHz at most,
+ * chip select active high.
+ */
+&spi22 {
+	status = "okay";
+	cs-gpios = <&gpio3 2 GPIO_ACTIVE_HIGH>;
+	pinctrl-0 = <&spi22_default>;
+	pinctrl-1 = <&spi22_sleep>;
+	pinctrl-names = "default", "sleep";
+
+	display: display@0 {
+		compatible = "sharp,ls027b7dh01";
+		reg = <0>;
+		spi-max-frequency = <2000000>;
+		spi-cs-setup-delay-ns = <3000>;
+		spi-cs-hold-delay-ns = <1000>;
+		width = <400>;
+		height = <240>;
+		disp-gpios = <&gpio3 5 GPIO_ACTIVE_HIGH>;
+		extcomin-gpios = <&gpio3 6 GPIO_ACTIVE_HIGH>;
+		power-gpios = <&gpio3 7 GPIO_ACTIVE_HIGH>;
+	};
+};
+
+/*
+ * ---- Storage ----
+ *
+ * The card socket left the board in 2026-09-20 (decision of the owner: a
+ * soldered part costs less than the whole of the storage is worth). The
+ * MX25R6435F takes its place: 8 MB, 3.1 mA to erase a sector in its ultra
+ * low power mode against the 20 mA of the usual parts, and 7 nA in deep
+ * power down. There is no card socket here, and no place left for one: a
+ * board file describes one board, and this is the one that gets made. A
+ * prototype that wants a card puts it in an overlay of its own, on the free
+ * chip select of P2.03.
+ *
+ * The partition table of this part, and the disk mounted on it, live in the
+ * application overlay and not here: MCUboot is built from this same board
+ * file, it has no SPI NOR driver in it, and a `fixed-partitions` node would
+ * put the chip into its flash map and leave the link with a device that
+ * does not exist.
+ */
+&spi00 {
+	status = "okay";
+	pinctrl-0 = <&spi00_default>;
+	pinctrl-1 = <&spi00_sleep>;
+	pinctrl-names = "default", "sleep";
+	cs-gpios = <&gpio2 5 GPIO_ACTIVE_LOW>;	/* the NOR flash, alone */
+
+	mx25r64: mx25r6435f@0 {
+		compatible = "jedec,spi-nor";
+		reg = <0>;
+		spi-max-frequency = <8000000>;
+		jedec-id = [c2 28 17];
+		sfdp-bfp = [
+			e5 20 f1 ff  ff ff ff 03  44 eb 08 6b  08 3b 04 bb
+			ee ff ff ff  ff ff 00 ff  ff ff 00 ff  0c 20 0f 52
+			10 d8 00 ff  23 72 f5 00  82 ed 04 cc  44 83 68 44
+			30 b0 30 b0  f7 c4 d5 5c  00 be 29 ff  f0 d0 ff ff
+		];
+		size = <67108864>;
+		has-dpd;
+		t-enter-dpd = <10000>;
+		t-exit-dpd = <35000>;
+		mxicy,mx25r-power-mode = "low-power";
+	};
+};
+
+/* ---- Light, buzzer and indicator ---- */
+&pwm20 {
+	status = "okay";
+	pinctrl-0 = <&pwm20_default>;
+	pinctrl-1 = <&pwm20_sleep>;
+	pinctrl-names = "default", "sleep";
+};
+
+&pwm21 {
+	status = "okay";
+	pinctrl-0 = <&pwm21_default>;
+	pinctrl-1 = <&pwm21_sleep>;
+	pinctrl-names = "default", "sleep";
+};
+
+&pwm22 {
+	status = "okay";
+	pinctrl-0 = <&pwm22_default>;
+	pinctrl-1 = <&pwm22_sleep>;
+	pinctrl-names = "default", "sleep";
+};
+
+/*
+ * ---- USB ----
+ *
+ * The serial of the commands and the rider's disk on the PC (docs/09). The
+ * connector is the sealed USB-C of the case.
+ */
+zephyr_udc0: &usbhs {
+	status = "okay";
+
+	cdc_acm_uart0: cdc_acm_uart0 {
+		compatible = "zephyr,cdc-acm-uart";
+	};
+};
+
+&usbhs_bc12 {
+	status = "okay";
+};

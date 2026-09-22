@@ -1,0 +1,39 @@
+/*
+ * GNSS Bike Computer (gnssbike/nrf54lm20a/cpuapp): what only the
+ * application image needs.
+ *
+ * The board itself is described in boards/gnss/gnssbike, which MCUboot is
+ * built from as well. What is here is the part MCUboot must not see: the
+ * partition table of the external NOR flash and the disk mounted on it.
+ * MCUboot carries no SPI NOR driver, and a `fixed-partitions` node on that
+ * chip would put it into the flash map of every image and leave the
+ * bootloader linking against a device that was never built.
+ */
+
+&mx25r64 {
+    partitions {
+        compatible = "fixed-partitions";
+        #address-cells = <1>;
+        #size-cells = <1>;
+
+        /* the whole part: the rider's activities, segments and routes */
+        storage_disk: partition@0 {
+            label = "storage_disk";
+            reg = <0x0 DT_SIZE_M(8)>;
+        };
+    };
+};
+
+/ {
+    /*
+     * The mount point stays /SD: as it was with the card, so nothing in the
+     * firmware or on the PC has to learn a new name.
+     */
+    storage_disk0 {
+        compatible = "zephyr,flash-disk";
+        status = "okay";
+        partition = <&storage_disk>;
+        disk-name = "SD";
+        cache-size = <4096>;
+    };
+};
