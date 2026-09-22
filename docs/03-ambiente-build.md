@@ -1,6 +1,6 @@
 # Ambiente, build, gravação e console
 
-Como montar o ambiente do nRF Connect SDK no Windows, compilar o port Zephyr, gravar o nRF52840-DK, ver o log, rodar os testes de host e validar a documentação. Tudo aqui foi executado nesta máquina em 2026-09-18, salvo onde está dito o contrário.
+Como montar o ambiente do nRF Connect SDK no Windows, compilar o port Zephyr, gravar o DK, ver o log, rodar os testes de host e validar a documentação. Tudo aqui foi executado nesta máquina em 2026-09-18, salvo onde está dito o contrário.
 
 **Nesta página:** [Ferramentas](#ferramentas) · [Scripts](#scripts) · [Build do firmware](#build-do-firmware) · [Gravar e ver o log](#gravar-e-ver-o-log) · [Testes e análise estática](#testes-e-análise-estática) · [Documentação](#documentação) · [CI](#ci) · [Legacy](#legacy) · [Problemas conhecidos](#problemas-conhecidos)
 
@@ -35,6 +35,7 @@ flowchart LR
     subgraph BASH["Git Bash"]
         FW["tools/fw/fw.sh build · flash · recover · devices · size"]
         HT["tools/fw/host_tests.sh"]
+        BC["tools/fw/board_check.py"]
         MC["tools/docs/mermaid_check.py"]
         LC["tools/docs/links_check.py"]
     end
@@ -50,7 +51,7 @@ flowchart LR
 |---|---|---|
 | `NCS_ROOT`, `NCS_VERSION`, `NCS_TOOLCHAIN` | `ncs_env.*` | trocam o SDK (padrão `C:\ncs`, `v3.3.0`, `936afb6332`; o `.sh` descobre o toolchain pelo `toolchains.json`) |
 | `BUILD_DIR` | `build.bat`, `flash.bat`, `fw.sh` | outra pasta de build (padrão `zephyr_app/build`); relativa, vale a partir da pasta atual |
-| `BOARD` | `build.bat`, `flash.bat`, `recover.bat`, `fw.sh` | outro alvo (padrão `nrf52840dk/nrf52840`; o nRF54LM20 DK é `nrf54lm20dk/nrf54lm20a/cpuapp`); o overlay `zephyr_app/boards/<placa>.overlay` entra pelo nome |
+| `BOARD` | `build.bat`, `flash.bat`, `recover.bat`, `fw.sh` | outro alvo. Os padrões **não são os mesmos**: no `fw.sh` é `nrf54lm20dk/nrf54lm20a/cpuapp` (`tools/fw/fw.sh:33`), nos `.bat` ainda é `nrf52840dk/nrf52840` (`build.bat:27`, `flash.bat:32`, `recover.bat:16`). A placa do projeto é `gnssbike/nrf54lm20a/cpuapp`; o overlay `zephyr_app/boards/<placa>.overlay` entra pelo nome |
 | `ANT` | `build.bat`, `fw.sh` | `1` compila com o ANT: o add-on `sdk-ant` em `SDK_ANT_DIR`, `zephyr_app/modules/ant_ncs33_compat` e `zephyr_app/ant.conf`; ao trocar, use `pristine` ou outra `BUILD_DIR` |
 | `SDK_ANT_DIR` | `build.bat`, `fw.sh` | pasta do add-on (padrão `C:\ncs\sdk-ant`) |
 | `FAMILY` | `flash.bat`, `recover.bat`, `fw.sh` | família do `nrfutil`; sem ela, vem da `BOARD` (`nrf54l` para as placas nRF54L, `nrf52` no resto) |
@@ -67,21 +68,35 @@ bash tools/fw/fw.sh build            # incremental
 bash tools/fw/fw.sh build pristine   # do zero
 ```
 
-Ou `build.bat` / `build.bat pristine` no cmd. Por baixo:
+Ou `build.bat` / `build.bat pristine` no cmd. Por baixo (`tools/fw/fw.sh:97-100`):
 
 ```sh
 source tools/fw/ncs_env.sh
 cd zephyr_app
-python -m west build -p auto -b nrf52840dk/nrf52840 -d build --sysbuild .
+python -m west build -p auto -b nrf54lm20dk/nrf54lm20a/cpuapp -d build --sysbuild . \
+  -- -DBOARD_ROOT=<caminho do zephyr_app> -Dmcuboot_BOARD_ROOT=<caminho do zephyr_app>
 ```
 
-- **Alvo:** `nrf52840dk/nrf52840`, com os pinos da placa myStravaB em `zephyr_app/boards/nrf52840dk_nrf52840.overlay`, que o Zephyr aplica pelo nome da placa. Outro alvo: `BOARD=<placa> bash tools/fw/fw.sh build` ou `set BOARD=<placa>` antes do `build.bat`.
-- **nRF54LM20 DK:** `BOARD=nrf54lm20dk/nrf54lm20a/cpuapp BUILD_DIR=zephyr_app/build_54 bash tools/fw/fw.sh build`. Usa `boards/nrf54lm20dk_nrf54lm20a_cpuapp.overlay` (pinos no conector de expansão do DK) e `boards/nrf54lm20dk_nrf54lm20a_cpuapp.conf` (configurações no ZMS). Detalhes em [05](05-arquitetura-zephyr.md#devicetree-e-alvos).
-- **ANT:** `ANT=1 bash tools/fw/fw.sh build pristine` (ou `set ANT=1` antes do `build.bat`), com `BOARD` para o nRF54LM20 DK. Precisa do add-on em `C:\ncs\sdk-ant` ([07](07-radio-ant-ble.md#ant-no-ncs-v330)); mostra um aviso esperado a mais, `Deprecated symbol SOC_SERIES_NRF52X is enabled` (ou `SOC_SERIES_NRF54LX`).
-- **Sysbuild** é o fluxo padrão do NCS. O `zephyr_app/sysbuild.conf` desliga o Partition Manager (`SB_CONFIG_PARTITION_MANAGER=n`), depreciado no NCS 3.3; o layout vem do devicetree.
-- **Saída:** `zephyr_app/build/zephyr_app/zephyr/zephyr.hex` (e `.elf`, `.map`, `.config`, `zephyr.dts`). Sem MCUboot não há `merged.hex`.
+- **Alvo padrão:** `nrf54lm20dk/nrf54lm20a/cpuapp`, com `boards/nrf54lm20dk_nrf54lm20a_cpuapp.overlay` (pinos no conector de expansão do DK) e `boards/nrf54lm20dk_nrf54lm20a_cpuapp.conf` (configurações no ZMS), que o Zephyr aplica pelo nome da placa. Detalhes em [05](05-arquitetura-zephyr.md#devicetree-e-alvos).
+- **Placa do projeto:** `BOARD=gnssbike/nrf54lm20a/cpuapp BUILD_DIR=zephyr_app/build_custom bash tools/fw/fw.sh build`. A board mora em `zephyr_app/boards/gnss/gnssbike/`, fora do caminho padrão do Zephyr: quem a encontra são os `-DBOARD_ROOT` e `-Dmcuboot_BOARD_ROOT` que o `fw.sh` passa, o segundo porque o sysbuild constrói o MCUboot à parte. **Não existe placa física:** por enquanto o alvo só compila.
+- **nRF52840 DK:** `BOARD=nrf52840dk/nrf52840 bash tools/fw/fw.sh build` ainda compila, com os pinos da myStravaB em `zephyr_app/boards/nrf52840dk_nrf52840.overlay`, mas o alvo **saiu de uso**. Nos `.bat` ele continua sendo o padrão, então ali o alvo do projeto pede `set BOARD=nrf54lm20dk/nrf54lm20a/cpuapp`.
+- **ANT:** `ANT=1 bash tools/fw/fw.sh build pristine` (ou `set ANT=1` antes do `build.bat`). Precisa do add-on em `C:\ncs\sdk-ant` ([07](07-radio-ant-ble.md#ant-no-ncs-v330)); mostra um aviso esperado a mais, `Deprecated symbol SOC_SERIES_NRF54LX is enabled` (ou `SOC_SERIES_NRF52X`).
+- **Sysbuild** é o fluxo padrão do NCS. O `zephyr_app/sysbuild.conf` desliga o Partition Manager (`SB_CONFIG_PARTITION_MANAGER=n`), depreciado no NCS 3.3; o layout vem do devicetree. O MCUboot entra só nos alvos com o nRF54LM20A (`zephyr_app/Kconfig.sysbuild`): no nRF52840 não cabem dois slots.
+- **Saída:** `zephyr_app/build/zephyr_app/zephyr/zephyr.hex` (e `.elf`, `.map`, `.config`, `zephyr.dts`). Nos alvos com o nRF54LM20A o sysbuild gera também `mcuboot/zephyr/zephyr.hex`, a imagem assinada `zephyr_app/zephyr/zephyr.signed.hex` e o `dfu_application.zip` da atualização por BLE. Não há `merged.hex` em nenhum alvo.
 
 ### Mapa de memória
+
+**nRF54LM20A** (nRF54LM20 DK e placa do projeto usam o mesmo layout, o do `nrf54lm20_a_b_cpuapp_partition.dtsi`). Dos 2.036 KB de RRAM, os últimos 96 KB são do FLPR: sobram cerca de 1.940 KB.
+
+| Região | Endereço | Tamanho | Conteúdo |
+|---|---|---|---|
+| RRAM: `mcuboot` | `0x000000` | 64 KB | gerenciador de boot |
+| RRAM: `image-0` (slot0) | `0x010000` | 920 KB | firmware; a imagem cabe em 921.456 B, o resto é o rodapé do MCUboot (`CONFIG_ROM_END_OFFSET=0x5090`) |
+| RRAM: `image-1` (slot1) | `0x0F6000` | 920 KB | imagem recebida pela atualização por BLE |
+| RRAM: `storage` | `0x1DC000` | 36 KB | settings no ZMS: bonds BLE e configurações do usuário |
+| RAM | `0x20000000` | 511 KB | tudo |
+
+**nRF52840 DK**, o alvo fora de uso, sem MCUboot:
 
 | Região | Endereço | Tamanho | Conteúdo |
 |---|---|---|---|
@@ -91,16 +106,21 @@ python -m west build -p auto -b nrf52840dk/nrf52840 -d build --sysbuild .
 
 ### Resultado de referência
 
-Build com sysbuild da `develop` em 2026-09-19 (atualizado a cada commit que muda o tamanho):
+Build com sysbuild da `develop` em 2026-09-22 (atualizado a cada commit que muda o tamanho):
+
+| Alvo | FLASH | RAM | MCUboot | Avisos |
+|---|---|---|---|---|
+| `nrf54lm20dk/nrf54lm20a/cpuapp` | 636.144 B (69,04 % dos 921.456 B do slot) | 393.080 B (75,12 % dos 511 KB) | 45.676 B de FLASH, 22.880 B de RAM | 0 |
+| `gnssbike/nrf54lm20a/cpuapp` | 636.360 B (69,06 %) | 369.120 B (70,54 %) | 45.880 B de FLASH, 22.888 B de RAM | 0 |
+
+Erros: 0 nos dois alvos.
+
+Medidas antigas, de 2026-09-19, não refeitas desde então:
 
 | Item | Valor |
 |---|---|
-| FLASH | 474.268 B (45,23 % de 1 MB) |
-| RAM | 220.352 B (84,06 % de 256 KB) |
-| Avisos | 0 |
-| Erros | 0 |
-| Tempo | cerca de 1 min do zero (pelos horários dos logs) |
-| nRF54LM20 DK | FLASH 498.256 B (25,08 % de 1.940 KB), RAM 250.336 B (47,84 % de 511 KB), 0 avisos |
+| Tempo de build | cerca de 1 min do zero (pelos horários dos logs) |
+| nRF52840 DK | FLASH 474.268 B (45,23 % de 1 MB), RAM 220.352 B (84,06 % de 256 KB), 0 avisos |
 | Com `ANT=1` | nRF52840 DK: FLASH 502.860 B, RAM 225.152 B; nRF54LM20 DK: FLASH 528.172 B, RAM 254.928 B; só o aviso do símbolo obsoleto |
 
 Maiores consumidores de RAM (`bash tools/fw/fw.sh size`): o heap do LVGL 32.768 B (`CONFIG_LV_Z_MEM_POOL_SIZE`), `seg_runtime` 22.000 B, o buffer de desenho do LVGL 19.200 B, o heap do sistema 16.384 B (`CONFIG_HEAP_MEM_POOL_SIZE`), o quadro da tela (12.482 B da Sharp no nRF52840, 36.482 B do JDI no nRF54LM20), `points` 8.000 B, a pilha da thread `ui` (6.144 B), o pool do controlador BLE 5.247 B, as outras pilhas ([05](05-arquitetura-zephyr.md#pilhas)) e quatro cópias do retrato da tela (`ui_model_t`, 2.404 B: a do modelo, a do canal, a da thread `ui` e a da interface).
@@ -117,8 +137,8 @@ bash tools/fw/fw.sh recover      # chip protegido: apaga tudo e libera o APPROTE
 ```
 
 - Os scripts filtram `--traits jlink` e a família do chip (`nrf52`, ou `nrf54l` quando a `BOARD` é uma placa nRF54L): nesta máquina costuma haver um ST-LINK e outras seriais USB conectados.
-- **Console:** `zephyr,console` é o `uart0` do DK (TX P0.06, RX P0.08, 115200 baud), exposto pela porta VCOM do J-Link. `serial.bat COMx` abre o miniterm do Python do toolchain (pyserial 3.5); `Ctrl+]` sai. O log usa o backend UART; o RTT está desligado no `prj.conf`.
-- Em 2026-09-18 não havia nRF52840-DK conectado: **nada foi gravado nem testado em placa** nesta revisão.
+- **Console:** no nRF54LM20 DK o `zephyr,console` é o `uart20` (TX P1.16, RX P1.17, 115200 baud), exposto pela porta VCOM do J-Link; na placa do projeto é o mesmo `uart20`, em TX P1.00 e RX P1.31; no nRF52840 DK é o `uart0` (TX P0.06, RX P0.08). `serial.bat COMx` abre o miniterm do Python do toolchain (pyserial 3.5); `Ctrl+]` sai. O log usa o backend UART; o RTT está desligado no `prj.conf`.
+- Até 2026-09-22 nenhum DK foi conectado a esta máquina: **nada foi gravado nem testado em placa**.
 
 ## Testes e análise estática
 
@@ -127,7 +147,7 @@ bash tools/fw/host_tests.sh             # configura, compila e roda todos
 bash tools/fw/host_tests.sh -R segment  # filtra pelo nome
 ```
 
-Os testes compilam os módulos de lógica de `zephyr_app/src` com o GCC do PC e shims mínimos do Zephyr; detalhes em [12-ferramentas-testes.md](12-ferramentas-testes.md) e na skill `fw-testes`.
+Os testes compilam os módulos de lógica de `zephyr_app/src` com o GCC do PC e shims mínimos do Zephyr: 53 conjuntos, 714 casos, todos verdes em 2026-09-22. Detalhes em [12-ferramentas-testes.md](12-ferramentas-testes.md) e na skill `fw-testes`.
 
 ```sh
 cppcheck --enable=warning,style,performance,portability --std=c11 --inline-suppr --quiet \
@@ -136,6 +156,13 @@ cppcheck --enable=warning,style,performance,portability --std=c11 --inline-suppr
 ```
 
 Sem os headers do Zephyr, o cppcheck acusa `syntaxError` nas macros de GATT e devicetree (`BT_GATT_*`, `DT_*`): são falsos positivos. Os achados reais estão em [11-qualidade-misra.md](11-qualidade-misra.md).
+
+```sh
+python tools/fw/board_check.py                  # a placa do projeto
+python tools/fw/board_check.py <pasta-da-placa>  # outra
+```
+
+O `board_check.py` lê o devicetree da placa e procura o que o build aceita calado: pino em duas funções, SCL de TWIM ou SCK de SPIM fora dos pinos de clock da tabela 79, pads do NFC (P1.01 e P1.02) sem `nfct-pins-as-gpios`, cristal em P1.20/P1.21, limite de pinos de cada porta, dois periféricos no mesmo bloco serial e apelido que falta. Sai com 1 se achar problema. Em 2026-09-22 a placa do projeto passa: **31 pinos usados de 66**, 31 livres, 12 deles de clock.
 
 ## Documentação
 
@@ -175,5 +202,5 @@ O firmware original não compila nesta máquina: exige **nRF5 SDK 16.0.0**, **So
 | `--no-sysbuild` | ainda funciona para imagem única, mas está depreciado desde o NCS 2.7 |
 | `JLink.exe` abre a ferramenta do Java | o `JLink.exe` do PATH é do Eclipse Adoptium; o da SEGGER fica em `C:\Program Files\SEGGER\JLink_V924a\` |
 | pino da placa se comportando como outro periférico no DK | um nó do DK voltou a ocupar o pino; o overlay desliga `qspi` e `mx25r64`, `spi3` e `pwm0` e tira RTS/CTS do `uart0` (ver [02-hardware.md](02-hardware.md#alvo-híbrido-no-dk)) |
-| cppcheck com `syntaxError` em `ble_*.c` e `neopixel.c` | macros do Zephyr sem os headers; falso positivo |
+| cppcheck com `syntaxError` nos `ble_*.c` ou nos `#if DT_...` dos serviços | macros do Zephyr sem os headers; falso positivo. Nos serviços, passe `"-DDT_NODE_HAS_STATUS(n,s)=1"` e `"-DDT_ALIAS(a)=a"` |
 | diagnósticos do clangd nos testes de host | o clangd usa o `compile_commands.json` do firmware; `zephyr_app/tests/host/.clangd` aponta para o dos testes depois do primeiro `host_tests.sh` |

@@ -60,7 +60,7 @@ flowchart TB
     ROOT["gnss_bike_computer/"]
     ROOT --> ZA["zephyr_app/"]
     ZA --> ZS["src/ e include/<br/>app · svc (serviços) · model · rf · ui"]
-    ZA --> ZB["boards/&lt;placa&gt;.overlay e .conf<br/>nRF52840 DK (pinos da V3) e nRF54LM20 DK"]
+    ZA --> ZB["boards/gnss/gnssbike/ (a placa do projeto)<br/>boards/&lt;placa&gt;.overlay e .conf<br/>nRF54LM20 DK e nRF52840 DK (fora de uso)"]
     ZA --> ZT["tests/host/<br/>Unity + CTest, shims e falsos<br/>tests/ui/: renderizador de telas"]
     ZA --> ZC["CMakeLists.txt · prj.conf · ant.conf · sysbuild.conf<br/>modules/ant_ncs33_compat · modules/gnss_drivers"]
     ROOT --> LEG["legacy/ · libraries/<br/>stravaV10 original"]
@@ -85,20 +85,20 @@ flowchart TB
 | Placas conectadas | `bash tools/fw/fw.sh devices` |
 | Memória e maiores símbolos | `bash tools/fw/fw.sh size` |
 | Testes de host | `bash tools/fw/host_tests.sh` (53 conjuntos, 714 casos) |
-| Telas da interface no PC (LVGL) | `python tools/ui/render_screens.py` (40 telas em 44 quadros, 2 temas cada, gera `docs/img/telas-lvgl/` e `docs/telas/`) |
+| Telas da interface no PC (LVGL) | `python tools/ui/render_screens.py` (44 quadros, 2 temas cada, gera `docs/img/telas-lvgl/` e `docs/telas/`) |
 | Converter um percurso do Strava para o formato do projeto | `python tools/route_convert.py entrada.gpx saida.RTE` (e `--selftest`) |
 | Diagramas e links da documentação | `python tools/docs/mermaid_check.py` e `python tools/docs/links_check.py` |
 | Ambiente do NCS no shell | `source tools/fw/ncs_env.sh` |
 
 Equivalentes no `cmd`: `build.bat [pristine]`, `flash.bat [keep]`, `recover.bat`, `serial.bat COMx`. Variáveis: `BUILD_DIR`, `NRF_SERIAL`, `NCS_VERSION`, `NCS_TOOLCHAIN`, `NOPAUSE`.
 
-Referência de 2026-09-21, com a interface, a energia, o GNSS, os segmentos, a atualização por BLE, o USB, o percurso pelo telefone (RTE, GPX e o texto do legacy), o perfil, as voltas e o arquivo FIT: nRF54LM20 DK FLASH 636.112 B de 921.456 B do slot (69,0 %), RAM 393.048 B (75,1 %); placa própria FLASH 636.328 B (69,1 %), RAM 369.088 B (70,5 %), mais o MCUboot com 45.676 B de FLASH e 22.880 B de RAM; 0 avisos.
+Referência de 2026-09-22, com a interface, a energia, o GNSS, os segmentos, a atualização por BLE, o USB, o percurso pelo telefone (RTE, GPX e o texto do legacy), o perfil, as voltas e o arquivo FIT: nRF54LM20 DK FLASH 636.144 B de 921.456 B do slot (69,04 %), RAM 393.080 B (75,12 %); placa própria FLASH 636.360 B (69,06 %), RAM 369.120 B (70,54 %), mais o MCUboot com 45.676 B de FLASH e 22.880 B de RAM no DK e 45.880 B e 22.888 B na placa; **0 avisos de compilador** (o CMake dá quatro, todos esperados: ver as armadilhas).
 
 ## 5. Estado e próximos passos
 
 - **Port:** compila no NCS v3.3.0 e passa nos testes de host; **nunca rodou em placa nem no DK**. Matriz completa em [`docs/10-status-do-port.md`](docs/10-status-do-port.md).
 - **Feito em 2026-09-18:** revisão completa do legacy e do port (7 análises), build com sysbuild, scripts novos, testes de host, documentação, e 13 correções críticas: pilha da `main_loop` (4 KB), GPS fora da ISR (ring buffer + processamento na thread), um callback de fix por época, checksum NMEA, parser NMEA, estouro do `sd_logger`, botões, polaridades do GPS e do FXOS, nós do DK desligados, reset em erro fatal, símbolo do SoC. Depois, da fase 1: a `main_loop` como única escritora do modelo, com `model_lock()` para a tela; `task_wdt` com um canal de 4 s por thread; auto-off de 15 min e desligamento pelo STC3100 (`power_scheduler`).
-- **Feito em 2026-09-19:** a base da arquitetura nova ([`docs/05`](docs/05-arquitetura-zephyr.md)): sete serviços com thread e caixa de entrada, eventos no zbus, máquinas de sistema e de modo no SMF, watchdog por serviço, hardware pelas APIs do Zephyr por aliases do devicetree; saíram o HAL próprio, os drivers da V3, a interface em paisagem e a USB antiga. E a interface da placa nova em LVGL (`src/ui`, `include/ui`): 29 telas em retrato, nos temas de 8 cores e preto e branco, com os arranjos e formatos do legacy, testadas no PC pelo renderizador de host (`tests/ui`). Depois, a interface no firmware: driver próprio da tela em `zephyr_app/modules/gnss_drivers` (JDI LPM027M128B/C e Sharp LS027B7DH01, retrato, só as linhas que mudaram), thread `ui` com o LVGL (6 KB de pilha), teclas por `zephyr,input-longpress`, máquina da luz; nada visto num painel. E o medidor MAX17262 por driver próprio (`adi,max17262`, API de fuel gauge), com bateria fraca e crítica no serviço de energia, o nPM1300 (trilhos travados, limite do VBUS pela fonte USB-C, eventos, máquina de carga) e o AEM10900 por driver próprio (`e-peas,aem10900`, API de carregadores; a potência em mW espera o fator da e-peas). E o GNSS: driver próprio do u-blox por UBX (`modem_ubx` sobre a UART, configuração por `CFG-VALSET` nas camadas RAM e BBR, `UBX-NAV-PVT` e `UBX-NAV-SAT` a 1 Hz, standby por `UBX-RXM-PMREQ` e reinício por silêncio) com a máquina de energia do receptor em `gnss_power.c`; não testado com nenhum desses componentes.
+- **Feito em 2026-09-19:** a base da arquitetura nova ([`docs/05`](docs/05-arquitetura-zephyr.md)): oito serviços com thread e caixa de entrada, eventos no zbus, máquinas de sistema e de modo no SMF, watchdog por serviço, hardware pelas APIs do Zephyr por aliases do devicetree; saíram o HAL próprio, os drivers da V3, a interface em paisagem e a USB antiga. E a interface da placa nova em LVGL (`src/ui`, `include/ui`): as telas em retrato, nos temas de 8 cores e preto e branco, com os arranjos e formatos do legacy, testadas no PC pelo renderizador de host (`tests/ui`). Depois, a interface no firmware: driver próprio da tela em `zephyr_app/modules/gnss_drivers` (JDI LPM027M128B/C e Sharp LS027B7DH01, retrato, só as linhas que mudaram), thread `ui` com o LVGL (6 KB de pilha), teclas por `zephyr,input-longpress`, máquina da luz; nada visto num painel. E o medidor MAX17262 por driver próprio (`adi,max17262`, API de fuel gauge), com bateria fraca e crítica no serviço de energia, o nPM1300 (trilhos travados, limite do VBUS pela fonte USB-C, eventos, máquina de carga) e o AEM10900 por driver próprio (`e-peas,aem10900`, API de carregadores; a potência em mW espera o fator da e-peas). E o GNSS: driver próprio do u-blox por UBX (`modem_ubx` sobre a UART, configuração por `CFG-VALSET` nas camadas RAM e BBR, `UBX-NAV-PVT` e `UBX-NAV-SAT` a 1 Hz, standby por `UBX-RXM-PMREQ` e reinício por silêncio) com a máquina de energia do receptor em `gnss_power.c`; não testado com nenhum desses componentes.
 - **Feito em 2026-09-20:** oito itens, todos verificados no build e nos testes, nenhum em placa.
   1. **Segmentos** de ponta a ponta: pool de 3 × 256 pontos com decimação, janela do histórico que anda, alocador a cada época no serviço do modelo, constantes do legacy.
   2. **Atualização por BLE**: MCUboot pelo sysbuild e mcumgr SMP, só no alvo nRF54LM20A, com recusa em atividade ou bateria fraca, tela de progresso e confirmação da imagem; ainda com a chave de desenvolvimento do MCUboot ([07](docs/07-radio-ant-ble.md#atualização-por-ble-dfu)).
@@ -113,7 +113,7 @@ Referência de 2026-09-21, com a interface, a energia, o GNSS, os segmentos, a a
 
 ```mermaid
 flowchart LR
-    A["1 · base de execução<br/>feito: serviços, zbus, SMF, watchdog, auto-off, GNSS por UBX<br/>falta: board própria (nRF54LM20A)"] --> B["2 · fidelidade<br/>Kalman, potência,<br/>distância, FDIR"]
+    A["1 · base de execução<br/>feito: serviços, zbus, SMF, watchdog, auto-off, GNSS por UBX<br/>feito: board própria<br/>falta: esquemático e placa física"] --> B["2 · fidelidade<br/>Kalman, potência,<br/>distância, FDIR"]
     B --> C["3 · armazenamento<br/>SD, formatos, segmentos"]
     C --> D["4 · rádio<br/>BLE central, ANT+"]
     D --> E["5 · interface<br/>feito: telas LVGL, driver da tela,<br/>thread, teclas e luz<br/>falta: mapa e segmentos, painel"]
@@ -168,6 +168,7 @@ flowchart LR
 | Shunt do STC3100 | esquema: 20 mΩ; código: 100 mΩ; confirme na placa antes de confiar em corrente e carga |
 | `git push` já foi bloqueado pelo classificador do auto mode; em 2026-09-22 passou a funcionar | tente o push quando o dono pedir, com o ramo explícito (`git push origin develop`); se voltar a ser recusado, peça a ele que rode no prompt, no modo bash, um comando por vez (`! git push origin develop`). Nunca crie regra de permissão para você, nunca use `--force` |
 | A `main` do GitHub pode ter merge de pull request feito pela interface, que a `main` local não tem, e o push é recusado como non-fast-forward | `git fetch origin` e confira com `git log --oneline --no-merges origin/main --not main`: se não sair nada, o commit remoto não traz conteúdo novo e um `git merge origin/main` junta as histórias sem mexer em arquivo nenhum (compare `main^{tree}` antes e depois). Nunca resolva com `--force` |
+| O CMake dá quatro avisos em todo build, e eles não são regressão | três são `No SOURCES given to Zephyr library: drivers__charger`, `drivers__display` e `drivers__fuel_gauge`: os drivers dessas classes são do projeto e moram em `zephyr_app/modules/gnss_drivers`, então a biblioteca da árvore do Zephyr fica vazia e é excluída. O quarto é a chave de desenvolvimento do MCUboot. **Aviso de compilador é que tem de ser zero** |
 | `legacy/` não compila aqui | faltam o nRF5 SDK 16, o S340 e os submódulos `libraries/ant_profiles` e `ble_services` |
 
 ## 7. Skills do projeto
@@ -197,7 +198,7 @@ flowchart LR
 | Arquitetura do firmware e máquinas de estado da placa nova | [docs/16-arquitetura-firmware.md](docs/16-arquitetura-firmware.md) |
 | Dispositivos BLE e ANT+ | [docs/17-dispositivos-ble-ant.md](docs/17-dispositivos-ble-ant.md) |
 | Interface e telas da placa nova | [docs/18-interface-telas.md](docs/18-interface-telas.md) |
-| As 35 telas, uma a uma | [docs/telas/README.md](docs/telas/README.md) |
+| Os 44 quadros da interface, um a um | [docs/telas/README.md](docs/telas/README.md) |
 | Lista de compras da placa nova | [docs/19-lista-de-compras.md](docs/19-lista-de-compras.md) |
 | Build e ambiente | [docs/03-ambiente-build.md](docs/03-ambiente-build.md) |
 | Legacy | [docs/04-arquitetura-legacy.md](docs/04-arquitetura-legacy.md), [legacy/README.md](legacy/README.md) |

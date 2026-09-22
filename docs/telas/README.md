@@ -1,9 +1,9 @@
-# As 35 telas da interface
+# Os 44 quadros da interface
 
-As 35 telas da interface da placa nova, nos dois temas — 39 quadros, porque algumas telas têm mais de um estado (o CRS com um ou dois segmentos, a volta com o cronômetro parado, a subida em curso e a próxima, a queda e o alarme): 8 cores, para o JDI LPM027M128C, e preto e branco, para a Sharp LS027B7DH01A da lista de compras. As imagens saem do código de verdade (`zephyr_app/src/ui`, LVGL 9.5), desenhado no PC pelo renderizador de host e reduzido às cores que o painel mostra; os números são dados de exemplo (`zephyr_app/tests/ui/ui_samples.c`). O projeto da interface, as regras e as diferenças para o legacy estão em [18-interface-telas.md](../18-interface-telas.md).
+As telas da interface da placa nova, nos dois temas — 44 quadros, porque algumas telas têm mais de um estado (o CRS com um ou dois segmentos, a volta com o cronômetro parado, a subida em curso e a próxima, a queda e o alarme, o treino com e sem arquivo): 8 cores, para o JDI LPM027M128C, e preto e branco, para a Sharp LS027B7DH01A da lista de compras. As imagens saem do código de verdade (`zephyr_app/src/ui`, LVGL 9.5), desenhado no PC pelo renderizador de host e reduzido às cores que o painel mostra; os números são dados de exemplo (`zephyr_app/tests/ui/ui_samples.c`). O projeto da interface, as regras e as diferenças para o legacy estão em [18-interface-telas.md](../18-interface-telas.md).
 
 > [!IMPORTANT]
-> Desenhadas e conferidas no PC (cores, textos dentro das caixas, navegação dos botões). Ainda não aparecem no firmware, porque falta o driver da tela: **nada foi visto em tela de verdade, não testado na placa.**
+> Desenhadas e conferidas no PC (cores, textos dentro das caixas, navegação dos botões). Desde 2026-09-19 a interface está no firmware, com o driver próprio da tela: o que falta é o painel. **Nada foi visto em tela de verdade, não testado na placa.**
 
 Para gerar de novo, depois de mexer na interface: `python tools/ui/render_screens.py` (também refaz as folhas de `docs/img/telas-lvgl/`).
 
@@ -48,6 +48,11 @@ Para gerar de novo, depois de mexer na interface: `python tools/ui/render_screen
 | 25 | [Energia](#25-energia) | Ajustes, Energia |
 | 26 | [Modo USB](#26-modo-usb) | cartão exposto pelo USB |
 | 27 | [Desligando](#27-desligando) | pedido de desligar |
+| 38 | [Treino](#38-treino) | menu, Treino, com uma sessão carregada |
+| 39 | [Treino sem arquivo](#39-treino-sem-arquivo) | menu, Treino, sem nenhum `.WKT` no armazenamento |
+| 40 | [Treinos](#40-treinos) | menu, Treino, para escolher a sessão |
+| 41 | [Alertas](#41-alertas) | Ajustes, Alertas |
+| 42 | [Lembretes](#42-lembretes) | Ajustes, Lembretes |
 
 ## Barra de estado
 
@@ -242,7 +247,7 @@ Em todas as listas: esquerda e direita mudam o item (dão a volta nas pontas, co
 | ![Menu em 8 cores](18_menu_cor.png) | ![Menu em preto e branco](18_menu_mono.png) |
 
 - **Quando:** centro numa página, depois dos 5 s iniciais (como o legacy, `Menuable.cpp:326`).
-- **Itens:** Voltar, Modo FEC, Modo CRS, Modo PRC, Modo Zwift, Modo DBG, Ajustes, Desligar (em vermelho).
+- **Itens (9):** Voltar, Modo FEC, Modo CRS, Modo PRC, Modo Zwift, Modo DBG, [Treino](#38-treino), Ajustes, Desligar (em vermelho).
 - **Legacy:** `Menuable.cpp:255-289`, em português.
 
 ### 18b Percursos
@@ -270,7 +275,7 @@ Em todas as listas: esquerda e direita mudam o item (dão a volta nas pontas, co
 |---|---|
 | ![Ajustes em 8 cores](19_ajustes_cor.png) | ![Ajustes em preto e branco](19_ajustes_mono.png) |
 
-- **Itens:** Voltar, Sensores, FTP (com o valor), Peso (com o valor), Calibrar bússola, Tela e luz, GNSS (LEAP ou potência plena), Energia, Formatar (em vermelho).
+- **Itens:** Voltar, Sensores, FTP (com o valor), Peso (com o valor), Calibrar bússola, Tela e luz, GNSS (LEAP ou potência plena), Energia, [Alertas](#41-alertas), [Lembretes](#42-lembretes), Formatar (em vermelho).
 - **Legacy:** o Settings (`Menuable.cpp`), com os pareamentos reunidos em Sensores e os itens novos da placa nova.
 
 ### 20 Sensores
@@ -410,6 +415,53 @@ Em todas as listas: esquerda e direita mudam o item (dão a volta nas pontas, co
 
 - **Quando:** um aplicativo manda firmware novo por Bluetooth ([07](../07-radio-ant-ble.md#atualização-por-ble-dfu)). Toma a frente sozinha e devolve as páginas ao terminar.
 - **Mostra:** a seta entrando no aparelho, a porcentagem da imagem recebida e "Não desligue"; no fim, "Reinicie para aplicar". Nova: o legacy não atualizava pelo ar.
+
+### 38 Treino
+
+| 8 cores | Preto e branco |
+|---|---|
+| ![Treino em 8 cores](38_treino_cor.png) | ![Treino em preto e branco](38_treino_mono.png) |
+
+- **Quando:** com uma sessão `.WKT` carregada, pelo item **Treino** do menu.
+- **Mostra:** o nome da sessão, o passo e o total ("passo 6 de 11"), o rótulo do passo, quanto falta (tempo, metros ou "tecla"), o alvo e o valor atual **na cor da resposta** — verde dentro da faixa, vermelho fora, porque no guidão se lê uma cor antes de um número — e uma barra com a faixa alvo e a marca de onde o ciclista está. Nova: o legacy não tinha treino estruturado.
+- **Ao desenhar apareceram dois defeitos do primeiro traçado:** o campo corta em 6 caracteres e vira `---`, e a fonte grande de valor só tem dígitos, de modo que a letra da unidade saía como caixa. A unidade foi para o canto do campo e o valor virou número puro.
+
+### 39 Treino sem arquivo
+
+| 8 cores | Preto e branco |
+|---|---|
+| ![Treino sem arquivo em 8 cores](39_treino_sem_arquivo_cor.png) | ![Treino sem arquivo em preto e branco](39_treino_sem_arquivo_mono.png) |
+
+- **Quando:** o ciclista abre **Treino** e não há nenhum `.WKT` no armazenamento.
+- **Mostra:** que não há sessão e onde pôr o arquivo. Nova.
+
+### 40 Treinos
+
+| 8 cores | Preto e branco |
+|---|---|
+| ![Treinos em 8 cores](40_treinos_cor.png) | ![Treinos em preto e branco](40_treinos_mono.png) |
+
+- **Quando:** menu, **Treino**, para escolher a sessão.
+- **Mostra:** a lista dos `.WKT` do armazenamento, e **Descarregar** enquanto há uma sessão carregada. Nova.
+
+### 41 Alertas
+
+| 8 cores | Preto e branco |
+|---|---|
+| ![Alertas em 8 cores](41_alertas_cor.png) | ![Alertas em preto e branco](41_alertas_mono.png) |
+
+- **Quando:** Ajustes, **Alertas**.
+- **Mostra:** os **oito** alertas que vigiam um número (`UI_ALERTS_THRESHOLDS`): frequência cardíaca, potência, velocidade e cadência, cada uma alta e baixa, com o limite de cada um.
+- **Por que dois grupos:** o `ui_list_create()` desenha doze linhas e **não rola**. Voltar mais doze alertas deixaria o último inalcançável, então os doze foram partidos em oito aqui e quatro nos [lembretes](#42-lembretes) — que é a divisão que um ciclista faria de qualquer jeito. Nova.
+
+### 42 Lembretes
+
+| 8 cores | Preto e branco |
+|---|---|
+| ![Lembretes em 8 cores](42_lembretes_cor.png) | ![Lembretes em preto e branco](42_lembretes_mono.png) |
+
+- **Quando:** Ajustes, **Lembretes**.
+- **Mostra:** os **quatro** que tocam de tempos em tempos: distância, tempo, beber e comer. Os três de tempo contam **minutos em movimento**, de modo que uma hora no café não aproxima o próximo. Nova.
 
 ## Botões
 

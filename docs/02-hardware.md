@@ -99,7 +99,7 @@ O port compila para `nrf52840dk/nrf52840` e aplica os pinos da V3 por overlay. R
 
 - **O que o overlay desliga:** o QSPI e a flash `mx25r64` (CSN em P0.17, o CS do LCD), o `spi3` (P1.13 a P1.15: NeoPixel, FIX e standby do GPS) e o `pwm0` (P0.13, o botão central). O `uart0` perdeu RTS e CTS, que caíam em P0.05/P0.07, os pinos do GPS.
 - **O que continua do DK:** o console no `uart0` (P0.06/P0.08, pela VCOM do J-Link), os LEDs 2 a 4 em P0.14 a P0.16 e o botão 4 em P0.25; nenhum deles é usado pela aplicação.
-- **Na placa real**, P0.06/P0.08 não têm ligação: o log só aparece no DK. A board própria da placa nova (nRF54LM20A, esquemático próprio) resolve de vez; ela está na fase 1 do roteiro.
+- **Na placa real**, P0.06/P0.08 não têm ligação: o log só aparece no DK. A board própria já existe como alvo de build (`gnssbike/nrf54lm20a/cpuapp`, em [`zephyr_app/boards/gnss/gnssbike/`](../zephyr_app/boards/gnss/gnssbike/)), então o port não depende mais deste alvo híbrido; `nrf52840dk/nrf52840` ainda compila, mas saiu de uso. **A placa física e o esquemático dela ainda não existem.**
 - Os nós `gps_ctrl`, `imu_ctrl` e `neopixel_pin` usam `compatible = "gpio-keys"` para pinos de saída; funciona enquanto `CONFIG_INPUT` estiver desligado.
 
 ## Mecânica
@@ -115,7 +115,7 @@ Decidido em 2026-09-18: o produto terá uma **board própria com MCU da Nordic**
 | ANT+ e BLE ao mesmo tempo, vários sensores | [07-radio-ant-ble.md](07-radio-ant-ble.md#decisão-ant-e-ble) |
 | USB para carregar, comandos e mass storage do cartão | legacy (CDC + MSC) |
 | SPI para o LCD e para o microSD, UART para o GNSS, I2C para os sensores | placa V3 |
-| RAM para framebuffer (12,5 KB), segmentos, pilhas e rádio | o port usa 118 KB hoje, com segmentos ainda sem dados |
+| RAM para framebuffer, segmentos, pilhas e rádio | em 2026-09-22 o port usa 369.120 B de RAM na placa própria (70,54 % dos 511 KB) e 393.080 B no nRF54LM20 DK (75,12 %) |
 
 | MCU | CPU | NVM / RAM | USB | Observação |
 |---|---|---|---|---|
@@ -128,7 +128,7 @@ O nRF54LM20A e o nRF54LM20B são a mesma peça, a não ser pela NPU Axon do B, q
 
 A proposta de componentes da placa nova (display, GNSS e antena, energia com painel solar, sensores e periféricos) está em [13-placa-nova.md](13-placa-nova.md), e a especificação técnica que sai dela, em [14-hardware-placa-nova.md](14-hardware-placa-nova.md).
 
-"nRF53840", citado na conversa, foi entendido como nRF5340. Qualquer que seja a escolha, a board entra em `zephyr_app/boards/` no modelo de hardware v2 do Zephyr, e a lógica do port não depende do MCU: só o devicetree, o Kconfig da board e o rádio mudam.
+"nRF53840", citado na conversa, foi entendido como nRF5340. A board entrou em [`zephyr_app/boards/gnss/gnssbike/`](../zephyr_app/boards/gnss/gnssbike/) no modelo de hardware v2 do Zephyr (`board.yml`, `.dts`, `-pinctrl.dtsi`, `Kconfig.*` e `_defconfig`), com o `zephyr_app/boards/gnssbike_nrf54lm20a_cpuapp.overlay` e o `.conf` da aplicação; a lógica do port não depende do MCU: só o devicetree, o Kconfig da board e o rádio mudam.
 
 ## Riscos
 

@@ -9,14 +9,14 @@
 ![RTOS](https://img.shields.io/badge/Zephyr-4.3.99-7929D2)
 ![Rádio](https://img.shields.io/badge/r%C3%A1dio-BLE%20%2B%20ANT%2B-0082FC)
 ![Linguagem](https://img.shields.io/badge/C-C11-A8B9CC?logo=c&logoColor=white)
-![Testes](https://img.shields.io/badge/testes%20de%20host-65%20casos-2E7D32)
+![Testes](https://img.shields.io/badge/testes%20de%20host-714%20casos-2E7D32)
 ![CI](https://img.shields.io/badge/CI-desligado-lightgrey)
 ![Estado](https://img.shields.io/badge/estado-port%20em%20andamento-EF6C00)
 ![Licença](https://img.shields.io/badge/licen%C3%A7a-a%20definir-lightgrey)
 
 </div>
 
-O projeto leva para o nRF Connect SDK o **stravaV10**, firmware aberto de Vincent Gollé para a placa **myStravaB V3**: um aparelho em retrato com LCD de memória Sharp, GNSS MediaTek, barômetro, acelerômetro, medidor de bateria, microSD e rádio BLE + ANT+. O código original fica em [`legacy/`](legacy/) como referência de comportamento; o port em C puro sobre Zephyr fica em [`zephyr_app/`](zephyr_app/) e compila para o nRF52840-DK e para o nRF54LM20 DK. A próxima placa é própria, com o nRF54LM20A, GNSS de banda dupla, tela colorida e painéis solares na caixa que estendem a autonomia, sem sustentar o aparelho sozinhos; a especificação e a avaliação dos componentes estão em [`docs/`](docs/README.md).
+O projeto leva para o nRF Connect SDK o **stravaV10**, firmware aberto de Vincent Gollé para a placa **myStravaB V3**: um aparelho em retrato com LCD de memória Sharp, GNSS MediaTek, barômetro, acelerômetro, medidor de bateria, microSD e rádio BLE + ANT+. O código original fica em [`legacy/`](legacy/) como referência de comportamento; o port em C puro sobre Zephyr fica em [`zephyr_app/`](zephyr_app/) e compila para o nRF54LM20 DK, para a placa do projeto (`gnssbike/nrf54lm20a/cpuapp`) e ainda para o nRF52840-DK, que saiu de uso. A próxima placa é própria, com o nRF54LM20A, GNSS de banda dupla, tela colorida e painéis solares na caixa que estendem a autonomia, sem sustentar o aparelho sozinhos; a especificação e a avaliação dos componentes estão em [`docs/`](docs/README.md).
 
 > [!WARNING]
 > O port **compila e passa nos testes de host, mas nunca rodou em placa nem nos DKs**. Segmentos, percursos, sensores BLE e ANT+, log no SD e a interface do legacy ainda não funcionam de ponta a ponta. A placa nova ainda não existe: nenhum componente foi comprado nem medido. O estado de cada área está em [docs/10-status-do-port.md](docs/10-status-do-port.md).
@@ -81,27 +81,27 @@ flowchart LR
 | Percurso com mapa e zoom | sim | parcial, não ligado |
 | Altitude por Kalman de 3 estados, subida, inclinação | sim | portado com diferenças |
 | Potência estimada | sim | fórmula diferente |
-| Sensores ANT+ (FC, velocidade e cadência, rolo FE-C) | sim | a pilha do add-on `sdk-ant` compila com o NCS v3.3.0 (`ANT=1`); perfis na fase 4 |
+| Sensores ANT+ (FC, velocidade e cadência, rolo FE-C) | sim | a pilha do add-on `sdk-ant` compila com o NCS v3.3.0 (`ANT=1`) e o firmware abre canal escravo; **nenhum canal abre de fato**, porque os perfis ficam fora do repositório e `GNSS_ANT_*_DEV_TYPE` valem 0 |
 | BLE (potência, posição do celular, Komoot) | sim | parcial |
 | Zonas de potência, suffer score, variabilidade da FC | sim | portados e testados, sem dados reais |
-| Log no microSD e download pelo PC | sim | log em stub |
-| USB serial e mass storage | sim | fora do build |
-| Telas em retrato, menu, notificações, botões | sim | LVGL no firmware com driver próprio da tela, 31 telas testadas no PC; nunca vistas num painel |
+| Log no microSD e download pelo PC | sim | FatFs de verdade, gravado pelo serviço de armazenamento; não testado com cartão |
+| USB serial e mass storage | sim | serviço `usb` no build (CDC dos comandos e o disco do ciclista); não testada com cabo |
+| Telas em retrato, menu, notificações, botões | sim | LVGL no firmware com driver próprio da tela, 44 quadros testados no PC; nunca vistos num painel |
 
 ## Início rápido
 
-**Pré-requisitos** (Windows): nRF Connect SDK v3.3.0 em `C:\ncs` com o toolchain `936afb6332`, SEGGER J-Link, nRF52840-DK ou nRF54LM20 DK. Para o ANT, o add-on `sdk-ant` em `C:\ncs\sdk-ant`, depois de aceitar o acordo ANT+ ([07](docs/07-radio-ant-ble.md#ant-no-ncs-v330)). Para os testes de host: MinGW-w64 GCC, CMake e Ninja. Detalhes em [docs/03-ambiente-build.md](docs/03-ambiente-build.md).
+**Pré-requisitos** (Windows): nRF Connect SDK v3.3.0 em `C:\ncs` com o toolchain `936afb6332`, SEGGER J-Link, nRF54LM20 DK (o nRF52840-DK ainda compila, mas saiu de uso). Para o ANT, o add-on `sdk-ant` em `C:\ncs\sdk-ant`, depois de aceitar o acordo ANT+ ([07](docs/07-radio-ant-ble.md#ant-no-ncs-v330)). Para os testes de host: MinGW-w64 GCC, CMake e Ninja. Detalhes em [docs/03-ambiente-build.md](docs/03-ambiente-build.md).
 
 Código: [github.com/Guiimartinho/gnss-bike-computer](https://github.com/Guiimartinho/gnss-bike-computer) (`git clone https://github.com/Guiimartinho/gnss-bike-computer.git`).
 
 ```sh
 # Git Bash, na raiz do repositório
-bash tools/fw/fw.sh build          # compila o zephyr_app (sysbuild) para o nRF52840-DK
+bash tools/fw/fw.sh build          # compila o zephyr_app (sysbuild) para o nRF54LM20 DK
 bash tools/fw/fw.sh flash          # grava no DK pelo J-Link
-BOARD=nrf54lm20dk/nrf54lm20a/cpuapp BUILD_DIR=zephyr_app/build_54 bash tools/fw/fw.sh build
+BOARD=gnssbike/nrf54lm20a/cpuapp BUILD_DIR=zephyr_app/build_custom bash tools/fw/fw.sh build   # a placa do projeto
 ANT=1 bash tools/fw/fw.sh build pristine   # com a pilha ANT do sdk-ant
-bash tools/fw/host_tests.sh        # 39 conjuntos de testes de host
-python tools/ui/render_screens.py  # desenha as 31 telas no PC (docs/telas)
+bash tools/fw/host_tests.sh        # 53 conjuntos, 714 casos
+python tools/ui/render_screens.py  # desenha os 44 quadros no PC (docs/telas)
 python tools/docs/mermaid_check.py # valida os diagramas da documentação
 ```
 
@@ -154,7 +154,7 @@ flowchart TB
 - **Feito em 2026-09-18:** build no NCS v3.3.0 com sysbuild; correção de 13 defeitos críticos (estouro de pilha no Kalman, GPS e modelo dentro de ISR, corrupção de memória no log, botões e pinos do GPS invertidos, conflitos de pinos com o DK); testes de host; documentação e contexto para assistentes de IA.
 - **Fase 1 do roteiro:** a base da arquitetura nova (serviços com thread própria, eventos no zbus, máquinas de sistema e de modo no SMF, watchdog por serviço, desligamento automático do legacy), feita em 2026-09-19.
 - **Novos alvos e rádio:** o port compila para o nRF54LM20 DK, e a pilha ANT do add-on `sdk-ant` v2.1.1 compila sobre o NCS v3.3.0 nos dois DKs (`ANT=1`); nada disso foi testado em placa.
-- **Interface:** as 29 telas em LVGL, testadas no PC, rodam no firmware desde 2026-09-19 com um driver próprio da tela (JDI LPM027M128B em 8 cores ou Sharp em preto e branco, em retrato), teclas com toque longo e a máquina da luz; nunca vistas num painel.
+- **Interface:** os 44 quadros em LVGL, testadas no PC, rodam no firmware desde 2026-09-19 com um driver próprio da tela (JDI LPM027M128B em 8 cores ou Sharp em preto e branco, em retrato), teclas com toque longo e a máquina da luz; nunca vistas num painel.
 - **Placa nova:** desenho do aparelho, especificação ([14](docs/14-hardware-placa-nova.md)) e avaliação dos componentes ([15](docs/15-avaliacao-componentes.md)). O esquemático é do dono; antes do layout vêm os testes de bancada da carga dupla, do GNSS (C/N0 por banda e isolamento da antena contra o rádio de 2,4 GHz), da coexistência dos rádios e do display.
 - **Decidido:** ANT+ e BLE juntos (os equipamentos externos falam ANT+) e placa própria com o nRF54LM20A. Decisões e pendências em [docs/10-status-do-port.md](docs/10-status-do-port.md#decisões-do-dono).
 - **Próximo:** bancada e esquemático da placa nova, depois fidelidade dos algoritmos, armazenamento, rádio e interface. Roteiro em [docs/10-status-do-port.md](docs/10-status-do-port.md#roteiro).

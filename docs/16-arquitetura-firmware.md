@@ -28,14 +28,14 @@ Conferidos no NCS v3.3.0 local (`C:\ncs\v3.3.0`, Zephyr 4.3.99).
 | Entrada | `gpio-keys`, `zephyr,input-longpress` | debounce por devicetree; o toque curto sai na soltura, o longo depois do tempo configurado |
 | LVGL | `modules/lib/gui/lvgl` (9.5 "dev", instantâneo do master) e `zephyr/modules/lvgl` | teclado pelo `zephyr,lvgl-keypad-input`; o driver de tela é que define o formato de pixel ([18](18-interface-telas.md#framework)) |
 | USB | `device_next`: `CONFIG_USBD_CDC_ACM_CLASS`, `CONFIG_USBD_MSC_CLASS` | o USBHS do nRF54LM20 tem suporte (`nordic,nrf-usbhs-nrf54l`); as amostras `cdc_acm` e `mass` do NCS aceitam o nRF54LM20A |
-| Arquivos | FatFs R0.16, `zephyr,sdhc-spi-slot` com `zephyr,sdmmc-disk` | o mesmo caminho serve ao microSD e ao SD NAND; o LittleFS também existe |
+| Arquivos | FatFs R0.16 sobre `zephyr,flash-disk` | a placa não tem cartão: o disco é uma partição da flash NOR soldada (`boards/gnssbike_nrf54lm20a_cpuapp.overlay`), com `CONFIG_DISK_DRIVER_FLASH=y` e `CONFIG_DISK_DRIVER_SDMMC=n` no `.conf` da placa; o ponto de montagem continua `/SD:`. O caminho de cartão (`zephyr,sdhc-spi-slot` com `zephyr,sdmmc-disk`) e o LittleFS também existem no Zephyr, mas não são usados |
 | Configurações | `CONFIG_ZMS` e `CONFIG_SETTINGS_ZMS` | a placa do DK não liga o ZMS por padrão; o port liga |
 | Atualização | MCUboot pelo sysbuild (`SB_CONFIG_BOOTLOADER_MCUBOOT`), mcumgr | no nRF54L o NCS usa `SWAP_USING_MOVE` e assinatura ED25519; transportes BLE (pede o papel periférico) e UART, que chega ao USB pelo CDC ACM (amostra `usb_mcumgr`) |
-| GNSS | `zephyr/include/zephyr/drivers/gnss.h` | posição por `GNSS_DATA_CALLBACK_DEFINE` (graus em nanograus, velocidade em mm/s) e satélites por `CONFIG_GNSS_SATELLITES`; os callbacks rodam no workqueue do modem; o driver do M10 é do port (`modules/gnss_drivers`, compatível `u-blox,max-m10`) |
+| GNSS | `zephyr/include/zephyr/drivers/gnss.h` | posição por `GNSS_DATA_CALLBACK_DEFINE` (graus em nanograus, velocidade em mm/s) e satélites por `CONFIG_GNSS_SATELLITES`; os callbacks rodam no workqueue do modem; o driver do u-blox é do port (`modules/gnss_drivers`), com **dois** compatíveis, `u-blox,max-f10` e `u-blox,max-m10` (`dts/bindings/gnss/`), no mesmo código: a placa declara o `u-blox,max-f10` do MAX-F10S e o compatível é o que diz ao driver se o receptor tem o grupo `CFG-PM` |
 | BLE | `CONFIG_BT_MAX_CONN`, clientes do NCS em `nrf/subsys/bluetooth/services` | o NCS traz clientes de FC (`hrs_client`), bateria, NUS e hora; **CSC, CPS, LNS e FTMS não têm cliente pronto**: o port mantém os seus, sobre o `BT_GATT_DM` |
 | Energia | drivers `npm13xx` (mfd, regulador, carregador, GPIO, LED, watchdog), `maxim,max17262`, `sys_poweroff()` | o carregador expõe estado, erro e VBUS como canais de sensor; o nRF54L não tem PM de sistema, só PM de dispositivo e o System OFF |
 | Sensores | `bosch,bmp581`, `bosch,bmi270`, `memsic,mmc56x3`, `ti,opt3001`; `st,lsm6dsv16x` para o IMU alternativo | o BMP581 lê por RTIO e só avisa dado pronto no modo de stream (pede o pino de interrupção); o BMI270 carrega um arquivo de configuração na partida e dá gatilhos de dado pronto e de movimento, mas o de movimento pede a configuração `base` (8 KB, compatível extra `bosch,bmi270-base`, sem exemplo no NCS) em vez da `max_fifo` padrão (328 bytes); o BMI270 não tem fusão, e a inclinação sai do acelerômetro, como no legacy; com o LSM6DSV16X no mesmo footprint, o devicetree declara os dois e o firmware usa o que `device_is_ready()` aceitar; o MMC5633NJL fica no mesmo I2C, e o firmware nunca varre o barramento (o endereço 0x7E o põe em I3C); o OPT3001 fica em modo contínuo, sem limiares |
-| Watchdog | `CONFIG_TASK_WDT` | 5 canais por padrão: com 6 threads da aplicação, `CONFIG_TASK_WDT_CHANNELS` sobe para 8; o `wdt31` vem desligado no dtsi do SoC, e o overlay do port o liga |
+| Watchdog | `CONFIG_TASK_WDT` | 5 canais por padrão: com as 8 threads da aplicação, o `prj.conf` põe `CONFIG_TASK_WDT_CHANNELS=10`; o `wdt31` vem desligado no dtsi do SoC, e o overlay do port o liga |
 
 ## Camadas
 
@@ -50,13 +50,15 @@ flowchart TB
     subgraph MODEL["modelo (port do legacy)"]
         BOU["boucle por modo<br/>attitude, Kalman, mode_fsm"]
         SEG["segmentos, percurso,<br/>zonas, suffer score, RR"]
+        NOV["módulos novos<br/>power_metrics, alerts, workout,<br/>notif_filter, cps/lns/komoot, qry"]
     end
     subgraph SVC["serviços"]
         PWR["energia<br/>nPM1300, AEM10900, MAX17262"]
         GNS["GNSS<br/>u-blox por UBX"]
         SNS["sensores<br/>BMP585, BMI270, MMC5633NJL, OPT3001"]
         RAD["rádio<br/>BLE e ANT+"]
-        STO["armazenamento<br/>FatFs e comandos"]
+        STO["armazenamento<br/>FatFs na flash NOR"]
+        USB["USB<br/>CDC ACM e MSC"]
         CFG["configurações<br/>ZMS"]
     end
     subgraph ZEP["Zephyr e NCS v3.3.0"]
@@ -72,6 +74,19 @@ flowchart TB
 
 As camadas só se falam para baixo por chamada e para cima por evento: um serviço nunca chama a interface, publica um evento que a interface escuta.
 
+Os módulos do modelo que não estavam no plano de 2026-09-18 e entraram depois, todos com teste de host próprio ([12](12-ferramentas-testes.md#testes-de-host-do-port)) e **nenhum testado em placa**:
+
+| Módulo | O que faz |
+|---|---|
+| `model/power_metrics.c` | as métricas de Coggan: potência normalizada, fator de intensidade, TSS e índice de variabilidade |
+| `model/alerts.c` | os 12 alertas do ciclista: máximo e mínimo de FC, potência, velocidade e cadência, marcos de distância, marcos de tempo em movimento e os lembretes de beber e de comer (`include/model/alerts.h:51-63`) |
+| `model/workout.c` | o treino estruturado dos arquivos `.WKT`: passos, repetições e o alvo mandado ao rolo |
+| `model/notif_filter.c` | o filtro das notificações do iPhone que chegam pelo ANCS (categoria, repetição, intervalo mínimo, chamadas) |
+| `model/cps_parse.c` | o medidor de potência pelo BLE (Cycling Power): potência, cadência, velocidade e balanço entre as pernas |
+| `model/lns_parse.c` | a posição do celular pelo BLE (Location and Navigation) |
+| `model/komoot_turn.c` | as 24 direções do Komoot traduzidas nas 9 setas da tela |
+| `model/qry.c` | as respostas do comando `$QRY`: listar o armazenamento e apagar um arquivo pela política de `model/file_policy.c` |
+
 ## Serviços
 
 | Serviço | Responsável por | Publica | Hardware |
@@ -80,23 +95,26 @@ As camadas só se falam para baixo por chamada e para cima por evento: um servi�
 | GNSS | configuração por UBX, sinais de L1 e L5, AssistNow, backup, reinício por falta de dado (LEAP e potência plena só com o M10N) | uma posição por época (NAV-PVT), satélites | u-blox MAX-F10S pelo TXU0204 |
 | Sensores | barômetro a 10 Hz (como o legacy), IMU por FIFO, magnetômetro, luz ambiente | amostras filtradas | BMP585, BMI270, MMC5633NJL, OPT3001 |
 | Rádio | BLE central (sensores e celular), ANT+ (HRM, BSC, FE-C), pareamento, religação | dados de cada sensor, estado de cada ligação | nRF54LM20A |
-| Armazenamento | FatFs, formatos do legacy, lotes de gravação, carga de segmentos e percursos, modo MSC, comandos `$LOC`, `$DWN`, `$QRY` | resultados de carga, estado do cartão | SD NAND ou microSD no `spi00` |
+| Armazenamento | FatFs, formatos do legacy, lotes de gravação, carga de segmentos, percursos e treinos, comandos `$LOC`, `$DWN`, `$QRY` | resultados de carga, estado do armazenamento | flash NOR **MX25R6435F** de 8 MB soldada, sozinha no `spi00` (CS P2.05, 8 MHz), com `zephyr,flash-disk` montado em `/SD:` |
+| USB | porta serial dos comandos (CDC ACM) e o disco do ciclista no PC (MSC) | estado da conexão | USBHS do nRF54LM20A |
 | Configurações | FTP, peso, sensores pareados, campos das telas, calibração do magnetômetro | mudanças de configuração | ZMS no RRAM |
 
 ## Threads
 
-Prioridade no Zephyr: número menor ganha. Os valores de pilha são estimativas de partida; a regra do projeto pede medir com `CONFIG_STACK_USAGE` e deixar 1 KB de folga.
+Prioridade no Zephyr: número menor ganha. São **8** threads da aplicação, uma por serviço; os valores abaixo são os que estão no código (`APP_PRIO_*` em `include/app/app_svc.h` e o `K_THREAD_DEFINE` de cada serviço). A regra do projeto pede medir com `CONFIG_STACK_USAGE` e deixar 1 KB de folga: as oito foram medidas assim e todas passam da folga ([05](05-arquitetura-zephyr.md#pilhas)). Medida no build, não na placa.
 
-| Thread | Prioridade | Pilha inicial | Acorda com | Faz |
+| Thread | Prioridade | Pilha | Acorda com | Faz |
 |---|---|---|---|---|
-| `sensors` | 4 | 1536 B | timer de 100 ms e interrupção da FIFO do IMU | lê os sensores e publica |
+| `sensors` | 4 | 2048 B | timer de 100 ms e interrupção da FIFO do IMU | lê os sensores e publica |
 | `model` | 5 | 4096 B | qualquer evento que o modelo assina | o ciclo do modo (a `main_loop` do port antigo), a única que escreve o modelo; publica uma cópia do estado por época |
-| `radio` | 6 | 2048 B | eventos do BT e do ANT, timers de religação | máquinas de estado de cada sensor, conversão em eventos |
-| `ui` | 7 | 4096 B | cópia nova do modelo, botão, notificação, timer do LVGL | compõe e envia a tela, menu, luz |
-| `storage` | 8 | 3072 B | lote de gravação, pedido de carga, comando | FatFs e comandos |
-| `power` | 9 | 1536 B | interrupções do nPM1300, do AEM10900 e do MAX17262, timer de 60 s | energia, carga, desligamento |
+| `gnss` | 6 | 2048 B | quadros UBX do receptor e pedidos da máquina de energia | configura o receptor, manda comando e espera resposta fora do workqueue do modem |
+| `radio` | 6 | 3072 B | eventos do BT e do ANT, timers de religação | máquinas de estado de cada sensor, conversão em eventos |
+| `ui` | 7 | 6144 B | cópia nova do modelo, botão, notificação, timer do LVGL | compõe e envia a tela, menu, luz |
+| `storage` | 8 | 3584 B | lote de gravação, pedido de carga, comando | FatFs e comandos |
+| `usb` | 8 | 2048 B | interrupção do CDC ACM e mudança de modo | porta serial dos comandos e disco MSC |
+| `power` | 9 | 3072 B | interrupções do nPM1300, do AEM10900 e do MAX17262, timer de 60 s | energia, carga, desligamento |
 
-Ficam por conta do Zephyr e do NCS: as threads do BT host e do MPSL, as do `sdk-ant`, a do subsistema de entrada, o workqueue do modem (onde rodam os callbacks do GNSS), o workqueue do sistema, o log e o idle. Cada thread da aplicação tem o seu canal de 4 s no `task_wdt`, como hoje ([05](05-arquitetura-zephyr.md#watchdog)), com `CONFIG_TASK_WDT_CHANNELS` acima dos 5 do padrão.
+Ficam por conta do Zephyr e do NCS: as threads do BT host e do MPSL, as do `sdk-ant`, a do subsistema de entrada, o workqueue do modem (onde rodam os callbacks do GNSS), o workqueue do sistema, o log e o idle. Cada thread da aplicação tem o seu canal de 4 s no `task_wdt`, como hoje ([05](05-arquitetura-zephyr.md#watchdog)), com `CONFIG_TASK_WDT_CHANNELS=10` no `prj.conf`, acima dos 5 do padrão.
 
 ## Eventos
 
@@ -136,7 +154,7 @@ flowchart LR
     MOD -->|"notif"| UI
     PS["serviço de energia"] -->|"power_status"| UI
     PS -->|"power_status"| MOD
-    ST --> FS[("FatFs no SD")]
+    ST --> FS[("FatFs em /SD:<br/>flash NOR MX25R6435F")]
     UI --> LCD["Sharp LS027B7DH01A<br/>ou JDI LPM027M128C"]
 ```
 
@@ -426,9 +444,9 @@ sequenceDiagram
 
 ## Armazenamento
 
-- **FatFs** no SD NAND do produto ou no microSD do protótipo, pelo `spi00` ([15](15-avaliacao-componentes.md#armazenamento)); os formatos são os do legacy: segmentos, `*.PAR`, `@DDMMYY.txt` ([09](09-armazenamento-usb.md#arquivos-do-legacy)).
+- **FatFs** sobre a flash NOR **MX25R6435F** de 8 MB soldada, sozinha no `spi00` (CS P2.05, `spi-max-frequency = 8000000`), por `zephyr,flash-disk` numa partição que toma a peça inteira ([15](15-avaliacao-componentes.md#armazenamento)). A placa **não tem cartão nem SD NAND**: a troca é de 2026-09-20. O ponto de montagem continua `/SD:`, para que nem o firmware nem o PC precisem aprender outro nome, e os formatos são os do legacy: segmentos, `*.PAR`, `@DDMMYY.txt` ([09](09-armazenamento-usb.md#arquivos-do-legacy)).
 - **Lotes:** o modelo manda 5 snapshots por vez, como o legacy; a thread de armazenamento liga a LDSW1, grava, sincroniza e pode desligar a chave de novo.
-- **Carga de segmentos e percursos:** pedido do modelo e resposta por evento, fora da thread do modelo, porque ler o SD pode passar de 4 s ([05](05-arquitetura-zephyr.md#watchdog)).
+- **Carga de segmentos e percursos:** pedido do modelo e resposta por evento, fora da thread do modelo, porque ler o armazenamento pode passar de 4 s ([05](05-arquitetura-zephyr.md#watchdog)).
 - **Configurações** no ZMS do RRAM, como o port já faz no nRF54LM20 DK.
 - **MSC:** desmonta o FatFs antes de expor o disco pelo USB, como o legacy faz com `$DWN,16`.
 
@@ -447,7 +465,7 @@ O que o legacy usa e o que o `sdk-ant` oferece estão em [07](07-radio-ant-ble.m
 
 - **MCUboot** pelo sysbuild. O mapa padrão do nRF54LM20 tem 64 KB para o MCUboot, duas imagens de 920 KB e 36 KB de armazenamento (`nrf54lm20_a_b_cpuapp_partition.dtsi`); o firmware com ANT ocupa cerca de 330 KB hoje ([03](03-ambiente-build.md#resultado-de-referência)), então cabe com folga. O port já compila sem o Partition Manager (`SB_CONFIG_PARTITION_MANAGER=n`), e esse mapa do devicetree vale.
 - **Modo e assinatura:** no nRF54L o NCS usa `SWAP_USING_MOVE` e ED25519 por padrão; a chave fica fora do repositório.
-- **Transporte:** mcumgr (SMP) pelo USB, pelo transporte UART sobre o CDC ACM (a amostra `usb_mcumgr` do NCS faz isso no nRF54LM20 DK), e pelo BLE, que pede o papel periférico ([decisões em aberto](#decisões-em-aberto)).
+- **Transporte:** mcumgr (SMP) pelo USB, pelo transporte UART sobre o CDC ACM (a amostra `usb_mcumgr` do NCS faz isso no nRF54LM20 DK), e pelo BLE, que pede o papel periférico — já ligado (`prj.conf:185-186`, `CONFIG_BT_PERIPHERAL=y` junto com `CONFIG_BT_CENTRAL=y`).
 
 ## Falhas
 
@@ -493,4 +511,5 @@ Encaixa no roteiro de [10](10-status-do-port.md#roteiro): os passos 1 e 2 fecham
 | Desligamento automático parado com fix | como o legacy (não desliga) ou pingar só em movimento | [Sistema e energia](#sistema-e-energia) |
 | Atividade e formato de exportação | log contínuo do legacy, ou atividade com início, pausa e fim e arquivo FIT ou GPX | [Gravação](#gravação) |
 | Saída do MSC | só com reset, como o legacy, ou ao desconectar o USB | [Sistema e energia](#sistema-e-energia) |
-| BLE periférico | só central, como o legacy, ou também periférico para um aplicativo e para atualizar o firmware sem cabo | [Comunicação](#comunicação) e [Atualização de firmware](#atualização-de-firmware) |
+
+**Decidida e implementada:** o **papel periférico** entra junto com o central. O `prj.conf:185-186` liga `CONFIG_BT_PERIPHERAL=y` e `CONFIG_BT_CENTRAL=y`, e o cliente de notificações do iPhone (`rf/ble_ancs_client.c`) só funciona com ele, assim como a atualização sem cabo pelo SMP. Não testado com nenhum celular ([17](17-dispositivos-ble-ant.md#limites-do-rádio)).

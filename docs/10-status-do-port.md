@@ -6,28 +6,28 @@ Onde o port Zephyr (`zephyr_app/`) está em relação ao firmware original (`leg
 
 ## Resumo
 
-- **Compila** no NCS v3.3.0 sem nenhum aviso de compilador (nRF52840 DK: FLASH 506.200 B, RAM 224.704 B; com `ANT=1`: 534.816 B e 229.312 B; nRF54LM20 DK, o alvo principal: FLASH 591.888 B, RAM 386.452 B, mais o MCUboot com 45.676 B de FLASH e 22.880 B de RAM) e **passa em 41 conjuntos de testes de host** (478 casos). Números conferidos em 2026-09-21 com build do zero nos três alvos. **Nada foi testado na placa** nem nos DKs.
-- Desde 2026-09-19 o firmware é a base da arquitetura de [16](16-arquitetura-firmware.md): sete serviços com thread própria, eventos no zbus, máquinas de sistema e de modo no SMF, hardware pelas APIs do Zephyr ([05](05-arquitetura-zephyr.md)). O HAL próprio, os drivers da V3 e a interface em paisagem saíram.
-- Os algoritmos do legacy continuam no `src/model` e rodam na thread do modelo; alguns **não funcionariam** ainda (segmentos, formatos de arquivo, BLE central), e a interface nova, em LVGL, está no firmware com o driver próprio da tela (JDI LPM027M128B e Sharp LS027B7DH01, em retrato), as teclas com toque longo e a luz; foi testada no PC (29 telas em 2 temas), mas nunca vista em tela de verdade ([18](18-interface-telas.md)).
-- ANT+: a pilha do add-on `sdk-ant` entra no build com `ANT=1` e sobe no boot (`rf_ant_init()`), mas os perfis (HRM, BSC, FE-C) ainda não foram portados; os clientes BLE ainda não funcionam de ponta a ponta.
+- **Compila** no NCS v3.3.0 sem nenhum aviso de compilador (nRF54LM20 DK, o alvo principal: FLASH 636.144 B de 921.456 B do slot, RAM 393.080 B; a placa do projeto, `gnssbike/nrf54lm20a/cpuapp`: FLASH 636.360 B, RAM 369.120 B; mais o MCUboot com 45.676 B de FLASH e 22.880 B de RAM no DK e 45.880 B e 22.888 B na placa) e **passa em 53 conjuntos de testes de host** (714 casos). Números conferidos em 2026-09-22 com build do zero nos dois alvos. **Nada foi testado na placa** nem no DK.
+- Desde 2026-09-19 o firmware é a base da arquitetura de [16](16-arquitetura-firmware.md): oito serviços com thread própria, eventos no zbus, máquinas de sistema e de modo no SMF, hardware pelas APIs do Zephyr ([05](05-arquitetura-zephyr.md)). O HAL próprio, os drivers da V3 e a interface em paisagem saíram.
+- Os algoritmos do legacy continuam no `src/model` e rodam na thread do modelo; os segmentos, os formatos de arquivo e o BLE central foram fechados entre 2026-09-20 e 2026-09-22 e **nenhum deles foi exercitado fora do PC**. A interface nova, em LVGL, está no firmware com o driver próprio da tela (JDI LPM027M128B e Sharp LS027B7DH01, em retrato), as teclas com toque longo e a luz; foi testada no PC (44 quadros em 2 temas), mas nunca vista em tela de verdade ([18](18-interface-telas.md)).
+- ANT+: a pilha do add-on `sdk-ant` entra no build com `ANT=1`, sobe no boot e **abre canal escravo** (`rf/ant/ant_channel.c`), mas **nenhum canal abre de fato**: os `CONFIG_GNSS_ANT_*_DEV_TYPE` valem 0 e os arquivos de decodificação de página ficam fora do repositório, porque o ANT+ Adopter Agreement proíbe redistribuir e o repositório é público. Os clientes BLE (HRS, CSC, FTMS, CPS, LNS, ANCS, Komoot, radar) estão ligados de ponta a ponta no código, e nenhum foi testado com dispositivo.
 
 ```mermaid
 pie showData
-    title Áreas do legacy no port (20 áreas da matriz)
-    "fiel" : 1
-    "parcial ou diferente" : 14
-    "stub ou não ligado" : 1
-    "ausente ou quebrado" : 4
+    title Áreas do legacy no port (30 áreas da matriz)
+    "fiel" : 8
+    "parcial" : 11
+    "diferente" : 6
+    "novo (não existia no legacy)" : 5
 ```
 
 ## Matriz por área
 
-Estados: **fiel** (mesmo comportamento), **diferente** (existe com regras ou constantes diferentes), **parcial**, **não ligado** (código existe, ninguém chama), **stub**, **ausente**, **quebrado** (ligado, mas falha).
+Estados: **fiel** (mesmo comportamento), **diferente** (existe com regras ou constantes diferentes), **parcial** (existe e falta parte, quase sempre o teste em hardware) e **novo** (não existia no legacy). Desde 2026-09-22 nenhuma área está **ausente**, **em stub**, **não ligada** nem **quebrada**.
 
 | Área | Legacy | Port | Estado | Detalhe |
 |---|---|---|---|---|
-| Execução | task manager cooperativo, eventos, tick de 5 ms | sete threads preemptivas de serviço, cada uma dormindo na sua caixa de entrada; eventos no zbus; a thread `model` é a única escritora do modelo | diferente | preemptivo, com cópias no lugar de estado compartilhado ([05](05-arquitetura-zephyr.md#threads)) |
-| Watchdog | 4 s, alimentado por boucle e LCD | `task_wdt`: um canal de 4 s por thread de serviço, sete no total, sobre o WDT do nRF | diferente | mais estrito que o legacy (cada thread responde pelo seu canal); não testado na placa ([05](05-arquitetura-zephyr.md#watchdog)) |
+| Execução | task manager cooperativo, eventos, tick de 5 ms | oito threads preemptivas de serviço, cada uma dormindo na sua caixa de entrada; eventos no zbus; a thread `model` é a única escritora do modelo | diferente | preemptivo, com cópias no lugar de estado compartilhado ([05](05-arquitetura-zephyr.md#threads)) |
+| Watchdog | 4 s, alimentado por boucle e LCD | `task_wdt`: um canal de 4 s por thread de serviço, oito no total (`CONFIG_TASK_WDT_CHANNELS=10`), sobre o WDT do nRF | diferente | mais estrito que o legacy (cada thread responde pelo seu canal); não testado na placa ([05](05-arquitetura-zephyr.md#watchdog)) |
 | Energia | latch pelo IO0 do STC3100, auto-off 15 min | máquina de sistema no SMF (`sys_fsm.c`): auto-off de 15 min com os pings do legacy (posição em CRS, PRC e DBG; rolo em FEC), desligamento em etapas com a resposta de cada serviço, ship mode do nPM1300 ou System OFF; medidor MAX17262 por driver próprio, com bateria fraca (10 %) e crítica (0 %); nPM1300 com os trilhos travados, o limite do VBUS pela fonte USB-C e a máquina de carga; AEM10900 por driver próprio, em 4,05 V com a placa ligada e de volta aos pinos antes de desligar | parcial | a potência do painel em mW espera o fator θ·L da e-peas; `test_sys_fsm`, `test_max17262`, `test_battery`, `test_charge`, `test_aem10900`; não testado na placa |
 | Modos | CRS, PRC, FEC, Zwift, MSC com `init`/`invalidate` | máquina de modos no SMF na thread do modelo: CRS, PRC, FEC, Zwift, DBG; o GNSS dorme em FEC e Zwift | parcial | o laço do Zwift (`$LOC`) e o MSC ainda não existem |
 | GPS e NMEA | TinyGPS++ com checksum, PMTK010→PMTK251, WDT de baud | API de GNSS do Zephyr pelo alias `gnss`: driver próprio do u-blox F10 e M10 por UBX no alvo da placa nova (`u-blox,max-f10` na peça escolhida, com L1 + L5, NavIC, standby e reinício por silêncio; `u-blox,max-m10` com LEAP na alternativa) e `gnss-nmea-generic` no alvo da V3, uma posição por época | parcial | falta AssistNow (no F10S, só Offline e Autonomous, e só de L1: o módulo é ROM) e o teste com receptor de verdade |
@@ -43,7 +43,7 @@ Estados: **fiel** (mesmo comportamento), **diferente** (existe com regras ou con
 | Notificações do celular | não existem (o `$ANCS` do legacy é comando serial) | `ancs_client` do NCS + `model/notif_filter.c`; só iPhone | novo | `test_notif_filter`; **nenhum celular foi à bancada** |
 | Posição do celular (LNS) | cliente do serviço 0x1819 | `model/lns_parse.c` + `rf/ble_lns_client.c`; entra como época com o sinalizador `phone` e o árbitro decide | fiel | `test_lns_parse`; só `LNS_POS_OK` é aceito; **nenhum celular foi à bancada** |
 | Navegação do Komoot | serviço próprio, curva a curva | cliente ligado ao modelo; `model/komoot_turn.c` traduz 24 direções em 9 setas | fiel | `test_komoot_turn`; **nenhum telefone foi à bancada** |
-| ANT+ | canais para FC, cadência, potência e radar | `rf/ant_channel.c` abre canal escravo com busca de 30 s e travamento no sensor; os parâmetros e as páginas ficam fora do repositório | parcial | sem perfil não há o que testar; **nenhum sensor foi à bancada** |
+| ANT+ | canais para FC, cadência, potência e radar | `rf/ant/ant_channel.c` abre canal escravo com busca de 30 s e travamento no sensor, sobre a pilha do `sdk-ant` (`ANT=1`) | parcial | **nenhum canal abre de fato**: os `CONFIG_GNSS_ANT_*_DEV_TYPE` valem 0 e `radar_pages.c`, `power_pages.c` e `sensor_pages.c` não estão no repositório nem na máquina, porque o ANT+ Adopter Agreement proíbe redistribuir e o repositório é público; um canal com tipo zero devolve `-ENOTSUP`. **Nenhum sensor foi à bancada** ([07](07-radio-ant-ble.md#ant-no-ncs-v330)) |
 | WS2812 (NeoPixel) | LED endereçável do legacy | **não existe e não vai existir**: a placa própria leva um LED RGB simples em `pwm22`, que gasta menos e não precisa de temporização rígida ([14](14-hardware-placa-nova.md#alocação-de-pinos)) | diferente | decisão registrada em 2026-09-22 |
 | Zonas de potência e suffer score | PowerZone, SufferScore | `power_zone.c`, `suffer_score.c`, alimentados como no legacy | diferente | zonas de potência com o rolo em FEC (`BoucleFEC.cpp:75`); o score a cada 1 s com a FC do momento (o legacy, a cada volta do laço, `Model.cpp:377`) |
 | Zonas RR | RRZone | `rr_zone.c`, a cada dado da cinta com RR | diferente | o legacy chama a cada volta do laço e repete o último RR ([06](06-algoritmos.md#zonas)) |
@@ -52,11 +52,10 @@ Estados: **fiel** (mesmo comportamento), **diferente** (existe com regras ou con
 | Log no SD | `@DDMMYY.txt`, 19 campos | o mesmo arquivo e os mesmos 19 campos (`sd_logger.c`), gravados de 15 em 15 m em lotes de 5 | fiel | `test_sd_logger`; não testado com cartão |
 | Configurações | FRAM 0x50, versão 0x0002 | NVS no nRF52840 e ZMS no nRF54LM20 (`user_settings.c`) | diferente | lidas e validadas no boot; FTP e peso gravados pelos comandos da interface |
 | Recuperação de falha (FDIR) | `.noinit` + CRC-8, restauração por data ao achar a referência do nível do mar, uma vez, com notificação | `crash_recovery.c` e `attitude.c` | fiel | corrigidos em 2026-09-19 o CRC (cobria o próprio campo), o `has_data` (exigia falha registrada) e o momento da restauração (era no `attitude_init`, antes de saber a data); `test_crash_recovery` |
-| BLE | só central (NUS→stravaAP, LNS, CPS, Komoot) | periférico + central (HRS, CSC, FTMS) | quebrado | scan nunca iniciado; `bt_gatt_subscribe` com `ccc_handle=0` faria `memset(NULL)` ([07](07-radio-ant-ble.md)) |
-| ANT+ | HRM, BSC, FE-C, busca em background | pilha do `sdk-ant` com `ANT=1` (`src/rf/ant/ant.c`), sem perfis | parcial | compila no NCS v3.3.0; mapa de integração em [07](07-radio-ant-ble.md#ant-no-ncs-v330) |
+| BLE | só central (NUS→stravaAP, LNS, CPS, Komoot) | periférico **e** central (HRS, CSC, FTMS, CPS, LNS, ANCS, Komoot, radar) | parcial | os três defeitos de 2026-09-20 foram corrigidos: a varredura começa, a inscrição GATT recebe `disc_params` e `end_handle`, e a referência de conexão é liberada; **nada foi testado com dispositivo nenhum** ([07](07-radio-ant-ble.md)) |
 | Atualização por BLE | não existia: firmware pelo J-Link | MCUboot pelo sysbuild e mcumgr SMP sobre BLE, com `src/rf/dfu.c`, a máquina pura `model/dfu_state.c` e a tela de atualização | parcial | só no alvo nRF54LM20A (no nRF52840 os slots não cabem); assinada com a **chave de desenvolvimento** do MCUboot, a trocar antes de sair da bancada; `test_dfu_state` (12 casos); não testado em placa ([07](07-radio-ant-ble.md#atualização-por-ble-dfu)) |
-| Interface | retrato, `Org_01`, cadrans, menu, notificações | LVGL em retrato, 29 telas (`src/ui`) testadas no PC; no firmware, a thread `ui` com o retrato do modelo, o driver `memlcd` (`modules/gnss_drivers`), as teclas por `zephyr,input-longpress` e a luz | parcial | falta projetar o mapa e os segmentos na tela (`nseg` e `route.n` vão em 0) e ver tudo num painel; a interface em paisagem (`src/vue`) saiu em 2026-09-19 ([18](18-interface-telas.md#diferenças-para-o-legacy)) |
-| Comandos (`$LOC`, `$DWN`, `$QRY`) e USB | VParser via USB CDC e NUS; MSC | nada; os arquivos da pilha USB antiga saíram | ausente | a USB `device_next` é o passo da USB |
+| Interface | retrato, `Org_01`, cadrans, menu, notificações | LVGL em retrato, 44 quadros (`src/ui`) testados no PC; no firmware, a thread `ui` com o retrato do modelo, o driver `memlcd` (`modules/gnss_drivers`), as teclas por `zephyr,input-longpress` e a luz | parcial | o mapa e os segmentos são projetados pelo modelo (`model/map_project.c`) desde 2026-09-20; falta **ver tudo num painel**; a interface em paisagem (`src/vue`) saiu em 2026-09-19 ([18](18-interface-telas.md#diferenças-para-o-legacy)) |
+| Comandos (`$LOC`, `$DWN`, `$QRY`) e USB | VParser via USB CDC e NUS; MSC | `model/cmd_parser.c` e `app/app_cmd.c` pelo NUS e pela serial USB, com `model/qry.c`; serviço `usb` com CDC e o disco do ciclista | parcial | `$QRY,2` recusa de propósito e aponta o SMP; os comandos destrutivos são recusados pelo rádio; `test_cmd_parser` e `test_qry`; **não testada com cabo** |
 
 ## Correções de 2026-09-18
 
@@ -88,7 +87,7 @@ A base da arquitetura de [16](16-arquitetura-firmware.md), descrita em [05](05-a
 
 | Item | O que mudou | Verificação |
 |---|---|---|
-| Serviços | sete threads (`sensors`, `model`, `gnss`, `radio`, `ui`, `storage`, `power`), cada uma dormindo na sua caixa de entrada, uma `k_msgq` enchida por listeners do zbus; nenhuma alocação depois do boot | build nos dois DKs, com e sem ANT, sem aviso |
+| Serviços | oito threads (`storage`, `usb`, `power`, `sensors`, `gnss`, `radio`, `model`, `ui`), cada uma dormindo na sua caixa de entrada, uma `k_msgq` enchida por listeners do zbus; nenhuma alocação depois do boot | build no nRF54LM20 DK e na placa do projeto, com e sem ANT, sem aviso |
 | Eventos | 20 canais do zbus com as mensagens de `include/app/app_events.h` | build |
 | Máquina de sistema | Partida, Ligado, MSC, Desligando (espera cada serviço por até 5 s) e Desligado, no SMF | `test_sys_fsm` (16 casos, com o `smf.c` do Zephyr); mutação: 6 de 6 mortas |
 | Máquina de modos | CRS, PRC, FEC, Zwift, DBG, com as entradas e saídas de `boucle__change_mode()` | build |
@@ -104,10 +103,18 @@ A base da arquitetura de [16](16-arquitetura-firmware.md), descrita em [05](05-a
 
 Ordenados por gravidade. Linhas conferidas em 2026-09-18. Saíram em 2026-09-21, com a lógica tirada dos clientes BLE para módulos puros e cobertos por teste: a velocidade CSC 3600 vezes menor (`model/csc_calc.c`) e os flags do FTMS (`model/ftms_parse.c`). Saíram com o código em 2026-09-19: o retrato errado do `ls027.c`, o EPO do `gps_epo.c`, o menu ilegível do `vue.c`, o score não inicializado do `vue_fec.c`, o campo sem uso do `hal_gpio.c` e o shunt do STC3100; as zonas que só recebiam amostra acima de zero foram corrigidas na migração.
 
-| Gravidade | Onde | Defeito |
-|---|---|---|
-| alto | `src/model/udmatrix.c:64-67, 264-281` | `udmat_ones` gera identidade; `bound` com sinal zera covariâncias negativas: α0 nunca é estimado |
-| alto | `src/model/crash_recovery.c:104-118` | CRC inclui o próprio campo `crc`; a restauração falha em 255 de 256 casos |
+**A lista está vazia desde 2026-09-22.** Os dois últimos saíram com o código: o `udmat_ones` que gerava identidade e o `bound` com sinal em `src/model/udmatrix.c`, e o CRC de `src/model/crash_recovery.c`, que incluía o próprio campo `crc` e fazia a restauração falhar em 255 de 256 casos (hoje o cálculo para em `offsetof(saved_data_t, crc)`).
+
+Vazia **não quer dizer correto**: quer dizer que não há defeito conhecido no código. O que continua em aberto não é defeito, é trabalho que falta, e está no [roteiro](#roteiro):
+
+| Em aberto | Onde |
+|---|---|
+| A chave do MCUboot é a **de desenvolvimento**, pública: qualquer um assina uma imagem para o aparelho. Trocar antes de a placa sair da bancada | [07](07-radio-ant-ble.md#atualização-por-ble-dfu) |
+| **Nenhum canal ANT+ abre**: os `CONFIG_GNSS_ANT_*_DEV_TYPE` valem 0 e os arquivos de decodificação de página não estão no repositório nem na máquina | [07](07-radio-ant-ble.md#ant-no-ncs-v330) |
+| **AssistNow não existe**: o MAX-F10S é ROM, só Offline e Autonomous, e só de L1 | [15](15-avaliacao-componentes.md#firmware) |
+| A potência do painel em mW espera o fator θ·L da e-peas | [14](14-hardware-placa-nova.md) |
+| Falta o **pad LGA** de cada GPIO no módulo BM20C. A contagem já bate (o módulo expõe 64 GPIO, todos menos o par do cristal, e o mapa usa 31 fora dele): o que falta é o de-para para o layout rotear | [14](14-hardware-placa-nova.md#alocação-de-pinos) |
+| **Nada rodou em hardware**: nem placa, nem DK, nem painel, nem receptor, nem sensor, nem cartão, nem cabo | este documento inteiro |
 
 ## Roteiro
 
@@ -116,12 +123,12 @@ Proposta de ordem; cada fase fecha com build, testes de host e, a partir da fase
 ```mermaid
 flowchart TD
     F0["0 · estabilização<br/>feito em 2026-09-18"]:::done --> F1
-    F1["1 · base de execução<br/>feito: serviços, zbus, SMF de sistema e de modo,<br/>watchdog por serviço, auto-off do legacy<br/>falta: board própria (nRF54LM20A, esquemático próprio)"]:::partial --> F2
+    F1["1 · base de execução<br/>feito: serviços, zbus, SMF de sistema e de modo,<br/>watchdog por serviço, auto-off do legacy<br/>feito: board própria (gnssbike/nrf54lm20a/cpuapp)<br/>falta: esquemático e placa física"]:::partial --> F2
     F2["2 · fidelidade dos algoritmos<br/>Kalman (ones, bound, taxa), potência, distância,<br/>zonas, FDIR, testes diferenciais contra o legacy"]:::pending --> F3
     F3["3 · armazenamento<br/>feito: formatos do legacy, log @DDMMYY,<br/>segmentos com pool e alocador por época<br/>falta: percursos .PAR, cartão de verdade"]:::partial --> F4
     F4["4 · rádio<br/>ANT+ pelo sdk-ant (HRM, BSC, FE-C) e BLE central,<br/>sensores no modelo, pareamento"]:::pending --> F5
     F5["5 · interface<br/>feito: telas LVGL, driver da tela, thread, teclas,<br/>luz, mapa e segmentos projetados pelo modelo<br/>falta: teste em painel"]:::partial --> F6
-    F6["6 · comandos e USB<br/>feito: atualização por BLE, comandos pelo NUS,<br/>USB device_next com serial (CDC) e disco (MSC)<br/>falta: $QRY (arquivos), teste com cabo"]:::partial --> F7
+    F6["6 · comandos e USB<br/>feito: atualização por BLE, comandos pelo NUS,<br/>USB device_next com serial (CDC) e disco (MSC)<br/>feito: $QRY<br/>falta: teste com cabo"]:::partial --> F7
     F7["7 · extras<br/>Komoot, LNS, EPO e host aiding, WS2812, FRAM"]:::pending
     classDef done fill:#2e7d32,color:#ffffff
     classDef partial fill:#f9a825,color:#000000
@@ -137,15 +144,15 @@ Tamanhos estimados pelos relatórios de análise: fase 1 M, fase 2 M, fase 3 G, 
 | Thread de modelo única | feito em 2026-09-18 e refeito em 2026-09-19: a thread `model` é a única escritora do modelo e recebe tudo pela caixa de entrada | `src/svc/model/model_svc.c` |
 | Trava do modelo | substituída em 2026-09-19: a tela recebe uma cópia do modelo pelo `chan_model_state` | `src/svc/model/model_ui.c` |
 | Mensagens dos clientes BLE para o modelo | feito em 2026-09-19: os callbacks publicam `ext_sensor` e `link_status` | `src/svc/radio/radio_svc.c` |
-| Watchdog | feito em 2026-09-18 e refeito em 2026-09-19: um canal de 4 s por thread de serviço, sete no total; não testado na placa | `src/app/app_svc.c`, `prj.conf` |
+| Watchdog | feito em 2026-09-18 e refeito em 2026-09-19: um canal de 4 s por thread de serviço, oito no total; não testado na placa | `src/app/app_svc.c`, `prj.conf` |
 | Auto-off e desligamento | feito em 2026-09-18 pelo STC3100 e refeito em 2026-09-19 na máquina de sistema: 15 min sem posição em CRS, PRC e DBG, ou sem dado do rolo em FEC; desligamento em etapas; ship mode do nPM1300 ou System OFF (o latch do STC3100 saiu com a V3); não testado na placa | `src/svc/power/sys_fsm.c`, `test_sys_fsm` |
-| Board própria | MCU escolhido em 2026-09-18 (nRF54LM20A) e esquemático próprio em projeto; o firmware compila para o nRF54LM20 DK com os periféricos da placa nova nos pinos de referência do docs/14 (GNSS, BMP585, BMI270, MMC5633NJL, OPT3001, cartão); não testado em placa | `boards/nrf54lm20dk_nrf54lm20a_cpuapp.overlay` e `.conf` |
+| Board própria | feito em 2026-09-22: o alvo `gnssbike/nrf54lm20a/cpuapp` existe e compila, com devicetree, pinctrl, Kconfig e defconfig próprios, e `tools/fw/board_check.py` confere o mapa de pinos (31 usados de 66). Escrever o devicetree derrubou parte do plano de pinos do [14](14-hardware-placa-nova.md#o-que-mudou-do-plano-para-a-placa). **Não há placa física**, e falta o de-para entre cada GPIO e o pad LGA do módulo BM20C, que o layout precisa | `boards/gnss/gnssbike/`, `boards/gnssbike_nrf54lm20a_cpuapp.{overlay,conf}` |
 
 ### Andamento da fase 5
 
 | Item | Estado | Onde |
 |---|---|---|
-| Telas | feito em 2026-09-19, no PC: 29 telas em LVGL nos temas de 8 cores e preto e branco, com os arranjos, os campos e os formatos do legacy e as diferenças registradas em [18](18-interface-telas.md#diferenças-para-o-legacy); o renderizador de host confere cores, textos e navegação | `src/ui/`, `include/ui/`, `tests/ui/`, `tools/ui/` |
+| Telas | feito em 2026-09-19 e ampliado depois, no PC: 44 quadros em LVGL nos temas de 8 cores e preto e branco, com os arranjos, os campos e os formatos do legacy e as diferenças registradas em [18](18-interface-telas.md#diferenças-para-o-legacy); o renderizador de host confere cores, textos e navegação | `src/ui/`, `include/ui/`, `tests/ui/`, `tools/ui/` |
 | Formatação dos números | feito em 2026-09-19: `_fmkstr`, `_secjmkstr` e os limites do `cadran`, com duas diferenças de propósito ([06](06-algoritmos.md#formatação-dos-números)) | `src/ui/ui_fmt.c`, `test_ui_fmt` |
 | Driver da tela | feito em 2026-09-19, no build: JDI LPM027M128B e C em 3 bits e Sharp LS027B7DH01 em 1 bit, retrato, a quantização do renderizador, só as linhas que mudaram, COM pelo EXTCOMIN ou pelo SPI, sequência de partida e de desligamento das fichas ([05](05-arquitetura-zephyr.md#tela)); `test_memlcd` (19 casos), mutação 14 de 14 mortas; não testado em painel | `modules/gnss_drivers/` |
 | Thread da tela, teclas e ligação ao modelo | feito em 2026-09-19, no build: thread `ui` com o LVGL (6 KB de pilha, ~4,7 KB medidos), o retrato do modelo, notificações, telas de USB e de desligamento com o progresso dos serviços, teclas com toque longo, tema e luz guardados em `ui/prefs`; não testado na placa | `src/svc/ui/` |

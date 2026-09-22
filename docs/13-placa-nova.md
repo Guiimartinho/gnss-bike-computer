@@ -354,13 +354,13 @@ Alternativa sem dois carregadores: o **TI BQ25798**, carregador buck-boost com d
 | Buzzer | não tem | **piezo** Same Sky CPT-1117-83-SMT-TR, em ponte por dois PWM em contrafase | sem ímã perto do magnetômetro; o volume cai se o I/O rodar abaixo de 3 V |
 | Vibração | não tem | não usar | no guidão ela não se sente e gasta dezenas de mA; se o dono quiser, TI DRV2605L com atuador LRA (`ti,drv2605`) |
 | Botões | 3 (C&K PTS526), o central liga a placa | 3 ou 4; o de ligar também no SHPHLD do nPM1300 | com vedação da caixa |
-| Depuração | soquete microSD J1 usado como SWD | pads de SWD e de console (`uart30`) na placa | o console da V3 só existia no DK |
+| Depuração | soquete microSD J1 usado como SWD | pads de SWD e de console (`uart20`) na placa | o console da V3 só existia no DK |
 
 ## Orçamento de pinos
 
 | Bloco | Sinais | Periférico proposto | Porta |
 |---|---|---|---|
-| microSD | SCK, MOSI, MISO, CS, detecção de cartão, liga do cartão | `spi00` (até 32 MHz) | P2 |
+| Armazenamento | SCK, MOSI, MISO, CS da flash NOR | `spi00` (a 8 MHz) | P2 |
 | Display | SCK, MOSI, CS, DISP, EXTCOMIN | `spi22` (o display usa 2 MHz) e um canal de PWM | P1/P3 |
 | Luz do display | PWM para um transistor (16 mA; os drivers de LED do nPM1300 dão só 5 mA) | `pwm20` | P1 |
 | GNSS | TX, RX, reset, liga/standby, PPS | `uart21` | P1 |
@@ -369,10 +369,10 @@ Alternativa sem dois carregadores: o **TI BQ25798**, carregador buck-boost com d
 | Botões | 3 ou 4 (o de ligar também vai ao SHPHLD) | GPIO com despertar | P0/P1 |
 | Buzzer | 2 PWM em contrafase | `pwm21` | P1/P3 |
 | LED RGB | 3 PWM | `pwm22` | P1/P3 |
-| Console | TX, RX em pads de teste | `uart30` | P0 |
+| Console | TX, RX em pads de teste | `uart20` | P1 |
 | USB, NFC, SWD, cristais | pinos dedicados | — | — |
 
-Somam de 33 a 39 GPIO, conforme o I2C dos sensores seja dividido com o da energia e o número de botões. Cabem no módulo (64 GPIO) com folga; **não cabem no QFN52** (32 GPIO), o que reforça a escolha do módulo ou do CSP. Os blocos seriais seguem os domínios de pinos do nRF54L ([05](05-arquitetura-zephyr.md#devicetree-e-alvos)).
+Este era o orçamento da proposta. O devicetree da placa fechou em **31 GPIO** e a contagem definitiva, pino a pino, está em [14](14-hardware-placa-nova.md#alocação-de-pinos): o console saiu do `uart30` para o `uart20` porque cada bloco serial do nRF54LM20A tem um periférico só, e `uart30` e `i2c30` são o mesmo bloco. Cabem no módulo (64 GPIO) com folga; **não cabem no QFN52** (32 GPIO), o que reforça a escolha do módulo ou do CSP.
 
 ## Orçamento de energia
 

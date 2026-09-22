@@ -3,7 +3,7 @@
 Especificação técnica preliminar da placa própria do GNSS Bike Computer: decisões, arquitetura, alimentação, componentes principais, barramentos, alocação de pinos, placa de circuito impresso, empilhamento mecânico, regras de layout e bring-up. A pesquisa de mercado e as alternativas estão em [13-placa-nova.md](13-placa-nova.md); a avaliação que escolheu cada componente, em [15-avaliacao-componentes.md](15-avaliacao-componentes.md); o aparelho desenhado, em [Como fica o aparelho](13-placa-nova.md#como-fica-o-aparelho).
 
 > [!IMPORTANT]
-> Especificação de conceito, anterior ao esquemático. Nenhum componente foi montado nem medido. Tensões, correntes e endereços vêm dos datasheets citados em [Referências](#referências); potências médias e autonomia são estimativas de [13](13-placa-nova.md#orçamento-de-energia).
+> Especificação de conceito, anterior ao esquemático. O **devicetree da placa já existe e compila** (`zephyr_app/boards/gnss/gnssbike/`, alvo `gnssbike/nrf54lm20a/cpuapp`), mas nenhum componente foi montado nem medido. Tensões, correntes e endereços vêm dos datasheets citados em [Referências](#referências); potências médias e autonomia são estimativas de [13](13-placa-nova.md#orçamento-de-energia).
 
 **Nesta página:** [Estado das decisões](#estado-das-decisões) · [Arquitetura](#arquitetura) · [Alimentação](#alimentação) · [Componentes principais](#componentes-principais) · [GNSS](#gnss) · [Barramentos e endereços](#barramentos-e-endereços) · [Alocação de pinos](#alocação-de-pinos) · [Placa de circuito impresso](#placa-de-circuito-impresso) · [Empilhamento mecânico](#empilhamento-mecânico) · [Regras de layout](#regras-de-layout) · [Teste e bring-up](#teste-e-bring-up) · [Pendências](#pendências) · [Referências](#referências)
 
@@ -190,7 +190,7 @@ Os números desta seção vêm da ficha do **MAX-F10S**, UBXDOC-963802114-12732 
 |---|---|---|---|---|---|
 | I2C dos sensores | `i2c23` | 400 kHz | 3,0 V, pull-ups de 4,7 kΩ | BMP585 0x47 (SDO no VDDIO; 0x46 com SDO em GND), BMI270 0x68 (SDO em GND; um LSM6DSV16X no mesmo footprint responde em 0x6A), MMC5633NJL 0x30 (fixo), OPT3001 0x44 (ADDR em GND) | sem conflito; o firmware nunca varre o barramento, porque o endereço 0x7E põe o MMC5633NJL em I3C |
 | I2C de energia | `i2c30` | até 400 kHz | 3,0 V | nPM1300 0x6B (fixo), MAX17262 0x36 (fixo), AEM10900 0x41 (I2C_ADDR em I2C_VDD; 0x40 em GND) | sem conflito; com o keep-alive, a configuração por I2C do AEM10900 continua valendo com o 3V0 desligado, e o firmware volta aos pinos antes do ship mode |
-| SPI do armazenamento | `spi00` | 16 MHz | 3,0 V | microSD e flash NOR, com chip select separado | 16 MHz fica fora do lóbulo de L1 e dentro do que cartão e NOR aceitam; confirmar o máximo da peça escolhida |
+| SPI do armazenamento | `spi00` | 8 MHz | 3,0 V | só a flash NOR MX25R6435F, num chip select (P2.05) | o devicetree fixa `spi-max-frequency = <8000000>`, que é o que a MX25R6435F aceita no modo de baixo consumo; o soquete de cartão saiu da placa em 2026-09-20 |
 | SPI do display | `spi22` | 2 MHz (máximo do display) | 3,0 V | Sharp LS027B7DH01A ou JDI LPM027M128C | CS ativo alto |
 | UART do GNSS | `uart21` | 38400 baud, o valor de fábrica do F10 e do M10 (`CFG-UART1-BAUDRATE`; padrões de configuração da UBX-23002975 R02): a 1 Hz são cerca de 360 B/s de `UBX-NAV-PVT` e `UBX-NAV-SAT` contra 3.840 B/s. A banda dupla não muda a conta: o `UBX-NAV-SAT` tem 8 + 12 bytes **por satélite**, não por sinal (seção 3.14.13.1) | 3,0 V no MCU, 1,8 V no módulo | u-blox MAX | pelo TXU0204 |
 | USB | USBHS | 480 Mbit/s | par diferencial de 90 Ω | USB-C | VBUS do nRF pela VBUSOUT do nPM1300 |
@@ -245,23 +245,40 @@ Com o SD3V0 desligado, os pinos do `spi00` ficam em nível baixo ou em alta impe
 
 ## Alocação de pinos
 
-Provisória. Os blocos seriais seguem os domínios de pinos do nRF54LM20A (`spi00` na porta P2; blocos 20 a 24 nas portas P1 e P3; bloco 30 na porta P0), e as funções que já existem no port repetem os pinos do alvo nRF54LM20 DK ([05](05-arquitetura-zephyr.md#devicetree-e-alvos)). O mapeamento final depende da pinagem do BM20C.
+Esta tabela **não é mais uma proposta**: é o que o devicetree da placa declara, em [`zephyr_app/boards/gnss/gnssbike/`](../zephyr_app/boards/gnss/gnssbike/) (o mapa dos pinos está em `gnssbike-pinctrl.dtsi` e o resto em `gnssbike_nrf54lm20a_cpuapp.dts`). O alvo `gnssbike/nrf54lm20a/cpuapp` compila; `python tools/fw/board_check.py` confere o mapa a cada mudança. **Falta uma conferência contra o BM20C**, e ela é mais estreita do que parece: a ficha Draft 0.99 do módulo, conferida na validação da [lista de compras](19-lista-de-compras.md), diz que ele expõe **64 GPIO** — todos os 66 do chip menos P1.20 e P1.21, que ficam com o cristal de 32,768 kHz ([15](15-avaliacao-componentes.md#módulo-do-mcu)). Os 31 pinos desta tabela estão todos fora desse par, de modo que **o mapa cabe no módulo**. O que ainda não foi levantado aqui é em qual pad LGA cada GPIO sai, que é o que o layout precisa para rotear — não o esquemático, que liga por nome de sinal.
 
-| Função | Sinais | Periférico | Porta | Pino no DK (referência) |
-|---|---|---|---|---|
-| Armazenamento | SCK, MOSI, MISO, CS do microSD, CS da flash NOR, detecção de cartão | `spi00` e GPIO | P2 | SCK P2.01, MOSI P2.02, MISO P2.04, CS do cartão P2.03, CS da flash P2.05 |
-| Display | SCK, MOSI, CS, DISP, EN do REG710 | `spi22` e GPIO | P3 | SCK P3.03, MOSI P3.00, CS P3.02, DISP P3.05 |
-| Display | EXTCOMIN (1 Hz sem luz; cerca de 120 Hz com a luz acesa, para o COM perto dos 60 Hz que a ficha pede) e luz | `pwm20` | P1 | EXTCOMIN P3.06 por GPIO e timer; a luz no LED 1 (`pwm20`) |
-| GNSS | TXD, RXD, RESET_N, EXTINT, TIMEPULSE (o OE do tradutor fica fixo no VCCA) | `uart21` e GPIO | P1 | TX P1.04, RX P1.05, RESET P1.06, EXTINT P1.07, TIMEPULSE P1.13 |
-| Sensores | SDA, SCL, INT1 e INT2 do IMU, INT do barômetro | `i2c23` e GPIO | P1 e P3 | SDA P1.29, SCL P1.03, INT1 P3.04 |
-| Energia | SDA, SCL, interrupção do nPM1300 (GPIO3), ALRT do MAX17262 e IRQ do AEM10900 (o bloqueio da carga solar vem do VBUSOUT, sem pino do MCU) | `i2c30` e GPIO | P0 | `i2c24`: SDA P1.11 e SCL P1.14, e a interrupção do GPIO3 do nPM1300 em P0.04; o SDA e a interrupção são os pinos das amostras da Nordic para o nPM1300 EK (lá no `i2c21`, que aqui é do `uart21` do GNSS, e com o SCL em P1.12, que não é pino de clock); MAX17262 e AEM10900 no mesmo barramento |
-| Botões | 2 entradas com despertar; o central chega pelo SHPHLD e pelo GPIO3 do nPM1300 | GPIO | P0 ou P1 | P1.26, P1.09, P1.08 |
-| LED RGB | 3 canais | `pwm22` | P1 ou P3 | — |
-| Buzzer | 2 canais em contrafase | `pwm21` | P1 ou P3 | — |
-| Console | TX, RX em pads de teste | `uart30` | P0 | — |
-| Dedicados | USB (D+, D−, VBUS), SWD, cristais internos do módulo | — | — | — |
+| Função | Sinais | Periférico | Pino |
+|---|---|---|---|
+| Armazenamento | SCK, MOSI, MISO, CS da flash NOR | `spi00` e GPIO | SCK P2.01, MOSI P2.02, MISO P2.04, CS P2.05 |
+| Display | SCK, MOSI, CS, DISP, EXTCOMIN, EN do REG710 | `spi22` e GPIO | SCK P3.03, MOSI P3.00, CS P3.02, DISP P3.05, EXTCOMIN P3.06, EN P3.07 |
+| Display | luz frontal | `pwm20` | P3.08 |
+| GNSS | TXD, RXD, RESET_N (o OE do tradutor fica fixo no VCCA) | `uart21` e GPIO | TX P1.04, RX P1.05, RESET_N P1.06 |
+| GNSS | EXTINT e TIMEPULSE, ligados na placa e **reservados** | — | EXTINT P1.08, TIMEPULSE P1.09 |
+| Sensores | SDA, SCL, INT do IMU, INT do barômetro | `i2c23` e GPIO | SDA P1.29, SCL P1.03, INT do BMI270 P1.10, INT do BMP585 P1.12 |
+| Energia | SDA, SCL, interrupção do nPM1300 (GPIO3); o bloqueio da carga solar vem do VBUSOUT, sem pino do MCU | `i2c30` e GPIO | SDA P0.02, SCL P0.03, interrupção P0.00 |
+| Botões | 3 entradas; o central também chega ao SHPHLD do nPM1300, que é o que liga o aparelho fora do ship mode | GPIO | esquerda P1.26, centro P1.27, direita P1.30 |
+| LED RGB | 3 canais | `pwm22` | P1.16, P1.19, P1.22 |
+| Buzzer | 2 canais em contrafase | `pwm21` | P1.25, P1.28 |
+| Console | TX, RX em dois pads de teste | `uart20` | TX P1.00, RX P1.31 |
+| Dedicados | USB (D+, D−, VBUS), SWD, cristais internos do módulo | — | — |
 
-Total: 37 GPIO no protótipo, com o microSD e a flash NOR, e 35 no produto, só com a flash, dos 64 do módulo (o chip tem 66; o cristal de 32,768 kHz ocupa P1.20 e P1.21).
+Total: **31 GPIO** dos 66 do chip, mais os dois reservados do GNSS. Sobram 31 livres, 12 deles pinos de clock; P1.20 e P1.21 ficam com o cristal de 32,768 kHz e P1.01 e P1.02 com os pads do NFC, que saem do reset sem GPIO.
+
+### O que mudou do plano para a placa
+
+Escrever o devicetree derrubou parte do plano anterior desta seção, que repetia os pinos do **nRF54LM20 DK**. Vale registrar, porque nenhum destes problemas aparecia no papel:
+
+| Plano anterior | Placa | Por quê |
+|---|---|---|
+| console no `uart30`, com o I²C da energia no `i2c30` | console no `uart20` (P1.00 e P1.31) | **cada bloco serial do nRF54LM20A tem um periférico só**; `uart30` e `i2c30` são o mesmo bloco, e o silício recusa |
+| I²C da energia com SDA P1.11 e SCL P1.14 | SDA P0.02 e SCL P0.03 | o bloco 30 mora na porta P0; P0.03 é pino de clock, como o SCL exige |
+| interrupção do nPM1300 em P0.04 | P0.00 | — |
+| EXTINT do GNSS em P1.07 e TIMEPULSE em P1.13 | P1.08 e P1.09 | P1.07 e P1.13 são pinos de clock: gastá-los com sinais que não precisam deles tira do `i2c` e do `spi` a única coisa que eles podem usar |
+| botões em P1.26, P1.09 e P1.08 | P1.26, P1.27 e P1.30 | P1.08 e P1.09 passaram a ser o EXTINT e o TIMEPULSE: o plano tinha os dois no mesmo pino |
+| INT1 do IMU em P3.04, mais um INT2 | INT do BMI270 em P1.10, INT do BMP585 em P1.12 | o driver usa uma interrupção só por peça, e P3.04 é pino de clock |
+| microSD com CS em P2.03 e detecção de cartão | não existem | o soquete saiu em 2026-09-20; P2.03 fica livre para um overlay de protótipo |
+| ALRT do MAX17262 e IRQ do AEM10900 | sem pino | nenhum dos dois drivers usa a linha; um pino que a firmware não alcança não entra no devicetree |
+| EN do REG710 e luz do display sem pino | P3.07 e P3.08 | — |
 
 Duas regras de pino do nRF54LM20A (ficha 4539_001 v1.0) mandam no mapa:
 
@@ -324,7 +341,7 @@ Da frente para trás, na área do display:
 
 1. **Antena GNSS:** área livre em todas as camadas, rede em π junto ao ponto de alimentação e sintonia com VNA na caixa final; bateria, soquete microSD, parafusos e painéis fora do caminho entre a antena e o céu ([13](13-placa-nova.md#regras-de-projeto)).
 2. **Rádio de 2,4 GHz:** o BM20C na borda, no canto oposto ao GNSS, com a área da antena (os últimos 5,5 mm do módulo) fora da placa ou sem cobre em todas as camadas; medir o S21 entre as duas antenas no protótipo.
-3. **Clocks e ruído:** microSD e SD NAND a 16 MHz; linhas do display, do cartão e do USB em camada interna entre planos de terra e longe da zona do GNSS. Clocks até cerca de 2 MHz, como o SPI do display, têm harmônicos dentro de L1 e L5: bordas lentas (resistor em série), trilhas curtas e o FPC do display pela esquerda.
+3. **Clocks e ruído:** a flash NOR a 8 MHz; linhas do display, do cartão e do USB em camada interna entre planos de terra e longe da zona do GNSS. Clocks até cerca de 2 MHz, como o SPI do display, têm harmônicos dentro de L1 e L5: bordas lentas (resistor em série), trilhas curtas e o FPC do display pela esquerda.
 4. **Fontes chaveadas:** laços dos bucks do nPM1300 e do boost do AEM10900 curtos, indutores junto dos pinos, no lado oposto e na diagonal da antena GNSS; ripple do 1V8 abaixo de 50 mV no módulo GNSS.
 5. **USB:** D+ e D− como par diferencial de 90 Ω, curto, sem vias se possível; TVS junto do conector.
 6. **Bateria e temperatura:** NTC do pack no nPM1300 e segundo NTC colado na célula para o AEM10900; célula longe dos painéis e do carregador, porque a caixa ao sol passa de 45 °C.
@@ -334,7 +351,7 @@ Da frente para trás, na área do display:
 ## Teste e bring-up
 
 - **Pontos de teste:** VBUS, VBAT, VSYS, 3V0, 1V8, SD3V0, 3V3BL, 5V0, VBCKP e GND, com jumper de 0 Ω em série nos trilhos de cada bloco (BM20C, GNSS, display, sensores, armazenamento) para medir corrente com o PPK2.
-- **Depuração:** SWD (SWDIO em J3, SWDCLK em K3, reset em G2, VDD e GND) num footprint Tag-Connect TC2030-NL, para o cabo TC2030-CTX-NL (conector Cortex de 10 vias do J-Link) preso pelo TC2030-CLIP, e console no `uart30`, em pads.
+- **Depuração:** SWD (SWDIO em J3, SWDCLK em K3, reset em G2, VDD e GND) num footprint Tag-Connect TC2030-NL, para o cabo TC2030-CTX-NL (conector Cortex de 10 vias do J-Link) preso pelo TC2030-CLIP, e console no `uart20` (P1.00 e P1.31), em dois pads.
 
 ```mermaid
 flowchart LR
@@ -362,7 +379,7 @@ flowchart LR
 | Mecânica | caixa, janela dos painéis, vedação, fixação da placa e dos painéis |
 | Estoque | resolvido na [lista de compras](19-lista-de-compras.md#trocas) (BMI270 e MMC5633NJL); a lista inteira é conferida de novo no dia do pedido |
 | AEM10900 | fora da DigiKey: conferir na Mouser (10AEM10900C0002 e a placa 2AAEM10900C002) ou pedir à e-peas, e perguntar qual corrente de entrada vale (tabela 6 ou a fórmula da seção 6.7.2) |
-| Armazenamento | SD NAND XTX: compra na LCSC e teste do modo SPI e da capacidade padrão com o `zephyr,sdhc-spi-slot` |
+| Armazenamento | MX25R6435F: conferir na bancada o consumo de apagamento no modo de baixo consumo e o tempo de saída do deep power down, com o `zephyr,flash-disk` montado em `/SD:` |
 | USB-C | placa de 0,8 mm e o furo de 9,54 × 3,76 mm na parede, pelo desenho da Molex |
 
 ## Referências

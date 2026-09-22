@@ -13,5 +13,5 @@ Regras mínimas, caso só este arquivo seja lido:
 - Commits em Conventional Commits, nunca atribuídos a IA, na branch `develop`; a `main` só recebe merge da `develop` quando o dono pedir.
 - Push só com pedido do dono, para o `origin` no GitHub (`Guiimartinho/gnss-bike-computer`, público).
 - Documentação em português com diagramas Mermaid, nunca diagramas em texto puro.
-- Nunca use WSL; ferramentas do projeto ficam em `tools/fw/` e `tools/docs/`.
+- Nunca use WSL; ferramentas do projeto ficam em `tools/fw/`, `tools/docs/` e `tools/ui/`.
 - O CI (`.github/workflows/ci.yml`) está desligado, só roda à mão: não ligue gatilhos sem o dono pedir.

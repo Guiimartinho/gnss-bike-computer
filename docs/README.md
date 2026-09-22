@@ -24,4 +24,4 @@
 | 18 | [Interface e telas](18-interface-telas.md) | interface da placa nova: LVGL sobre driver próprio, implementação em `src/ui`, teste no PC, paleta de 8 cores e tema preto e branco, grade e barra de estado, fontes, todas as telas, botões, atualização e luz, memória, diferenças para o legacy |
 | 19 | [Lista de compras](19-lista-de-compras.md) | lista de materiais do protótipo da placa nova, validada em duas passagens (compra e integração): trocas, correções do circuito, códigos, estoque e preço da DigiKey, passivos, placas de avaliação, custo e compras fora da DigiKey |
 
-As 29 telas da interface, uma a uma, com o que cada uma mostra, estão em [`telas/`](telas/README.md). Imagens da interface e fotos do aparelho ficam em [`img/`](img/). Os documentos de novembro de 2025, substituídos por estes, estão em [`historico/`](historico/).
+Os 44 quadros da interface, um a um, com o que cada uma mostra, estão em [`telas/`](telas/README.md). Imagens da interface e fotos do aparelho ficam em [`img/`](img/). Os documentos de novembro de 2025, substituídos por estes, estão em [`historico/`](historico/).

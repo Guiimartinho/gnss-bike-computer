@@ -1,28 +1,30 @@
 # Visão geral
 
-O GNSS Bike Computer é um computador de bordo para ciclismo com GPS, baseado no nRF52840, que disputa segmentos do Strava em tempo real, segue percursos GPX, mede a altimetria com barômetro e acelerômetro e fala com sensores e com o celular. O projeto porta para Zephyr (nRF Connect SDK) o firmware aberto **stravaV10**, de Vincent Gollé, que roda na placa **myStravaB V3**.
+O GNSS Bike Computer é um computador de bordo para ciclismo com GPS, baseado no nRF54LM20A, que disputa segmentos do Strava em tempo real, segue percursos GPX, mede a altimetria com barômetro e acelerômetro e fala com sensores e com o celular. O projeto porta para Zephyr (nRF Connect SDK) o firmware aberto **stravaV10**, de Vincent Gollé, que roda na placa **myStravaB V3** (nRF52840).
 
 **Nesta página:** [Funcionalidades](#funcionalidades) · [O aparelho](#o-aparelho) · [Modos](#modos) · [Legacy e port](#legacy-e-port) · [Onde começar](#onde-começar)
 
 ## Funcionalidades
 
-Funcionalidades do stravaV10 original e o estado no port em 2026-09-18 (detalhes em [10-status-do-port.md](10-status-do-port.md)).
+Funcionalidades do stravaV10 original e o estado no port em 2026-09-22 (detalhes em [10-status-do-port.md](10-status-do-port.md)).
 
 | Funcionalidade | No legacy | No port |
 |---|---|---|
-| Segmentos do Strava em tempo real (avanço contra o recorde, até 2 na tela, LED azul ou vermelho) | sim | lógica portada, sem carga de dados |
-| Percurso GPX com mapa e zoom | sim (`.PAR`) | parcial, não ligado |
+| Segmentos do Strava em tempo real (avanço contra o recorde, até 2 na tela, LED azul ou vermelho) | sim | lógica portada, com a carga dos arquivos do legacy e a projeção na tela; não testado com cartão |
+| Percurso GPX com mapa e zoom | sim (`.PAR`) | o modelo carrega o `.PAR` e projeta o mapa com o zoom em cinco passos; não visto num painel |
 | Altitude por fusão barômetro + acelerômetro (Kalman de 3 estados), subida, inclinação | sim | portado com diferenças |
 | Potência estimada pela física (peso, subida, rolamento, arrasto) | sim | fórmula diferente |
-| Sensores ANT+: frequência cardíaca, velocidade e cadência, rolo FE-C | sim | pilha ANT com `ANT=1`, perfis ainda não portados; clientes BLE não funcionais |
-| BLE: medidor de potência, posição do celular (LNS), navegação Komoot | sim | parcial |
+| Sensores ANT+: frequência cardíaca, velocidade e cadência, rolo FE-C | sim | pilha ANT com `ANT=1` e abertura de canais (`rf/ant/`), mas **nenhum canal abre de fato**: os `CONFIG_GNSS_ANT_*_DEV_TYPE` valem 0 e os arquivos de páginas ficam fora do repositório pela licença ANT+ |
+| BLE: medidor de potência, posição do celular (LNS), navegação Komoot | sim | parcial; os clientes foram corrigidos em 2026-09-20 (varredura iniciada, inscrição GATT com `disc_params` e `end_handle`, referência de conexão liberada), sem teste com sensor |
 | Zonas de potência, suffer score, variabilidade da FC | sim | módulos portados, sem dados reais |
-| Log da atividade no microSD e download pelo PC (stravaAP) | sim | log em stub, sem comandos |
-| USB: comandos seriais e mass storage | sim | fora do build |
-| Recuperação do estado depois de uma falha (FDIR) | sim | não funciona |
+| Log da atividade no microSD e download pelo PC (stravaAP) | sim | FatFs de verdade no `svc/storage` e comandos do legacy pelo NUS e pela USB; não testado com cartão |
+| USB: comandos seriais e mass storage | sim | no build (`svc/usb`): porta serial dos comandos e disco do ciclista; não testada com cabo |
+| Recuperação do estado depois de uma falha (FDIR) | sim | funciona (o CRC cobre até `offsetof(saved_data_t, crc)`); não testado na placa |
 | Autonomia: menos de 8 mA em rolo, ~35 mA com GPS | medido pelo autor original | não medido |
 
 ## O aparelho
+
+O aparelho do legacy, a myStravaB V3, e o que fala com ele. A placa do projeto, com o nRF54LM20A, está proposta em [13-placa-nova.md](13-placa-nova.md) e especificada em [14-hardware-placa-nova.md](14-hardware-placa-nova.md); ela já é um alvo de build, mas **não existe placa física**.
 
 ```mermaid
 flowchart LR
@@ -58,7 +60,7 @@ Componentes, pinagem e alimentação em [02-hardware.md](02-hardware.md); fotos 
 | Zwift | posição simulada vinda do PC | standby | — |
 | MSC | expor o cartão por USB | — | — |
 
-No port, `boucle_set_mode()` ainda só guarda o modo; o ciclo é sempre o de CRS, com start, pause e stop pelo botão central.
+No port, o `boucle` saiu: a troca de modo é a máquina `model/mode_fsm.c`, com guardas que o legacy não tinha (modo de percurso só com percurso carregado, atividade gravando não cruza de ar livre para indoor) e cobertura no host (`test_mode_fsm`, 22 casos). Start, pause e stop continuam no botão central.
 
 ## Legacy e port
 
@@ -80,7 +82,7 @@ timeline
 | Linguagem | C/C++ com Adafruit GFX e TinyGPS++ | C puro |
 | Execução | task manager cooperativo | threads preemptivas |
 | Rádio | ANT+ e BLE central | BLE periférico + central |
-| Estado | completo, testado pelo autor, não compila aqui | compila, 40 testes de host, sem teste na placa |
+| Estado | completo, testado pelo autor, não compila aqui | compila, 53 conjuntos de testes de host (714 casos), sem teste na placa |
 | Licença | CC BY-NC 4.0 | a definir (deriva do legacy) |
 
 ## Onde começar

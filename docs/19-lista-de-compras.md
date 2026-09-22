@@ -76,7 +76,7 @@ Achados da segunda passagem que mudam o circuito ou o firmware. A especificaçã
 10. **IMU com dois fabricantes no mesmo footprint:** pinos 2 e 3 no VDDIO (a Bosch proíbe GND), 10 e 11 abertos, 12 no VDDIO, 1 no GND; o BMI270 responde em 0x68 e o LSM6DSV16X, em 0x6A. O devicetree declara os dois, e o firmware usa o que responder. O despertar por movimento do BMI270 pede a configuração `base` do driver (8 KB, com o compatível extra `bosch,bmi270-base`), sem exemplo no NCS: a testar.
 11. **MMC5633NJL:** o endereço 0x7E no barramento o põe em I3C até faltar energia, então o firmware nunca varre o I2C; o VDD pede pelo menos 2,2 µF junto do pino. O ID 0x10 e o mapa de registradores conferem com o driver `memsic,mmc56x3`.
 12. **BMP585:** o CSB precisa estar no VDDIO na partida, ou o I2C fica desligado até o próximo reset de energia; o SDO no VDDIO dá o endereço 0x47.
-13. **SD NAND:** o XTSDG08GWSIGA é de capacidade padrão (CSD versão 1.0, 1 Gbyte) e aceita CMD8, CMD58 e ACMD41 no modo SPI; a pilha SD do Zephyr trata esse caso (bloco de 512 bytes e endereço em bytes), sem teste. DAT1 e DAT2, reservados no SPI, levam pull-up; com o SD3V0 desligado, os pinos do `spi00` ficam em nível baixo ou em alta impedância, para não alimentar o chip pelos pinos.
+13. **Flash NOR soldada:** o SD NAND XTX saiu em 2026-09-20 e no lugar dele vai a Macronix **MX25R6435F** de 64 Mbit (8 Mbyte), a mesma peça do nRF54LM20 DK, sozinha no `spi00` com CS em P2.05 e `spi-max-frequency = 8000000`. Ela entra no devicetree como `jedec,spi-nor`, e uma partição que toma a peça inteira vira disco por `zephyr,flash-disk`, montado em `/SD:` com FatFs (`CONFIG_DISK_DRIVER_FLASH=y` e `CONFIG_DISK_DRIVER_SDMMC=n`); **não há cartão nem SD NAND na placa**. WP e HOLD levam pull-up; com o trilho da flash desligado, os pinos do `spi00` ficam em nível baixo ou em alta impedância, para não alimentar o chip pelos pinos. Nada disso foi testado em placa.
 14. **USB-C da Molex:** o desenho recomenda placa de 0,8 mm, e a especificação passa de 1,0 para 0,8 mm; o anel de vedação passa da borda da placa (a borda fica 2,73 mm atrás da frente do conector); furo de 9,54 × 3,76 mm numa parede de pelo menos 1,2 mm.
 15. **Tela Sharp:** 5 V do REG710 com o EN num pino do MCU, para a sequência de ligar e para cortar os 65 µA do REG710; entradas com VIH a partir de 2,7 V, que a lógica de 3,0 V atende; EXTMODE no VDD da tela. O filme de luz tem um LED de 10 mA típicos (25 mA no máximo).
 16. **TPS7A02:** pelo menos 0,5 µF efetivos na saída, EN ligado ao IN.
@@ -187,7 +187,7 @@ As quantidades por placa saem do esquemático; a compra sugerida cobre 5 placas 
 | 0,47 µF, 10 V, X5R, 0402 | REG do MAX17262 | Murata GRM155R61A474KE15D | 490-3264-1-ND | 1.773.664 | 0,12 / 0,068 | 10 | — |
 | 0,22 µF, 25 V, X5R, 0402 | bombeamento do REG710 | Samsung CL05A224KA5NNNC | 1276-1455-1-ND | 1.498 | 0,17 / 0,096 | 10 | alternativa Murata GRM155R71A224KE01D (343); o 0603 da Murata só volta em 26/10 |
 | 100 nF, 10 V, X7R, 0402 | desacoplamento dos CIs | Murata GRM155R71A104KA01D | 490-6321-1-ND | 809.747 | 0,10 / 0,025 | 200 | — |
-| 47 kΩ | RVSET1, pull-ups do SD NAND e do microSD | Yageo RC0402FR-0747KL | 311-47.0KLRCT-ND | 2.038.082 | 0,10 / 0,021 | 100 | — |
+| 47 kΩ | RVSET1, pull-ups de WP e HOLD da flash NOR | Yageo RC0402FR-0747KL | 311-47.0KLRCT-ND | 2.038.082 | 0,10 / 0,021 | 100 | — |
 | 150 kΩ | RVSET2 | Yageo RC0402FR-07150KL | 311-150KLRCT-ND | 219.429 | 0,10 / 0,021 | 10 | — |
 | 100 kΩ e 1 MΩ | divisor do DIS_STO_CH | Yageo RC0402FR-07100KL e RC0402FR-071ML | 311-100KLRCT-ND e 311-1.00MLRCT-ND | 6.812.165 e 1.390.456 | 0,10 / 0,021 | 10 de cada | — |
 | 22 kΩ | RDIV do AEM10900 | Yageo RC0402FR-0722KL | 311-22.0KLRCT-ND | 1.379.018 | 0,10 / 0,021 | 10 | — |
@@ -214,13 +214,14 @@ O J-Link da SEGGER já está na máquina de desenvolvimento ([CLAUDE.md](../CLAU
 
 ## Custo
 
-Estimativa das peças de uma placa, com os preços de 10 unidades quando existem, sem o AEM10900, a bateria, a placa de circuito impresso e a montagem: cerca de US$ 214 (a troca do M10N pelo F10S tirou US$ 1,38). Os maiores itens são o filme de luz, o SD NAND de 8 Gbit, a tela, os painéis e o GNSS.
+Estimativa das peças de uma placa, com os preços de 10 unidades quando existem, **sem** o AEM10900, a bateria, a placa de circuito impresso e a montagem, e **sem a flash NOR**, cujo preço ainda não foi conferido ([Armazenamento](#armazenamento)): cerca de **US$ 173** (a troca do M10N pelo F10S tirou US$ 1,38). Os maiores itens são o filme de luz, a tela, os painéis e o GNSS.
+
+O SD NAND de 8 Gbit, que sozinho respondia por US$ 40,43, **saiu em 2026-09-20**, trocado pela Macronix MX25R6435F soldada. A conta é a soma das fatias abaixo: 66,45 + 23,61 + 15,84 + 13,14 + 9,96 + 9,78 + 34,47 = **173,25**. O total anterior, de US$ 213,68, era esse mesmo valor mais os 40,43 do SD NAND.
 
 ```mermaid
 pie showData
-    title Peças de uma placa, US$ (estimativa)
+    title Peças de uma placa, US$ (estimativa, sem a flash NOR)
     "Filme de luz frontal" : 66.45
-    "SD NAND 8 Gbit" : 40.43
     "Tela Sharp" : 23.61
     "6 painéis solares" : 15.84
     "GNSS" : 13.14
@@ -229,14 +230,14 @@ pie showData
     "Outros" : 34.47
 ```
 
-Com o SD NAND de 1 Gbit no protótipo (código C7429710, US$ 10,26), a placa cai para cerca de US$ 185.
+A fatia "Outros" junta o resto das tabelas por bloco e os passivos, e já inclui o soquete microSD do protótipo (US$ 3,02); a flash NOR não está em nenhuma fatia, porque a linha dela ainda traz "a confirmar" no preço. Confirmado esse preço, some-o aos US$ 173,25.
 
 ## Compras fora da DigiKey
 
 | Item | Onde | Observação |
 |---|---|---|
 | e-peas AEM10900 e a placa 2AAEM10900C002 | Mouser (distribuidor mundial da e-peas) ou a própria e-peas | a Mouser não pôde ser conferida; a ficha manda pedir amostras a sales@e-peas.com |
-| XTX SD NAND | LCSC | 115 peças de 8 Gbit; capacidades menores com mais estoque |
+| Flash NOR Macronix MX25R6435F | a definir | o SD NAND XTX que ocupava esta linha saiu em 2026-09-20, trocado pela NOR soldada. Código, preço e estoque ainda **não foram conferidos** em distribuidor nenhum ([Armazenamento](#armazenamento)) |
 | Bateria | fabricante de packs | 60 × 36 × 7 mm, PCM, NTC de 10 kΩ B3380 (um segundo NTC opcional), cabo com o GHR-06V-S, UN38.3 |
 | Tag-Connect | loja da Tag-Connect | a DigiKey tem só as versões com pernas, que pedem outro footprint |
 | BM20C direto | Fanstel, por e-mail | US$ 6,50 (US$ 5,94 no lote de mil), se o prazo da DigiKey não servir |
@@ -254,13 +255,13 @@ Com o SD NAND de 1 Gbit no protótipo (código C7429710, US$ 10,26), a placa cai
 
 ## Referências
 
-- DigiKey, páginas de produto e de busca de cada PN da lista, lidas em 2026-09-18; LCSC, página do C25836657 e a API de peças da JLCPCB para as outras capacidades do SD NAND.
+- DigiKey, páginas de produto e de busca de cada PN da lista, lidas em 2026-09-18; LCSC, página do C25836657 e a API de peças da JLCPCB para as outras capacidades do SD NAND (peça descartada em 2026-09-20).
 - Fanstel, BM20C Product Specifications Draft 0.99 (pinagem, p. 11; montagem, p. 17) e biblioteca Eagle BM20C-V7.
 - Nordic, nPM1300 Product Specification v1.1: VSET (tabelas 18 e 19), LDSW (tabelas 23 e 24), ship mode (tabela 33), LPRESETCONFIG, configurações e lista de referência (tabelas 39 e 40).
 - e-peas, AEM1090x datasheet v2.4.0: corrente de entrada (tabela 6 e seção 6.7.2), pinos e lista de materiais (tabela 43).
 - u-blox, MAX-F10S Data sheet R03, UBXDOC-963802114-12732 (tabelas 10, 12, 13, 15, 16 e 17) e F10 SPG 6.00 Interface description, UBX-23002975 R02; MAX-M10N-10B Data sheet R05 (tabelas 12, 13, 15 e 16), para a alternativa.
 - Bosch, BMI270 (BST-BMI270-DS000-08, tabela 22) e BMP585 (interface pelo CSB); ST, LSM6DSV16X (tabela 2); Memsic, MMC5633NJL Rev A.
-- XTX, SD NAND Rev 1.0 (pinos, comandos dos modos SD e SPI, CSD).
+- XTX, SD NAND Rev 1.0 (pinos, comandos dos modos SD e SPI, CSD): leitura da avaliação de 2026-09-18, da peça descartada em 2026-09-20.
 - Sharp, LS027B7DH01A (ficha LD-28305A, conectores na tabela 8-2-1); JDI, LPM027M128B Ver.01 (conector, p. 34); Azumo, 2.7" Front Light Panel 11103-xx (12369-01_T4).
 - Molex, desenho do 2036150003 (rev. A); Amphenol, folheto "Waterproof USB Type C".
 - Same Sky, CPT-1117-83-SMT-TR; Kingbright, APTF1616SEEZGKQBKC e APT1608SURCK; Omron, B3S; E-Switch, TL3780; Diodes, DMG1012T (DS31783); TI, REG710, TPS7A02, ESD761 e TPD4E05U06.
