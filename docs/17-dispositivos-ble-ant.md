@@ -53,11 +53,12 @@ Os números de tipo de dispositivo ANT+ vêm do SDK FIT da Garmin (enum `antplus
 |---|---|---|---|---|---|
 | Cinta de FC, relógio que retransmite | Heart Rate, tipo 120 | Heart Rate, 0x180D | FC e intervalos RR | ANT: `ant_hrm`; BLE: `hrs_client` do NCS | P1 (o legacy usa ANT+) |
 | Velocidade e cadência | Bike Speed and Cadence, tipos 121 (combinado), 122 (cadência), 123 (velocidade) | Cycling Speed and Cadence, 0x1816 | voltas da roda e do pedivela com tempo | ANT: `ant_bsc`; BLE: cliente próprio (o port tem um) | P1 (o legacy usa o combinado ANT+) |
-| Medidor de potência | Bicycle Power, tipo 11 | Cycling Power, 0x1818 | potência, cadência, torque; vetor (0x2A64) no BLE | ANT: `ant_bpwr` parcial (páginas 1, 16, 17 e 18 e torque); BLE: cliente próprio | P1 no BLE (o legacy lê potência e vetor pelo CPS); P2 no ANT+ |
+| Medidor de potência | Bicycle Power, tipo 11 | Cycling Power, 0x1818 | potência, cadência, torque, balanço entre as pernas, energia | **feito pelo BLE** (`model/cps_parse.c` + `rf/ble_cps_client.c`, 2026-09-22); pelo ANT+, só a tubulação, porque o perfil não pode entrar num repositório público (`rf/power_ant.h`) | P1 no BLE (o legacy lê potência e vetor pelo CPS); P2 no ANT+ |
 | Rolo inteligente | Fitness Equipment (FE-C), tipo 17 | Fitness Machine (FTMS), 0x1826 | potência, velocidade, tempo; controle de carga, resistência e inclinação | ANT: não há perfil, o `fec.c` do legacy vai sobre canais crus; BLE: cliente próprio (o port tem um) | P1 (o legacy usa FE-C) |
 | Posição do celular | — | Location and Navigation, 0x1819 | posição e velocidade | cliente próprio | P1 (o legacy usa) |
 | Navegação do Komoot | — | serviço próprio do Komoot | curva a curva | cliente próprio | P1 (o legacy usa) |
 | Ponte com o stravaAP | — | NUS | comandos e arquivos | `nus_client` do NCS | P1 (o legacy usa) |
+| Notificações do celular | — | Apple Notification Center Service | chamada, mensagem, agenda | **feito** pelo `ancs_client` do NCS (`rf/ble_ancs_client.c`, 2026-09-22), com o filtro em `model/notif_filter.c`; **só iPhone**, porque o Android não tem serviço equivalente | P2 |
 | Hora do celular | — | Current Time, 0x1805 | hora | `cts_client` do NCS | P2 |
 | Bateria dos sensores | páginas comuns 80 e 81 | Battery, 0x180F | nível de bateria | ANT: `ant_common`; BLE: `bas_client` | P2 |
 | Radar traseiro (Garmin Varia, Wahoo TRACKR, Bryton Gardia, Magene L508) | Bike Radar, tipo 40 | só proprietário | distância, velocidade e ameaça de cada veículo | **feito pelo BLE** (`rf/ble_radar_client.c`); pelo ANT+, só a tubulação, porque o perfil não pode entrar num repositório público ([09](09-armazenamento-usb.md) e `rf/radar_ant.h`) | o formato BLE é de engenharia reversa e **não foi conferido em aparelho** |

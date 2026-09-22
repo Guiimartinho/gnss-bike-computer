@@ -182,6 +182,25 @@ void ui_sample_ride(ui_model_t *m)
     m->fec.cad_rpm = 92U;
     m->fec.hr_bpm = 151U;
     m->fec.zone = 4U;
+    /* what forty-two minutes of that session were worth (model/power_metrics.h) */
+    /* a session in the middle of a block (model/workout.h) */
+    m->wk.loaded = true;
+    m->wk.running = true;
+    (void)strcpy(m->wk.name, "4x5 limiar");
+    (void)strcpy(m->wk.label, "Bloco 3");
+    m->wk.step = 6U;
+    m->wk.steps = 10U;
+    m->wk.remaining = 187U;
+    m->wk.lo = 270U;
+    m->wk.hi = 290U;
+    m->wk.target = 1U;
+    m->wk.value = 264U;
+    m->wk.zone = -1;
+
+    m->fec.np_w = 252U;
+    m->fec.if100 = 126U;
+    m->fec.tss = 47U;
+    m->fec.vi100 = 103U;
     {
         static const uint8_t z[UI_PWR_ZONES] = {8U, 22U, 30U, 26U, 12U, 6U, 2U};
 

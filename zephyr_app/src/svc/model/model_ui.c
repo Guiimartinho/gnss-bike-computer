@@ -25,6 +25,8 @@
 #include "model/parcours.h"
 #include "model/segment.h"
 #include "model/user_settings.h"
+#include "model/power_metrics.h"
+#include "model/workout.h"
 #include "model_internal.h"
 
 uint32_t model_time_of_day(const struct model_ctx *ctx)
@@ -242,10 +244,11 @@ static void fill_ride(const struct model_ctx *ctx, ui_model_t *m)
     r->alt_m = att.loc.alt;
     r->va_ms = att.vit_asc;
     r->score = suffer_score_get(&ctx->suffer);
-    r->pwr_w = att.pwr;
+    /* the meter when the rider has one, else the estimate: one source */
+    r->pwr_w = (int16_t)model_ride_power_w(ctx, &att);
     r->next_seg_m = att.next;
     r->solar_mw = ctx->power.solar_mw;
-    r->cad_rpm = ctx->ext[APP_EXT_BSC].cadence_rpm;
+    r->cad_rpm = model_ride_cadence_rpm(ctx);
     r->hr_bpm = ctx->ext[APP_EXT_HR].hr_bpm;
     r->slope_pct = att.slope;
     r->pr = att.pr;
@@ -281,9 +284,10 @@ static void fill_zones(const struct model_ctx *ctx, ui_model_t *m)
 
     f->time_s = ctx->ext[APP_EXT_FEC].elapsed_s;
     f->score = suffer_score_get(&ctx->suffer);
-    f->pwr_w = ctx->ext[APP_EXT_FEC].power_w;
+    /* a crank meter beats the flywheel: it measures the rider */
+    f->pwr_w = model_ride_power_w(ctx, NULL);
     f->rr_ms = ctx->ext[APP_EXT_HR].rr_ms;
-    f->cad_rpm = ctx->ext[APP_EXT_FEC].cadence_rpm;
+    f->cad_rpm = model_ride_cadence_rpm(ctx);
     f->hr_bpm = ctx->ext[APP_EXT_HR].hr_bpm;
     f->zone = power_zone_get_current(&ctx->zones);
     for (uint8_t z = 0U; (z < UI_PWR_ZONES) && (z < PW_ZONES_NB); z++) {
@@ -291,7 +295,71 @@ static void fill_zones(const struct model_ctx *ctx, ui_model_t *m)
 
         f->zone_pct[z] = (total > 0U) ? (uint8_t)((t * 100U) / total) : 0U;
     }
+
+    /* what the ride was worth, for the rider with a power meter */
+    f->np_w = power_metrics_np(&ctx->pm);
+    f->if100 = power_metrics_if100(&ctx->pm);
+    f->tss = power_metrics_tss(&ctx->pm);
+    f->vi100 = power_metrics_vi100(&ctx->pm);
+
     f->vector_valid = false;
+}
+
+/** The structured session, as the screen of `ui_scr_workout` reads it */
+static void fill_workout(const struct model_ctx *ctx, ui_model_t *m)
+{
+    ui_workout_t *w = &m->wk;
+    const struct workout *src = &ctx->wk;
+
+    (void)memset(w, 0, sizeof(*w));
+    w->loaded = workout_is_loaded(src);
+    if (!w->loaded) {
+        return;
+    }
+
+    (void)strncpy(w->name, workout_name(src), sizeof(w->name) - 1U);
+    w->steps = workout_steps(src);
+
+    const struct workout_step *st = workout_current(src);
+
+    if (st == NULL) {
+        /* loaded but not running, or finished */
+        w->step = w->steps;
+        return;
+    }
+
+    w->running = true;
+    w->step = (uint8_t)(workout_index(src) + 1U);
+    (void)strncpy(w->label, st->label, sizeof(w->label) - 1U);
+    w->by_distance = (st->dur_kind == (uint8_t)WK_DUR_DIST);
+    w->by_key = (st->dur_kind == (uint8_t)WK_DUR_LAP);
+    attitude_t att;
+
+    if (attitude_get(&att) != APP_OK) {
+        (void)memset(&att, 0, sizeof(att));
+    }
+    w->remaining = workout_remaining(src, ctx->act.ride.timer_ms / 1000U, att.dist);
+    w->lo = st->lo;
+    w->hi = st->hi;
+    w->target = st->tgt_kind;
+
+    /* what the rider is doing, in the unit the step asked for */
+    switch ((enum wk_target)st->tgt_kind) {
+    case WK_TGT_POWER:
+        w->value = model_ride_power_w(ctx, &att);
+        break;
+    case WK_TGT_HR:
+        w->value = ctx->ext[APP_EXT_HR].hr_bpm;
+        break;
+    case WK_TGT_CADENCE:
+        w->value = model_ride_cadence_rpm(ctx);
+        break;
+    case WK_TGT_NONE:
+    default:
+        w->value = 0U;
+        break;
+    }
+    w->zone = (int8_t)workout_zone(src, w->value);
 }
 
 static void fill_gnss(const struct model_ctx *ctx, ui_model_t *m, uint32_t now)
@@ -618,6 +686,7 @@ void model_ui_fill(const struct model_ctx *ctx, ui_model_t *m)
     fill_ride(ctx, m);
     fill_attitude(ctx, m);
     fill_zones(ctx, m);
+    fill_workout(ctx, m);
     fill_gnss(ctx, m, now);
     fill_energy(ctx, m);
     fill_sensors(ctx, m);

@@ -311,9 +311,31 @@ typedef struct {
     uint8_t hr_bpm;
     uint8_t zone;
     uint8_t zone_pct[UI_PWR_ZONES];     /**< time share in each power zone */
+    uint16_t np_w;                      /**< normalised power (model/power_metrics.h) */
+    uint16_t if100;                     /**< intensity factor, hundredths */
+    uint16_t tss;                       /**< training stress, whole points */
+    uint16_t vi100;                     /**< variability index, hundredths */
     bool vector_valid;
     uint8_t vector[UI_VECTOR_PTS];      /**< power over one turn, 0..100 */
 } ui_fec_t;
+
+/** The structured session being ridden (`model/workout.h`) */
+typedef struct {
+    char name[24];          /**< of the session */
+    char label[16];         /**< of the step */
+    uint8_t step;           /**< the one being ridden, counting from 1 */
+    uint8_t steps;          /**< how many there are */
+    uint32_t remaining;     /**< seconds, or metres for a distance step */
+    bool by_distance;       /**< the step ends on metres, not seconds */
+    bool by_key;            /**< it waits for the lap key */
+    uint16_t lo;            /**< the target range, in the unit below */
+    uint16_t hi;
+    uint8_t target;         /**< 0 none, 1 watts, 2 bpm, 3 rpm */
+    uint16_t value;         /**< what the rider is doing, same unit */
+    int8_t zone;            /**< -1 under the range, 0 in it, +1 over */
+    bool loaded;
+    bool running;
+} ui_workout_t;
 
 /** One satellite */
 typedef struct {
@@ -409,6 +431,7 @@ typedef struct {
     uint8_t nseg;           /**< segments on screen: 0, 1 or 2 */
     ui_segment_t seg[UI_SEG_MAX];
     ui_nav_t nav;
+    ui_workout_t wk;
     ui_rr_t rr;
     ui_attitude_t att;
     ui_route_t route;

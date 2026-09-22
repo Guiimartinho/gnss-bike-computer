@@ -59,6 +59,7 @@ static const ui_screen_ops_t *const ops[UI_SCREEN_COUNT] = {
     [UI_SCREEN_CLIMB] = &ui_scr_climb,
     [UI_SCREEN_INCIDENT] = &ui_scr_incident,
     [UI_SCREEN_ROUTES] = &ui_scr_routes,
+    [UI_SCREEN_WORKOUT] = &ui_scr_workout,
 };
 
 /* ==========================================================================

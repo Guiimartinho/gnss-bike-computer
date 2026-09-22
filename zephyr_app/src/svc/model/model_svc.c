@@ -15,6 +15,7 @@
  */
 
 #include <math.h>
+#include <zephyr/fs/fs.h>
 #include <string.h>
 
 #include <zephyr/kernel.h>
@@ -25,10 +26,12 @@
 #include "app/app_channels.h"
 #include "app/app_svc.h"
 #include "model/activity.h"
+#include "model/alerts.h"
 #include "model/attitude.h"
 #include "model/climb.h"
 #include "model/incident.h"
 #include "model/loc_arbiter.h"
+#include "model/power_metrics.h"
 #include "model/radar.h"
 #include "model/vecteur.h"
 #include "model/fit_encode.h"
@@ -36,6 +39,8 @@
 #include "model/parcours.h"
 #include "model/segment.h"
 #include "model/user_settings.h"
+#include "model/workout.h"
+#include "rf/ble_fec_client.h"
 #include "model_internal.h"
 
 LOG_MODULE_REGISTER(model_svc, CONFIG_LOG_DEFAULT_LEVEL);
@@ -85,6 +90,8 @@ static uint32_t act_last_ms;
 
 static void update_activity(const attitude_t *att, const loc_data_t *loc);
 static void publish_activity(enum activity_event ev, bool finished);
+static uint8_t current_hr(void);
+static void publish_state(void);
 
 /* The thinned copy of the route the climb scan walks (model_internal.h) */
 static struct {
@@ -267,6 +274,115 @@ static void find_climbs(void)
     LOG_INF("route: %u climbs over %u m", (unsigned int)found, (unsigned int)total);
 }
 
+/**
+ * @brief Open the structured session the interface chose
+ *
+ * Read line by line into `model/workout.c`, which flattens the repeats and
+ * refuses the file whole if any line is wrong: a rider given half the plan
+ * they wrote would ride the wrong session without knowing.
+ */
+static void load_selected_workout(int32_t index)
+{
+    char path[48];
+    struct fs_file_t f;
+    char line[80];
+    size_t len = 0U;
+
+    workout_init(&ctx.wk);
+    ctx.wk_sel = -1;
+
+    if ((index < 0) || ((uint8_t)index >= ctx.storage.nworkouts)) {
+        publish_state();
+        return;     /* the rider unloaded it */
+    }
+
+    (void)snprintf(path, sizeof(path), "/SD:/%s", ctx.storage.workout[index]);
+    fs_file_t_init(&f);
+    if (fs_open(&f, path, FS_O_READ) != 0) {
+        app_notify("Treino", "Arquivo nao abriu", NULL, false, 0U);
+        return;
+    }
+
+    char buf[128];
+    ssize_t got;
+    bool ok = true;
+
+    while (ok && ((got = fs_read(&f, buf, sizeof(buf))) > 0)) {
+        for (ssize_t i = 0; ok && (i < got); i++) {
+            char c = buf[i];
+
+            if ((c == '\n') || (c == '\r')) {
+                if (len > 0U) {
+                    line[len] = '\0';
+                    ok = workout_parse_line(&ctx.wk, line);
+                    len = 0U;
+                }
+            } else if (len < (sizeof(line) - 1U)) {
+                line[len] = c;
+                len++;
+            } else {
+                ok = false;     /* a line longer than any session needs */
+            }
+        }
+        model_feed_wdt();
+    }
+    if (ok && (len > 0U)) {
+        line[len] = '\0';
+        ok = workout_parse_line(&ctx.wk, line);
+    }
+    (void)fs_close(&f);
+
+    if (!ok || !workout_parse_end(&ctx.wk)) {
+        workout_init(&ctx.wk);
+        app_notify("Treino", "Arquivo invalido", NULL, false, 0U);
+        return;
+    }
+
+    ctx.wk_sel = index;
+    LOG_INF("workout %s loaded, %u steps", workout_name(&ctx.wk), workout_steps(&ctx.wk));
+    app_notify("Treino", workout_name(&ctx.wk), NULL, true, 0U);
+    publish_state();
+}
+
+/**
+ * @brief Run the session over this epoch, and drive the trainer
+ *
+ * ERG only while the device is indoors: asking a trainer for watts while
+ * the rider is on the road would be asking a machine that is not there,
+ * and a session by heart rate or cadence sets no watts at all.
+ */
+static void run_workout(const attitude_t *att, uint32_t ride_s)
+{
+    if (!workout_is_loaded(&ctx.wk)) {
+        return;
+    }
+
+    enum wk_event ev = workout_update(&ctx.wk, ride_s, att->dist);
+
+    if (ev == WK_EVENT_DONE) {
+        app_notify("Treino", "Terminado", NULL, true, 0U);
+        (void)ble_fec_client_set_target_power(0U);
+        return;
+    }
+    if (ev == WK_EVENT_STEP) {
+        const struct workout_step *st = workout_current(&ctx.wk);
+
+        app_notify("Treino", (st != NULL) ? st->label : NULL, NULL, true, 0U);
+    }
+
+    if (mode_fsm_is_outdoor(&ctx.fsm)) {
+        return;
+    }
+
+    uint16_t target = workout_target_power(&ctx.wk);
+
+    if ((target != 0U) && (target != ctx.wk_target_w)) {
+        ctx.wk_target_w = target;
+        (void)ble_fec_client_set_target_power(target);
+        LOG_INF("ERG: asking the trainer for %u W", target);
+    }
+}
+
 static void load_selected_route(void)
 {
     char path[48];
@@ -424,7 +540,7 @@ static void on_fix(const struct app_gnss_fix *f)
         struct app_log_point p = {
             .loc = loc,
             .date = att.date,
-            .power_w = att.pwr,
+            .power_w = model_ride_power_w(&ctx, &att),
             .hr_bpm = ctx.ext[APP_EXT_HR].hr_bpm,
             .cadence_rpm = ctx.ext[APP_EXT_BSC].cadence_rpm,
             .filt_alt = attitude_get_elevation(),
@@ -474,6 +590,17 @@ static void on_ext(const struct app_ext_sensor *e)
 
             rr_zone_add_data(&ctx.rr, &hrm);
         }
+        break;
+    case APP_EXT_POWER:
+        /*
+         * The rider's own power meter, outdoors. It wins over the estimate
+         * of `model/power_estimate.c`, which guesses watts from speed,
+         * slope and weight and cannot know the wind or what gear is
+         * turning. `model_ride_power_w()` is what picks between the two.
+         * The zones take it as they take the trainer's.
+         */
+        power_zone_add_data(&ctx.zones, e->power_w, e->uptime_ms);
+        publish_state();
         break;
     case APP_EXT_FEC:
         /*
@@ -604,6 +731,48 @@ static void publish_activity(enum activity_event ev, bool finished)
 }
 
 /** One epoch of the ride: totals, auto-pause and the automatic lap */
+/** What the screen says for each alert the rider set */
+static const char *const alert_text[ALERT_COUNT] = {
+    [ALERT_HR_HIGH] = "FC alta",
+    [ALERT_HR_LOW] = "FC baixa",
+    [ALERT_POWER_HIGH] = "Potencia alta",
+    [ALERT_POWER_LOW] = "Potencia baixa",
+    [ALERT_SPEED_HIGH] = "Velocidade alta",
+    [ALERT_SPEED_LOW] = "Velocidade baixa",
+    [ALERT_CADENCE_HIGH] = "Cadencia alta",
+    [ALERT_CADENCE_LOW] = "Cadencia baixa",
+    [ALERT_DISTANCE] = "Distancia",
+    [ALERT_TIME] = "Tempo",
+    [ALERT_DRINK] = "Beba agua",
+    [ALERT_EAT] = "Coma algo",
+};
+
+/**
+ * @brief Run the rider's alerts over this epoch
+ *
+ * The interval alerts are fed **moving** time, so an hour at a cafe does
+ * not bring the next reminder any closer (`model/alerts.h`).
+ */
+static void run_alerts(const attitude_t *att, const loc_data_t *loc, uint32_t now)
+{
+    struct alert_sample as = {
+        .hr_bpm = current_hr(),
+        .power_w = model_ride_power_w(&ctx, att),
+        .speed_kmh10 = (uint16_t)((loc->speed * 10.0f) + 0.5f),
+        .cadence_rpm = ctx.ext[APP_EXT_BSC].cadence_rpm,
+        .dist_m = att->dist,
+        .moving_s = activity_ride(&act)->timer_ms / 1000U,
+    };
+
+    uint32_t fired = alerts_update(&ctx.alerts, &as, now);
+
+    for (unsigned int i = 0U; (fired != 0U) && (i < ALERT_COUNT); i++) {
+        if ((fired & (1U << i)) != 0U) {
+            app_notify("Alerta", alert_text[i], NULL, false, 0U);
+        }
+    }
+}
+
 static void update_activity(const attitude_t *att, const loc_data_t *loc)
 {
     uint32_t now = k_uptime_get_32();
@@ -617,16 +786,40 @@ static void update_activity(const attitude_t *att, const loc_data_t *loc)
         .dist_m = att->dist,
         .climb_m = att->climb,
         .alt_m = attitude_get_elevation(),
-        .power_w = att->pwr,
+        .power_w = model_ride_power_w(&ctx, att),
         .hr_bpm = ctx.ext[APP_EXT_HR].hr_bpm,
         .cadence_rpm = ctx.ext[APP_EXT_BSC].cadence_rpm,
     };
 
     enum activity_event ev = activity_update(&act, &s, dt);
 
+    /*
+     * One sample a second of **moving** time into the power metrics: the
+     * timer of the activity already leaves the pauses out, so a stop at the
+     * traffic lights cannot feed zeros and drag the rolling average down
+     * (`model/power_metrics.h`). A late epoch catches up second by second,
+     * up to a window's worth; past that the gap is long enough that
+     * pretending the power held would be a lie.
+     */
+    uint32_t moving_s = activity_ride(&act)->timer_ms / 1000U;
+
+    if (moving_s > ctx.pm_last_s) {
+        uint32_t missing = moving_s - ctx.pm_last_s;
+
+        if (missing > PM_WINDOW_S) {
+            missing = PM_WINDOW_S;
+        }
+        for (uint32_t i = 0U; i < missing; i++) {
+            power_metrics_add(&ctx.pm, s.power_w);
+        }
+        ctx.pm_last_s = moving_s;
+    }
+
     if (ev == ACTIVITY_EVENT_LAP) {
         app_notify("Volta", NULL, NULL, false, 0U);
     }
+    run_alerts(att, loc, now);
+    run_workout(att, activity_ride(&act)->timer_ms / 1000U);
     publish_activity(ev, false);
 }
 
@@ -642,9 +835,32 @@ static void on_command(const struct app_system_cmd *cmd)
         ctx.route_sel = (int8_t)cmd->arg;
         load_selected_route();
         break;
+    case APP_CMD_WORKOUT_SELECT:
+        load_selected_workout(cmd->arg);
+        break;
+    case APP_CMD_WORKOUT_START:
+        workout_start(&ctx.wk, activity_ride(&act)->timer_ms / 1000U, attitude_get_distance());
+        ctx.wk_target_w = 0U;
+        publish_state();
+        break;
+    case APP_CMD_WORKOUT_STOP:
+        workout_stop(&ctx.wk);
+        ctx.wk_target_w = 0U;
+        (void)ble_fec_client_set_target_power(0U);
+        publish_state();
+        break;
+    case APP_CMD_SET_ALERT: {
+        uint8_t id = (uint8_t)(((uint32_t)cmd->arg >> 16) & 0xFFU);
+        uint16_t value = (uint16_t)((uint32_t)cmd->arg & 0xFFFFU);
+
+        alerts_set(&ctx.alerts, (enum alert_id)id, value, value > 0U);
+        user_settings_set_alert(settings, id, value);
+        break;
+    }
     case APP_CMD_SET_FTP:
         user_settings_set_ftp(settings, (uint16_t)cmd->arg);
         power_zone_set_ftp(&ctx.zones, (uint16_t)cmd->arg);
+        power_metrics_set_ftp(&ctx.pm, (uint16_t)cmd->arg);
         (void)user_settings_save(settings);
         break;
     case APP_CMD_SET_WEIGHT:
@@ -764,6 +980,75 @@ static void handle(struct model_msg *msg)
     }
 }
 
+/**
+ * @brief The power of the ride: the meter when there is one, else the guess
+ *
+ * A rider with a power meter gets what the meter says. Without one — or
+ * when it has gone quiet for more than `MODEL_EXT_MAX_AGE_MS` — the ride
+ * falls back to the estimate of `model/power_estimate.c`, the formula of
+ * the legacy over speed, slope and rider weight, which is the best that can
+ * be done without a sensor but cannot know the wind or the gear.
+ *
+ * Indoors the trainer is the meter, and it already reports through
+ * `APP_EXT_FEC`; a separate crank meter, if the rider has one, wins over
+ * the trainer because it measures the rider and not the flywheel.
+ */
+uint16_t model_ride_power_w(const struct model_ctx *c, const attitude_t *att)
+{
+    uint32_t now = k_uptime_get_32();
+
+    if (c != NULL) {
+        if ((c->link[APP_EXT_POWER].link == APP_LINK_CONNECTED) &&
+            ((now - c->ext_uptime_ms[APP_EXT_POWER]) <= MODEL_EXT_MAX_AGE_MS)) {
+            return c->ext[APP_EXT_POWER].power_w;
+        }
+
+        if ((c->link[APP_EXT_FEC].link == APP_LINK_CONNECTED) &&
+            ((now - c->ext_uptime_ms[APP_EXT_FEC]) <= MODEL_EXT_MAX_AGE_MS)) {
+            return c->ext[APP_EXT_FEC].power_w;
+        }
+    }
+
+    /* the estimate is signed too: going downhill it is below zero */
+    if ((att == NULL) || (att->pwr <= 0)) {
+        return 0U;
+    }
+
+    return (uint16_t)att->pwr;
+}
+
+uint8_t model_ride_cadence_rpm(const struct model_ctx *c)
+{
+    uint32_t now = k_uptime_get_32();
+
+    if (c == NULL) {
+        return 0U;
+    }
+
+    /*
+     * A crank power meter counts the pedals too, so a rider with one needs
+     * no separate cadence sensor. The dedicated sensor wins when both are
+     * there, because that is what the rider fitted it for.
+     */
+    if ((c->link[APP_EXT_BSC].link == APP_LINK_CONNECTED) &&
+        ((now - c->ext_uptime_ms[APP_EXT_BSC]) <= MODEL_EXT_MAX_AGE_MS) &&
+        (c->ext[APP_EXT_BSC].cadence_rpm > 0U)) {
+        return c->ext[APP_EXT_BSC].cadence_rpm;
+    }
+
+    if ((c->link[APP_EXT_POWER].link == APP_LINK_CONNECTED) &&
+        ((now - c->ext_uptime_ms[APP_EXT_POWER]) <= MODEL_EXT_MAX_AGE_MS)) {
+        return c->ext[APP_EXT_POWER].cadence_rpm;
+    }
+
+    if ((c->link[APP_EXT_FEC].link == APP_LINK_CONNECTED) &&
+        ((now - c->ext_uptime_ms[APP_EXT_FEC]) <= MODEL_EXT_MAX_AGE_MS)) {
+        return c->ext[APP_EXT_FEC].cadence_rpm;
+    }
+
+    return 0U;
+}
+
 /** Heart rate of a connected strap with fresh data, else 0 */
 static uint8_t current_hr(void)
 {
@@ -832,6 +1117,19 @@ void model_svc_init(void)
     ctx.route_sel = -1;
     ctx.zoom = 3U;
     power_zone_init(&ctx.zones, (ftp > 0U) ? ftp : MODEL_DEFAULT_FTP_W);
+    /*
+     * The threshold goes in as the rider set it, zero included: without one
+     * there is no intensity factor and no training stress to show, and a
+     * made-up default would give them a number that means nothing.
+     */
+    power_metrics_init(&ctx.pm, ftp);
+    alerts_init(&ctx.alerts);
+    for (uint8_t i = 0U; i < ALERT_COUNT; i++) {
+        uint16_t v = user_settings_get_alert(settings, i);
+
+        alerts_set(&ctx.alerts, (enum alert_id)i, v, v > 0U);
+    }
+    ctx.pm_last_s = 0U;
     suffer_score_init(&ctx.suffer);
     rr_zone_init(&ctx.rr);
     /* attitude restores the activity a crash interrupted (FDIR) */

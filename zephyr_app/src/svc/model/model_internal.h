@@ -19,7 +19,10 @@
 #include "model/climb.h"
 #include "model/incident.h"
 #include "model/loc_arbiter.h"
+#include "model/alerts.h"
 #include "model/mode_fsm.h"
+#include "model/workout.h"
+#include "model/power_metrics.h"
 #include "model/radar.h"
 
 /**
@@ -68,6 +71,12 @@ struct model_ctx {
     struct radar rad;               /**< vehicles behind (model/radar.h) */
     struct incident inc;            /**< alarm and crash detection (model/incident.h) */
     struct loc_arbiter arb;         /**< which position source wins (model/loc_arbiter.h) */
+    struct power_metrics pm;        /**< NP, IF and TSS of the ride (model/power_metrics.h) */
+    struct alerts alerts;           /**< what the rider asked to be told (model/alerts.h) */
+    struct workout wk;              /**< the structured session (model/workout.h) */
+    int32_t wk_sel;                 /**< index of the session loaded, -1 for none */
+    uint16_t wk_target_w;           /**< watts last asked of the trainer */
+    uint32_t pm_last_s;             /**< moving seconds already fed to it */
     float heading_deg;
     bool heading_valid;
     float pitch_deg;
@@ -93,6 +102,19 @@ struct model_ctx {
 /**
  * @brief Fill the snapshot the interface draws
  */
+/**
+ * @brief The power of the ride: the meter when there is one, else the guess
+ *
+ * A rider with a power meter sees what the meter says; without one — or
+ * when it has gone quiet — the screen falls back to the estimate of
+ * `model/power_estimate.c`. Both the screens and the recording go through
+ * here, so they can never disagree about what the ride was doing.
+ */
+uint16_t model_ride_power_w(const struct model_ctx *ctx, const attitude_t *att);
+
+/** Cadence of whichever sensor is reporting it: the meter, or the sensor */
+uint8_t model_ride_cadence_rpm(const struct model_ctx *ctx);
+
 void model_ui_fill(const struct model_ctx *ctx, ui_model_t *m);
 
 /**

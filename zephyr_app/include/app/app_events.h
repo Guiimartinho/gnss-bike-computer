@@ -262,7 +262,16 @@ enum app_cmd_id {
     APP_CMD_MSC,                /**< expose the card over USB */
     APP_CMD_STORAGE_RESCAN,     /**< a file arrived: list the storage again */
     APP_CMD_LAP,                /**< close the lap being ridden and start another */
-    APP_CMD_ALARM_TOGGLE        /**< arm or disarm the bike alarm */
+    APP_CMD_ALARM_TOGGLE,       /**< arm or disarm the bike alarm */
+    /**
+     * One of the rider's alerts (`model/alerts.h`). The identifier and the
+     * value travel in one argument because the channel carries one:
+     * `(enum alert_id << 16) | value`, and a value of zero turns it off.
+     */
+    APP_CMD_SET_ALERT,
+    APP_CMD_WORKOUT_SELECT,     /**< arg: index in the workout list, -1 to unload */
+    APP_CMD_WORKOUT_START,      /**< begin the loaded session */
+    APP_CMD_WORKOUT_STOP
 };
 
 /** Channel system_cmd */
@@ -429,6 +438,8 @@ struct app_storage_info {
     uint16_t segments;          /**< segments loaded */
     uint8_t nroutes;
     char route[APP_ROUTE_LIST_MAX][20];
+    uint8_t nworkouts;          /**< structured sessions on the card (.WKT) */
+    char workout[APP_ROUTE_LIST_MAX][20];
 };
 
 #ifdef __cplusplus

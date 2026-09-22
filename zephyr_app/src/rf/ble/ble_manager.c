@@ -21,6 +21,8 @@
 #include "rf/ble_lns.h"
 #include "rf/ble_hrs_client.h"
 #include "rf/ble_bsc_client.h"
+#include "rf/ble_ancs_client.h"
+#include "rf/ble_cps_client.h"
 #include "rf/ble_fec_client.h"
 #include "rf/ble_komoot_client.h"
 
@@ -46,6 +48,7 @@ LOG_MODULE_REGISTER(ble_mgr, CONFIG_LOG_DEFAULT_LEVEL);
 
 /** Service UUIDs for filtering (use Zephyr's BT_UUID_HRS_VAL) */
 #define BT_UUID_CSC_VAL     0x1816
+#define BT_UUID_CPS_VAL     0x1818
 #define BT_UUID_FTMS_VAL    0x1826
 
 /** Sensor type flags */
@@ -53,6 +56,7 @@ LOG_MODULE_REGISTER(ble_mgr, CONFIG_LOG_DEFAULT_LEVEL);
 #define SENSOR_TYPE_BSC     0x02U
 #define SENSOR_TYPE_FEC     0x04U
 #define SENSOR_TYPE_RADAR   0x08U
+#define SENSOR_TYPE_CPS     0x10U
 
 /* ==========================================================================
  * Private Variables
@@ -69,6 +73,7 @@ static struct bt_conn *hrs_conn;
 
 /** BSC sensor connection */
 static struct bt_conn *bsc_conn;
+static struct bt_conn *cps_conn;
 
 /** FEC trainer connection */
 static struct bt_conn *fec_conn;
@@ -194,6 +199,14 @@ static uint8_t detect_sensor_type(const uint8_t *ad_data, uint8_t ad_len)
     bt_data_parse(&buf, ad_contains_uuid16, &uuid);
     if (uuid == 0U) {
         sensor_type |= SENSOR_TYPE_BSC;
+    }
+
+    /* Reset buffer and check for the power meter */
+    net_buf_simple_init_with_data(&buf, (uint8_t *)ad_data, ad_len);
+    uuid = BT_UUID_CPS_VAL;
+    bt_data_parse(&buf, ad_contains_uuid16, &uuid);
+    if (uuid == 0U) {
+        sensor_type |= SENSOR_TYPE_CPS;
     }
 
     /* Reset buffer and check for FTMS (FEC) */
@@ -360,6 +373,16 @@ static void connected(struct bt_conn *conn, uint8_t err)
         }
     }
 
+    if (!is_sensor) {
+        /*
+         * Not one of the rider's sensors, so it is the phone: the one that
+         * connects to us rather than the other way round. It may carry the
+         * notification service (`rf/ble_ancs_client.h`); if it does not,
+         * the discovery simply finds nothing.
+         */
+        ble_ancs_client_on_connect(conn);
+    }
+
     if (is_sensor) {
         /* Sensor connection */
         if ((sensor_type & SENSOR_TYPE_HRS) != 0U) {
@@ -371,6 +394,11 @@ static void connected(struct bt_conn *conn, uint8_t err)
             bsc_conn = bt_conn_ref(conn);
             ble_bsc_client_on_connect(conn);
             LOG_INF("BSC sensor connected");
+        }
+        if ((sensor_type & SENSOR_TYPE_CPS) != 0U) {
+            cps_conn = bt_conn_ref(conn);
+            ble_cps_client_on_connect(conn);
+            LOG_INF("power meter connected");
         }
         if ((sensor_type & SENSOR_TYPE_FEC) != 0U) {
             fec_conn = bt_conn_ref(conn);
@@ -407,6 +435,12 @@ static void connected(struct bt_conn *conn, uint8_t err)
 
 static void disconnected(struct bt_conn *conn, uint8_t reason)
 {
+    /*
+     * The notification client keeps its own reference and answers only for
+     * the connection it took, so it is told about every one that drops.
+     */
+    ble_ancs_client_on_disconnect(conn);
+
     LOG_INF("Disconnected (reason %u)", reason);
 
     /* Check which connection was lost */
@@ -434,6 +468,12 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
         bsc_conn = NULL;
         LOG_INF("BSC sensor disconnected");
         /* Resume scanning to reconnect */
+        (void)ble_manager_start_scan();
+    } else if (conn == cps_conn) {
+        ble_cps_client_on_disconnect(conn);
+        bt_conn_unref(cps_conn);
+        cps_conn = NULL;
+        LOG_INF("power meter disconnected");
         (void)ble_manager_start_scan();
     } else if (conn == fec_conn) {
         ble_fec_client_on_disconnect(conn);

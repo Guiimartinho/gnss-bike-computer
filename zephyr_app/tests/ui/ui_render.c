@@ -304,6 +304,25 @@ static void render_theme(ui_theme_t theme)
     ui_key(UI_KEY_RIGHT, UI_PRESS_SHORT, tick_ms);
     expect_screen(UI_SCREEN_CRS1, "and forward again");
 
+    /* the structured session, in the middle of a block below its target */
+    ui_go(UI_SCREEN_WORKOUT);
+    ui_update(&m, tick_ms);
+    snap("38_treino", theme);
+
+    /*
+     * And with nothing loaded. The page is built from the model, so the
+     * model changes first and the page is torn down and built again on the
+     * update after that, as the trainer page does when the rolo goes quiet.
+     */
+    m.wk.loaded = false;
+    ui_update(&m, tick_ms);
+    ui_rebuild();
+    ui_update(&m, tick_ms);
+    snap("39_treino_sem_arquivo", theme);
+    m.wk.loaded = true;
+    ui_go(UI_SCREEN_CRS1);
+    ui_update(&m, tick_ms);
+
     /* the timer held: the lap page says so */
     m.status.paused = true;
     ui_go(UI_SCREEN_LAP);

@@ -8,7 +8,8 @@
 #   tools/fw/fw.sh size               memória por região e maiores símbolos de RAM/flash
 #
 # Variáveis: BUILD_DIR (padrão: zephyr_app/build), BOARD (padrão:
-# nrf52840dk/nrf52840; o nRF54LM20 DK é nrf54lm20dk/nrf54lm20a/cpuapp),
+# nrf54lm20dk/nrf54lm20a/cpuapp, que é o alvo do projeto; o nRF52840 DK,
+# que não é mais usado, ainda compila com BOARD=nrf52840dk/nrf52840),
 # FAMILY (família do nrfutil, deduzida da BOARD: nrf52 ou nrf54l),
 # NRF_SERIAL (número de série do J-Link) e as de tools/fw/ncs_env.sh
 # (NCS_ROOT, NCS_VERSION, NCS_TOOLCHAIN).
@@ -29,7 +30,7 @@ case "$BUILD_DIR" in
     /*|[A-Za-z]:*) ;;
     *) BUILD_DIR="$PWD/$BUILD_DIR" ;;
 esac
-BOARD="${BOARD:-nrf52840dk/nrf52840}"
+BOARD="${BOARD:-nrf54lm20dk/nrf54lm20a/cpuapp}"
 case "$BOARD" in
     *nrf54l*) DEFAULT_FAMILY=nrf54l ;;
     *) DEFAULT_FAMILY=nrf52 ;;

@@ -83,6 +83,10 @@ target_sources(app PRIVATE
     src/model/climb.c
     src/model/loc_arbiter.c
     src/model/mode_fsm.c
+    src/model/alerts.c
+    src/model/notif_filter.c
+    src/model/cps_parse.c
+    src/model/power_metrics.c
     src/model/csc_calc.c
     src/model/ftms_parse.c
     src/model/incident.c
@@ -102,6 +106,7 @@ target_sources(app PRIVATE
     src/model/udmatrix.c
     src/model/user_settings.c
     src/model/vecteur.c
+    src/model/workout.c
 )
 
 # =============================================================================
@@ -117,6 +122,8 @@ target_sources(app PRIVATE
     src/rf/ble_radar_client.c
     src/rf/ble_hrs_client.c
     src/rf/ble_bsc_client.c
+    src/rf/ble_cps_client.c
+    src/rf/ble_ancs_client.c
     src/rf/ble_fec_client.c
     src/rf/ble_komoot_client.c
 )
@@ -153,6 +160,7 @@ target_sources_ifdef(CONFIG_LVGL app PRIVATE
 target_sources_ifdef(CONFIG_ANT app PRIVATE
     src/rf/ant/ant.c
     src/rf/ant/radar_ant.c
+    src/rf/ant/power_ant.c
 )
 
 # The page decoding of the ANT+ Bike Radar is not in this repository
@@ -160,6 +168,9 @@ target_sources_ifdef(CONFIG_ANT app PRIVATE
 # compiled and its strong definition takes over from the weak one.
 if(CONFIG_ANT AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/src/rf/ant/radar_pages.c)
     target_sources(app PRIVATE src/rf/ant/radar_pages.c)
+endif()
+if(CONFIG_ANT AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/src/rf/ant/power_pages.c)
+    target_sources(app PRIVATE src/rf/ant/power_pages.c)
     message(STATUS "ANT+ radar: local profile found")
 endif()
 

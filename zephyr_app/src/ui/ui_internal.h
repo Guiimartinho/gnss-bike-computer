@@ -111,6 +111,8 @@ typedef enum {
     T_AUTO, T_OFF, T_COLOURS, T_BW, T_SEARCHING, T_KG, T_W, T_SEGMENTS,
     T_ALT, T_ELAPSED, T_ROUTES, T_ERROR, T_NO_ROUTES,
     T_LAP, T_LAPS, T_MOVING, T_PAUSED, T_DESCENT, T_KCAL,
+    T_WORKOUT, T_NO_WORKOUT, T_STEP, T_REMAINING, T_TARGET, T_NOW,
+    T_STOPPED, T_PRESS_KEY,
     T_CLIMB_N, T_TO_TOP, T_GRADE, T_NEXT_M, T_NO_CLIMB, T_HC,
     T_ALARM, T_CRASH, T_CRASH_Q, T_ANY_KEY, T_ALARM_ARM, T_ALARM_OFF,
     T_COUNT
@@ -182,6 +184,7 @@ extern const ui_screen_ops_t ui_scr_usb;
 extern const ui_screen_ops_t ui_scr_shutdown;
 extern const ui_screen_ops_t ui_scr_routes;
 extern const ui_screen_ops_t ui_scr_dfu;
+extern const ui_screen_ops_t ui_scr_workout;
 extern const ui_screen_ops_t ui_scr_profile;
 extern const ui_screen_ops_t ui_scr_lap;
 extern const ui_screen_ops_t ui_scr_climb;
