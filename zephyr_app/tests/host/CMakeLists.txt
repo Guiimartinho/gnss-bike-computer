@@ -128,6 +128,8 @@ gnss_add_test(test_attitude
 gnss_add_test(test_power_estimate SOURCES model/power_estimate.c)
 gnss_add_test(test_alerts SOURCES model/alerts.c)
 gnss_add_test(test_qry SOURCES model/qry.c model/file_policy.c model/segment_file.c)
+gnss_add_test(test_komoot_turn SOURCES model/komoot_turn.c)
+gnss_add_test(test_lns_parse SOURCES model/lns_parse.c)
 gnss_add_test(test_workout SOURCES model/workout.c)
 gnss_add_test(test_notif_filter SOURCES model/notif_filter.c)
 gnss_add_test(test_cps_parse SOURCES model/cps_parse.c)

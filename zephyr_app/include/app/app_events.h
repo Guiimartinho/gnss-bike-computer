@@ -36,6 +36,12 @@ struct app_gnss_fix {
     uint32_t uptime_ms;         /**< when the epoch reached the service */
     bool fix;                   /**< position valid */
     bool sim;                   /**< position given by a PC ($LOC), which wins over the receiver */
+    /**
+     * Position given by the phone over the Location and Navigation
+     * service. It is the last source the arbiter of `model/loc_arbiter.h`
+     * will take, and only while the receiver has no fix of its own.
+     */
+    bool phone;
     uint8_t mode;               /**< enum app_gnss_mode */
     uint8_t nsat;               /**< satellites used */
     int32_t lat_e7;             /**< latitude, 1e-7 degree */

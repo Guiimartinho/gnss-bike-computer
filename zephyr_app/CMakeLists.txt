@@ -87,6 +87,8 @@ target_sources(app PRIVATE
     src/model/notif_filter.c
     src/model/cps_parse.c
     src/model/power_metrics.c
+    src/model/komoot_turn.c
+    src/model/lns_parse.c
     src/model/qry.c
     src/model/csc_calc.c
     src/model/ftms_parse.c
@@ -124,6 +126,7 @@ target_sources(app PRIVATE
     src/rf/ble_hrs_client.c
     src/rf/ble_bsc_client.c
     src/rf/ble_cps_client.c
+    src/rf/ble_lns_client.c
     src/rf/ble_ancs_client.c
     src/rf/ble_fec_client.c
     src/rf/ble_komoot_client.c
