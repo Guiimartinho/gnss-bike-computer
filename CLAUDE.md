@@ -12,7 +12,8 @@ Portar para **Zephyr / nRF Connect SDK** o **stravaV10**, computador de bordo GP
 | Original | `legacy/` | nRF5 SDK 16 + S340, C/C++: **especificação de comportamento**, só leitura |
 | Bibliotecas do original | `libraries/` | Adafruit GFX, TinyGPS++, Kalman, SEGGER, etc.: só leitura |
 | Ferramentas | `tools/` | `fw/`, `docs/` e `ui/` são do projeto; `TDD/`, `TDDW/`, `zpm/`, `MMD/`, `jumper/` vêm do legacy |
-| Placa | `hardware/` | Eagle da V3 (os Gerbers da pasta são da **V2**) |
+| Placa | `hardware/` | Eagle da V3 (os Gerbers da pasta são da **V2**), só leitura |
+| Esquemático da placa nova | `hardware_gnssbike/` | folhas, cálculos, lista de nós, placa e materiais; **nada montado** |
 
 O dono do projeto é um desenvolvedor brasileiro de eletrônica embarcada que quer investigação completa, código nativo e verificação de verdade, não atalhos.
 
@@ -66,7 +67,7 @@ flowchart TB
     ROOT --> LEG["legacy/ · libraries/<br/>stravaV10 original"]
     ROOT --> TOOLS["tools/fw · tools/docs · tools/ui<br/>tools/TDD · TDDW · zpm · MMD · jumper"]
     ROOT --> DOCS["docs/01 a 19 · img · historico"]
-    ROOT --> HW["hardware/"]
+    ROOT --> HW["hardware/ (Eagle da V3)<br/>hardware_gnssbike/ (esquemático da placa nova)"]
     ROOT --> AI["CLAUDE.md · AGENTS.md · .claude/skills/"]
     ROOT --> BAT["*.bat da raiz"]
 ```
@@ -200,6 +201,7 @@ flowchart LR
 | Interface e telas da placa nova | [docs/18-interface-telas.md](docs/18-interface-telas.md) |
 | Os 44 quadros da interface, um a um | [docs/telas/README.md](docs/telas/README.md) |
 | Lista de compras da placa nova | [docs/19-lista-de-compras.md](docs/19-lista-de-compras.md) |
+| Esquemático da placa nova | [hardware_gnssbike/README.md](hardware_gnssbike/README.md) |
 | Build e ambiente | [docs/03-ambiente-build.md](docs/03-ambiente-build.md) |
 | Legacy | [docs/04-arquitetura-legacy.md](docs/04-arquitetura-legacy.md), [legacy/README.md](legacy/README.md) |
 | Port | [docs/05-arquitetura-zephyr.md](docs/05-arquitetura-zephyr.md) |
