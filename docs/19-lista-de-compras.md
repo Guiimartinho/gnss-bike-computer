@@ -176,6 +176,22 @@ Plano B, se o BM20C atrasar: MinewSemi ME54BS13-1Y20TI (6024-ME54BS13-1Y20TITR-N
 
 As quantidades por placa saem do esquemático; a compra sugerida cobre 5 placas com folga. Todos os resistores são de filme espesso, 0402 e ±1 %.
 
+> [!IMPORTANT]
+> **O esquemático de 2026-09-23 criou cinco valores que esta tabela não tem.** Eles saem de contas em [`hardware_gnssbike/02-calculos.md`](../hardware_gnssbike/02-calculos.md), não de preferência, e sem eles a placa não se monta como o esquemático a descreve. Ainda **não passaram pela validação de compra** desta lista: falta código, preço e estoque.
+>
+> | Valor | Quantidade por placa | Para quê |
+> |---|---|---|
+> | 100 Ω | 3 | série das três teclas, que saem para a caixa e não tinham proteção nenhuma |
+> | 1 nF | 3 | ao terra em cada tecla, junto com o resistor acima |
+> | 330 Ω | 2 | série do buzzer: sem ele o pico da borda passa de 30 mA no piezo |
+> | 33 Ω | 3 | série do `spi00`, para amaciar a borda de 8 MHz, cujo 197º harmônico cai a 0,58 MHz do centro de L1 |
+> | 10 kΩ | 3 | pull-up do `ALRT` do MAX17262, do `IRQ` do AEM10900 e do `INT` do OPT3001, que não vão a pino do MCU e não podem flutuar |
+> | 0 Ω, **1206**, ≥ 2 A, ≤ 50 mΩ | 1 | o `JP101`, jumper de medição de corrente no caminho da célula: o `ERJ-2GE0R00X` de 0402 **não serve** |
+>
+> Os cinco primeiros são 0402 e baratos; o trabalho é achar o código e somar ao pedido. O **4,7 µF** do volume do módulo **não** entra nesta lista: a linha de 4,7 µF, 16 V, X5R, 0603 já existe abaixo, comprada para o `VDD` do MMC5633NJL, e as 20 peças cobrem os dois usos em 5 placas.
+>
+> **Duas quantidades também precisam mudar:** o LED do nPM1300 passa de **1 para 2 por placa** (o `LED1` é o indicador de carga e o `LED0` o de erro, e o esquemático usa os dois), e a linha de **100 kΩ** deixa de ser só o divisor do `DIS_STO_CH`: são **9 por placa**, com os pull-downs das portas dos quatro MOSFET, dos três sinais ativos altos do display e do `NOR_CS`.
+
 | Valor | Uso | Peça | DigiKey | Estoque | US$ 1 / 10 | Compra | Notas |
 |---|---|---|---|---|---|---|---|
 | 10 µF, 25 V, X5R, 0603 | VBUS, VBUSOUT e saídas do nPM1300 (9 na referência da Nordic), filtro do 1V8, REG710 | Taiyo Yuden TMK107BBJ106MA-T | 587-6023-1-ND | 673.507 | 0,45 / 0,269 | 100 | cerca de 4,9 µF a 5 V e 7,2 µF a 3 V; PN novo MSAST168BB5106MTNA01; alternativa Samsung CL10A106MA8NRNC (1276-1869-1-ND, 278.714) |

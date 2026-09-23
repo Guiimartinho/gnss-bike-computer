@@ -32,7 +32,7 @@ lê as tabelas desta página e as compara com o devicetree da placa em
 | `3V0` | 3,0 V | nPM1300 `BUCK2` | BM20C `VDD`; BMP585, BMI270, MMC5633NJL e OPT3001; TXU0204 `VCCA`; AEM10900 `I2C_VDD`; buzzer; entrada da `LDSW1`; REG710 `IN`; e o `VDD`/`VDDA` do display **só na montagem com o JDI**, pelo `JP401` | alim |
 | `1V8` | 1,8 V | nPM1300 `BUCK1`, por filtro LC | MAX-F10S `VCC` e `V_IO`; TXU0204 `VCCB` | alim |
 | `SD3V0` | 3,0 V | nPM1300 `LDSW1`, do `3V0` | MX25R6435F `VCC` | alim |
-| `3V3BL` | 3,3 V | nPM1300 `LDSW2`, do `VSYS` | dreno do MOSFET da luz, por `R_BL` | alim |
+| `3V3BL` | 3,3 V | nPM1300 `LDSW2`, do `VSYS` | anodo do LED da luz, por `R_BL`; o catodo vai ao dreno do `Q401` | alim |
 | `VBCKP` | 1,8 V | TPS7A02, do `VBAT` | MAX-F10S `V_BCKP` | alim |
 | `5V0` | 5,0 V | REG710NA-5, do `3V0` | `VDD` e `VDDA` do display **só na montagem com a Sharp**, pelo `JP401` | alim |
 | `VINT` | interno | AEM10900 `VINT` | `R_MPP[2:0]`, `T_MPP[1:0]`, `STO_CFG[2]`, `STO_CFG[0]`, `KEEP_ALIVE` | alim |
@@ -167,8 +167,8 @@ no `I2C_VDD`).
 
 | Nó | Pino do MCU | Outro extremo | Tipo | Nota |
 |---|---|---|---|---|
-| `CON_TX` | P1.00 | pad de teste TP1, com um pad de GND ao lado | dig | 115200 baud; não sai na caixa |
-| `CON_RX` | P1.31 | pad de teste TP2 | dig | — |
+| `CON_TX` | P1.00 | ponto de teste `TP201` | dig | 115200 baud; não sai na caixa. O `TP203`, de `GND`, fica ao lado: sem ele não dá para ligar um conversor USB-serial ([06](06-conectores-e-pontos-de-teste.md#pontos-de-teste)) |
+| `CON_RX` | P1.31 | ponto de teste `TP202` | dig | — |
 
 ### Dedicados do módulo
 
@@ -187,15 +187,32 @@ no `I2C_VDD`).
 |---|---|---|---|
 | `CC1`, `CC2` | USB-C A5, B5 | nPM1300 `CC1`, `CC2`, com o **TPD4E05U06** | o Rd de 5,1 kΩ é interno ao nPM1300; o TPD4E05U06 protege as linhas de CC e de dados |
 | `NTC_BAT` | NTC do pack | nPM1300 `NTC` | 10 kΩ, B3380, JEITA |
-| `TH_MON` | segundo NTC | AEM10900 `TH_MON` | com `TH_REF` e `RDIV` de 22 kΩ |
-| `DIS_STO_CH` | divisor 100 kΩ / 1 MΩ do `VBUSOUT` | AEM10900 `DIS_STO_CH` | **o USB bloqueia a carga solar em hardware**, sem pino do MCU |
+| `TH_MON` | **`RT101`, o NTC da face de trás da placa** | AEM10900 `TH_MON` | com `TH_REF` e `RDIV` de 22 kΩ. A [lista de materiais](05-materiais.md#folha-1--energia) escolhe este caminho; o conector reserva a via para o do pack, e **os dois nunca são montados juntos** ([01](01-esquematico.md#folha-1--energia)) |
+| `DIS_STO_CH` | divisor de 100 kΩ e 1 MΩ do `VBUSOUT` | AEM10900 `DIS_STO_CH` | **o USB bloqueia a carga solar em hardware**, sem pino do MCU. **Qual resistor fica em série não está definido em fonte nenhuma**, e as duas leituras dão níveis muito diferentes — ver o aviso abaixo |
 | `SWDCDC` | AEM10900 | indutor de 4,7 µH | nó curto, sem plano embaixo |
 | `SRC` | painéis solares | AEM10900 `SRC` | 6 módulos de 3 células |
 | `LED_CHG` | nPM1300 `LED1` | LED de carga, anodo no `VSYS` | acende com o aparelho desligado |
 | `LED_ERR` | nPM1300 `LED0` | LED de erro, anodo no `VSYS` | — |
 | `SHPHLD` | tecla central | nPM1300 `SHPHLD` | pull-up interno de 50 kΩ; liga fora do ship mode |
-| `RGB_R_D`, `RGB_G_D`, `RGB_B_D` | `VSYS`, por `R_LEDR`, `R_LEDG` e `R_LEDB` | catodo de cada cor, e daí ao dreno do seu MOSFET | **o catodo não vai ao pino do MCU**: com o USB o `VSYS` chega a 5,5 V ([02](02-calculos.md#led-rgb)) |
-| `ST_STO` | AEM10900 | ponto de teste TP3 | — |
+| `RGB_R_D`, `RGB_G_D`, `RGB_B_D` | catodo de cada cor do LED | `R_LEDR`, `R_LEDG` ou `R_LEDB`, e daí ao dreno do seu MOSFET | o LED é de **anodo comum**: o anodo vai direto ao `VSYS` e **o resistor fica do lado do catodo**, um por cor. Pôr o resistor no anodo o deixaria em paralelo com o die, que veria o `VSYS` nu — até 5,5 V com cabo ([02](02-calculos.md#led-rgb)) |
+| `ST_STO` | AEM10900 | ponto de teste `TP111` | — |
+| `ALRT` do MAX17262 | pull-up de 10 kΩ ao `3V0` | **nenhum pino do MCU** | dreno aberto; o firmware não usa o alerta, e o pull-up existe para o pino não flutuar ([14](../docs/14-hardware-placa-nova.md#ligações-fixas-dos-cis)) |
+| `IRQ` do AEM10900 | pull-up de 10 kΩ ao `3V0` | **nenhum pino do MCU** | idem |
+| `INT` do OPT3001 | pull-up de 10 kΩ ao `3V0` | **nenhum pino do MCU** | idem |
+| `JP102` a `JP106` | cada trilho de bloco | 0 Ω em série, um por bloco: BM20C, GNSS, display, sensores e armazenamento | para medir a corrente de **cada bloco** com o PPK2, e não só o total ([14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso)); o `JP101` da célula mede o conjunto |
+| `JP101` | `VBAT+` do `J102` | `BATT` do MAX17262 | jumper de 0 Ω, 1206, para abrir o caminho da célula e pôr o amperímetro; a resistência dele entra na tensão que o medidor lê, então ≤ 50 mΩ ([06](06-conectores-e-pontos-de-teste.md#jp101--jumper-de-medição-de-corrente)) |
+
+> [!CAUTION]
+> **O divisor do `DIS_STO_CH` não tem orientação definida, e nenhuma das
+> duas óbvias parece servir.** Com 100 kΩ em série e 1 MΩ ao terra o pino
+> vê `5,5 × 1M ÷ 1,1M` = **5,0 V**; com 1 MΩ em série e 100 kΩ ao terra vê
+> **0,5 V**. Os pinos de configuração do AEM10900 são referenciados ao
+> `VINT`, não a 5 V: a primeira provavelmente passa do domínio do pino, a
+> segunda não chega a nível alto. **Fechar a razão e a orientação contra a
+> ficha do AEM10900 antes do layout.** Isto importa mais do que parece: é o
+> **único intertravamento da placa que não passa por firmware**, e existe
+> justamente para o caso de o firmware travar com as duas fontes de carga
+> ativas ([01](01-esquematico.md#folha-1--energia)).
 
 ### Pinos de configuração, amarrados em cobre
 
@@ -224,8 +241,11 @@ placa sem que nada avise. Um pino de configuração aberto do AEM10900
 | Display `VSS`, `VSSA` | `GND` | — |
 | Portas dos quatro MOSFET (`BL_PWM`, `RGB_R`, `RGB_G`, `RGB_B`) | 100 kΩ ao `GND` | o DMG1012T-7 não tem pull-down interno e os GPIO saem do reset em alta impedância: sem isto a luz pode acender sozinha e o MOSFET ficar na região linear |
 | `DISP_PWR_EN`, `DISP_ON`, `DISP_CS` | 100 kΩ ao `GND` | os três são ativos altos e flutuam do reset até o firmware; o `SCS` flutuando alto com o relógio indefinido escreve lixo no painel |
-| `NOR_SCK`, `NOR_MOSI`, `NOR_MISO` | 33 Ω em série, junto do pino do MCU | amacia a borda de 8 MHz, cujo 197º harmônico cai a 0,58 MHz do centro de L1 ([04](04-pcb-e-caixa.md)) |
-| `BUZ_A`, `BUZ_B` | 100 Ω em série | o piezo é carga capacitiva e o pico da borda fica limitado só pelo driver do GPIO |
+| `NOR_SCK` e `NOR_MOSI` junto do pino do MCU; **`NOR_MISO` junto do pino `SO` da flash** | 33 Ω em série | amacia a borda de 8 MHz, cujo 197º harmônico cai a 0,58 MHz do centro de L1; a constante de tempo fica em cerca de 1 % do meio período, longe de atrapalhar o relógio ([02](02-calculos.md#resistor-de-série-no-spi-da-flash)) |
+| `BUZ_A`, `BUZ_B` | **330 Ω** em série | o piezo é carga capacitiva: sem resistor o pico da borda passa de 30 mA, e 330 Ω o põe em 9 mA sem tirar volume ([02](02-calculos.md#buzzer-piezo)) |
+| `KEY_L`, `KEY_C`, `KEY_R` | **100 Ω** em série e **1 nF** ao `GND` | as teclas saem para a caixa e não tinham proteção nenhuma; τ de 13 µs com o pull-up interno e só 23 mV de queda no nível baixo ([02](02-calculos.md#proteção-das-teclas)) |
+| Derivação da tecla central para o `SHPHLD` | sai **depois** dos 100 Ω, não do contato | é o que faz a rede proteger os dois ramos: contra o pull-up interno de 50 kΩ do PMIC, 100 Ω dão 11 mV de erro a 5,5 V e o 1 nF dá τ de 50 µs, inócuos para um botão e para o toque longo de 10 s |
+| `3V0`, junto do pino de alimentação do BM20C | **4,7 µF** | o rádio puxa 10,9 mA em rajada e o buck leva cerca de 10 µs para responder ([02](02-calculos.md#capacitor-de-volume-no-módulo)) |
 | Pull-ups de `WP` e `HOLD` da flash | 47 kΩ ao **`SD3V0`** | ao `3V0` a flash se alimentaria pelos pinos com a `LDSW1` cortada |
 | Tag-Connect pino 1 (`VTref`) | `3V0` | sem ele a maioria das sondas recusa conectar |
 | Tag-Connect pino 5 | `GND` | — |
@@ -247,5 +267,5 @@ Números conferidos contando as linhas deste arquivo e rodando
 | Pinos de clock usados | **5**: `NOR_SCK` P2.01, `DISP_SCK` P3.03, `SENS_SCL` P1.03, `PWR_SCL` P0.03 e `GNSS_TX` P1.04 |
 | Pinos de clock livres | 12 |
 | Nós de alimentação | 12 |
-| Nós sem ligação ao MCU | 11 |
-| Pinos de configuração amarrados em cobre | 24 |
+| Nós sem ligação ao MCU | 12 |
+| Pinos de configuração amarrados em cobre | 26 |

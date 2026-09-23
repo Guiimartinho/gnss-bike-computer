@@ -90,11 +90,37 @@ interno de 50 kΩ, e **também** a um GPIO, porque o firmware precisa ler a
 mesma tecla enquanto o aparelho está ligado. Segurar por mais de 10 s
 religa o sistema inteiro, e isso vem ligado de fábrica.
 
+> [!CAUTION]
+> **Um termistor para o AEM10900, nunca dois.** A fonte oferece duas
+> saídas e a palavra é **ou**: o segundo NTC vem do pack, pelo conector,
+> **ou** é um TDK NTCG103JF103FT1 na face de trás da placa, sob a célula
+> ([15](../docs/15-avaliacao-componentes.md#detalhes-para-o-esquemático)).
+> Montar os dois põe 10 kΩ em paralelo com 10 kΩ no `TH_MON`, e a conta é
+> feia (**conta**, com B = 3380):
+>
+> ```
+> 10 kΩ ∥ 10 kΩ = 5 kΩ
+> 5 kΩ com B3380 equivale a 44,4 °C
+> ```
+>
+> O corte do AEM10900 é **45 °C**. Com os dois montados, o colhedor
+> enxerga 44,4 °C com a célula a 25 °C e **desliga a carga solar com o
+> ambiente pouco acima da temperatura de uma sala** — sem nada passar por
+> firmware, sem erro, sem aviso. A lista de compras aprova a peça de placa
+> e o conector tem via para a do pack: os dois caminhos existem no
+> material, e é a montagem que tem de escolher um.
+
 ### Em aberto nesta folha
 
 - O indutor do AEM10900: a tabela 6 e a fórmula da ficha não batem ([02](02-calculos.md#colheita-solar)).
 - O calor do carregador linear numa caixa vedada ([02](02-calculos.md#calor-do-carregador)).
 - O fator θ·L da e-peas, que falta para o firmware informar a potência do painel em mW.
+- **O driver do AEM10900 não grava `TMONEN`, `HPEN` nem `KEEPALEN`.** Ele
+  escreve `VOVDIS`, `VOVCH`, `APM` e `CTRL`, e valida com `CTRL.UPDATE = 1`.
+  A [avaliação](../docs/15-avaliacao-componentes.md#detalhes-para-o-esquemático)
+  avisa que os registradores partem dos **valores de fábrica, não dos
+  pinos**, e que os três precisam ficar em 1 — o keep-alive, que é o que
+  faz a configuração sobreviver ao `3V0` desligado, é um deles.
 
 ## Folha 2 · MCU
 
@@ -107,7 +133,7 @@ flowchart TB
     VOUT(("VBUSOUT")) -->|"VBUS, pad H7"| MOD
     USBD["USB-C D+ / D−"] ---|"par de 90 Ω"| MOD
     TC["Tag-Connect TC2030-NL"] ---|"SWDIO J3, SWDCLK K3, reset G2"| MOD
-    TP["TP1, TP2<br/>pads do console"] ---|"uart20 · P1.00, P1.31"| MOD
+    TP["TP201 e TP202<br/>pads do console"] ---|"uart20 · P1.00, P1.31"| MOD
     MOD --- BUSES["spi00 · spi22 · uart21<br/>i2c23 · i2c30 · pwm20/21/22"]
 ```
 
@@ -275,8 +301,24 @@ para cortar os 65 µA que o conversor gasta parado, com a tela desligada.
 > com filme (o que a lista já faz), voltar ao JDI **C** (sem canal
 > autorizado de compra) ou aceitar o JDI B e tirar a luz do projeto.
 
+> [!CAUTION]
+> **Com a Sharp, o COM fica em 1 Hz mesmo com a luz acesa.** A interface
+> pede 120 Hz e o driver **recusa** qualquer valor acima de 20 Hz quando o
+> painel é Sharp, devolvendo `-EINVAL` que ninguém lê. A placa declara
+> `sharp,ls027b7dh01`, que é a tela da lista de compras — e 1 Hz com a luz
+> acesa é justamente a condição que o `EXTCOMIN` existe para evitar, porque
+> deixa tensão contínua no VCOM. É defeito de firmware, não de desenho, e
+> está no [status](../docs/10-status-do-port.md#defeitos-abertos).
+
 - O resistor da luz na montagem com a Sharp depende da tensão direta do
   filme, que precisa ser medida na amostra ([02](02-calculos.md#luz-do-display)).
+- **A luz frontal é o item mais caro da placa** (US$ 66,45, 38 % da lista).
+  A busca de 2026-09-23 por uma tela com luz até R$ 509 não achou nada
+  melhor do que o que a lista já escolhe, e achou três coisas que valem
+  saber — o filme escolhido é o mais barato da família Azumo, existiu um
+  filme para o JDI B que está obsoleto, e o LPM027M128C aparece no
+  AliExpress a partir de R$ 324, com anúncios que confundem o B e o C
+  ([15](../docs/15-avaliacao-componentes.md#a-luz-da-tela-procurada-em-2026-09-23)).
 - A `LDSW2` sai de regulação com o `VSYS` perto de 3,4 V: a luz enfraquece
   com a bateria baixa, e isso não tem conserto no resistor.
 
@@ -314,6 +356,29 @@ firmware.
 
 ### Em aberto nesta folha
 
+> [!CAUTION]
+> **Ninguém liga a chave de alimentação da flash.** O nó `LDO1` do nPM1300
+> (a `LDSW1`, que entrega o `SD3V0`) está declarado no
+> [devicetree](../zephyr_app/boards/gnss/gnssbike/gnssbike_nrf54lm20a_cpuapp.dts)
+> **sem `regulator-boot-on` e sem apelido**, a `mx25r6435f@0` **não declara
+> `supply` nenhum**, e nada em `zephyr_app/src/` referencia o regulador. Na
+> placa de verdade isso quer dizer **flash sem energia e armazenamento que
+> não funciona**, em silêncio — no DK não aparece, porque lá a flash é
+> alimentada pelo próprio kit.
+>
+> Três saídas, e é decisão de firmware, não de esquemático: dar um `supply`
+> à flash, como o GNSS já tem (`vcc-supply = <&npm1300_buck1>`); ligar a
+> `LDSW1` no boot; ou tirar a chave do circuito e aceitar a flash sempre
+> alimentada, perdendo os nanoampères do deep power down.
+>
+> **E há um segundo efeito, que só aparece somando os dois defeitos:** com
+> o `SD3V0` em 0 V, o serviço de armazenamento aciona um SPI de 8 MHz
+> contra uma peça sem alimentação, e ela **se alimenta pelos diodos de
+> grampo do `SCK` e do `MOSI`** — agora através dos 33 Ω de série, que
+> limitam a corrente mas não impedem o caminho. É o modo de falha que a
+> própria folha descreve duas linhas acima, acontecendo hoje. **Achado pelo
+> dry-run de 2026-09-23, ao escrever a [sequência de partida](07-sequencias-e-protecao.md).**
+
 - **8 MHz é uma frequência ruim para o L1.** Harmônicos de 8 MHz caem a
   menos de 0,6 MHz do centro de 1575,42 MHz. A flash é a única coisa
   rápida perto do receptor, e a mitigação é de layout: resistor em série
@@ -331,8 +396,9 @@ flowchart LR
     K2 -->|"SHPHLD"| NPM["nPM1300"]
     K3["tecla direita"] -->|"P1.30"| MCU["MCU"]
     MCU -->|"pwm21 · P1.25 e P1.28"| BUZ["buzzer piezo<br/>em contrafase"]
-    VSYS(("VSYS")) -->|"1 kΩ em cada cor"| RGB["LED RGB"]
-    RGB --> FETS["3 × DMG1012T-7"] --> GND2["GND"]
+    VSYS(("VSYS")) -->|"anodo comum"| RGB["LED RGB"]
+    RGB -->|"1 kΩ por cor, no catodo"| FETS["3 × DMG1012T-7"]
+    FETS --> GND2["GND"]
     MCU -->|"pwm22 · portas"| FETS
 ```
 
@@ -351,16 +417,25 @@ comum fica no `VSYS`, que **com o cabo USB chega a 5,5 V**: um pino de
 3,0 V amarrado ao catodo ficaria com o diodo de proteção polarizado. Vão
 três DMG1012T-7, com o pino do MCU na porta de cada um e **1 kΩ** em
 série com cada cor, o valor que a especificação já fixava. O preço disso é
-que o brilho varia cerca de dez vezes entre a bateria vazia e o USB, e o
-verde e o azul somem no fim da carga ([02](02-calculos.md#led-rgb)) — o
+que o brilho varia com a tensão do `VSYS` ([02](02-calculos.md#led-rgb)) — o
 que se aceita porque o indicador serve a pareamento e a carga, e carga é
 justamente quando o `VSYS` está alto.
 
 ### Em aberto nesta folha
 
-- O brilho do LED varia cerca de três vezes entre a bateria vazia e o USB,
+- O brilho do LED varia com a tensão do `VSYS`: **3,2 vezes no vermelho** e
+  **9,6 vezes no verde e no azul** entre a célula vazia e o USB no limite,
   porque o anodo está num trilho não regulado ([02](02-calculos.md#led-rgb));
   com 1 kΩ e o Kingbright APTF1616SEEZGKQBKC, o verde e o azul chegam ao fim
   da bateria com 0,29 mA — fracos, mas acesos.
 - O buzzer é o Same Sky CPT-1117-83-SMT-TR, aprovado: 83 dB a 10 cm com
   5 Vpp, e os dois pinos em contrafase dão 6 Vpp.
+
+> [!CAUTION]
+> **Nem o buzzer nem o LED RGB têm firmware, e o devicetree só declara um
+> canal de cada.** O `rgb_pwm` e o `buzzer_pwm` apontam para o canal 0 do
+> seu PWM, os dois com `PWM_POLARITY_NORMAL`, e **nada em
+> `zephyr_app/src/` menciona buzzer ou LED**. Como está, das três cores só
+> a primeira acenderia, e a contrafase que dá os 6 Vpp **não existe**. O
+> `pinctrl` já traz os cinco pinos; o que falta é o segundo canal em cada
+> nó, com polaridade invertida no buzzer, e o código que os aciona.
