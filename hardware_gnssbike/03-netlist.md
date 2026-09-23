@@ -29,19 +29,28 @@ lê as tabelas desta página e as compara com o devicetree da placa em
 | `VBUSOUT` | = `VBUS` | nPM1300 `VBUSOUT` | pad `VBUS` do BM20C (detecção e PHY do USB); topo do divisor `DIS_STO_CH`; C 1 µF | alim |
 | `VBAT` | 3,0 a 4,2 V | positivo da célula, pelo `BATT` do MAX17262 | `SYS` do MAX17262 (o sensor de 7 mΩ é **interno** ao CI, entre `BATT` e `SYS`); nPM1300 `VBAT`; AEM10900 `STO`; TPS7A02 `IN` | alim |
 | `VSYS` | `VBAT` ou `VBUS` | nPM1300 `VSYS` | entradas de `BUCK1`, `BUCK2` e `LDSW2`; anodos do LED RGB e do LED de carga | alim |
-| `3V0` | 3,0 V | nPM1300 `BUCK2` | BM20C `VDD`; BMP585, BMI270, MMC5633NJL e OPT3001; TXU0204 `VCCA`; AEM10900 `I2C_VDD`; buzzer; entrada da `LDSW1`; REG710 `IN`; e o `VDD`/`VDDA` do display **só na montagem com o JDI**, pelo `JP401` | alim |
+| `3V0` | 3,0 V | nPM1300 `BUCK2` | BM20C `VDD`; BMP585, BMI270, MMC5633NJL e OPT3001; TXU0204 `VCCA`; AEM10900 `I2C_VDD`; buzzer; entrada da `LDSW1`; o `VDD`/`VDDA` do display pelo `JP401`; e o `IN` do REG710 **só no plano B** | alim |
 | `1V8` | 1,8 V | nPM1300 `BUCK1`, por filtro LC | MAX-F10S `VCC` e `V_IO`; TXU0204 `VCCB` | alim |
 | `SD3V0` | 3,0 V | nPM1300 `LDSW1`, do `3V0` | MX25R6435F `VCC` | alim |
-| `3V3BL` | 3,3 V | nPM1300 `LDSW2`, do `VSYS` | anodo do LED da luz, por `R_BL`; o catodo vai ao dreno do `Q401` | alim |
+| `3V3BL` | 3,3 V | nPM1300 `LDSW2`, do `VSYS` | anodo do LED da luz, por `R_BL`; o catodo vai ao dreno do `Q401`. Com o JDI o LED está **dentro do painel**, e **por qual conector os dois fios chegam a ele é pendência aberta** ([01](01-esquematico.md#folha-4--display)) | alim |
 | `VBCKP` | 1,8 V | TPS7A02, do `VBAT` | MAX-F10S `V_BCKP` | alim |
-| `5V0` | 5,0 V | REG710NA-5, do `3V0` | `VDD` e `VDDA` do display **só na montagem com a Sharp**, pelo `JP401` | alim |
+| `5V0` | 5,0 V | REG710NA-5, do `3V0` | `VDD` e `VDDA` do display, pelo `JP401` — **não montado**: existe só no plano B, com a Sharp | alim |
 | `VINT` | interno | AEM10900 `VINT` | `R_MPP[2:0]`, `T_MPP[1:0]`, `STO_CFG[2]`, `STO_CFG[0]`, `KEEP_ALIVE` | alim |
 | `GND` | 0 V | — | plano contínuo | alim |
 
 > [!CAUTION]
-> `3V0` e `5V0` chegam ao mesmo pino do display e **nunca** podem alcançá-lo ao mesmo tempo: o JDI
-> tem máximo absoluto de 3,6 V e queima com 5 V. A escolha é um jumper de
-> resistor de posição única ([01](01-esquematico.md#folha-4--display)).
+> **O `5V0` deixou de existir na placa montada.** A decisão de 2026-09-23
+> pelo **JDI LPM027M128C**, de 3,0 V, tirou o `U401` (REG710NA-5), o `C401`
+> de bombeamento e os dois de 10 µF da montagem: o `JP401` vira um **0 Ω
+> fixo na posição do 3,0 V** e a posição do 5 V fica sem peça
+> ([01](01-esquematico.md#folha-4--display)). O nó continua na tabela porque
+> o footprint continua no desenho, e é ele que faz o plano B — a Sharp
+> LS027B7DH01A, de 5 V — ser uma troca de montagem.
+>
+> A regra antiga não muda de valor: `3V0` e `5V0` chegam ao mesmo pino do
+> display e **nunca** podem alcançá-lo ao mesmo tempo, porque o JDI tem
+> máximo absoluto de 3,6 V e queima com 5 V. O pad do meio do `JP401` é um
+> só, e é isso que torna o caso impossível.
 
 ## Nós do MCU
 
@@ -66,8 +75,19 @@ usa, mais os dois reservados. Confira com `python tools/fw/board_check.py`.
 | `DISP_CS` | P3.02 | FPC pino 3 (`SCS`) | dig | **ativo alto**, ao contrário do costume |
 | `DISP_EXTCOMIN` | P3.06 | FPC pino 4 (`EXTCOMIN`) | dig | inverte o VCOM; 1 Hz sem luz, cerca de 120 Hz com luz |
 | `DISP_ON` | P3.05 | FPC pino 5 (`DISP`) | dig | liga a matriz |
-| `DISP_PWR_EN` | P3.07 | REG710 `EN` | dig | corta os 65 µA do REG710; só na montagem com a Sharp |
-| `BL_PWM` | P3.08 | porta do MOSFET da luz | dig | `pwm20`, canal 0 |
+| `DISP_PWR_EN` | P3.07 | REG710 `EN` | dig | **pino livre**: com o JDI o REG710 não é montado e nada o usa; volta a ter função só no plano B, cortando os 65 µA do conversor. Ver o aviso abaixo |
+| `BL_PWM` | P3.08 | porta do MOSFET da luz | dig | `pwm20`, canal 0; a luz é o LED **de dentro** do painel |
+
+> [!NOTE]
+> **O `DISP_PWR_EN` ficou sem carga, e o firmware ainda o declara.** Com o
+> JDI LPM027M128C não há REG710 para habilitar, de modo que **P3.07 volta a
+> ficar disponível**. O
+> [devicetree](../zephyr_app/boards/gnss/gnssbike/gnssbike_nrf54lm20a_cpuapp.dts)
+> continua trazendo `power-gpios = <&gpio3 7 ...>` no nó do display, e o
+> pull-down de 100 kΩ do `R403` segura o nível enquanto ninguém o aciona:
+> não faz mal, mas é linha a limpar no firmware quando alguém precisar do
+> pino. A linha fica nesta tabela para o `net_check.py` continuar batendo
+> com o devicetree.
 
 ### GNSS · `uart21`
 
@@ -240,7 +260,7 @@ placa sem que nada avise. Um pino de configuração aberto do AEM10900
 | Display `EXTMODE` | `VDD` da tela | VCOM invertido pelo `EXTCOMIN` |
 | Display `VSS`, `VSSA` | `GND` | — |
 | Portas dos quatro MOSFET (`BL_PWM`, `RGB_R`, `RGB_G`, `RGB_B`) | 100 kΩ ao `GND` | o DMG1012T-7 não tem pull-down interno e os GPIO saem do reset em alta impedância: sem isto a luz pode acender sozinha e o MOSFET ficar na região linear |
-| `DISP_PWR_EN`, `DISP_ON`, `DISP_CS` | 100 kΩ ao `GND` | os três são ativos altos e flutuam do reset até o firmware; o `SCS` flutuando alto com o relógio indefinido escreve lixo no painel |
+| `DISP_PWR_EN`, `DISP_ON`, `DISP_CS` | 100 kΩ ao `GND` | os três são ativos altos e flutuam do reset até o firmware; o `SCS` flutuando alto com o relógio indefinido escreve lixo no painel. Com o JDI o `DISP_PWR_EN` não aciona nada, e o pull-down é o que o mantém definido |
 | `NOR_SCK` e `NOR_MOSI` junto do pino do MCU; **`NOR_MISO` junto do pino `SO` da flash** | 33 Ω em série | amacia a borda de 8 MHz, cujo 197º harmônico cai a 0,58 MHz do centro de L1; a constante de tempo fica em cerca de 1 % do meio período, longe de atrapalhar o relógio ([02](02-calculos.md#resistor-de-série-no-spi-da-flash)) |
 | `BUZ_A`, `BUZ_B` | **330 Ω** em série | o piezo é carga capacitiva: sem resistor o pico da borda passa de 30 mA, e 330 Ω o põe em 9 mA sem tirar volume ([02](02-calculos.md#buzzer-piezo)) |
 | `KEY_L`, `KEY_C`, `KEY_R` | **100 Ω** em série e **1 nF** ao `GND` | as teclas saem para a caixa e não tinham proteção nenhuma; τ de 13 µs com o pull-up interno e só 23 mV de queda no nível baixo ([02](02-calculos.md#proteção-das-teclas)) |
@@ -266,6 +286,6 @@ Números conferidos contando as linhas deste arquivo e rodando
 | Total de pinos do MCU neste esquemático | **33** |
 | Pinos de clock usados | **5**: `NOR_SCK` P2.01, `DISP_SCK` P3.03, `SENS_SCL` P1.03, `PWR_SCL` P0.03 e `GNSS_TX` P1.04 |
 | Pinos de clock livres | 12 |
-| Nós de alimentação | 12 |
+| Nós de alimentação | 12 na tabela, **11 montados**: o `5V0` só existe no plano B, com a Sharp |
 | Nós sem ligação ao MCU | 12 |
 | Pinos de configuração amarrados em cobre | 26 |

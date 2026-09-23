@@ -5,6 +5,15 @@ Lista de materiais do protótipo da placa nova, com cada peça validada em duas 
 > [!IMPORTANT]
 > Estoque e preço são da DigiKey em 2026-09-18, em US$ por unidade para 1 e 10 peças, e mudam rápido: confira no dia do pedido. A Mouser bloqueia acesso automático, então **nenhum dado da Mouser foi conferido**. Nenhuma peça foi montada nem medida: a validação é sobre datasheets, desenhos e o código do NCS v3.3.0.
 
+> [!NOTE]
+> **A tela mudou em 2026-09-23, por decisão do dono:** entra o **JDI
+> LPM027M128C**, peça única de 2,7", 400 × 240, MIP de 8 cores e **com luz
+> frontal integrada**, e saem do pedido a Sharp LS027B7DH01A, o filme Azumo
+> 11103-06_A1, o conector dele (Molex 5034800440) e o REG710NA-5/3K dos 5 V.
+> A Sharp com o filme continua na lista como **plano B**, no mesmo conector.
+> Custo: **+US$ 54 na tela** e cerca de **+US$ 52 na placa** ([Custo](#custo)),
+> **sem canal autorizado de compra e sem garantia** ([Display](#display)).
+
 **Nesta página:** [Como a lista foi validada](#como-a-lista-foi-validada) · [Resultado](#resultado) · [Trocas](#trocas) · [Correções de integração](#correções-de-integração) · [Lista por bloco](#lista-por-bloco) · [Passivos](#passivos) · [Placas de avaliação e ferramentas](#placas-de-avaliação-e-ferramentas) · [Custo](#custo) · [Compras fora da DigiKey](#compras-fora-da-digikey) · [Antes de fechar o pedido](#antes-de-fechar-o-pedido) · [Referências](#referências)
 
 ## Como a lista foi validada
@@ -32,19 +41,19 @@ flowchart LR
 | Energia | 14 | NTC, conector da bateria | trilhos dos bucks, pinos do AEM10900, indutor, configuração do MAX17262, luz pela LDSW2 |
 | GNSS | 6 | módulo, do MAX-M10N-10B para o MAX-F10S | V_IO travado em 1,8 V, 0 dBm no RF_IN sem exceção fora da banda |
 | Sensores | 5 | IMU, magnetômetro | pinos comuns do IMU, CSB do barômetro, nada de varredura no I2C |
-| Display | 7 | tela, conectores, REG710 | tela monocromática com luz frontal, 5 V com EN |
+| Display | 7 | tela, conectores, REG710 — e a tela **de volta ao JDI** em 2026-09-23 | tela de 8 cores com luz integrada em 3,0 V; o REG710 e os 5 V saíram da montagem |
 | Armazenamento | 2 | preço e estoque da NOR ainda não conferidos | MX25R6435F de 8 MB, pull-ups de WP e HOLD, pinos com o trilho desligado |
 | USB | 4 | TVS do VBUS, receptáculo | placa de 0,8 mm |
 | Interface | 4 | botões sem vedação | LEDs no VSYS, buzzer em alta corrente |
 | Passivos | 18 | três capacitores sem estoque ou obsoletos | capacitância efetiva pelo DC bias |
 
-Todas as peças passam na integração, com as ressalvas de cada linha. Na compra ficam duas pendências: o BM20C, sem estoque hoje, com 1.000 previstos para 12/11/2026 na DigiKey e venda direta pela Fanstel, prazo que cabe no tempo do layout, com o plano B na linha dele; e o AEM10900, que a DigiKey não vende e que só a Mouser, não conferida, ou a e-peas fornecem. Quatro compras saem da DigiKey: o AEM10900, a flash NOR, a bateria e a ferramenta da Tag-Connect ([Compras fora da DigiKey](#compras-fora-da-digikey)).
+Todas as peças passam na integração, com as ressalvas de cada linha. Na compra ficam **três** pendências: o BM20C, sem estoque hoje, com 1.000 previstos para 12/11/2026 na DigiKey e venda direta pela Fanstel, prazo que cabe no tempo do layout, com o plano B na linha dele; o AEM10900, que a DigiKey não vende e que só a Mouser, não conferida, ou a e-peas fornecem; e, desde 2026-09-23, **o JDI LPM027M128C**, que **nenhum distribuidor autorizado vende** e que a decisão do dono aceita comprar de revendedor, sem garantia. Cinco compras saem da DigiKey: o AEM10900, a flash NOR, a bateria, a ferramenta da Tag-Connect e a tela ([Compras fora da DigiKey](#compras-fora-da-digikey)).
 
 ## Trocas
 
 | Peça da avaliação | Problema | Substituta | Consequência |
 |---|---|---|---|
-| JDI LPM027M128C (tela de 8 cores) | nenhum canal autorizado: a DigiKey não tem a peça e marca como obsoletos os módulos da Azumo com ela; a Switch Science encerrou as vendas; a Data Modul não lista JDI; o site da JDI não tem mais MIP | Sharp **LS027B7DH01A** com o filme de luz frontal **Azumo 11103-06_A1** | tela monocromática com luz; a placa continua aceitando o JDI no mesmo conector e a interface não depende de cor ([18](18-interface-telas.md#tela)) |
+| ~~JDI LPM027M128C (tela de 8 cores)~~ | nenhum canal autorizado: a DigiKey não tem a peça e marca como obsoletos os módulos da Azumo com ela; a Switch Science encerrou as vendas; a Data Modul não lista JDI; o site da JDI não tem mais MIP | ~~Sharp **LS027B7DH01A** com o filme de luz frontal **Azumo 11103-06_A1**~~ | **Troca desfeita em 2026-09-23**, por decisão do dono: volta o JDI LPM027M128C, e o risco de compra é aceito. O par Sharp + Azumo vira o plano B, no mesmo conector ([Display](#display)) |
 | Sharp LS027B7DH01 | sem estoque (400 previstos para 10/11/2026) | Sharp LS027B7DH01A | mesma pinagem; polarizador novo e 1,625 mm de espessura |
 | SMK CFP-4610-0150F e Molex 51441-1093 (conectores da ficha antiga da Sharp) | o primeiro sem venda encontrada, o segundo obsoleto | Hirose FH28-10S-0.5SH(05) | as fichas do JDI e da Sharp atual citam o FH28, com contato por baixo |
 | TI REG710NA-5/250 | sem estoque | TI REG710NA-5/3K | a mesma peça em rolo maior, vendida em fita cortada |
@@ -78,7 +87,7 @@ Achados da segunda passagem que mudam o circuito ou o firmware. A especificaçã
 12. **BMP585:** o CSB precisa estar no VDDIO na partida, ou o I2C fica desligado até o próximo reset de energia; o SDO no VDDIO dá o endereço 0x47.
 13. **Flash NOR soldada:** o SD NAND XTX saiu em 2026-09-20 e no lugar dele vai a Macronix **MX25R6435F** de 64 Mbit (8 Mbyte), a mesma peça do nRF54LM20 DK, sozinha no `spi00` com CS em P2.05 e `spi-max-frequency = 8000000`. Ela entra no devicetree como `jedec,spi-nor`, e uma partição que toma a peça inteira vira disco por `zephyr,flash-disk`, montado em `/SD:` com FatFs (`CONFIG_DISK_DRIVER_FLASH=y` e `CONFIG_DISK_DRIVER_SDMMC=n`); **não há cartão nem SD NAND na placa**. WP e HOLD levam pull-up; com o trilho da flash desligado, os pinos do `spi00` ficam em nível baixo ou em alta impedância, para não alimentar o chip pelos pinos. Nada disso foi testado em placa.
 14. **USB-C da Molex:** o desenho recomenda placa de 0,8 mm, e a especificação passa de 1,0 para 0,8 mm; o anel de vedação passa da borda da placa (a borda fica 2,73 mm atrás da frente do conector); furo de 9,54 × 3,76 mm numa parede de pelo menos 1,2 mm.
-15. **Tela Sharp:** 5 V do REG710 com o EN num pino do MCU, para a sequência de ligar e para cortar os 65 µA do REG710; entradas com VIH a partir de 2,7 V, que a lógica de 3,0 V atende; EXTMODE no VDD da tela. O filme de luz tem um LED de 10 mA típicos (25 mA no máximo).
+15. **Tela.** Com o **JDI LPM027M128C**, decidido em 2026-09-23: VDD e VDDA em 3,0 V do BUCK2 (máximo absoluto de 3,6 V), EXTMODE no VDD da tela, luz de 16 mA a 2,67 V com o resistor de 39 Ω pela LDSW2, e **o REG710 e o trilho de 5 V deixam de ser montados** — com eles o `DISP_PWR_EN` (P3.07) volta a ficar livre. **Falta uma coisa que nenhum documento do projeto tem:** o FPC de 10 vias não traz par para o LED, de modo que **não se sabe por onde a luz do C se liga**; sai da ficha do C ou de uma amostra, **antes do layout**. No **plano B**, com a Sharp: 5 V do REG710 com o EN num pino do MCU, para a sequência de ligar e para cortar os 65 µA do conversor; entradas com VIH a partir de 2,7 V, que a lógica de 3,0 V atende; e o filme de luz com um LED de 10 mA típicos (25 mA no máximo), no Molex 5034800440.
 16. **TPS7A02:** pelo menos 0,5 µF efetivos na saída, EN ligado ao IN.
 17. **Capacitância efetiva:** pelas curvas da Taiyo Yuden, o 10 µF de 25 V em 0603 fica com cerca de 4,9 µF a 5 V e 7,2 µF a 3 V, e o 22 µF de 10 V, com cerca de 9,0 µF a 4 V, acima dos 5 µF efetivos que o AEM10900 pede no STO.
 18. **LEDs e buzzer:** o LED RGB tem anodo comum no VSYS e um N-MOSFET por cor, porque um pino do MCU em 3,0 V não segura um catodo cujo anodo vai a até 5,5 V (com o USB, o VSYS acompanha o VBUS); o brilho varia com a tensão do VSYS. O buzzer usa dois pinos em alta corrente.
@@ -137,15 +146,18 @@ Plano B, se o BM20C atrasar: MinewSemi ME54BS13-1Y20TI (6024-ME54BS13-1Y20TITR-N
 
 ### Display
 
+A tela decidida está na primeira linha; as quatro marcadas como **plano B** ficam na lista com código e estoque, e **não entram no pedido** enquanto o JDI for a tela.
+
 | Função | Peça | DigiKey | Estoque | US$ 1 / 10 | Por placa | Compra | Situação |
 |---|---|---|---|---|---|---|---|
-| Tela | Sharp LS027B7DH01A | 425-2908-ND | 3.180 | 29,29 / 23,61 | 1 | 6 | aprovada; monocromática, 400 × 240, 5 V |
-| Luz frontal | Azumo 11103-06_A1 | 2004-11103-06_A1-ND | 1.909 | 79,06 / 66,45 | 1 | 6 | aprovada com ressalva: filme de 0,05 mm laminado sobre a tela, feito para a LS027B7DH01 (confirmar com a Azumo na 01A) |
-| Conector do filme | Molex 5034800440 (4 vias, passo de 0,5 mm) | — | 55.126 | 0,68 / — | 1 | 6 | aprovada |
+| **Tela** | **JDI LPM027M128C** (2,7", 400 × 240, 8 cores, 3,0 V, **com luz integrada**) | — | — | R$ 776 no [anúncio escolhido](https://pt.aliexpress.com/item/1005011938384752.html), cerca de US$ 144 | 1 | 3 a 5 amostras | **decidida em 2026-09-23**; **sem canal autorizado e sem garantia**: revendedor apenas. Anúncios confundem o B e o C — conferir a peça que chegar ([15](15-avaliacao-componentes.md#a-luz-da-tela-procurada-em-2026-09-23)) |
 | Conector da tela | Hirose FH28-10S-0.5SH(05) | H125752CT-ND | 6.136 | 1,91 / 1,622 | 1 | 6 | aprovada; serve à Sharp e ao JDI; se a FPC for dobrada, um de contato duplo (Hirose FH34SRJ-10S-0.5SH(50)) |
-| 5 V da tela | TI REG710NA-5/3K | 296-26327-1-ND | 2.187 | 1,77 / 1,296 | 1 | 6 | aprovada; o mesmo CI da V3 |
 | Chave da luz | Diodes DMG1012T-7 | DMG1012T-7DICT-ND | 150.305 | 1,17 / 0,733 | 1 | ver [Interface](#interface) | aprovada; 0,5 Ω a 2,5 V de porta |
-| Tela colorida (opcional) | JDI LPM027M128C | — | — | — | — | amostras | sem canal autorizado; só em revendedores, sem garantia |
+| Conector da luz do JDI | **a definir** | — | — | — | ? | — | **pendência de alta prioridade**: o FPC de 10 vias não tem par de LED e não se sabe se o C traz um FPC maior ou um rabicho próprio. Sai da ficha do C ou de uma amostra, **antes do layout** |
+| Tela, **plano B** | Sharp LS027B7DH01A | 425-2908-ND | 3.180 | 29,29 / 23,61 | 0 | — | aprovada; monocromática, 400 × 240, 5 V; fora do pedido enquanto o JDI for a tela |
+| Luz frontal, **plano B** | Azumo 11103-06_A1 | 2004-11103-06_A1-ND | 1.909 | 79,06 / 66,45 | 0 | — | aprovada com ressalva: filme de 0,05 mm laminado sobre a tela, feito para a LS027B7DH01 (confirmar com a Azumo na 01A) |
+| Conector do filme, **plano B** | Molex 5034800440 (4 vias, passo de 0,5 mm) | — | 55.126 | 0,68 / — | 0 | — | aprovada; sem filme, não há o que ligar nele |
+| 5 V da tela, **plano B** | TI REG710NA-5/3K | 296-26327-1-ND | 2.187 | 1,77 / 1,296 | 0 | — | aprovada; o mesmo CI da V3. O JDI vive em 3,0 V, e com o REG710 saem o trilho de 5 V e o uso do `DISP_PWR_EN` |
 
 ### Armazenamento
 
@@ -194,14 +206,14 @@ As quantidades por placa saem do esquemático; a compra sugerida cobre 5 placas 
 
 | Valor | Uso | Peça | DigiKey | Estoque | US$ 1 / 10 | Compra | Notas |
 |---|---|---|---|---|---|---|---|
-| 10 µF, 25 V, X5R, 0603 | VBUS, VBUSOUT e saídas do nPM1300 (9 na referência da Nordic), filtro do 1V8, REG710 | Taiyo Yuden TMK107BBJ106MA-T | 587-6023-1-ND | 673.507 | 0,45 / 0,269 | 100 | cerca de 4,9 µF a 5 V e 7,2 µF a 3 V; PN novo MSAST168BB5106MTNA01; alternativa Samsung CL10A106MA8NRNC (1276-1869-1-ND, 278.714) |
+| 10 µF, 25 V, X5R, 0603 | VBUS, VBUSOUT e saídas do nPM1300 (9 na referência da Nordic), filtro do 1V8; os dois do REG710 só no plano B | Taiyo Yuden TMK107BBJ106MA-T | 587-6023-1-ND | 673.507 | 0,45 / 0,269 | 100 | cerca de 4,9 µF a 5 V e 7,2 µF a 3 V; PN novo MSAST168BB5106MTNA01; alternativa Samsung CL10A106MA8NRNC (1276-1869-1-ND, 278.714) |
 | 22 µF, 6,3 V, X5R, 0402 | CSRC e CINT do AEM10900 | Samsung CL05A226MQ5N6J8 | 1276-7090-1-ND | 812.238 | 0,60 / 0,367 | 20 | alternativa Yageo CC0402MRX5R5BB226 |
 | 22 µF, 10 V, X5R, 0603 | CSTO do AEM10900, SD3V0 | Taiyo Yuden MSASL168BB5226MTNA01 | 587-MSASL168BB5226MTNA01CT-ND | 5.446 | 0,50 / 0,301 | 20 | cerca de 9,0 µF a 4 V; alternativa KYOCERA AVX 0603YD226MAT2A (16 V) |
 | 1 µF, 25 V, X5R, 0402 | nPM1300 (2), TPS7A02 (2) | Samsung CL05A105KA5NQNC | 1276-1445-1-ND | 2.380.423 | 0,19 / 0,109 | 50 | alternativa Murata GRM155R61E105MA12D |
 | 2,2 µF, 16 V, X7R, 0603 | C6 da referência do nPM1300 | Taiyo Yuden EMK107BB7225KA-T | 587-5835-1-ND | 167.592 | 0,27 / 0,157 | 10 | PN novo MSASE168BB7225KTNA01 |
 | 4,7 µF, 16 V, X5R, 0603 | VDD do MMC5633NJL (pede 2,2 µF no mínimo) | Samsung CL10A475KO8NNNC | 1276-1784-1-ND | 113.878 | 0,14 / 0,079 | 20 | alternativa TDK C1608X5R1C475K080AC |
 | 0,47 µF, 10 V, X5R, 0402 | REG do MAX17262 | Murata GRM155R61A474KE15D | 490-3264-1-ND | 1.773.664 | 0,12 / 0,068 | 10 | — |
-| 0,22 µF, 25 V, X5R, 0402 | bombeamento do REG710 | Samsung CL05A224KA5NNNC | 1276-1455-1-ND | 1.498 | 0,17 / 0,096 | 10 | alternativa Murata GRM155R71A224KE01D (343); o 0603 da Murata só volta em 26/10 |
+| 0,22 µF, 25 V, X5R, 0402 | bombeamento do REG710, **só no plano B** | Samsung CL05A224KA5NNNC | 1276-1455-1-ND | 1.498 | 0,17 / 0,096 | 10 | alternativa Murata GRM155R71A224KE01D (343); o 0603 da Murata só volta em 26/10 |
 | 100 nF, 10 V, X7R, 0402 | desacoplamento dos CIs | Murata GRM155R71A104KA01D | 490-6321-1-ND | 809.747 | 0,10 / 0,025 | 200 | — |
 | 47 kΩ | RVSET1, pull-ups de WP e HOLD da flash NOR | Yageo RC0402FR-0747KL | 311-47.0KLRCT-ND | 2.038.082 | 0,10 / 0,021 | 100 | — |
 | 150 kΩ | RVSET2 | Yageo RC0402FR-07150KL | 311-150KLRCT-ND | 219.429 | 0,10 / 0,021 | 10 | — |
@@ -210,7 +222,7 @@ As quantidades por placa saem do esquemático; a compra sugerida cobre 5 placas 
 | 10 kΩ | pull-ups de interrupção e de ALRT | Yageo RC0402FR-0710KL | 311-10.0KLRCT-ND | 11.449.482 | 0,10 / 0,021 | 50 | — |
 | 4,7 kΩ | pull-ups dos dois I2C | Panasonic ERJ-2RKF4701X | P4.70KLCT-ND | 685.748 | 0,10 / 0,031 | 50 | — |
 | 1 kΩ | LED RGB | Yageo RC0402FR-071KL | 311-1.00KLRTR-ND (fita cortada na mesma página) | 5.428.413 | 0,10 / 0,021 | 50 | cerca de 1,9 mA no vermelho e 1,0 mA no verde e no azul com 3,7 V |
-| 39 Ω | luz da tela | Yageo RC0402FR-0739RL | 311-39.0LRCT-ND | 335.302 | 0,10 / 0,021 | 10 | ajustar na amostra; 10 mW dissipados |
+| 39 Ω | luz da tela | Yageo RC0402FR-0739RL | 311-39.0LRCT-ND | 335.302 | 0,10 / 0,021 | 10 | **fechado para o JDI**: 14,9 mA e 8,6 mW com o LED de 16 mA a 2,67 V ([cálculos](../hardware_gnssbike/02-calculos.md#luz-do-display)); no plano B, ajustar na amostra do filme |
 | 0 Ω | jumpers de medição de corrente, rede em π | Panasonic ERJ-2GE0R00X | P0.0JCT-ND | 10.407.240 | 0,10 / 0,015 | 100 | o Yageo RC0402JR-070RL está sem estoque até 09/11 |
 
 ## Placas de avaliação e ferramentas
@@ -230,23 +242,33 @@ O J-Link da SEGGER já está na máquina de desenvolvimento ([CLAUDE.md](../CLAU
 
 ## Custo
 
-Estimativa das peças de uma placa, com os preços de 10 unidades quando existem, **sem** o AEM10900, a bateria, a placa de circuito impresso e a montagem, e **sem a flash NOR**, cujo preço ainda não foi conferido ([Armazenamento](#armazenamento)): cerca de **US$ 173** (a troca do M10N pelo F10S tirou US$ 1,38). Os maiores itens são o filme de luz, a tela, os painéis e o GNSS.
+Estimativa das peças de uma placa, com os preços de 10 unidades quando existem, **sem** o AEM10900, a bateria, a placa de circuito impresso e a montagem, e **sem a flash NOR**, cujo preço ainda não foi conferido ([Armazenamento](#armazenamento)): cerca de **US$ 225**. Os maiores itens são a tela, os painéis e o GNSS.
 
-O SD NAND de 8 Gbit, que sozinho respondia por US$ 40,43, **saiu em 2026-09-20**, trocado pela Macronix MX25R6435F soldada. A conta é a soma das fatias abaixo: 66,45 + 23,61 + 15,84 + 13,14 + 9,96 + 9,78 + 34,47 = **173,25**. O total anterior, de US$ 213,68, era esse mesmo valor mais os 40,43 do SD NAND.
+**A troca da tela em 2026-09-23 é o que explica o salto**, de US$ 173 para US$ 225 (**conta**, a R$ 5,40 por dólar — ajuste pela cotação do dia):
+
+```
+saem:  Sharp 23,61 + filme Azumo 66,45        =  90,06
+       REG710 1,296 + conector do filme 0,68  =   1,98
+entra: JDI LPM027M128C, R$ 776 ÷ 5,40         = 143,70
+total: 173,25 − 90,06 − 1,98 + 143,70         = 224,91
+```
+
+São **US$ 54 a mais só na tela** (143,70 contra 90,06) e cerca de **US$ 52 a mais na placa**, porque o REG710 e o conector do filme saem junto. Não é economia: é peça única, sem laminação, com cor e com menos consumo, **sem canal autorizado e sem garantia**.
+
+O SD NAND de 8 Gbit, que sozinho respondia por US$ 40,43, **saiu em 2026-09-20**, trocado pela Macronix MX25R6435F soldada; o total anterior à troca da tela, de US$ 173,25, era a soma de 66,45 + 23,61 + 15,84 + 13,14 + 9,96 + 9,78 + 34,47, e antes do SD NAND sair era US$ 213,68.
 
 ```mermaid
 pie showData
     title Peças de uma placa, US$ (estimativa, sem a flash NOR)
-    "Filme de luz frontal" : 66.45
-    "Tela Sharp" : 23.61
+    "Tela JDI LPM027M128C" : 143.70
     "6 painéis solares" : 15.84
     "GNSS" : 13.14
     "BM20C" : 9.96
     "4 sensores" : 9.78
-    "Outros" : 34.47
+    "Outros" : 32.49
 ```
 
-A fatia "Outros" junta o resto das tabelas por bloco e os passivos, e já inclui o soquete microSD do protótipo (US$ 3,02); a flash NOR não está em nenhuma fatia, porque a linha dela ainda traz "a confirmar" no preço. Confirmado esse preço, some-o aos US$ 173,25.
+A fatia "Outros" junta o resto das tabelas por bloco e os passivos — já sem o REG710 (US$ 1,296) e sem o conector do filme (US$ 0,68), que saíram da montagem — e ainda inclui o soquete microSD do protótipo (US$ 3,02); a flash NOR não está em nenhuma fatia, porque a linha dela ainda traz "a confirmar" no preço. Confirmado esse preço, some-o aos US$ 224,91.
 
 ## Compras fora da DigiKey
 
@@ -257,14 +279,14 @@ A fatia "Outros" junta o resto das tabelas por bloco e os passivos, e já inclui
 | Bateria | fabricante de packs | 60 × 36 × 7 mm, PCM, NTC de 10 kΩ B3380 (um segundo NTC opcional), cabo com o GHR-06V-S, UN38.3 |
 | Tag-Connect | loja da Tag-Connect | a DigiKey tem só as versões com pernas, que pedem outro footprint |
 | BM20C direto | Fanstel, por e-mail | US$ 6,50 (US$ 5,94 no lote de mil), se o prazo da DigiKey não servir |
-| JDI LPM027M128C | revendedores, sem garantia | só se a tela colorida continuar no plano |
+| **JDI LPM027M128C** | AliExpress, [anúncio escolhido](https://pt.aliexpress.com/item/1005011938384752.html) a **R$ 776**, ou outro revendedor | **é a tela decidida em 2026-09-23**, e não há canal autorizado: sem garantia e sem procedência. Dois dos quatro anúncios achados nomeiam o B e o C no mesmo título, e **o B não tem luz** — conferir a peça que chegar antes de fechar o layout ([15](15-avaliacao-componentes.md#a-luz-da-tela-procurada-em-2026-09-23)) |
 
 ## Antes de fechar o pedido
 
 1. **Conferir o dia:** estoque e preço na DigiKey, e a Mouser à mão para as mesmas peças.
 2. **BM20C:** entrar na fila da DigiKey ou pedir à Fanstel, e perguntar a tolerância do cristal de 32,768 kHz; sem ela, o ANT fica em risco até a medida do LFCLK contra o 1 PPS do GNSS. Com o F10S a medida fica mais simples: sem LEAP, o TIMEPULSE não tem a limitação da SPG 5.30.
 3. **AEM10900:** confirmar a compra e perguntar à e-peas qual corrente de entrada vale.
-4. **Tela:** a lista compra a Sharp com a luz frontal. A tela colorida SPI de 2,7" não tem canal autorizado; a única colorida MIP em estoque é a Sharp LS021B7DD02 (2,13", 240 × 320, 64 cores), de interface paralela de 6 bits e com 3,2 V e 5 V, que pede outra caixa, outro driver e outras telas. A decisão de voltar à cor fica com o dono. Confirmar também com a Azumo o filme sobre a LS027B7DH01A.
+4. **Tela:** o dono decidiu em 2026-09-23 pelo **JDI LPM027M128C**, com luz integrada, e a lista compra **de revendedor, sem garantia**. Antes de fechar: pedir de 3 a 5 amostras, conferir no anúncio e na peça que é o **C** e não o B (o B não tem luz), e **levantar por onde a luz se liga** — o FPC de 10 vias não tem par de LED, e sem isso a folha 4 do esquemático não fecha. A única colorida MIP em estoque por canal autorizado é a Sharp LS021B7DD02 (2,13", 240 × 320, 64 cores), de interface paralela de 6 bits e com 3,2 V e 5 V, que pede outra caixa, outro driver e outras telas. Se o plano B for acionado, confirmar com a Azumo o filme sobre a LS027B7DH01A.
 5. **Placa de circuito impresso:** 0,8 mm e 4 camadas, com controle de impedância, por causa do receptáculo USB-C.
 6. **Bateria:** especificação com o fabricante do pack.
 7. **Umidade:** o MAX-F10S é MSL 4 (o MAX-M10N-10B também) e o BMP585, MSL 3; montar logo depois de abrir a embalagem ou secar antes.
@@ -278,7 +300,7 @@ A fatia "Outros" junta o resto das tabelas por bloco e os passivos, e já inclui
 - u-blox, MAX-F10S Data sheet R03, UBXDOC-963802114-12732 (tabelas 10, 12, 13, 15, 16 e 17) e F10 SPG 6.00 Interface description, UBX-23002975 R02; MAX-M10N-10B Data sheet R05 (tabelas 12, 13, 15 e 16), para a alternativa.
 - Bosch, BMI270 (BST-BMI270-DS000-08, tabela 22) e BMP585 (interface pelo CSB); ST, LSM6DSV16X (tabela 2); Memsic, MMC5633NJL Rev A.
 - XTX, SD NAND Rev 1.0 (pinos, comandos dos modos SD e SPI, CSD): leitura da avaliação de 2026-09-18, da peça descartada em 2026-09-20.
-- Sharp, LS027B7DH01A (ficha LD-28305A, conectores na tabela 8-2-1); JDI, LPM027M128B Ver.01 (conector, p. 34); Azumo, 2.7" Front Light Panel 11103-xx (12369-01_T4).
+- Sharp, LS027B7DH01A (ficha LD-28305A, conectores na tabela 8-2-1); JDI, LPM027M128B Ver.01 (conector, p. 34); Azumo, 2.7" Front Light Panel 11103-xx (12369-01_T4). **A ficha do LPM027M128C, a tela decidida, não foi lida**, e é ela que falta para o caminho da luz.
 - Molex, desenho do 2036150003 (rev. A); Amphenol, folheto "Waterproof USB Type C".
 - Same Sky, CPT-1117-83-SMT-TR; Kingbright, APTF1616SEEZGKQBKC e APT1608SURCK; Omron, B3S; E-Switch, TL3780; Diodes, DMG1012T (DS31783); TI, REG710, TPS7A02, ESD761 e TPD4E05U06.
 - Taiyo Yuden, curvas de DC bias do TMK107BBJ106MA, LMK107BBJ226MA, EMK107BB7225KA e EMK105BJ105KV.

@@ -401,11 +401,18 @@ temp_sensor: &temp {
 /*
  * ---- Display ----
  *
- * Sharp LS027B7DH01A, 400 x 240 monochrome, drawn in portrait by the driver
- * of `modules/gnss_drivers`. It runs from 5 V, made by a REG710 that this
- * pin enables. The same connector takes the JDI LPM027M128C in eight
- * colours at 3.0 V, whose compatible is "jdi,lpm027m128b" and which needs
- * no regulator: changing the panel is changing these two lines.
+ * JDI LPM027M128C, 400 x 240 in eight colours, drawn in portrait by the
+ * driver of `modules/gnss_drivers`. It runs from 3.0 V and carries its own
+ * front light, so no regulator sits between the rail and the panel. The
+ * owner chose it on 2026-09-23, over the Sharp LS027B7DH01A with an Azumo
+ * film: one part instead of two, no lamination step, and the same 400 x 240
+ * the interface is drawn for. It costs 24 kB of RAM, because the frame of
+ * an eight-colour panel is 36,482 B against the 12,482 B of a mono one.
+ *
+ * The Sharp stays the fallback and the same connector takes it: it needs
+ * 5 V from a REG710 that `power-gpios` enables, and its compatible is
+ * "sharp,ls027b7dh01". Changing the panel is changing that one line and
+ * fitting the regulator.
  *
  * EXTMODE is high on the panel side, so the COM inverts on the rising edges
  * of EXTCOMIN. Timing (datasheet 4.2): 1 MHz typical and 2 MHz at most,
@@ -419,7 +426,7 @@ temp_sensor: &temp {
 	pinctrl-names = "default", "sleep";
 
 	display: display@0 {
-		compatible = "sharp,ls027b7dh01";
+		compatible = "jdi,lpm027m128c";
 		reg = <0>;
 		spi-max-frequency = <2000000>;
 		spi-cs-setup-delay-ns = <3000>;

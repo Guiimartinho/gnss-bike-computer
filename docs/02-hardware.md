@@ -115,7 +115,7 @@ Decidido em 2026-09-18: o produto terá uma **board própria com MCU da Nordic**
 | ANT+ e BLE ao mesmo tempo, vários sensores | [07-radio-ant-ble.md](07-radio-ant-ble.md#decisão-ant-e-ble) |
 | USB para carregar, comandos e mass storage do cartão | legacy (CDC + MSC) |
 | SPI para o LCD e para o microSD, UART para o GNSS, I2C para os sensores | placa V3 |
-| RAM para framebuffer, segmentos, pilhas e rádio | em 2026-09-22 o port usa 369.120 B de RAM na placa própria (70,54 % dos 511 KB) e 393.080 B no nRF54LM20 DK (75,12 %) |
+| RAM para framebuffer, segmentos, pilhas e rádio | em 2026-09-23 o port usa 393.120 B de RAM na placa própria (75,13 % dos 511 KB) e 393.080 B no nRF54LM20 DK (75,12 %) |
 
 | MCU | CPU | NVM / RAM | USB | Observação |
 |---|---|---|---|---|

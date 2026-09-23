@@ -106,12 +106,12 @@ python -m west build -p auto -b nrf54lm20dk/nrf54lm20a/cpuapp -d build --sysbuil
 
 ### Resultado de referência
 
-Build com sysbuild da `develop` em 2026-09-22 (atualizado a cada commit que muda o tamanho):
+Build com sysbuild da `develop` em 2026-09-23 (atualizado a cada commit que muda o tamanho):
 
 | Alvo | FLASH | RAM | MCUboot | Avisos |
 |---|---|---|---|---|
 | `nrf54lm20dk/nrf54lm20a/cpuapp` | 636.144 B (69,04 % dos 921.456 B do slot) | 393.080 B (75,12 % dos 511 KB) | 45.676 B de FLASH, 22.880 B de RAM | 0 |
-| `gnssbike/nrf54lm20a/cpuapp` | 636.360 B (69,06 %) | 369.120 B (70,54 %) | 45.880 B de FLASH, 22.888 B de RAM | 0 |
+| `gnssbike/nrf54lm20a/cpuapp` | 636.376 B (69,06 %) | 393.120 B (75,13 %) | 45.880 B de FLASH, 22.888 B de RAM | 0 |
 
 Erros: 0 nos dois alvos.
 
@@ -138,7 +138,7 @@ bash tools/fw/fw.sh recover      # chip protegido: apaga tudo e libera o APPROTE
 
 - Os scripts filtram `--traits jlink` e a família do chip (`nrf52`, ou `nrf54l` quando a `BOARD` é uma placa nRF54L): nesta máquina costuma haver um ST-LINK e outras seriais USB conectados.
 - **Console:** no nRF54LM20 DK o `zephyr,console` é o `uart20` (TX P1.16, RX P1.17, 115200 baud), exposto pela porta VCOM do J-Link; na placa do projeto é o mesmo `uart20`, em TX P1.00 e RX P1.31; no nRF52840 DK é o `uart0` (TX P0.06, RX P0.08). `serial.bat COMx` abre o miniterm do Python do toolchain (pyserial 3.5); `Ctrl+]` sai. O log usa o backend UART; o RTT está desligado no `prj.conf`.
-- Até 2026-09-22 nenhum DK foi conectado a esta máquina: **nada foi gravado nem testado em placa**.
+- Até 2026-09-23 nenhum DK foi conectado a esta máquina: **nada foi gravado nem testado em placa**.
 
 ## Testes e análise estática
 
@@ -147,7 +147,7 @@ bash tools/fw/host_tests.sh             # configura, compila e roda todos
 bash tools/fw/host_tests.sh -R segment  # filtra pelo nome
 ```
 
-Os testes compilam os módulos de lógica de `zephyr_app/src` com o GCC do PC e shims mínimos do Zephyr: 53 conjuntos, 714 casos, todos verdes em 2026-09-22. Detalhes em [12-ferramentas-testes.md](12-ferramentas-testes.md) e na skill `fw-testes`.
+Os testes compilam os módulos de lógica de `zephyr_app/src` com o GCC do PC e shims mínimos do Zephyr: 53 conjuntos, 714 casos, todos verdes em 2026-09-23. Detalhes em [12-ferramentas-testes.md](12-ferramentas-testes.md) e na skill `fw-testes`.
 
 ```sh
 cppcheck --enable=warning,style,performance,portability --std=c11 --inline-suppr --quiet \
@@ -162,7 +162,7 @@ python tools/fw/board_check.py                  # a placa do projeto
 python tools/fw/board_check.py <pasta-da-placa>  # outra
 ```
 
-O `board_check.py` lê o devicetree da placa e procura o que o build aceita calado: pino em duas funções, SCL de TWIM ou SCK de SPIM fora dos pinos de clock da tabela 79, pads do NFC (P1.01 e P1.02) sem `nfct-pins-as-gpios`, cristal em P1.20/P1.21, limite de pinos de cada porta, dois periféricos no mesmo bloco serial e apelido que falta. Sai com 1 se achar problema. Em 2026-09-22 a placa do projeto passa: **31 pinos usados de 66**, 31 livres, 12 deles de clock.
+O `board_check.py` lê o devicetree da placa e procura o que o build aceita calado: pino em duas funções, SCL de TWIM ou SCK de SPIM fora dos pinos de clock da tabela 79, pads do NFC (P1.01 e P1.02) sem `nfct-pins-as-gpios`, cristal em P1.20/P1.21, limite de pinos de cada porta, dois periféricos no mesmo bloco serial e apelido que falta. Sai com 1 se achar problema. Em 2026-09-23 a placa do projeto passa: **31 pinos usados de 66**, 31 livres, 12 deles de clock.
 
 ## Documentação
 

@@ -37,6 +37,7 @@ componente.
 | [05 · Materiais por folha](05-materiais.md) | o que cada folha consome, ligado à lista de compras |
 | [06 · Conectores e pontos de teste](06-conectores-e-pontos-de-teste.md) | cada conector pino a pino, e onde encostar a ponta de prova |
 | [07 · Sequências e proteção](07-sequencias-e-protecao.md) | em que ordem os trilhos sobem e descem, e o que protege o que sai da caixa |
+| [08 · Plano de layout](08-layout.md) | regras de projeto, ordem de roteamento, terra e retorno, os nós críticos e a subida da primeira placa |
 
 ## O aparelho em blocos
 
@@ -64,9 +65,8 @@ flowchart TB
     end
 
     subgraph F4["Folha 4 · Display"]
-        FPC["Hirose FH28-10S<br/>10 vias"] --- PANEL["JDI LPM027M128B<br/>ou Sharp LS027B7DH01A"]
-        REG["REG710 5 V<br/>só com a Sharp"] --- FPC
-        BL["luz frontal<br/>MOSFET e PWM"] --- PANEL
+        FPC["Hirose FH28-10S<br/>10 vias"] --- PANEL["JDI LPM027M128C<br/>8 cores, com luz"]
+        BL["luz do painel<br/>R_BL, MOSFET e PWM"] -.->|"por onde? em aberto"| PANEL
     end
 
     subgraph F5["Folha 5 · Memória e sensores"]
@@ -105,7 +105,7 @@ bloco, e vale dizer exatamente qual foi usada em cada caso:
 | Colheita solar | **lista mínima de materiais da e-peas** (tabela 43 da ficha do AEM10900), com a exceção registrada do indutor | ficha AEM1090x v2.4.0 |
 | Medidor de bateria | **circuito de aplicação do MAX17262** com sensor entre BATT e SYS | ficha Maxim |
 | GNSS | **projeto de referência do MAX-F10S**: entrada com SAW, LNA e SAW já dentro do módulo; a placa entrega alimentação limpa, a linha de 50 Ω e a zona livre | ficha MAX-F10S R03, conferida em [15](../docs/15-avaliacao-componentes.md#gnss) |
-| Display | ficha do painel e do conector: ordem dos 10 pinos, EXTMODE no VDD, VCOM pelo EXTCOMIN | fichas JDI LPM027M128B Ver.01 e Sharp LS027B7DH01 (LD-28305A) |
+| Display | ficha do painel e do conector: ordem dos 10 pinos, EXTMODE no VDD, VCOM pelo EXTCOMIN | fichas JDI LPM027M128**B** Ver.01 e Sharp LS027B7DH01 (LD-28305A). **A tela montada é o LPM027M128C, e a ficha dele não foi lida**: é dela que tem de sair por onde a luz se liga ([06](06-conectores-e-pontos-de-teste.md#a-luz-do-lpm027m128c)) |
 
 > [!IMPORTANT]
 > **O documento de diretrizes de projeto de hardware do nRF54LM20 da
@@ -192,11 +192,12 @@ esquemático não está pronto para virar layout**.
 ### Decisões que são do dono
 
 - [ ] **Ligação da tecla central** — só ao `SHPHLD`, como manda a especificação, ou também a P1.27, como está o devicetree. Resolver muda o firmware ([03](03-netlist.md#interface)).
-- [ ] **Qual painel** — e, por consequência, se existe luz. O JDI B decidido não tem; o C não tem canal autorizado; a Sharp com filme Azumo é o que a lista compra ([01](01-esquematico.md#folha-4--display), [15](../docs/15-avaliacao-componentes.md#a-luz-da-tela-procurada-em-2026-09-23)).
+- [x] **Qual painel** — **decidido em 2026-09-23: o JDI LPM027M128C**, peça única de 2,7", 400 × 240, MIP de 8 cores e **com luz frontal integrada**, no lugar do par Sharp LS027B7DH01A + filme Azumo. Sem etapa de laminação, mesma resolução, consumo menor e cor. A Sharp continua sendo o **plano B** no mesmo conector. O que a decisão custa: R$ 776 contra US$ 90,06 do par, **sem canal autorizado e sem garantia** ([01](01-esquematico.md#folha-4--display), [19](../docs/19-lista-de-compras.md#display)).
 - [ ] **Qual antena** — a TE L000670 tem 10,75 mm e a zona reservada tem 8 mm ([04](04-pcb-e-caixa.md#zonas-proibidas)).
 
 ### Fichas que precisam ser lidas
 
+- [ ] **Por onde a luz do JDI LPM027M128C se liga** — **alta prioridade, e bloqueia o layout**. O FPC de 10 vias que as duas telas compartilham (`SCLK`, `SI`, `SCS`, `EXTCOMIN`, `DISP`, `VDDA`, `VDD`, `EXTMODE`, `VSS`, `VSSA`) **não tem par para o LED**, e o `J402` existia para o filme separado da Sharp. O C tem de ter um FPC com mais vias **ou** um rabicho próprio, e **nenhum documento do projeto traz isso**: a ficha lida é a do **B**, que não tem luz. Sai da ficha do C ou de uma amostra, **antes do layout** — sem ela não dá para desenhar a folha 4 nem posicionar o conector ([01](01-esquematico.md#folha-4--display), [06](06-conectores-e-pontos-de-teste.md#a-luz-do-lpm027m128c)).
 - [ ] **Domínio de tensão dos pinos digitais do nPM1300** — se for o `VSYS`, o `PMIC_INT` e o I²C da energia não casam com os 3,0 V do MCU ([02](02-calculos.md#pull-ups-do-i²c)).
 - [ ] **De que lado do sensor interno ficam o `BATT` e o `SYS` do MAX17262** — trocar os dois inverte o sinal da corrente ([01](01-esquematico.md#folha-1--energia)).
 - [ ] **Brown-out e `VSYSPOF` do nPM1300** — a partida suave já está levantada (cerca de 1,2 ms, 360 µs/V), estes dois não ([07](07-sequencias-e-protecao.md)).
@@ -205,19 +206,19 @@ esquemático não está pronto para virar layout**.
 - [ ] **Tolerância do cristal de 32,768 kHz do BM20C** — o ANT+ pede ±50 ppm e a ficha não informa.
 - [ ] **Um termistor para o AEM10900, não dois** — o do pack pelo conector **ou** o SMD na face de trás, nunca os dois: em paralelo dão 5 kΩ, que o colhedor lê como 44,4 °C contra o corte de 45 °C ([01](01-esquematico.md#folha-1--energia)).
 - [ ] **Indutor do AEM10900** — a tabela 6 e a fórmula da seção 6.7.2 da ficha não batem; 4,7 µH é a escolha e 6,8 µH é o valor das curvas publicadas ([02](02-calculos.md#indutor)).
-- [ ] **O filme Azumo na LS027B7DH01A** — ele foi feito para a LS027B7DH01 sem o A ([19](../docs/19-lista-de-compras.md#display)).
+- [ ] **O filme Azumo na LS027B7DH01A** — só no plano B: ele foi feito para a LS027B7DH01 sem o A ([19](../docs/19-lista-de-compras.md#display)).
 
 ### O que precisa de bancada
 
 - [ ] **Painel com um módulo tapado** — confirmar que o arranjo em paralelo sem diodo perde pouco ([02](02-calculos.md#série-ou-paralelo)).
 - [ ] **Calor do carregador na caixa vedada** — 1,50 W no pior caso põem a junção perto de 73 °C e a caixa inteira de 8 a 16 °C acima do ambiente; o corte por temperatura da célula pode disparar antes do fim da carga, e ao sol isso fica pior ([02](02-calculos.md#calor-do-carregador), [calor da caixa](02-calculos.md#calor-da-caixa-inteira)).
 - [ ] **Isolação entre a antena do GNSS e a do rádio** — o S21, não só a geometria ([04](04-pcb-e-caixa.md#as-duas-antenas)).
-- [ ] **Tensão direta do filme de luz** — sem ela o `R_BL` da montagem com a Sharp não fecha ([02](02-calculos.md#luz-do-display)).
+- [ ] **Tensão direta do filme de luz** — só no plano B: sem ela o `R_BL` da montagem com a Sharp não fecha. Com o JDI o `R_BL` é 39 Ω, fechado pela ficha ([02](02-calculos.md#luz-do-display)).
 
 ### O que falta definir
 
 - [ ] **Pilha de camadas do fabricante** — sem ela não há largura de trilha, nem 50 Ω da antena, nem 90 Ω do USB ([02](02-calculos.md#corrente-por-trilho-e-largura-de-trilha)).
-- [ ] **Atribuição das quatro vias do conector do filme de luz** — o número de vias é 4, mas **qual contato leva o quê não está em arquivo nenhum do projeto**; sai do desenho 12369-01_T4 da Azumo ([06](06-conectores-e-pontos-de-teste.md#j402--filme-de-luz)).
+- [ ] **Atribuição das quatro vias do conector do filme de luz** — só no plano B: o número de vias é 4, mas **qual contato leva o quê não está em arquivo nenhum do projeto**; sai do desenho 12369-01_T4 da Azumo ([06](06-conectores-e-pontos-de-teste.md#no-plano-b-o-filme-e-o-j402)).
 - [ ] **Pinagem do conector da bateria, com o fabricante do pack** ([06](06-conectores-e-pontos-de-teste.md)).
 
 ## Verificação
