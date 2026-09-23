@@ -94,7 +94,7 @@ Sem a regra 1, o arredondamento do RGB565 (6 bits de verde, 5 de vermelho e azul
 - um texto sai da caixa que o contém;
 - a navegação não chega à tela esperada ou uma ação não sai: páginas do CRS em anel, notificação fechada por tecla, tela do GNSS com a posição velha, trava do menu, menu, percursos, falta de percurso, ajustes, sensores, pareamento, FTP, zoom do PRC e desligamento pelo toque longo.
 
-Resultado em 2026-09-22: 44 telas em 2 temas, 88 quadros, 0 problemas; pico de 23.696 B no heap do LVGL, na tela com notificação, e de 7.359 B de pilha (no PC, x86-64, com ponteiros de 64 bits). O `lv_conf.h` do renderizador espelha o Kconfig do firmware: só os formatos RGB565 e A8 no renderizador, a fonte padrão UNSCII 8 e só rótulos; com os outros formatos cortados, as imagens saíram iguais byte a byte. A formatação dos números tem teste de host próprio, `test_ui_fmt` (10 casos), contra a transcrição de `_fmkstr` e `_secjmkstr` em `zephyr_app/tests/host/support/legacy_ref.h` ([12](12-ferramentas-testes.md#testes-de-host-do-port)).
+Resultado em 2026-09-23: 44 telas em 2 temas, 88 quadros, 0 problemas; pico de 23.696 B no heap do LVGL, na tela com notificação, e de 7.359 B de pilha (no PC, x86-64, com ponteiros de 64 bits). O `lv_conf.h` do renderizador espelha o Kconfig do firmware: só os formatos RGB565 e A8 no renderizador, a fonte padrão UNSCII 8 e só rótulos; com os outros formatos cortados, as imagens saíram iguais byte a byte. A formatação dos números tem teste de host próprio, `test_ui_fmt` (10 casos), contra a transcrição de `_fmkstr` e `_secjmkstr` em `zephyr_app/tests/host/support/legacy_ref.h` ([12](12-ferramentas-testes.md#testes-de-host-do-port)).
 
 O teste no PC confere o desenho, não o painel: tempo de SPI, COM, luz e legibilidade ao sol ficam para a bancada.
 
@@ -258,7 +258,7 @@ Os três botões e as funções do legacy ([08](08-interface.md#botões)), com o
 | Flash no nRF54LM20 DK | LVGL 92.467 B, telas 28.753 B, fontes 26.904 B, driver 2.972 B | só os formatos RGB565 e A8 no renderizador e sem o log do LVGL |
 | Linha em 3 bits | 150 B de pixels por linha física de 400 pixels, mais os bits de modo e endereço | ficha, seção 6.1 |
 | Quadro inteiro pelo SPI | cerca de 36 KB, perto de 150 ms a 2 MHz | só na troca de tela; nas páginas de dados vão as linhas que mudaram |
-| RAM do nRF54LM20A | 512 KB | medida em 2026-09-22, com a interface e o resto do firmware: 393.080 B (75,12 %) no nRF54LM20 DK e 369.120 B (70,54 %) na placa do projeto ([03](03-ambiente-build.md#resultado-de-referência)) |
+| RAM do nRF54LM20A | 512 KB | medida em 2026-09-23, com a interface e o resto do firmware: 393.080 B (75,12 %) no nRF54LM20 DK e 393.120 B (75,13 %) na placa do projeto ([03](03-ambiente-build.md#resultado-de-referência)) |
 
 ## Diferenças para o legacy
 

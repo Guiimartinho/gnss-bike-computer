@@ -6,9 +6,9 @@ Onde o port Zephyr (`zephyr_app/`) está em relação ao firmware original (`leg
 
 ## Resumo
 
-- **Compila** no NCS v3.3.0 sem nenhum aviso de compilador (nRF54LM20 DK, o alvo principal: FLASH 636.144 B de 921.456 B do slot, RAM 393.080 B; a placa do projeto, `gnssbike/nrf54lm20a/cpuapp`: FLASH 636.360 B, RAM 369.120 B; mais o MCUboot com 45.676 B de FLASH e 22.880 B de RAM no DK e 45.880 B e 22.888 B na placa) e **passa em 53 conjuntos de testes de host** (714 casos). Números conferidos em 2026-09-22 com build do zero nos dois alvos. **Nada foi testado na placa** nem no DK.
+- **Compila** no NCS v3.3.0 sem nenhum aviso de compilador (nRF54LM20 DK, o alvo principal: FLASH 636.144 B de 921.456 B do slot, RAM 393.080 B; a placa do projeto, `gnssbike/nrf54lm20a/cpuapp`: FLASH 636.376 B, RAM 393.120 B; mais o MCUboot com 45.676 B de FLASH e 22.880 B de RAM no DK e 45.880 B e 22.888 B na placa) e **passa em 53 conjuntos de testes de host** (714 casos). Números conferidos em 2026-09-23 com build do zero nos dois alvos. **Nada foi testado na placa** nem no DK.
 - Desde 2026-09-19 o firmware é a base da arquitetura de [16](16-arquitetura-firmware.md): oito serviços com thread própria, eventos no zbus, máquinas de sistema e de modo no SMF, hardware pelas APIs do Zephyr ([05](05-arquitetura-zephyr.md)). O HAL próprio, os drivers da V3 e a interface em paisagem saíram.
-- Os algoritmos do legacy continuam no `src/model` e rodam na thread do modelo; os segmentos, os formatos de arquivo e o BLE central foram fechados entre 2026-09-20 e 2026-09-22 e **nenhum deles foi exercitado fora do PC**. A interface nova, em LVGL, está no firmware com o driver próprio da tela (JDI LPM027M128B e Sharp LS027B7DH01, em retrato), as teclas com toque longo e a luz; foi testada no PC (44 quadros em 2 temas), mas nunca vista em tela de verdade ([18](18-interface-telas.md)).
+- Os algoritmos do legacy continuam no `src/model` e rodam na thread do modelo; os segmentos, os formatos de arquivo e o BLE central foram fechados entre 2026-09-20 e 2026-09-23 e **nenhum deles foi exercitado fora do PC**. A interface nova, em LVGL, está no firmware com o driver próprio da tela (JDI LPM027M128B e C, e Sharp LS027B7DH01, em retrato; a placa declara o **C** desde 2026-09-23), as teclas com toque longo e a luz; foi testada no PC (44 quadros em 2 temas), mas nunca vista em tela de verdade ([18](18-interface-telas.md)).
 - ANT+: a pilha do add-on `sdk-ant` entra no build com `ANT=1`, sobe no boot e **abre canal escravo** (`rf/ant/ant_channel.c`), mas **nenhum canal abre de fato**: os `CONFIG_GNSS_ANT_*_DEV_TYPE` valem 0 e os arquivos de decodificação de página ficam fora do repositório, porque o ANT+ Adopter Agreement proíbe redistribuir e o repositório é público. Os clientes BLE (HRS, CSC, FTMS, CPS, LNS, ANCS, Komoot, radar) estão ligados de ponta a ponta no código, e nenhum foi testado com dispositivo.
 
 ```mermaid
@@ -22,7 +22,7 @@ pie showData
 
 ## Matriz por área
 
-Estados: **fiel** (mesmo comportamento), **diferente** (existe com regras ou constantes diferentes), **parcial** (existe e falta parte, quase sempre o teste em hardware) e **novo** (não existia no legacy). Desde 2026-09-22 nenhuma área está **ausente**, **em stub**, **não ligada** nem **quebrada**.
+Estados: **fiel** (mesmo comportamento), **diferente** (existe com regras ou constantes diferentes), **parcial** (existe e falta parte, quase sempre o teste em hardware) e **novo** (não existia no legacy). Desde 2026-09-23 nenhuma área está **ausente**, **em stub**, **não ligada** nem **quebrada**.
 
 | Área | Legacy | Port | Estado | Detalhe |
 |---|---|---|---|---|
@@ -35,7 +35,7 @@ Estados: **fiel** (mesmo comportamento), **diferente** (existe com regras ou con
 | Altitude (Kalman 3 estados) | `Attitude::computeFusion` | `kalman_altitude.c` + `udmatrix.c` | fiel | corrigidos em 2026-09-19 o P0 (900 em todos os elementos), o `bound` (valor absoluto) e a soma de matrizes que zerava o destino, além da taxa (uma fusão por época, com a pressão média de 1 s); `test_kalman_altitude`, `test_udmatrix` ([06](06-algoritmos.md#altitude-kalman-de-3-estados)) |
 | Distância | equiretangular com 6.371.008 m, posições brutas, descarte dos primeiros 25 m, instantâneo a cada 15 m | a mesma fórmula (`vecteur.c`) e a mesma regra (`distance.c`) | fiel | `test_vecteur`, `test_distance`; em 2026-09-21 saíram as duas segundas fórmulas, a do `locator.c` (com o módulo inteiro) e a do `parcours.c` |
 | Drift barômetro/GPS | τ = 800/801 por fix | igual em `attitude.c` | fiel | uma vez por época; o `baro_drift.c` duplicado saiu |
-| Potência estimada | `1.025·(9.81·W·vz + 0.004·9.81·W·v + 0.204·v³)` | a mesma fórmula em `power_estimate.c`, com a velocidade da posição anterior e o peso só do ciclista | fiel | `test_power_estimate` contra a transcrição do legacy; satura em vez de dar a volta no `int16_t`; desde 2026-09-22 só vale quando **não** há medidor (`ride_power_w()` no serviço do modelo) |
+| Potência estimada | `1.025·(9.81·W·vz + 0.004·9.81·W·v + 0.204·v³)` | a mesma fórmula em `power_estimate.c`, com a velocidade da posição anterior e o peso só do ciclista | fiel | `test_power_estimate` contra a transcrição do legacy; satura em vez de dar a volta no `int16_t`; desde 2026-09-23 só vale quando **não** há medidor (`ride_power_w()` no serviço do modelo) |
 | Medidor de potência | CPS pelo BLE | `model/cps_parse.c` (caminhada pelos campos, relógio da roda a 1/2048 s) + `rf/ble_cps_client.c`; ANT+ só com a tubulação | novo | `test_cps_parse`; a ordem dos campos vem da especificação como o port a entende e **nenhum medidor foi à bancada** |
 | NP, IF, TSS e VI | não existem | `model/power_metrics.c`, método de Coggan (média móvel de 30 s, quarta potência) | novo | `test_power_metrics`, com todos os valores calculados da definição antes do teste |
 | Treino estruturado e ERG | não existe | `model/workout.c`: arquivo `.WKT`, repetições achatadas, alvo por potência, FC ou cadência; o rolo recebe o meio da faixa só dentro de casa | novo | `test_workout`; **nenhum rolo foi à bancada** |
@@ -44,7 +44,7 @@ Estados: **fiel** (mesmo comportamento), **diferente** (existe com regras ou con
 | Posição do celular (LNS) | cliente do serviço 0x1819 | `model/lns_parse.c` + `rf/ble_lns_client.c`; entra como época com o sinalizador `phone` e o árbitro decide | fiel | `test_lns_parse`; só `LNS_POS_OK` é aceito; **nenhum celular foi à bancada** |
 | Navegação do Komoot | serviço próprio, curva a curva | cliente ligado ao modelo; `model/komoot_turn.c` traduz 24 direções em 9 setas | fiel | `test_komoot_turn`; **nenhum telefone foi à bancada** |
 | ANT+ | canais para FC, cadência, potência e radar | `rf/ant/ant_channel.c` abre canal escravo com busca de 30 s e travamento no sensor, sobre a pilha do `sdk-ant` (`ANT=1`) | parcial | **nenhum canal abre de fato**: os `CONFIG_GNSS_ANT_*_DEV_TYPE` valem 0 e `radar_pages.c`, `power_pages.c` e `sensor_pages.c` não estão no repositório nem na máquina, porque o ANT+ Adopter Agreement proíbe redistribuir e o repositório é público; um canal com tipo zero devolve `-ENOTSUP`. **Nenhum sensor foi à bancada** ([07](07-radio-ant-ble.md#ant-no-ncs-v330)) |
-| WS2812 (NeoPixel) | LED endereçável do legacy | **não existe e não vai existir**: a placa própria leva um LED RGB simples em `pwm22`, que gasta menos e não precisa de temporização rígida ([14](14-hardware-placa-nova.md#alocação-de-pinos)) | diferente | decisão registrada em 2026-09-22 |
+| WS2812 (NeoPixel) | LED endereçável do legacy | **não existe e não vai existir**: a placa própria leva um LED RGB simples em `pwm22`, que gasta menos e não precisa de temporização rígida ([14](14-hardware-placa-nova.md#alocação-de-pinos)) | diferente | decisão registrada em 2026-09-23 |
 | Zonas de potência e suffer score | PowerZone, SufferScore | `power_zone.c`, `suffer_score.c`, alimentados como no legacy | diferente | zonas de potência com o rolo em FEC (`BoucleFEC.cpp:75`); o score a cada 1 s com a FC do momento (o legacy, a cada volta do laço, `Model.cpp:377`) |
 | Zonas RR | RRZone | `rr_zone.c`, a cada dado da cinta com RR | diferente | o legacy chama a cada volta do laço e repete o último RR ([06](06-algoritmos.md#zonas)) |
 | Segmentos Strava | carga por distância, ativação, desempenho, até 2 na tela | `segment.c`, `liste_points.c`, `vecteur.c`, com os arquivos do legacy lidos por `segment_file.c` | parcial | a varredura, a carga e o alocador são os do legacy (nome com a posição, 300 m para alocar, texto `lat ; lon ; rtime ; alt`, alocador a cada época no serviço do modelo), com os pontos num pool de 3 × 256 e decimação do que passa disso; `test_segment` (14 casos) e `test_segment_file` nos 138 arquivos reais; falta mostrar o segmento na tela e testar com cartão de verdade |
@@ -103,7 +103,7 @@ A base da arquitetura de [16](16-arquitetura-firmware.md), descrita em [05](05-a
 
 Ordenados por gravidade. Linhas conferidas em 2026-09-18. Saíram em 2026-09-21, com a lógica tirada dos clientes BLE para módulos puros e cobertos por teste: a velocidade CSC 3600 vezes menor (`model/csc_calc.c`) e os flags do FTMS (`model/ftms_parse.c`). Saíram com o código em 2026-09-19: o retrato errado do `ls027.c`, o EPO do `gps_epo.c`, o menu ilegível do `vue.c`, o score não inicializado do `vue_fec.c`, o campo sem uso do `hal_gpio.c` e o shunt do STC3100; as zonas que só recebiam amostra acima de zero foram corrigidas na migração.
 
-**A lista está vazia desde 2026-09-22.** Os dois últimos saíram com o código: o `udmat_ones` que gerava identidade e o `bound` com sinal em `src/model/udmatrix.c`, e o CRC de `src/model/crash_recovery.c`, que incluía o próprio campo `crc` e fazia a restauração falhar em 255 de 256 casos (hoje o cálculo para em `offsetof(saved_data_t, crc)`).
+**A lista está vazia desde 2026-09-23.** Os dois últimos saíram com o código: o `udmat_ones` que gerava identidade e o `bound` com sinal em `src/model/udmatrix.c`, e o CRC de `src/model/crash_recovery.c`, que incluía o próprio campo `crc` e fazia a restauração falhar em 255 de 256 casos (hoje o cálculo para em `offsetof(saved_data_t, crc)`).
 
 Vazia **não quer dizer correto**: quer dizer que não há defeito conhecido no código. O que continua em aberto não é defeito, é trabalho que falta, e está no [roteiro](#roteiro):
 
@@ -117,10 +117,22 @@ Vazia **não quer dizer correto**: quer dizer que não há defeito conhecido no 
 | **Ninguém liga a chave de alimentação da flash** (`LDSW1` do nPM1300): o nó existe no devicetree sem `regulator-boot-on` e sem apelido, a `mx25r6435f@0` não declara `supply` e nada em `src/` referencia o regulador. Na placa do projeto isso é armazenamento sem energia, em silêncio; no DK não aparece | [esquemático, folha 5](../hardware_gnssbike/01-esquematico.md#folha-5--memória-e-sensores) |
 | O firmware **não assina `NPM13XX_EVENT_SHIPHOLD_PRESS`**: hoje ele lê a tecla central por P1.27, que é justamente a ligação em conflito com a especificação de hardware | [esquemático, lista de nós](../hardware_gnssbike/03-netlist.md#interface) |
 | **O buzzer e o LED RGB não têm código nem canal.** O devicetree declara **um** canal de PWM em cada (`rgb_pwm` e `buzzer_pwm`, os dois `PWM_POLARITY_NORMAL`), e nada em `src/` menciona buzzer ou LED. Os 6 Vpp em contrafase que o hardware promete não são produzíveis pelo que está declarado, e das três cores só a primeira acenderia | [esquemático, folha 6](../hardware_gnssbike/01-esquematico.md#folha-6--interface) |
-| **O COM da tela fica em 1 Hz com a luz acesa, na Sharp.** A interface pede 120 Hz (`ui_svc.c:67`), o driver recusa acima de **20 Hz** quando o painel é Sharp (`memlcd.c:45`) devolvendo `-EINVAL`, e `ui_svc.c:277` ignora o retorno. A placa declara `sharp,ls027b7dh01`, que é a tela que a lista compra — e 1 Hz com a luz acesa é justamente o caso que o EXTCOMIN existe para evitar | [esquemático, folha 4](../hardware_gnssbike/01-esquematico.md#folha-4--display) |
 | **O driver do AEM10900 não grava `TMONEN`, `HPEN` nem `KEEPALEN`.** Ele escreve `VOVDIS`, `VOVCH`, `APM` e `CTRL` e valida com `CTRL.UPDATE = 1`; a [avaliação](15-avaliacao-componentes.md#detalhes-para-o-esquemático) diz que os registradores partem dos valores de fábrica, **não dos pinos**, e que os três têm de ser mantidos em 1 | [esquemático, folha 1](../hardware_gnssbike/01-esquematico.md#folha-1--energia) |
 | **A flash se alimenta pelos pinos de sinal.** Dois defeitos já registrados se somam: ninguém liga a `LDSW1`, e o serviço de armazenamento aciona um SPI de 8 MHz contra uma peça com `VCC` em 0 V. Ela conduz pelos diodos de grampo do `SCK` e do `MOSI` — agora através dos 33 Ω, que limitam mas não impedem | [esquemático, folha 5](../hardware_gnssbike/01-esquematico.md#folha-5--memória-e-sensores) |
+| **Por onde a luz do JDI LPM027M128C se liga não está em fonte nenhuma.** É pendência de **hardware**, não de firmware, e de alta prioridade: o FPC de 10 vias das duas telas não tem par de LED, e a ficha que o projeto leu é a do **B**, que não tem luz. Sem isso a folha 4 do esquemático não fecha nem o conector é posicionado | [esquemático, folha 4](../hardware_gnssbike/01-esquematico.md#folha-4--display) |
 | **Nada rodou em hardware**: nem placa, nem DK, nem painel, nem receptor, nem sensor, nem cartão, nem cabo | este documento inteiro |
+
+> [!NOTE]
+> **Um defeito saiu daqui em 2026-09-23 sem ninguém escrever código.** O
+> "COM da tela em 1 Hz com a luz acesa" existia porque a placa declarava
+> `sharp,ls027b7dh01`, e o driver **recusa** qualquer valor acima de
+> **20 Hz** nesse painel (`MEMLCD_COM_HZ_MAX_SHARP`,
+> `zephyr_app/modules/gnss_drivers/drivers/display/memlcd.c:45`): os 120 Hz
+> que `ui_svc.c:67` pede voltavam como `-EINVAL`, que `ui_svc.c:277`
+> ignorava. Com a **troca da tela para o JDI LPM027M128C**, o limite passa a
+> ser **140 Hz** (`MEMLCD_COM_HZ_MAX_JDI`, linha 46) e os 120 Hz **passam**.
+> O defeito deixou de existir por escolha de hardware — e voltaria a existir
+> se alguém montasse o plano B, com a Sharp, sem mexer no firmware.
 
 ## Roteiro
 
@@ -152,7 +164,7 @@ Tamanhos estimados pelos relatórios de análise: fase 1 M, fase 2 M, fase 3 G, 
 | Mensagens dos clientes BLE para o modelo | feito em 2026-09-19: os callbacks publicam `ext_sensor` e `link_status` | `src/svc/radio/radio_svc.c` |
 | Watchdog | feito em 2026-09-18 e refeito em 2026-09-19: um canal de 4 s por thread de serviço, oito no total; não testado na placa | `src/app/app_svc.c`, `prj.conf` |
 | Auto-off e desligamento | feito em 2026-09-18 pelo STC3100 e refeito em 2026-09-19 na máquina de sistema: 15 min sem posição em CRS, PRC e DBG, ou sem dado do rolo em FEC; desligamento em etapas; ship mode do nPM1300 ou System OFF (o latch do STC3100 saiu com a V3); não testado na placa | `src/svc/power/sys_fsm.c`, `test_sys_fsm` |
-| Board própria | feito em 2026-09-22: o alvo `gnssbike/nrf54lm20a/cpuapp` existe e compila, com devicetree, pinctrl, Kconfig e defconfig próprios, e `tools/fw/board_check.py` confere o mapa de pinos (31 usados de 66). Escrever o devicetree derrubou parte do plano de pinos do [14](14-hardware-placa-nova.md#o-que-mudou-do-plano-para-a-placa). **Não há placa física**, e falta o de-para entre cada GPIO e o pad LGA do módulo BM20C, que o layout precisa | `boards/gnss/gnssbike/`, `boards/gnssbike_nrf54lm20a_cpuapp.{overlay,conf}` |
+| Board própria | feito em 2026-09-23: o alvo `gnssbike/nrf54lm20a/cpuapp` existe e compila, com devicetree, pinctrl, Kconfig e defconfig próprios, e `tools/fw/board_check.py` confere o mapa de pinos (31 usados de 66). Escrever o devicetree derrubou parte do plano de pinos do [14](14-hardware-placa-nova.md#o-que-mudou-do-plano-para-a-placa). **Não há placa física**, e falta o de-para entre cada GPIO e o pad LGA do módulo BM20C, que o layout precisa | `boards/gnss/gnssbike/`, `boards/gnssbike_nrf54lm20a_cpuapp.{overlay,conf}` |
 
 ### Andamento da fase 5
 
@@ -184,7 +196,7 @@ Tomada em 2026-09-19:
 
 | Decisão | Escolha | Consequência |
 |---|---|---|
-| Display | **JDI LPM027M128B**, achado no AliExpress; a Sharp LS027B7DH01A fica de reserva; peças do AliExpress têm preferência | o nRF54LM20 DK usa o LPM027M128B (`jdi,lpm027m128b`) e o tema de 8 cores; o B é refletivo e sem luz própria; a [lista de compras](19-lista-de-compras.md) não muda |
+| Display | **JDI LPM027M128B**, achado no AliExpress; a Sharp LS027B7DH01A fica de reserva; peças do AliExpress têm preferência | o nRF54LM20 DK usa o LPM027M128B (`jdi,lpm027m128b`) e o tema de 8 cores; o B é refletivo e sem luz própria; a [lista de compras](19-lista-de-compras.md) não muda. **Revisto em 2026-09-23**, abaixo: a tela passou a ser o **C**, que tem luz |
 
 Tomada em 2026-09-20:
 
@@ -192,11 +204,17 @@ Tomada em 2026-09-20:
 |---|---|---|
 | GNSS | **u-blox MAX-F10S**, banda dupla L1 + L5, no lugar do MAX-M10N-10B; o M10N fica como alternativa econômica no mesmo footprint | 1 m de CEP contra 1,5 m e o código do L5 contra o multipercurso; mesmo encapsulamento MAX, mesma pinagem, mesmo driver UBX (compatível `u-blox,max-f10`), e US$ 1,38 mais barato. **Custa autonomia**: o aparelho vai de cerca de 21 mW para cerca de 58 mW e de cerca de 310 h para cerca de 115 h sem sol, e o painel solar passa a devolver de 23 a 46 min por hora em vez de cobrir o consumo. O F10S não tem o grupo `CFG-PM` (nada de LEAP), não faz banda única e é ROM, sem o AssistNow Live Orbits. O A/B na bancada decide se a troca se paga ([15](15-avaliacao-componentes.md#escolha-max-f10s)) |
 
+Tomada em 2026-09-23:
+
+| Decisão | Escolha | Consequência |
+|---|---|---|
+| Display | **JDI LPM027M128C**, peça única de 2,7", 400 × 240, MIP de 8 cores e **com luz frontal integrada**, no lugar do par Sharp LS027B7DH01A + filme Azumo 11103-06_A1; a Sharp fica como plano B no mesmo conector | peça única, **sem etapa de laminação**, mesma resolução (a interface não muda), consumo menor e cor. A placa declara `jdi,lpm027m128c` e **o defeito do COM em 1 Hz deixou de existir** (o driver aceita 140 Hz no JDI contra 20 Hz na Sharp). No hardware saem o REG710, o trilho de 5 V, o filme e o conector dele, e o `DISP_PWR_EN` (P3.07) **fica livre** ([esquemático, folha 4](../hardware_gnssbike/01-esquematico.md#folha-4--display)). **Custa mais**: R$ 776 contra US$ 90,06 do par, cerca de **US$ 54 a mais por placa**, **sem canal autorizado e sem garantia** ([19 · Custo](19-lista-de-compras.md#custo)). E custa **RAM**: o quadro do JDI ocupa 36.482 B contra 12.482 B da Sharp, **24.000 B a mais** ([05](05-arquitetura-zephyr.md#tela)), que é o que separa os números de memória do [resumo](#resumo) dos de 2026-09-22. **Deixa uma pendência de alta prioridade**: por onde a luz do C se liga não está em fonte nenhuma |
+
 Ainda em aberto:
 
 | Decisão | Opções | Consequência |
 |---|---|---|
-| Componentes da placa nova | proposta em [13](13-placa-nova.md), especificação em [14](14-hardware-placa-nova.md), avaliação em [15](15-avaliacao-componentes.md) e lista de compras validada em [19](19-lista-de-compras.md): nRF54LM20A no módulo Fanstel BM20C, display Sharp LS027B7DH01A com luz frontal (o JDI LPM027M128C de 8 cores no mesmo conector, sem canal autorizado de compra; a tela foi decidida em 2026-09-19: o JDI LPM027M128B, acima), GNSS u-blox MAX-F10S de banda dupla (o MAX-M10N-10B no mesmo footprint, como alternativa econômica) com antena linear L1/L5 na borda de cima, nPM1300 com MAX17262 e carregador solar AEM10900, BMP585, BMI270, MMC5633NJL e OPT3001 | o dono aprova ou troca cada item; amostras e placas de avaliação antes do esquemático |
+| Componentes da placa nova | proposta em [13](13-placa-nova.md), especificação em [14](14-hardware-placa-nova.md), avaliação em [15](15-avaliacao-componentes.md) e lista de compras validada em [19](19-lista-de-compras.md): nRF54LM20A no módulo Fanstel BM20C, display **JDI LPM027M128C** de 8 cores com luz integrada (decidido em 2026-09-23, acima; a Sharp LS027B7DH01A com o filme Azumo fica de plano B no mesmo conector), GNSS u-blox MAX-F10S de banda dupla (o MAX-M10N-10B no mesmo footprint, como alternativa econômica) com antena linear L1/L5 na borda de cima, nPM1300 com MAX17262 e carregador solar AEM10900, BMP585, BMI270, MMC5633NJL e OPT3001 | o dono aprova ou troca cada item; amostras e placas de avaliação antes do esquemático |
 | Hardware de teste | nRF54LM20 DK para desenvolver até a placa própria existir, e as placas de avaliação da [proposta](13-placa-nova.md#próximos-passos) | sem placa, nada roda de verdade: hoje só há build e testes de host |
 | Formatos no SD | compatíveis com o legacy (segmentos em texto com nome base36, `.PAR`, `@DDMMYY.txt`) ou formatos novos com conversor | há 138 segmentos e 2 percursos de exemplo em `tools/TDD/DB` no formato do legacy |
 | Licença do projeto | o legacy é CC BY-NC 4.0; o port deriva dele | afeta uso comercial e a escolha da licença do repositório |

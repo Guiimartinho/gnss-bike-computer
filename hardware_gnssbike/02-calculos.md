@@ -5,7 +5,7 @@ origem de cada número de entrada. Conta feita aqui vem marcada como
 **conta**; número de ficha técnica vem marcado como **ficha**; e o que
 depende de medida está dito como tal.
 
-**Nesta página:** [Corrente de cada trilho](#corrente-de-cada-trilho) · [Orçamento do USB](#orçamento-do-usb-e-tempo-de-carga) · [Autonomia](#autonomia) · [Corrente por trilho](#corrente-por-trilho-e-largura-de-trilha) · [Pull-ups do I²C](#pull-ups-do-i²c) · [Luz do display](#luz-do-display) · [LED RGB](#led-rgb) · [Calor do carregador](#calor-do-carregador) · [Calor da caixa](#calor-da-caixa-inteira) · [Colheita solar](#colheita-solar) · [Medidor de bateria](#medidor-de-bateria) · [Conversores do nPM1300](#conversores-do-npm1300) · [Desacoplamento](#desacoplamento) · [Capacitor de volume](#capacitor-de-volume-no-módulo) · [Proteção das teclas](#proteção-das-teclas) · [Buzzer](#buzzer-piezo) · [Série no SPI](#resistor-de-série-no-spi-da-flash) · [Rampa do V_IO](#rampa-do-v_io-na-partida) · [Trilho de 5 V](#trilho-de-5-v-com-a-sharp) · [O que não foi calculado](#o-que-não-foi-calculado)
+**Nesta página:** [Corrente de cada trilho](#corrente-de-cada-trilho) · [Orçamento do USB](#orçamento-do-usb-e-tempo-de-carga) · [Autonomia](#autonomia) · [Corrente por trilho](#corrente-por-trilho-e-largura-de-trilha) · [Pull-ups do I²C](#pull-ups-do-i²c) · [Luz do display](#luz-do-display) · [LED RGB](#led-rgb) · [Calor do carregador](#calor-do-carregador) · [Calor da caixa](#calor-da-caixa-inteira) · [Colheita solar](#colheita-solar) · [Medidor de bateria](#medidor-de-bateria) · [Conversores do nPM1300](#conversores-do-npm1300) · [Desacoplamento](#desacoplamento) · [Capacitor de volume](#capacitor-de-volume-no-módulo) · [Proteção das teclas](#proteção-das-teclas) · [Buzzer](#buzzer-piezo) · [Série no SPI](#resistor-de-série-no-spi-da-flash) · [Rampa do V_IO](#rampa-do-v_io-na-partida) · [Trilho de 5 V](#trilho-de-5-v-do-plano-b) · [O que não foi calculado](#o-que-não-foi-calculado)
 
 > [!WARNING]
 > Nada foi medido. Não existe placa.
@@ -23,8 +23,13 @@ depende de medida está dito como tal.
 | Flash NOR apagando um setor, no modo de baixo consumo | 3,1 mA | ficha da MX25R6435F |
 | Display (JDI, 1 quadro/s) | 10 µA | 30 µW ÷ 3,0 V, **conta** |
 | TXU0204 `VCCA` e `I2C_VDD` do AEM10900 | dezenas de µA | ficha |
-| REG710, só na montagem com a Sharp | cerca de 0,2 mA | 65 µA parado mais o dobro da corrente da tela |
+| REG710, **não montado**; só volta no plano B com a Sharp | cerca de 0,2 mA | 65 µA parado mais o dobro da corrente da tela |
 | **Soma** | **cerca de 23 mA** | **conta** |
+
+A troca de 2026-09-23 para o **JDI LPM027M128C** tirou o REG710 da placa
+montada ([01](01-esquematico.md#folha-4--display)), e com ele os 0,2 mA da
+linha acima: a soma cai para cerca de 22,8 mA, que continua sendo os mesmos
+**cerca de 23 mA** e não muda nada do que este documento dimensiona.
 
 **Ocupação: 23 mA de 200 mA, 11,5 %** — ou seja, folga de 177 mA, quase 9×.
 
@@ -223,11 +228,12 @@ aumenta a folga. **Mesmo valor nos dois, 4,7 kΩ.**
 O trilho `3V3BL` sai da `LDSW2` do nPM1300 em 3,3 V, e o MOSFET de canal N
 liga o catodo ao terra sob PWM.
 
-### Com o JDI LPM027M128**C**
+### Com o JDI LPM027M128**C**, a tela montada
 
-LED de **16 mA a 2,67 V** (ficha). **Só o C tem luz**: o B é a mesma tela
-sem backlight ([01](01-esquematico.md#folha-4--display)), e com ele este
-resistor, o `Q401` e o trilho `3V3BL` não têm o que acionar. Com `V_DS` do MOSFET em cerca de 50 mV:
+Esta é a montagem decidida em 2026-09-23
+([01](01-esquematico.md#folha-4--display)). LED de **16 mA a 2,67 V**
+(ficha), **integrado ao painel**: não há filme a laminar. Só o C tem luz —
+o B é a mesma tela sem ela. Com `V_DS` do MOSFET em cerca de 50 mV:
 
 ```
 R_BL = (3,3 − 2,67 − 0,05) / 16 mA = 0,58 / 0,016 = 36,3 Ω
@@ -241,10 +247,28 @@ I = 0,58 / 39 = 14,9 mA        (93 % do nominal)
 P = 0,58 × 0,0149 = 8,6 mW     (0402 aguenta 63 mW)
 ```
 
+**Os 39 Ω continuam valendo**: a conta acima sempre foi a do LED do JDI, e
+a troca da tela não mexeu em nenhum dos números dela. O `Q401`
+(DMG1012T-7) e o trilho `3V3BL` também continuam como estavam.
+
+> [!CAUTION]
+> **Falta saber por onde essa corrente chega ao painel.** O FPC de 10 vias
+> que as duas telas compartilham **não tem par para o LED**, e o conector do
+> filme (`J402`) existia para a luz separada da Sharp. O C tem de ter um FPC
+> com mais vias ou um rabicho próprio, e **nenhum documento do projeto
+> registra qual dos dois** — a ficha lida pelo projeto é a do
+> LPM027M128**B**, que não tem luz. Os 39 Ω, o `Q401` e o `3V3BL` estão
+> certos; o que falta é o caminho físico
+> ([01](01-esquematico.md#folha-4--display),
+> [06](06-conectores-e-pontos-de-teste.md#a-luz-do-lpm027m128c)). **Alta
+> prioridade, antes do layout.**
+
 ### Com a Sharp e o filme Azumo
 
-LED de **10 mA típicos, 25 mA máximo** (ficha), com a tensão direta a
-medir na amostra. Com `V_f` = 3,0 V como hipótese:
+**Plano B**, se o JDI não chegar: a Sharp LS027B7DH01A com o filme frontal
+Azumo 11103-06_A1 laminado sobre ela. LED de **10 mA típicos, 25 mA
+máximo** (ficha), com a tensão direta a medir na amostra. Com `V_f` = 3,0 V
+como hipótese:
 
 ```
 R_BL = (3,3 − 3,0 − 0,05) / 10 mA = 25 Ω
@@ -560,8 +584,8 @@ de cada CI**, mais o volume que a ficha de cada peça pede.
 | `CSRC` e `CINT` do AEM10900 | 22 µF, 6,3 V, 0402 | lista mínima da e-peas |
 | `CSTO` do AEM10900 | 22 µF, 10 V, 0603 | dá cerca de 9 µF com 4 V aplicados, acima dos 5 µF efetivos que a ficha pede |
 | Saída do TPS7A02 | pelo menos 0,5 µF efetivos | ficha |
-| Bombeamento do REG710 | 0,22 µF, 25 V | ficha |
-| Entrada **e** saída do REG710 | 10 µF cada | [14](../docs/14-hardware-placa-nova.md#componentes-principais), "como na V3"; a entrada tinha sido esquecida |
+| Bombeamento do REG710, **só no plano B** | 0,22 µF, 25 V | ficha |
+| Entrada **e** saída do REG710, **só no plano B** | 10 µF cada | [14](../docs/14-hardware-placa-nova.md#componentes-principais), "como na V3"; a entrada tinha sido esquecida |
 
 ## Capacitor de volume no módulo
 
@@ -581,8 +605,8 @@ C = I × t / ΔV = 10,9 mA × 10 µs / 50 mV = 2,2 µF
 ser o degrau E-series acima de 2,2 µF (não é; E12 dá 2,7 e E6 dá 3,3), mas
 porque **a lista de compras já traz essa linha** (4,7 µF, 16 V, X5R, 0603,
 para o `VDD` do MMC5633NJL) e ela cobre os dois usos. Os outros trilhos já tinham volume declarado (22 µF
-no `SD3V0`, 10 µF no `1V8`, 10 µF na saída do REG710) e o `3V0` do MCU
-não tinha.
+no `SD3V0`, 10 µF no `1V8` e, no plano B, 10 µF na saída do REG710) e o
+`3V0` do MCU não tinha.
 
 ## Proteção das teclas
 
@@ -700,7 +724,15 @@ levantado**: o buck do nPM1300 parte em cerca de **1,2 ms** (3,3 V com
 mais de uma década de folga para cada lado. **Confirmar com osciloscópio**
 na primeira energização, antes de soldar o receptor.
 
-## Trilho de 5 V, com a Sharp
+## Trilho de 5 V, do plano B
+
+> [!IMPORTANT]
+> **Este trilho não é montado.** Com o JDI LPM027M128C, decidido em
+> 2026-09-23, a tela vive em 3,0 V: o `U401` (REG710NA-5), o `C401` de
+> bombeamento e os dois de 10 µF de entrada e de saída ficam **sem peça**, e
+> o `5V0` deixa de existir na placa construída
+> ([01](01-esquematico.md#folha-4--display)). A conta abaixo fica registrada
+> porque é ela que dimensiona o plano B, com a Sharp.
 
 O REG710 entrega 30 mA. A carga é só a tela (**conta**):
 
@@ -722,6 +754,7 @@ Dito aqui para não passar por esquecimento.
 | Largura de trilha em milímetros | depende da pilha do fabricante, que [04](04-pcb-e-caixa.md#camadas) ainda não tem; a [corrente](#corrente-por-trilho-e-largura-de-trilha) está fixada | no layout |
 | Impedância da linha da antena GNSS e o par de 90 Ω do USB | idem | no layout |
 | Integridade de sinal do SPI do display | 2 MHz no máximo, trilha curta: não é regime crítico | se a FPC ficar longa |
+| **Caminho elétrico da luz do LPM027M128C** | o FPC de 10 vias não tem par de LED e nenhuma fonte do projeto diz se o C traz um FPC maior ou um rabicho próprio ([luz do display](#luz-do-display)) | **antes do layout** |
 | Comportamento térmico da caixa fechada | precisa do material e da geometria reais | no protótipo |
 | Brown-out do nRF54LM20A e `VSYSPOF` do nPM1300 | fichas não lidas nesta rodada ([07](07-sequencias-e-protecao.md)) | antes do primeiro protótipo |
 | Domínio de tensão dos pinos digitais do nPM1300 | nenhum documento do projeto registra ([pull-ups](#pull-ups-do-i²c)) | **antes do layout** |

@@ -9,7 +9,7 @@ Proposta de hardware da placa própria do GNSS Bike Computer, com o nRF54LM20A e
 | Bloco | V3 | Proposta | Alternativa |
 |---|---|---|---|
 | MCU | nRF52840 no módulo BMD-340 | nRF54LM20A no módulo Fanstel BM20C | o chip em CSP98 com antena própria |
-| Display | Sharp LS027B7DH01, monocromático, 5 V | JDI LPM027M128C, MIP de 8 cores, 3,0 V, com luz; sem canal de compra, a [lista de compras](19-lista-de-compras.md#trocas) usa a Sharp LS027B7DH01A com luz frontal | LS027 no mesmo conector; TFT transflectivo com ST7789 |
+| Display | Sharp LS027B7DH01, monocromático, 5 V | **JDI LPM027M128C**, MIP de 8 cores, 3,0 V, com luz integrada — **decidido em 2026-09-23**, sem canal autorizado de compra | Sharp LS027B7DH01A com o filme Azumo, no mesmo conector (plano B); TFT transflectivo com ST7789 |
 | GNSS | Antenova M10578-A3 (MediaTek MT3333), só L1 | u-blox MAX-F10S (L1 + L5) no footprint MAX, 1 m de CEP, 46,8 mW a 1,8 V ([15](15-avaliacao-componentes.md#gnss)) | MAX-M10N-10B (só L1) no mesmo footprint, 13,7 mW em LEAP; Quectel LC76G(PA), com driver no NCS |
 | Antena GNSS | chip Antenova SR4G008 na borda | antena linear L1/L5 na borda de cima, como nos ciclocomputadores do mercado | patch cerâmica, com a caixa de 25 a 35 mm mais longa |
 | Carregador e reguladores | MCP73831, TPS63051, REG710 | Nordic nPM1300 | TI BQ25798 (carregador único com duas entradas) |
@@ -93,7 +93,7 @@ flowchart LR
 Conceito em escala a partir da caixa impressa da V3 ([foto](img/front1.png)), gerado por `tools/docs/case_drawing.py`; não há projeto mecânico nem layout ainda.
 
 - **Caixa:** 62 × 104 × 19 mm, mais 3 mm do engate de quarto de volta; a V3 tem cerca de 60 × 85 mm. A frente mantém a moldura elevada, os três botões e o furo de luz da V3.
-- **Tela:** JDI LPM027M128C com a interface em 8 cores; a janela é a mesma do LS027. A [lista de compras](19-lista-de-compras.md#display) usa a Sharp LS027B7DH01A com luz frontal, no mesmo conector e na mesma janela.
+- **Tela:** JDI LPM027M128C com a interface em 8 cores e a luz frontal integrada, decidida em 2026-09-23; a janela é a mesma do LS027. A Sharp LS027B7DH01A com o filme Azumo continua como plano B, no mesmo conector e na mesma janela ([lista de compras](19-lista-de-compras.md#display)).
 - **Painéis:** 6 módulos de 3 células de 23 × 8 mm, 2 numa face inclinada abaixo da tela e 2 em cada chanfro de 45° das bordas longas ([painel solar](#painel-solar)).
 - **Antenas:** GNSS L1 e L5 na parede de cima, longe dos painéis; o módulo BM20C (BLE e ANT+) no canto de baixo à direita, com a antena fora da área dos painéis.
 - **Conectores:** USB-C IPX8 na base, sem tampa; microSD com tampa na lateral esquerda só no protótipo, porque o produto usa SD NAND soldado ([15](15-avaliacao-componentes.md#armazenamento)); respiro do barômetro com membrana na traseira.
@@ -139,9 +139,17 @@ O legacy mostra velocidade, tempo, frequência cardíaca, potência e segmentos 
 ### Recomendação: JDI LPM027M128C
 
 > [!NOTE]
-> A validação da [lista de compras](19-lista-de-compras.md#trocas) confirmou o risco de compra: nenhum canal autorizado vende o JDI. A lista usa o plano B, a Sharp LS027B7DH01A, com o filme de luz frontal da Azumo e o REG710; a placa continua aceitando o JDI no mesmo conector, o Hirose FH28-10S-0.5SH(05), que as fichas das duas telas citam.
+> **Decidido pelo dono em 2026-09-23: é o LPM027M128C.** A validação da
+> [lista de compras](19-lista-de-compras.md#trocas) tinha confirmado que
+> nenhum canal autorizado vende o JDI, e a lista passou a usar o par Sharp
+> LS027B7DH01A + filme Azumo + REG710. A decisão desfaz isso: **peça única**,
+> sem etapa de laminação, mesma resolução (a interface não muda), consumo
+> menor e cor. O preço é comprar de revendedor, **sem garantia**, por
+> R$ 776 contra os US$ 90,06 do par. A Sharp continua sendo o **plano B** no
+> mesmo conector, o Hirose FH28-10S-0.5SH(05), que as fichas das duas telas
+> citam.
 
-LCD de memória refletivo de 8 cores, com backlight; o LPM027M128B é a mesma tela sem backlight. Os números abaixo foram conferidos nos dois datasheets (JDI LPM027M128B Ver.01 e Sharp LS027B7DH01).
+LCD de memória refletivo de 8 cores, com backlight; o LPM027M128B é a mesma tela sem backlight. Os números abaixo foram conferidos nos dois datasheets (JDI LPM027M128B Ver.01 e Sharp LS027B7DH01) — e **a ficha do C nunca foi lida**, o que é de onde tem de sair por onde a luz dele se liga ([esquemático, folha 4](../hardware_gnssbike/01-esquematico.md#folha-4--display)).
 
 | Item | Sharp LS027B7DH01 (V3) | JDI LPM027M128B/C (proposta) |
 |---|---|---|
@@ -162,7 +170,7 @@ LCD de memória refletivo de 8 cores, com backlight; o LPM027M128B é a mesma te
 Por que ele:
 
 1. **Mesmo tamanho, mesma grade e mesma pinagem do LS027**: a mecânica do legacy e o layout das telas continuam valendo, e a interface monocromática atual roda no modo de 1 bit (50 B por linha, framebuffer de 12.000 B) antes de ganhar cor. Em 3 bits o framebuffer tem 36.000 B, que cabem com folga nos 512 KB do nRF54LM20A.
-2. **Consome menos que o LS027** e dispensa o 5 V: o REG710 da V3 sai do projeto (o WS2812B, se ficar, é que ainda pede 5 V).
+2. **Consome menos que o LS027** e dispensa o 5 V: com a decisão de 2026-09-23 o REG710 deixou de ser montado, e o trilho de 5 V saiu da placa ([esquemático, folha 4](../hardware_gnssbike/01-esquematico.md#folha-4--display)). O `DISP_PWR_EN` (P3.07), que era o `EN` dele, **voltou a ficar livre**.
 3. **Legível ao sol sem luz própria**, sem fantasma e sem piscar, na mesma faixa de temperatura do LS027.
 
 Cuidados para o esquemático:
@@ -174,8 +182,9 @@ Cuidados para o esquemático:
 
 Riscos:
 
-- **Compra.** A Switch Science, principal revenda, encerrou as vendas do LPM027M128C (¥9.460); a JDI não lista MIP no site; os módulos da Azumo com esse painel constam como obsoletos na DigiKey. Restam AliExpress e brokers, sem procedência garantida. Antes do layout, compre de 3 a 5 amostras e teste.
-- **Plano B no mesmo conector.** O LS027 e o JDI usam FPC de 10 vias com passo de 0,5 mm e a mesma ordem de pinos; muda a tensão (5 V contra 3,0 V, e o JDI queima acima de 3,6 V) e talvez o lado de contato. Um regulador de 5 V opcional, não montado por padrão, deixa a placa aceitar o LS027 monocromático se o JDI faltar.
+- **Compra.** A Switch Science, principal revenda, encerrou as vendas do LPM027M128C (¥9.460); a JDI não lista MIP no site; os módulos da Azumo com esse painel constam como obsoletos na DigiKey. Restam AliExpress e brokers, **sem canal autorizado, sem procedência e sem garantia**: o anúncio escolhido em 2026-09-23 é de **R$ 776** ([link](https://pt.aliexpress.com/item/1005011938384752.html)). Antes do layout, compre de 3 a 5 amostras e teste.
+- **Por onde a luz se liga é pendência aberta, e de alta prioridade.** O FPC de 10 vias que as duas telas compartilham não tem par para o LED, e na Sharp a luz vinha num filme com cauda própria. O C tem de trazer um FPC com mais vias ou um rabicho separado, e **nenhum documento do projeto registra qual**: a ficha lida é a do B, que não tem luz. Precisa sair da ficha do C ou de uma amostra **antes do layout** ([esquemático, folha 4](../hardware_gnssbike/01-esquematico.md#folha-4--display)).
+- **Plano B no mesmo conector.** O LS027 e o JDI usam FPC de 10 vias com passo de 0,5 mm e a mesma ordem de pinos; muda a tensão (5 V contra 3,0 V, e o JDI queima acima de 3,6 V) e talvez o lado de contato. O footprint do regulador de 5 V e a posição de 5 V do jumper ficam na placa **sem peça**, e é isso que deixa a placa aceitar o LS027 monocromático com o filme Azumo se o JDI faltar.
 - **Plano C.** MIP de 64 cores ainda em produção, como o Sharp LS021B7DD02 (2,13", 320 × 240, em estoque na DigiKey), muda o tamanho e usa interface paralela de 6 bits, sem driver no Zephyr; o TFT transflectivo com ST7789 tem driver pronto, mas gasta centenas de vezes mais.
 - **Software.** O `jdi,lpm013m126` do Zephyr guarda largura e altura em `uint8_t` (máximo 255), manda o endereço de 8 bits com os bits invertidos e não manda os 16 clocks finais; para o LPM027M128 ele precisa de largura e altura em 16 bits, endereço de 10 bits e o modo de 1 bit. A alternativa é estender o `src/drivers/lcd/ls027.c` do port. Nos dois casos, o trabalho é pequeno e testável só com o painel na mão.
 
@@ -388,7 +397,7 @@ Estimativa, não medida. A base de cada linha está na coluna do meio.
 | PMIC, medidor e harvester | menos de 20 µA somados | < 0,1 mW | < 0,1 mW | < 0,1 mW |
 | **Na bateria** (reguladores a cerca de 90 %) | | cerca de 19 mW | cerca de 58 mW | cerca de 74 mW |
 
-As colunas "típico" e "pesado" usam o MAX-F10S, que a [avaliação](15-avaliacao-componentes.md#efeito-no-aparelho) escolheu. Com o MAX-M10N-10B em LEAP, a alternativa no mesmo footprint, o uso típico cai para cerca de 21 mW e a autonomia sem sol com 2000 mAh sobe para cerca de 310 h. Com a Sharp e o filme de luz da [lista de compras](19-lista-de-compras.md#display), a tela passa de cerca de 0,2 para 0,4 mW (175 µW a 1 quadro/s e os 65 µA do REG710), e a luz acesa tira cerca de 37 mW do VSYS (10 mA pelo LDO de 3,3 V), contra cerca de 59 mW do JDI no mesmo circuito.
+**A tabela é a do JDI**, que voltou a ser a tela decidida em 2026-09-23: 30 µW a 1 quadro/s e 16 mA a 2,67 V na luz. As colunas "típico" e "pesado" usam o MAX-F10S, que a [avaliação](15-avaliacao-componentes.md#efeito-no-aparelho) escolheu. Com o MAX-M10N-10B em LEAP, a alternativa no mesmo footprint, o uso típico cai para cerca de 21 mW e a autonomia sem sol com 2000 mAh sobe para cerca de 310 h. No **plano B**, com a Sharp e o filme de luz, a tela passaria de cerca de 0,2 para 0,4 mW (175 µW a 1 quadro/s e os 65 µA do REG710), e a luz acesa tiraria cerca de 37 mW do VSYS (10 mA pelo LDO de 3,3 V), contra cerca de 59 mW do JDI no mesmo circuito — ou seja, **o JDI gasta menos parado e mais com a luz acesa**.
 
 Autonomia sem sol, com 90 % da energia nominal (3,7 V) utilizável. Para comparar: só o GNSS da V3 gasta 92 mW.
 
@@ -430,7 +439,8 @@ Referências do mercado: o Garmin Edge 1040 Solar declara de 35 para 45 h no uso
 
 | Risco | Detalhe | Como reduzir |
 |---|---|---|
-| Compra do display | a principal revenda do JDI LPM027M128C encerrou as vendas; a JDI não lista MIP no site | amostras antes do layout; o conector de 10 vias aceita o LS027 como plano B |
+| Compra do display | o JDI LPM027M128C **é a tela decidida e não tem canal autorizado**: a principal revenda encerrou as vendas, a JDI não lista MIP no site e o que resta é revendedor, a R$ 776 e sem garantia | amostras antes do layout; o conector de 10 vias aceita o LS027 com o filme Azumo como plano B |
+| **Ligação da luz do LPM027M128C** | o FPC de 10 vias não tem par de LED e nenhuma fonte do projeto diz por onde a luz do C se liga; a ficha lida é a do B, que não tem luz | ficha do C ou amostra, **antes do layout**: sem isso a folha 4 não fecha ([esquemático](../hardware_gnssbike/01-esquematico.md#folha-4--display)) |
 | Dois carregadores na célula | a Nordic não documenta um carregador externo no VBAT do nPM1300 | validar com o nPM1300 EK e a placa de avaliação do AEM10900 antes do esquemático; alternativa BQ25798 |
 | Antena GNSS dentro de uma caixa pequena | o LCD ocupa a face de cima, o plano de terra é pequeno e o BLE transmite até +8 dBm a centímetros da antena; com o F10S a banda L5 também precisa casar (56 % de eficiência contra 66 % em L1) | antena linear L1/L5 na borda de cima, como no mercado; módulo com SAW antes do LNA; antenas de GNSS e de 2,4 GHz em cantos opostos; teste A/B do F10S e do M10N na caixa real, com C/N0 medido por banda |
 | Calor ao sol | no verão a caixa passa de 45 °C, e o corte térmico da carga zera a colheita no sol forte | afastar a célula do painel; medir a temperatura interna; subir o limite só se o datasheet da célula permitir |

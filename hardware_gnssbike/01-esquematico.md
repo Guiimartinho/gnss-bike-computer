@@ -249,31 +249,52 @@ ganha um pino.
 
 ```mermaid
 flowchart LR
-    R3V0(("3V0")) --> SEL{"jumper de<br/>posição única"}
-    SEL -->|"posição JDI"| FPC
-    R3V0 --> REG["REG710NA-5<br/>EN em P3.07"] -->|"5V0"| SEL
-    SEL -->|"posição Sharp"| FPC["Hirose FH28-10S<br/>10 vias"]
+    R3V0(("3V0")) -->|"JP401 · 0 Ω<br/>posição 3,0 V"| FPC["Hirose FH28-10S<br/>10 vias"]
+    NM["REG710NA-5 e trilho 5V0<br/>não montados · plano B"] -.->|"posição vazia do JP401"| FPC
     MCU["spi22"] -->|"SCLK, SI, SCS"| FPC
     MCU -->|"EXTCOMIN, DISP"| FPC
-    FPC --- PANEL["JDI LPM027M128B<br/>ou Sharp LS027B7DH01A"]
-    RBL(("3V3BL")) -->|"R_BL"| LED["luz frontal"] --> MOSFET["MOSFET N"] --> GND["GND"]
+    FPC --- PANEL["JDI LPM027M128C<br/>8 cores, luz integrada"]
+    RBL(("3V3BL")) -->|"R_BL · 39 Ω"| LED["LED da luz<br/>dentro do painel"] --> MOSFET["Q401<br/>DMG1012T-7"] --> GND["GND"]
     MCU -->|"pwm20 · P3.08"| MOSFET
+    LED -.->|"por onde? em aberto"| PANEL
 ```
 
 ### As decisões desta folha
 
+**A tela é o JDI LPM027M128C, decidido em 2026-09-23.** Peça única: 2,7",
+400 × 240, MIP de 8 cores, **com luz frontal integrada**. Ela substitui o
+par que a lista de compras trazia, a Sharp LS027B7DH01A mais o filme Azumo
+11103-06_A1 — sem etapa de laminação, mesma resolução (a interface não
+muda), consumo menor e cor. **A Sharp continua sendo o plano B**, no mesmo
+conector, se o JDI não chegar.
+
+**O caminho de 5 V saiu.** O JDI vive em 3,0 V, de modo que o `U401`
+(REG710NA-5), o `C401` de bombeamento e os dois de 10 µF de entrada e de
+saída **não são montados**, e o trilho `5V0` deixa de existir na placa
+construída. Os footprints ficam no desenho, porque são eles que fazem o
+plano B ser uma troca de montagem e não uma placa nova.
+
+**O `DISP_PWR_EN` (P3.07) fica livre.** Ele era o `EN` do REG710; sem o
+regulador, o pino volta a ficar disponível para outro uso. **O firmware
+ainda o declara** como `power-gpios` do nó do display no
+[devicetree](../zephyr_app/boards/gnss/gnssbike/gnssbike_nrf54lm20a_cpuapp.dts),
+com o pull-down de 100 kΩ do `R403` segurando o nível: não faz mal, mas é
+linha a limpar quando alguém quiser o pino.
+
 **Um conector, duas telas.** Os dez pinos das duas fichas estão na mesma
 ordem (`SCLK`, `SI`, `SCS`, `EXTCOMIN`, `DISP`, `VDDA`, `VDD`, `EXTMODE`,
-`VSS`, `VSSA`), e o mesmo Hirose FH28-10S-0.5SH(05) aparece nas duas. O
-JDI é a tela decidida; a Sharp é a que tem canal de compra. A placa aceita
-as duas.
+`VSS`, `VSSA`), e o mesmo Hirose FH28-10S-0.5SH(05) aparece nas duas.
 
 > [!CAUTION]
-> **Um JDI com 5 V queima**: o máximo absoluto dele é 3,6 V. A escolha da
-> tensão **não pode ser um erro possível de montagem**. Por isso é um
-> jumper de **posição única**: ou o resistor está na posição do 3,0 V, ou
-> está na do 5 V, e nunca nas duas. Duas posições independentes de 0 Ω
-> deixariam alguém montar as duas e destruir o painel.
+> **Um JDI com 5 V queima**: o máximo absoluto dele é 3,6 V. Com uma tela
+> só, o `JP401` deixa de ser um seletor: ele vira um **0 Ω fixo na posição
+> do 3,0 V**, e a posição do 5 V fica **sem peça**. O footprint das três
+> posições continua no desenho de propósito — é ele que permite montar a
+> Sharp do plano B sem redesenhar a folha —, e o pad do meio continua sendo
+> **um só**, de modo que nenhuma montagem consegue pôr os dois trilhos no
+> painel ao mesmo tempo. Uma alternativa seria apagar o jumper e ligar o
+> `3V0` direto ao painel em cobre; ela é mais segura contra erro de
+> montagem e custa o plano B, que passaria a exigir corte de trilha.
 
 **O chip select é ativo alto.** Ao contrário de quase todo SPI. Vale
 repetir aqui porque é o tipo de coisa que se inverte sem pensar.
@@ -284,43 +305,45 @@ VCOM inverte nas bordas de subida do `EXTCOMIN`, que é um PWM do MCU —
 perto dos 60 Hz que a ficha pede. A V3 fazia diferente: `EXTMODE` no GND e
 VCOM pelo SPI.
 
-**O `EN` do REG710 é um pino do MCU.** Serve para a sequência de ligar e
-para cortar os 65 µA que o conversor gasta parado, com a tela desligada.
+**Com o JDI os 120 Hz passam.** O driver aceita até **140 Hz** no JDI
+(`MEMLCD_COM_HZ_MAX_JDI`, em
+`zephyr_app/modules/gnss_drivers/drivers/display/memlcd.c:46`) contra
+20 Hz na Sharp. Enquanto a placa declarava `sharp,ls027b7dh01`, o pedido de
+120 Hz da interface era recusado com `-EINVAL` e o COM ficava em 1 Hz com a
+luz acesa, que é justamente o que o `EXTCOMIN` existe para evitar. Com
+`jdi,lpm027m128c` no devicetree **esse defeito deixa de existir** — e ele
+volta a existir se alguém montar o plano B sem mexer no firmware.
 
 ### Em aberto nesta folha
 
 > [!CAUTION]
-> **A tela decidida não tem luz.** A decisão de 2026-09-19 foi o **JDI
-> LPM027M128B**, e o B é "a mesma tela **sem backlight**"
-> ([13](../docs/13-placa-nova.md#display)); quem tem o LED de 16 mA a
-> 2,67 V é o **C**. Montada com o B, a placa fica com o trilho `3V3BL`, o
-> `Q401`, o `R401` e o `BL_PWM` sem nada para acionar, e o ciclista sem luz
-> à noite. A [lista de compras](../docs/19-lista-de-compras.md#display) já
-> não usa o JDI: ela fica com a **Sharp LS027B7DH01A mais o filme Azumo**,
-> que tem luz. **Decisão do dono**, e as três saídas são: aceitar a Sharp
-> com filme (o que a lista já faz), voltar ao JDI **C** (sem canal
-> autorizado de compra) ou aceitar o JDI B e tirar a luz do projeto.
+> **Não se sabe por onde a luz do C se liga, e isso trava a folha 4.** O
+> FPC de 10 vias que as duas telas compartilham — `SCLK`, `SI`, `SCS`,
+> `EXTCOMIN`, `DISP`, `VDDA`, `VDD`, `EXTMODE`, `VSS`, `VSSA` — **não tem
+> par para o LED**, e o `J402` existia justamente porque a luz da Sharp
+> vinha num filme separado. O C tem de ter **ou um FPC com mais vias, ou um
+> rabicho próprio para a luz**, e **nenhum documento do projeto traz isso**:
+> a ficha que o projeto leu é a do **LPM027M128B**, que não tem luz. Sem
+> essa informação não dá para desenhar a folha 4 nem posicionar o conector
+> da luz no layout. **Alta prioridade, e antes do layout**: sai da ficha do
+> LPM027M128C ou de uma amostra na mão.
 
-> [!CAUTION]
-> **Com a Sharp, o COM fica em 1 Hz mesmo com a luz acesa.** A interface
-> pede 120 Hz e o driver **recusa** qualquer valor acima de 20 Hz quando o
-> painel é Sharp, devolvendo `-EINVAL` que ninguém lê. A placa declara
-> `sharp,ls027b7dh01`, que é a tela da lista de compras — e 1 Hz com a luz
-> acesa é justamente a condição que o `EXTCOMIN` existe para evitar, porque
-> deixa tensão contínua no VCOM. É defeito de firmware, não de desenho, e
-> está no [status](../docs/10-status-do-port.md#defeitos-abertos).
-
-- O resistor da luz na montagem com a Sharp depende da tensão direta do
-  filme, que precisa ser medida na amostra ([02](02-calculos.md#luz-do-display)).
-- **A luz frontal é o item mais caro da placa** (US$ 66,45, 38 % da lista).
-  A busca de 2026-09-23 por uma tela com luz até R$ 509 não achou nada
-  melhor do que o que a lista já escolhe, e achou três coisas que valem
-  saber — o filme escolhido é o mais barato da família Azumo, existiu um
-  filme para o JDI B que está obsoleto, e o LPM027M128C aparece no
-  AliExpress a partir de R$ 324, com anúncios que confundem o B e o C
+- **Sem canal autorizado e sem garantia.** O anúncio escolhido é de
+  **R$ 776** no AliExpress
+  ([link](https://pt.aliexpress.com/item/1005011938384752.html)); a JDI não
+  lista mais MIP, a Switch Science encerrou as vendas e nenhum distribuidor
+  tem a peça. Comprar é comprar de revendedor, sem procedência
   ([15](../docs/15-avaliacao-componentes.md#a-luz-da-tela-procurada-em-2026-09-23)).
+- **A tela é o item mais caro da placa**, e ficou mais cara: R$ 776, ou
+  cerca de **US$ 144** a R$ 5,40 por dólar, contra os US$ 23,61 + US$ 66,45
+  = **US$ 90,06** do par Sharp + Azumo. São **US$ 54 a mais por placa**
+  ([19](../docs/19-lista-de-compras.md#custo)).
 - A `LDSW2` sai de regulação com o `VSYS` perto de 3,4 V: a luz enfraquece
   com a bateria baixa, e isso não tem conserto no resistor.
+- **No plano B** (Sharp mais filme Azumo) voltam o `U401`, o `C401`, os dois
+  de 10 µF, o `DS402`, o `J402` e o `JP401` na posição do 5 V; o `R_BL`
+  deixa de ser 39 Ω e passa a depender da tensão direta do filme, que só a
+  amostra dá ([02](02-calculos.md#luz-do-display)).
 
 ## Folha 5 · Memória e sensores
 

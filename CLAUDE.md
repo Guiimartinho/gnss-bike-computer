@@ -93,7 +93,7 @@ flowchart TB
 
 Equivalentes no `cmd`: `build.bat [pristine]`, `flash.bat [keep]`, `recover.bat`, `serial.bat COMx`. Variáveis: `BUILD_DIR`, `NRF_SERIAL`, `NCS_VERSION`, `NCS_TOOLCHAIN`, `NOPAUSE`.
 
-Referência de 2026-09-22, com a interface, a energia, o GNSS, os segmentos, a atualização por BLE, o USB, o percurso pelo telefone (RTE, GPX e o texto do legacy), o perfil, as voltas e o arquivo FIT: nRF54LM20 DK FLASH 636.144 B de 921.456 B do slot (69,04 %), RAM 393.080 B (75,12 %); placa própria FLASH 636.360 B (69,06 %), RAM 369.120 B (70,54 %), mais o MCUboot com 45.676 B de FLASH e 22.880 B de RAM no DK e 45.880 B e 22.888 B na placa; **0 avisos de compilador** (o CMake dá quatro, todos esperados: ver as armadilhas).
+Referência de 2026-09-23, com a **tela JDI LPM027M128C** (decisão do dono nesse dia: peça única com luz integrada, no lugar da Sharp com filme, o que custou **24.000 B de RAM** a mais pelo quadro de 8 cores), a interface, a energia, o GNSS, os segmentos, a atualização por BLE, o USB, o percurso pelo telefone (RTE, GPX e o texto do legacy), o perfil, as voltas e o arquivo FIT: nRF54LM20 DK FLASH 636.144 B de 921.456 B do slot (69,04 %), RAM 393.080 B (75,12 %); placa própria FLASH 636.376 B (69,06 %), RAM 393.120 B (75,13 %), mais o MCUboot com 45.676 B de FLASH e 22.880 B de RAM no DK e 45.880 B e 22.888 B na placa; **0 avisos de compilador** (o CMake dá quatro, todos esperados: ver as armadilhas).
 
 ## 5. Estado e próximos passos
 
@@ -109,7 +109,7 @@ Referência de 2026-09-22, com a interface, a energia, o GNSS, os segmentos, a a
   6. **Comandos do legacy** pelo NUS, com os destrutivos recusados pelo rádio.
   7. **Memória soldada** no lugar do cartão na placa nova (decisão do dono): FatFs sobre `zephyr,flash-disk`, com `/SD:` de sempre.
   8. **USB**: serviço novo com porta serial dos comandos e o disco do ciclista no PC no modo USB.
-- **Em aberto da fase 6:** o teste com cabo (o `$QRY` foi respondido em 2026-09-22).
+- **Em aberto da fase 6:** o teste com cabo (o `$QRY` foi respondido em 2026-09-23).
 - **Ordem proposta do que falta:**
 
 ```mermaid
@@ -167,7 +167,7 @@ flowchart LR
 | Mermaid: `;` numa mensagem de `sequenceDiagram` | é separador de comandos; escreva "e" |
 | Gerbers em `hardware/myStravaB_V3_2018-12-12/` | são da V2; não fabrique a V3 com eles |
 | Shunt do STC3100 | esquema: 20 mΩ; código: 100 mΩ; confirme na placa antes de confiar em corrente e carga |
-| `git push` já foi bloqueado pelo classificador do auto mode; em 2026-09-22 passou a funcionar | tente o push quando o dono pedir, com o ramo explícito (`git push origin develop`); se voltar a ser recusado, peça a ele que rode no prompt, no modo bash, um comando por vez (`! git push origin develop`). Nunca crie regra de permissão para você, nunca use `--force` |
+| `git push` já foi bloqueado pelo classificador do auto mode; em 2026-09-23 passou a funcionar | tente o push quando o dono pedir, com o ramo explícito (`git push origin develop`); se voltar a ser recusado, peça a ele que rode no prompt, no modo bash, um comando por vez (`! git push origin develop`). Nunca crie regra de permissão para você, nunca use `--force` |
 | A `main` do GitHub pode ter merge de pull request feito pela interface, que a `main` local não tem, e o push é recusado como non-fast-forward | `git fetch origin` e confira com `git log --oneline --no-merges origin/main --not main`: se não sair nada, o commit remoto não traz conteúdo novo e um `git merge origin/main` junta as histórias sem mexer em arquivo nenhum (compare `main^{tree}` antes e depois). Nunca resolva com `--force` |
 | O CMake dá quatro avisos em todo build, e eles não são regressão | três são `No SOURCES given to Zephyr library: drivers__charger`, `drivers__display` e `drivers__fuel_gauge`: os drivers dessas classes são do projeto e moram em `zephyr_app/modules/gnss_drivers`, então a biblioteca da árvore do Zephyr fica vazia e é excluída. O quarto é a chave de desenvolvimento do MCUboot. **Aviso de compilador é que tem de ser zero** |
 | `legacy/` não compila aqui | faltam o nRF5 SDK 16, o S340 e os submódulos `libraries/ant_profiles` e `ble_services` |

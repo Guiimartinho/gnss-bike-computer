@@ -8,7 +8,7 @@ essa lacuna que este documento fecha, porque ela é a forma clássica de
 inverter a polaridade da bateria na primeira montagem — e de descobrir
 isso pelo cheiro.
 
-**Nesta página:** [Como ler](#como-ler) · [De onde vem cada pinagem](#de-onde-vem-cada-pinagem) · [J101 · USB-C](#j101--usb-c) · [J102 · Bateria](#j102--bateria) · [J201 · Depuração SWD](#j201--depuração-swd) · [J401 · Display](#j401--display) · [J402 · Filme de luz](#j402--filme-de-luz) · [JP401 · Seletor da tensão do display](#jp401--seletor-da-tensão-do-display) · [JP101 · Jumper de medição de corrente](#jp101--jumper-de-medição-de-corrente) · [Pontos de teste](#pontos-de-teste) · [O que falta conferir](#o-que-falta-conferir)
+**Nesta página:** [Como ler](#como-ler) · [De onde vem cada pinagem](#de-onde-vem-cada-pinagem) · [J101 · USB-C](#j101--usb-c) · [J102 · Bateria](#j102--bateria) · [J201 · Depuração SWD](#j201--depuração-swd) · [J401 · Display](#j401--display) · [A luz do LPM027M128C](#a-luz-do-lpm027m128c) · [JP401 · Tensão do display](#jp401--tensão-do-display) · [JP101 · Jumper de medição de corrente](#jp101--jumper-de-medição-de-corrente) · [Pontos de teste](#pontos-de-teste) · [O que falta conferir](#o-que-falta-conferir)
 
 > [!WARNING]
 > **Nada disto foi montado, medido ou fabricado.** Não existe placa, não
@@ -39,20 +39,19 @@ flowchart LR
     subgraph EXT["Fora da placa"]
         CABO["cabo USB-C"]
         PACK["pack LiPo 1S<br/>PCM e NTC"]
-        PAINEL["painel MIP 2,7&quot;"]
-        FILME["filme de luz Azumo"]
+        PAINEL["painel JDI LPM027M128C<br/>2,7&quot;, com luz integrada"]
         SONDA["J-Link<br/>cabo TC2030-CTX-NL"]
     end
     CABO --> J101["J101 · USB-C<br/>Molex 2036150003<br/>16 contatos"]
     PACK --> J102["J102 · bateria<br/>JST SM06B-GHS-TB<br/>6 vias"]
     PAINEL --> J401["J401 · display<br/>Hirose FH28-10S<br/>10 vias"]
-    FILME --> J402["J402 · filme de luz<br/>Molex 5034800440<br/>4 vias"]
+    PAINEL -.->|"por onde?"| LUZ["conector da luz<br/>não definido"]
     SONDA --> J201["J201 · SWD<br/>Tag-Connect TC2030-NL<br/>6 pads, sem peça"]
     J101 --> F1["folha 1 · energia"]
     J102 --> F1
     J201 --> F2["folha 2 · MCU"]
     J401 --> F4["folha 4 · display"]
-    J402 --> F4
+    LUZ -.-> F4
 ```
 
 ## De onde vem cada pinagem
@@ -63,8 +62,8 @@ flowchart LR
 | `J102` bateria | **escolha deste projeto** — não existe padrão para isto | o fabricante do pack, antes de fechar o pedido |
 | `J201` depuração | **a conferir**: o arranjo abaixo é o Cortex de 6 pinos que o Tag-Connect publica, mas o desenho do cabo comprado **não foi lido** e há variante com `nRESET` no 3 e `SWO` no 6 | o desenho do **TC2030-CTX-NL** ([19](../docs/19-lista-de-compras.md#placas-de-avaliação-e-ferramentas)) |
 | `J401` display | **ficha do fabricante**, e a mesma ordem nas duas telas | fichas JDI LPM027M128B Ver.01 e Sharp LS027B7DH01A (LD-28305A) |
-| `J402` filme de luz | **falta**: o número de vias está nos documentos, a atribuição dos contatos **não está em arquivo nenhum do projeto** | o desenho 12369-01_T4 da Azumo |
-| `JP401` seletor | **escolha deste projeto** | este documento |
+| Conector da luz do JDI | **falta tudo**: não se sabe sequer se ele existe como conector separado ou se o C traz um FPC maior | ficha do **LPM027M128C**, ou uma amostra |
+| `JP401` tensão do display | **escolha deste projeto** | este documento |
 | `JP101` medição | **escolha deste projeto**, e peça que ainda não existe na lista | o dono |
 
 ## J101 · USB-C
@@ -280,6 +279,12 @@ registrada em [15](../docs/15-avaliacao-componentes.md#display): `SCLK`,
 **É ficha de fabricante, não escolha deste projeto** — e é ela que permite
 um conector só para duas telas.
 
+**Repare no que não está nesses dez:** não há par para o LED da luz. Na
+Sharp isso não incomodava, porque a luz era um filme separado com cauda
+própria; com o **JDI LPM027M128C**, decidido em 2026-09-23, a luz é do
+painel e **por onde ela se liga é pendência aberta**
+([abaixo](#a-luz-do-lpm027m128c)).
+
 | Contato | Sinal | Direção | Nota |
 |---|---|---|---|
 | 1 | `SCLK` | saída | `DISP_SCK`, P3.03, `spi22`; 1 MHz típico, 2 MHz máximo |
@@ -287,7 +292,7 @@ um conector só para duas telas.
 | 3 | `SCS` | saída | `DISP_CS`, P3.02, **ativo alto**; pull-down de 100 kΩ ao `GND` |
 | 4 | `EXTCOMIN` | saída | `DISP_EXTCOMIN`, P3.06; 1 Hz sem luz, cerca de 120 Hz com luz |
 | 5 | `DISP` | saída | `DISP_ON`, P3.05; liga a matriz; pull-down de 100 kΩ |
-| 6 | `VDDA` | alim | do **`JP401`**: `3V0` com o JDI, `5V0` com a Sharp |
+| 6 | `VDDA` | alim | do **`JP401`**, que com o JDI é um 0 Ω fixo no `3V0`; `5V0` só no plano B, com a Sharp |
 | 7 | `VDD` | alim | do **`JP401`**, mesmo trilho do contato 6 |
 | 8 | `EXTMODE` | alim | **ao contato 7 em cobre**, seja qual for a tensão: é isso que põe a inversão do VCOM no `EXTCOMIN` |
 | 9 | `VSS` | alim | `GND` |
@@ -312,64 +317,67 @@ de sair por comando de SPI, que é o que a V3 faz
 > item de layout**: é a orientação do conector na placa que resolve, não o
 > firmware.
 
-## J402 · Filme de luz
+## A luz do LPM027M128C
 
-**Molex 5034800440**, FPC de **4 vias**, passo de 0,5 mm, para a cauda do
-filme frontal **Azumo 11103-06_A1**. O conector existe **só na montagem
-com a Sharp** ([05](05-materiais.md#folha-4--display)); com o JDI não há
-filme.
+**Este é o buraco que a decisão de 2026-09-23 abriu**, e ele é de alta
+prioridade porque **bloqueia o layout**: sem ele não dá para desenhar a
+folha 4 nem posicionar o conector.
 
-**O número de vias está documentado: quatro.** Consta de
-[14](../docs/14-hardware-placa-nova.md#componentes-principais) ("FPC de 4
-vias, passo de 0,5 mm; a Azumo indica a série 503480") e da
-[lista de compras](../docs/19-lista-de-compras.md#display) ("4 vias, passo
-de 0,5 mm"), e o filme é descrito como tendo "um LED e cauda de 4 vias".
+O `J401` leva dez vias — `SCLK`, `SI`, `SCS`, `EXTCOMIN`, `DISP`, `VDDA`,
+`VDD`, `EXTMODE`, `VSS`, `VSSA` — e **nenhuma delas é o LED**. Enquanto a
+tela era a Sharp isso estava resolvido: a luz vinha num filme separado,
+com cauda própria de 4 vias, e a placa tinha o `J402` (Molex 5034800440)
+para ela. Com o **JDI LPM027M128C** a luz é **do painel**, e há duas
+possibilidades, sem que nenhuma fonte do projeto diga qual:
 
-**O que falta é a atribuição dos contatos.** Procurei em
-[`docs/14`](../docs/14-hardware-placa-nova.md),
-[`docs/15`](../docs/15-avaliacao-componentes.md) e
-[`docs/19`](../docs/19-lista-de-compras.md): **nenhum dos três diz o que
-cada uma das quatro vias recebe**. Quem decide é o desenho 12369-01_T4 da
-Azumo, citado como referência em [19](../docs/19-lista-de-compras.md#referências)
-mas não transcrito em lugar nenhum do projeto.
-
-| Contato | Sinal | Direção | Nota |
-|---|---|---|---|
-| 1 | **não definido** | — | falta o desenho 12369-01_T4 da Azumo |
-| 2 | **não definido** | — | idem |
-| 3 | **não definido** | — | idem |
-| 4 | **não definido** | — | idem |
+| Possibilidade | O que muda na placa |
+|---|---|
+| O C traz um **FPC com mais de 10 vias** | o `J401` deixa de ser um FH28-10S: outro conector, outro footprint, outra área |
+| O C traz um **rabicho separado** para a luz | volta a existir um segundo conector na folha 4, com número de vias e pinagem a definir |
 
 > [!WARNING]
-> **Não preencha esta tabela por simetria.** Dobrar cada sinal em dois
-> contatos é o arranjo comum nesse tipo de cauda, e é exatamente o palpite
-> que este documento se recusa a fazer: um LED tem polaridade, e um chute
-> errado põe o anodo no dreno do MOSFET.
+> **Não preencha isto por simetria nem por analogia com o filme Azumo.** Um
+> LED tem polaridade, e um chute errado põe o anodo no dreno do MOSFET. A
+> ficha que o projeto leu é a do **LPM027M128B**, que não tem luz — ela não
+> responde esta pergunta e nem poderia. **Quem responde é a ficha do C ou
+> uma amostra na mão**, e isso precisa acontecer **antes do layout**.
 
-O que **está** definido são os dois sinais que o filme precisa, e eles
-vêm da [folha 4](01-esquematico.md#folha-4--display):
+O que **está** definido são os dois sinais que a luz precisa, quaisquer que
+sejam os contatos, e eles vêm da [folha 4](01-esquematico.md#folha-4--display):
 
 | Sinal | Direção | De onde vem | Nota |
 |---|---|---|---|
-| anodo do LED | alim | `3V3BL` pelo **`R401`** | trilho da `LDSW2` do nPM1300; 3,3 V tirados do `VSYS` |
+| anodo do LED | alim | `3V3BL` pelo **`R401`**, 39 Ω | trilho da `LDSW2` do nPM1300; 3,3 V tirados do `VSYS`; 16 mA a 2,67 V na ficha do JDI |
 | catodo do LED | saída | dreno do **`Q401`** (DMG1012T-7) | chave de canal N no lado baixo, acionada pelo `BL_PWM` em P3.08, `pwm20` |
 
-**O `R401` não tem valor fechado para o filme.** São 10 mA típicos e
-**25 mA no máximo** num LED só, e o valor depende da tensão direta da
-amostra: com 3,0 V de tensão direta a conta dá 25 Ω, e a mesma resistência
-numa amostra de 2,7 V já passa de 22 mA
-([02](02-calculos.md#com-a-sharp-e-o-filme-azumo)). É resistor que sai da
-medida, não do cálculo.
+### No plano B, o filme e o `J402`
 
-## JP401 · Seletor da tensão do display
+Se o JDI não chegar, volta a montagem da Sharp LS027B7DH01A com o filme
+frontal **Azumo 11103-06_A1** e o **Molex 5034800440**, FPC de **4 vias**,
+passo de 0,5 mm. O número de vias está documentado em
+[14](../docs/14-hardware-placa-nova.md#componentes-principais) ("FPC de 4
+vias, passo de 0,5 mm; a Azumo indica a série 503480") e na
+[lista de compras](../docs/19-lista-de-compras.md#display); **a atribuição
+dos quatro contatos não está em arquivo nenhum do projeto**, e quem decide
+é o desenho 12369-01_T4 da Azumo, citado em
+[19](../docs/19-lista-de-compras.md#referências) e não transcrito aqui.
+
+**E o `R401` não tem valor fechado para o filme.** São 10 mA típicos e
+**25 mA no máximo** num LED só: com 3,0 V de tensão direta a conta dá 25 Ω,
+e a mesma resistência numa amostra de 2,7 V já passa de 22 mA
+([02](02-calculos.md#com-a-sharp-e-o-filme-azumo)). Os 39 Ω montados são os
+do JDI; com o filme, o resistor sai da medida.
+
+## JP401 · Tensão do display
 
 **Escolha deste projeto.** Um jumper de 0 Ω (Panasonic ERJ-2GE0R00X) que
-liga os contatos 6 e 7 do `J401` ao `3V0` **ou** ao `5V0`.
+liga os contatos 6 e 7 do `J401` ao `3V0` **ou** ao `5V0`. Com o JDI
+decidido, **só a posição do `3V0` é montada** e a do `5V0` fica vazia.
 
 ```mermaid
 flowchart LR
-    A["pad A<br/>3V0, do BUCK2"] -.->|"posição JDI"| B["pad B<br/>VDD e VDDA do painel<br/>J401 contatos 6 e 7"]
-    C["pad C<br/>5V0, do REG710NA-5"] -.->|"posição Sharp"| B
+    A["pad A<br/>3V0, do BUCK2"] -->|"0 Ω montado"| B["pad B<br/>VDD e VDDA do painel<br/>J401 contatos 6 e 7"]
+    C["pad C<br/>5V0, do REG710NA-5<br/>não montado"] -.->|"posição vazia · plano B"| B
     B --> J401["J401"]
 ```
 
@@ -377,6 +385,14 @@ flowchart LR
 0 Ω ocupa A–B ou B–C, e **não existe montagem em que ocupe os dois**: o
 pad do meio é um só. A serigrafia diz `3V0 · JDI` de um lado e
 `5V0 · SHARP` do outro.
+
+**Por que manter o footprint do jumper, agora que há uma tela só.** Ele
+custa um resistor de 0 Ω e um pad, e é o que faz o plano B ser uma troca de
+montagem: o JDI **não tem canal autorizado de compra** e vem de revendedor
+sem garantia, de modo que a chance de a Sharp precisar entrar não é
+teórica. Apagar o jumper e ligar o `3V0` ao painel em cobre seria mais
+seguro contra erro de montagem — e transformaria o plano B em corte de
+trilha. **A posição do 5 V fica não montada, não apagada.**
 
 > [!CAUTION]
 > **Por que não duas posições independentes de 0 Ω.** É o arranjo que
@@ -498,7 +514,7 @@ placa, porque o que importa é a distância do laço.
 
 | Ponto | Sinal | O que se vê ali | Nota |
 |---|---|---|---|
-| `TP401` | `5V0` | saída do REG710NA-5 | **só existe na montagem com a Sharp**; é o trilho que jamais pode chegar a um painel JDI |
+| `TP401` | `5V0` | saída do REG710NA-5 | **sem sinal na placa montada**: o REG710 não é montado com o JDI. O ponto existe para o plano B, e é o trilho que jamais pode chegar a um painel JDI |
 
 ### Como os pads são
 
@@ -526,9 +542,10 @@ Honesto, item a item:
 | **`J102`: entrada lateral ou superior** | pela nomenclatura da JST o prefixo `SM` é de entrada lateral e `BM`, de topo; o desenho **não foi lido aqui** e é ele que decide para que lado o cabo sai | catálogo GH da JST |
 | **`TH_MON`: ordem do divisor** | [14](../docs/14-hardware-placa-nova.md#ligações-fixas-dos-cis) registra "`RDIV` de 22 kΩ" e o NTC, mas não diz qual perna fica no `TH_REF` e qual no `GND`. Trocar inverte o sentido da leitura de temperatura | ficha do AEM10900 |
 | **`J201`: qual arranjo de seis pinos o TC2030-CTX-NL entrega** | há variantes com `nRESET` no 3 e `SWO` no 6; com a variante errada o depurador não reseta o alvo. **Não foi lido nesta sessão** | desenho do cabo |
+| **Por onde a luz do LPM027M128C se liga** | **alta prioridade, e bloqueia o layout**: o FPC de 10 vias não tem par de LED, e nenhum documento do projeto diz se o C traz um FPC maior ou um rabicho próprio. A ficha lida é a do **B**, que não tem luz ([acima](#a-luz-do-lpm027m128c)) | ficha do **LPM027M128C**, ou uma amostra |
 | **`J401`: de que lado a FPC do painel tem os contatos** | decide se o pino 1 do painel encontra o contato 1 ou o 10 | amostra, e [15](../docs/15-avaliacao-componentes.md#bancada-antes-do-layout) |
-| **`J402`: o que recebe cada uma das quatro vias** | **não está em arquivo nenhum do projeto** | desenho 12369-01_T4 da Azumo |
-| **`R401` com o filme** | depende da tensão direta da amostra; 25 mA é o máximo do LED | medida na amostra |
+| **`J402`: o que recebe cada uma das quatro vias** | só importa no plano B; **não está em arquivo nenhum do projeto** | desenho 12369-01_T4 da Azumo |
+| **`R401` com o filme** | só no plano B: depende da tensão direta da amostra; 25 mA é o máximo do LED. Com o JDI são 39 Ω, fechados | medida na amostra |
 | **`JP101`: existir ou não** | é uma junta a mais no caminho da célula, que é o caminho mais crítico da placa; ganha-se medição, perde-se um ponto de falha | decisão do dono |
 | **`JP101` e os pontos de teste novos** | o `JP101` e os pontos de teste entraram em [03](03-netlist.md) e em [05](05-materiais.md) na mesma rodada, que estão sendo editados em paralelo | próxima passagem nesses dois |
 | **`TP1`, `TP2` e `TP3`** | [03](03-netlist.md) e [04](04-pcb-e-caixa.md) ainda usam a numeração antiga; aqui eles são `TP201`, `TP202` e `TP111`, que é o esquema de [05](05-materiais.md) | próxima passagem nesses dois |

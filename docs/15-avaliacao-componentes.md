@@ -6,7 +6,12 @@ Avaliação de engenharia, bloco a bloco, dos componentes principais da placa no
 > Avaliação feita sobre datasheets e notas de aplicação, sem bancada: nenhum componente foi montado nem medido. Cada escolha diz qual medida a confirma. Preço e estoque são da DigiKey em 2026-09-18 e mudam rápido.
 
 > [!NOTE]
-> A [lista de compras](19-lista-de-compras.md) validou cada peça em duas passagens, compra e integração, e o texto abaixo já traz o que mudou: a tela da lista é a Sharp LS027B7DH01A com luz frontal, porque o JDI não tem canal autorizado de compra; o BMI270 e o MMC5633NJL entram no lugar do LSM6DSV16X e do LIS2MDL, sem estoque; o BUCK2 dá os 3,0 V e o BUCK1, os 1,8 V, pela tabela dos resistores de VSET; o indutor do AEM10900 passa a 4,7 µH; o ESD761, o NTC da TDK, o JST GH e o receptáculo da Molex substituem o ESD751, o NTC da Murata, o JST SH e o Amphenol.
+> A [lista de compras](19-lista-de-compras.md) validou cada peça em duas passagens, compra e integração, e o texto abaixo já traz o que mudou: o BMI270 e o MMC5633NJL entram no lugar do LSM6DSV16X e do LIS2MDL, sem estoque; o BUCK2 dá os 3,0 V e o BUCK1, os 1,8 V, pela tabela dos resistores de VSET; o indutor do AEM10900 passa a 4,7 µH; o ESD761, o NTC da TDK, o JST GH e o receptáculo da Molex substituem o ESD751, o NTC da Murata, o JST SH e o Amphenol.
+>
+> **A tela voltou a ser o JDI em 2026-09-23**, por decisão do dono: o
+> **LPM027M128C**, peça única com luz frontal integrada, no lugar do par
+> Sharp LS027B7DH01A + filme Azumo que a lista tinha adotado. A Sharp segue
+> como plano B ([Display](#display)).
 
 **Nesta página:** [Resumo](#resumo) · [Critérios](#critérios) · [Carga: USB-C e painel solar](#carga-usb-c-e-painel-solar) · [GNSS](#gnss) · [Módulo do MCU](#módulo-do-mcu) · [Display](#display) · [Antena GNSS](#antena-gnss) · [Sensores](#sensores) · [Armazenamento](#armazenamento) · [USB-C e proteção](#usb-c-e-proteção) · [Bateria](#bateria) · [Tradutor de nível e backup do GNSS](#tradutor-de-nível-e-backup-do-gnss) · [Interface](#interface) · [Bancada antes do layout](#bancada-antes-do-layout) · [Referências](#referências)
 
@@ -20,7 +25,7 @@ Avaliação de engenharia, bloco a bloco, dos componentes principais da placa no
 | Medição | Analog Devices MAX17262 | vê as duas fontes, também com o aparelho desligado | nRF Fuel Gauge corrigido pelo APM (perde a carga em ship mode) |
 | GNSS | u-blox MAX-F10S, L1 + L5 | 1 m de CEP contra 1,5 m, no mesmo encapsulamento MAX e com o mesmo driver UBX; é o multibanda que menos consome (46,8 mW contra 59 do LC79H e 79 do LC29H). Custa autonomia: o aparelho vai a cerca de 58 mW e dura cerca de 115 h, contra 21 mW e 310 h do MAX-M10N-10B em LEAP | MAX-M10N-10B no mesmo footprint |
 | MCU | Fanstel BM20C (nRF54LM20A) | módulo certificado, 64 GPIO, antena e cristais inclusos; o QFN52 não tem pinos suficientes | chip em CSP98 com antena própria |
-| Display | Sharp LS027B7DH01A com a luz frontal Azumo 11103-06_A1; o JDI LPM027M128C no mesmo conector | o JDI (cor e 30 µW a 1 quadro/s) não tem canal autorizado de compra; a Sharp tem estoque e já roda no port | JDI de revendedores, se a cor voltar ao plano |
+| Display | **JDI LPM027M128C**, MIP de 8 cores com luz frontal integrada (decidido em 2026-09-23) | peça única: sem etapa de laminação, mesma resolução, 30 µW a 1 quadro/s contra 175 µW da Sharp, e cor. Custa R$ 776 contra US$ 90,06 do par, **sem canal autorizado e sem garantia** | Sharp LS027B7DH01A com o filme Azumo 11103-06_A1, no mesmo conector |
 | Antena GNSS | TE L000670 no protótipo | L1 e L5 numa alimentação só: o F10S precisa das duas bandas, e ela ainda serve ao M10N do A/B | elementos de parede sob medida |
 | Barômetro | Bosch BMP585 | robusto a água e produtos químicos (15 bar sem efeito, pela ficha), 1,3 µA a 1 Hz, ±0,5 Pa/K | ST LPS28DFW |
 | IMU e magnetômetro | Bosch BMI270 e Memsic MMC5633NJL | em estoque, com driver no NCS v3.3.0 e despertar por movimento; o footprint do IMU aceita o ST LSM6DSV16X | ST LSM6DSV16X e LIS2MDL, quando voltarem ao estoque |
@@ -211,7 +216,7 @@ Entre os de banda dupla — F10S, LC29H(AA) e LC79H(AL) — o F10S é o que meno
 
 ### Efeito no aparelho
 
-Resto do aparelho no uso típico do [orçamento](13-placa-nova.md#orçamento-de-energia): 5,5 mW (MCU e rádios, display, sensores e microSD, PMIC; a tela Sharp com o REG710 soma cerca de 0,2 mW ao orçamento feito com o JDI), reguladores a cerca de 90 % e 90 % dos 7,4 Wh da célula de 2000 mAh utilizáveis.
+Resto do aparelho no uso típico do [orçamento](13-placa-nova.md#orçamento-de-energia): 5,5 mW (MCU e rádios, display, sensores e armazenamento, PMIC), com o **JDI**, que é a tela decidida; no plano B, a Sharp com o REG710 somaria cerca de 0,2 mW. Reguladores a cerca de 90 % e 90 % dos 7,4 Wh da célula de 2000 mAh utilizáveis.
 
 | GNSS | Aparelho, na bateria | Autonomia sem sol | Pedal de sol com os painéis do desenho (22 a 44 mW) |
 |---|---|---|---|
@@ -298,6 +303,25 @@ O BM20C tem pinos LGA, não castelados: a montagem é por estêncil e forno, com
 
 ## Display
 
+> [!IMPORTANT]
+> **Decidido pelo dono em 2026-09-23: o JDI LPM027M128C.** Peça única,
+> 2,7", 400 × 240, MIP de 8 cores, **com luz frontal integrada**, no lugar
+> do par Sharp LS027B7DH01A + filme Azumo 11103-06_A1 que a validação de
+> compra tinha adotado. O motivo é montagem e consumo: **sem etapa de
+> laminação**, mesma resolução (a interface não muda), 30 µW a 1 quadro/s
+> contra 175 µW e cor. O preço é o da coluna de compra abaixo — **nenhum
+> canal autorizado**, R$ 776 num anúncio de revendedor
+> ([link](https://pt.aliexpress.com/item/1005011938384752.html)), **sem
+> garantia**. A Sharp continua sendo o **plano B**, no mesmo conector.
+>
+> **E abre uma pendência de alta prioridade:** o FPC de 10 vias que as duas
+> telas compartilham **não tem par para o LED**, e o conector do filme
+> existia justamente para a luz separada da Sharp. O C tem de trazer um FPC
+> com mais vias ou um rabicho próprio, e **nenhum documento do projeto
+> registra qual** — a ficha que o projeto leu é a do **B**, que não tem luz.
+> Precisa sair da ficha do C ou de uma amostra **antes do layout**
+> ([esquemático, folha 4](../hardware_gnssbike/01-esquematico.md#folha-4--display)).
+
 | | JDI LPM027M128C | Sharp LS027B7DH01 |
 |---|---|---|
 | Tela | MIP refletivo de 8 cores, 2,7", 400 × 240, área ativa de 58,8 × 35,28 mm | MIP refletivo monocromático, 2,7", 400 × 240, área ativa de 58,8 × 35,28 mm |
@@ -305,10 +329,11 @@ O BM20C tem pinos LGA, não castelados: a montagem é por estêncil e forno, com
 | Alimentação | VDD e VDDA de 3,0 V (máximo absoluto de 3,6 V) | VDD e VDDA de 4,8 a 5,5 V |
 | Entradas | VIH de 3,0 V | VIH de 2,70 a 3,00 V: aceita a lógica de 3,0 V |
 | Consumo | 5 µW parado, 30 µW a 1 quadro/s | 50 µW parado, 175 µW a 1 quadro/s |
-| Luz | 16 mA na versão C | não tem; o filme frontal Azumo 11103-06_A1 (0,05 mm, um LED de 10 mA) é laminado sobre a tela |
-| FPC | 10 vias, passo de 0,5 mm; conector indicado: Hirose FH28-10S-0.5SH(05) | 10 vias, passo de 0,5 mm, **na mesma ordem**; a ficha atual (LD-28305A, tabela 8-2-1) indica o Hirose FH28-10S-0.5SH, com contato por baixo, e três de contato duplo; a antiga indicava SMK CFP-4610-0150F ou Molex 51441-1093 |
-| Compra | sem canal autorizado: a JDI não lista mais MIP, a Switch Science encerrou as vendas, a DigiKey marca como obsoletos os módulos da Azumo com esse painel e a Data Modul não tem JDI | LS027B7DH01A na DigiKey, com 3.180 em estoque; a LS027B7DH01 sem A está sem estoque |
-| Firmware | o `jdi,lpm013m126` do Zephyr aceita até 255 px por eixo e precisa de mudanças | o port já desenha nele |
+| Luz | **16 mA a 2,67 V, integrada** na versão C; o `R_BL` de 39 Ω fecha pela ficha | não tem; o filme frontal Azumo 11103-06_A1 (0,05 mm, um LED de 10 mA) é laminado sobre a tela |
+| FPC | 10 vias, passo de 0,5 mm; conector indicado: Hirose FH28-10S-0.5SH(05). **Por onde a luz do C se liga não está em fonte nenhuma**: os 10 pinos não têm par de LED | 10 vias, passo de 0,5 mm, **na mesma ordem**; a ficha atual (LD-28305A, tabela 8-2-1) indica o Hirose FH28-10S-0.5SH, com contato por baixo, e três de contato duplo; a antiga indicava SMK CFP-4610-0150F ou Molex 51441-1093; a luz tem cauda própria de 4 vias, no Molex 5034800440 |
+| Compra | **sem canal autorizado e sem garantia**: a JDI não lista mais MIP, a Switch Science encerrou as vendas, a DigiKey marca como obsoletos os módulos da Azumo com esse painel e a Data Modul não tem JDI. O anúncio escolhido em 2026-09-23 é de **R$ 776** | LS027B7DH01A na DigiKey, com 3.180 em estoque; a LS027B7DH01 sem A está sem estoque |
+| Firmware | o `jdi,lpm013m126` do Zephyr aceita até 255 px por eixo e precisa de mudanças; o **driver próprio do port já aceita `jdi,lpm027m128c`**, em 3 bits, e a placa o declara | o port já desenha nele, em 1 bit |
+| Custo na placa | R$ 776, cerca de **US$ 144** a R$ 5,40 por dólar | US$ 23,61 + US$ 66,45 = **US$ 90,06**, mais o REG710 e o conector do filme |
 
 ### A luz da tela, procurada em 2026-09-23
 
@@ -330,11 +355,22 @@ LPM027M128**C** tem e o **B** não.
 | **O LPM027M128C existe no AliExpress** | quatro anúncios, de **R$ 324,63** a R$ 2.483,40. **Dois deles nomeiam B e C no mesmo título**, e o B não tem luz: comprar do anúncio errado é receber exatamente o problema. O de R$ 1.324,48 é o único que diz **WLED** com todas as letras |
 | **O painel Sharp sai mais barato no AliExpress** | R$ 113,69 a R$ 270,99, contra os US$ 29,29 da DigiKey na unidade. Não resolve a luz, mas é dinheiro |
 
-**Conclusão:** dentro de R$ 509 não há nada melhor do que o que a lista já
-escolhe. A Sharp com o filme Azumo dá cerca de **R$ 486** por placa (a
-R$ 5,40 por dólar — ajuste pela cotação do dia), o que **já cabe no teto**.
-O único candidato mais barato é o anúncio de R$ 324,63, e ele é cara ou
-coroa justamente na característica que se está comprando.
+**Conclusão desta busca:** dentro de R$ 509 não havia nada melhor do que o
+que a lista escolhia. A Sharp com o filme Azumo dá cerca de **R$ 486** por
+placa (a R$ 5,40 por dólar — ajuste pela cotação do dia), o que cabe no
+teto. O único candidato mais barato era o anúncio de R$ 324,63, e ele é
+cara ou coroa justamente na característica que se está comprando.
+
+> [!NOTE]
+> **O dono decidiu por cima disso no mesmo dia**, e passando do teto: o
+> **LPM027M128C** por **R$ 776**
+> ([link](https://pt.aliexpress.com/item/1005011938384752.html)), num
+> anúncio que não é o de R$ 324,63. A troca vale a pena por montagem e
+> consumo, não por preço — **são US$ 54 a mais por placa**
+> ([19 · Custo](19-lista-de-compras.md#custo)) —, e a ressalva desta seção
+> continua de pé: **sem canal autorizado, sem procedência e sem garantia**,
+> e com anúncios que confundem o B e o C. Peça amostra e confira qual chegou
+> antes de fechar o layout.
 
 > [!NOTE]
 > **Esta varredura foi parcial.** O orçamento de busca da sessão acabou e
@@ -344,13 +380,14 @@ coroa justamente na característica que se está comprando.
 > costuma aparecer barato. Nenhum anúncio individual foi aberto: não se
 > sabe vendedor, quantidade, avaliação, nem se a peça é nova ou recuperada.
 
-A cor e o consumo fazem do JDI a melhor tela, mas não há canal autorizado de compra, e a [lista de compras](19-lista-de-compras.md#display) fica com a Sharp LS027B7DH01A e o filme de luz da Azumo. Nenhuma MIP colorida de 2 a 3,5" com SPI e 3,0 V está à venda: as coloridas da Sharp (LS021B7DD02 e LS035Q7DD01) têm interface paralela de 6 bits e pedem 3,2 V e 5 V. A placa segue desenhada para as duas telas no mesmo conector:
+A cor e o consumo fazem do JDI a melhor tela, e **a decisão de 2026-09-23 pagou o preço de compra para tê-la**. Nenhuma MIP colorida de 2 a 3,5" com SPI e 3,0 V está à venda por canal autorizado: as coloridas da Sharp (LS021B7DD02 e LS035Q7DD01) têm interface paralela de 6 bits e pedem 3,2 V e 5 V. A placa segue desenhada para as duas telas no mesmo conector:
 
-- **Pinagem:** conferida nas duas fichas, a ordem dos 10 pinos é a mesma (SCLK, SI, SCS, EXTCOMIN, DISP, VDDA, VDD, EXTMODE, VSS, VSSA).
-- **Alimentação selecionável:** 3,0 V do BUCK2 para o JDI ou 5 V de uma bomba de carga para a Sharp, com resistores de 0 Ω. A V3 já usa o TI REG710 de 5 V para o LS027 ([02](02-hardware.md)); o footprint dele fica na placa e só é montado com o Sharp. O EXTMODE vai ao VDD do display, qualquer que seja a tensão, e a inversão do VCOM vem do PWM no EXTCOMIN; na V3 o EXTMODE fica em GND e o VCOM se inverte pelo SPI ([02](02-hardware.md)), o que o driver precisa acompanhar. **Um JDI com 5 V queima**: a montagem precisa deixar isso impossível de errar (por exemplo, uma única posição de resistor que escolhe a fonte).
+- **Pinagem:** conferida nas duas fichas, a ordem dos 10 pinos é a mesma (SCLK, SI, SCS, EXTCOMIN, DISP, VDDA, VDD, EXTMODE, VSS, VSSA). **Nenhum desses dez é o LED da luz** — na Sharp ele vinha na cauda do filme, e por onde ele chega no C é a pendência aberta acima.
+- **Alimentação:** 3,0 V do BUCK2, direto do `JP401` com o 0 Ω na posição do 3,0 V. Os 5 V da bomba de carga **não são montados**: o footprint do TI REG710, que a V3 usa para o LS027 ([02](02-hardware.md)), fica na placa vazio, e com ele o trilho de 5 V e o `DISP_PWR_EN` (P3.07), que volta a ficar livre. O EXTMODE vai ao VDD do display, qualquer que seja a tensão, e a inversão do VCOM vem do PWM no EXTCOMIN; na V3 o EXTMODE fica em GND e o VCOM se inverte pelo SPI ([02](02-hardware.md)), o que o driver precisa acompanhar. **Um JDI com 5 V queima**: o `JP401` tem uma posição só populada e o pad do meio é um só, de modo que a montagem não consegue pôr os dois trilhos no painel.
+- **COM a 120 Hz:** o driver aceita até 140 Hz no JDI e só 20 Hz na Sharp, e a interface pede 120 Hz com a luz acesa. Com o JDI declarado, o pedido passa; com a Sharp, ele era recusado e o COM ficava em 1 Hz ([10](10-status-do-port.md)).
 - **Conector:** o Hirose FH28-10S-0.5SH(05), com contato por baixo, aparece nas duas fichas; se a FPC for dobrada na montagem, um de contato duplo (Hirose FH34SRJ-10S-0.5SH(50)) serve à Sharp, e a amostra do JDI confirma.
 - **Caixa:** a janela e o apoio seguem o contorno maior, o do Sharp.
-- **Compra do JDI:** só amostras de revendedores, sem garantia; voltar à cor é decisão do dono ([19](19-lista-de-compras.md#antes-de-fechar-o-pedido)).
+- **Compra do JDI:** só amostras de revendedores, sem garantia — e é o que a decisão do dono aceitou ([19](19-lista-de-compras.md#antes-de-fechar-o-pedido)).
 
 O TFT transflectivo (ST7789, com driver no Zephyr) redesenha a tela o tempo todo e gasta cerca de 20 mW sem a luz: somaria um terço ao consumo do aparelho com o F10S, e o dobraria com o M10N em LEAP. Por isso fica fora.
 
@@ -470,7 +507,7 @@ Alternativa sem tradutor: o GNSS inteiro em 3,0 V pelo BUCK2 (VIO_SEL aberto). C
 | LED de carga | Kingbright APT1608SURCK (0603) no LED1 do nPM1300, anodo no VSYS | acende carregando sem firmware (o LED1 sai de fábrica como indicador de carga); 5 mA de corrente constante, sem resistor |
 | LED RGB | Kingbright APTF1616SEEZGKQBKC (anodo comum, 1,6 × 1,6 mm), 3 canais PWM do MCU, com um DMG1012T-7 em cada catodo e o anodo no VSYS | o verde e o azul de InGaN têm pouca folga para o resistor em 3,0 V; o WS2812B da V3 pede 5 V, e o port troca o `neopixel.c` pelos `pwm-leds` |
 | Buzzer | piezo Same Sky CPT-1117-83-SMT-TR (11 × 9 mm) | dois PWM em contrafase dobram a excursão sobre o piezo |
-| Luz do display | DMG1012T-7 com PWM, resistor de 39 Ω, alimentação pela LDSW2 em 3,3 V | 16 mA a 2,67 V na ficha do JDI e 10 mA no filme da Sharp. Com 3,0 V sobrariam só 0,33 V para o resistor; os 3,3 V da LDSW2, tirados do VSYS, dão 0,63 V. O resistor final sai da medida da amostra |
+| Luz do display | DMG1012T-7 com PWM, resistor de 39 Ω, alimentação pela LDSW2 em 3,3 V | 16 mA a 2,67 V na ficha do JDI, que é a tela decidida, e 10 mA no filme da Sharp do plano B. Com 3,0 V sobrariam só 0,33 V para o resistor; os 3,3 V da LDSW2, tirados do VSYS, dão 0,63 V. Com o JDI os 39 Ω fecham pela ficha; com o filme, o valor sai da medida da amostra. **Por onde os dois fios chegam ao painel do C é pendência aberta** |
 
 ## Bancada antes do layout
 
@@ -482,7 +519,7 @@ Cada item confirma uma escolha deste documento; o que falhar volta para a avalia
 | Painel no modelo da caixa | os 6 módulos na caixa impressa, ao meio-dia e sob árvores | corrente de pico com 4,7 e 6,8 µH (a ficha dá 65,5 ou 85 mA com 6,8 µH); tempo do MPPT pedalando na sombra variável | indutor e T_MPP |
 | GNSS | placas de avaliação do MAX-M10N-10B e do MAX-F10S, com a TE L000670 num plano do tamanho da placa | C/N0, `UBX-MON-SPAN`, partida a frio e a quente, trajeto em cidade e em mata contra uma referência, LEAP contra potência plena, consumo no PPK2 | [GNSS](#gnss) |
 | Coexistência | as duas antenas nas posições do desenho | S21 entre a antena de 2,4 GHz e a do GNSS em 2,44 GHz; C/N0 com BLE e ANT+ transmitindo | limite de potência do rádio |
-| Display | a Sharp LS027B7DH01A com o filme da Azumo e, se houver, amostras do JDI no mesmo conector | brilho e corrente do filme, espessura com o filme, lado do contato do FPC, driver em 1 bit e, com o JDI, em 8 cores | [Display](#display) |
+| Display | **amostras do JDI LPM027M128C**, a tela decidida, e a Sharp LS027B7DH01A com o filme da Azumo como plano B, no mesmo conector | **por onde a luz do C se liga** (o item que trava o layout), brilho e corrente dela, espessura do painel com a luz, lado do contato do FPC, e o driver em 8 cores; no plano B, a tensão direta do filme e o driver em 1 bit | [Display](#display) |
 | Sensores | a primeira placa, ou placas de avaliação do BMP585 e do BMI270 | BMP585 no driver `bosch,bmp581` (chip ID 0x51); despertar por movimento do BMI270 com a configuração `base`; MMC5633NJL no `memsic,mmc56x3` | [Sensores](#sensores) |
 | Consumo total | primeira placa | corrente por trilho com o PPK2, nos estados de [14](14-hardware-placa-nova.md#estados-de-energia) | o orçamento de energia |
 
@@ -496,7 +533,7 @@ Conferidos para esta avaliação (seções e tabelas citadas no texto):
 - u-blox, MAX-F10S Data sheet R03 (UBXDOC-963802114-12732): L5 pré-operacional (1.1), sinais e "single-band operation is not supported" (1.3), desempenho (tabelas 2 e 3), máximos absolutos (tabela 12), E/S digital (tabela 14) e correntes (tabelas 15 a 17).
 - u-blox, M10 firmware SPG 5.30 Release note (UBXDOC-304424225-20393): LEAP (3.2.2) e limitações conhecidas (6).
 - Quectel, LC76G Series GNSS Specification V1.1: sensibilidade e consumo das variantes PA e PB.
-- JDI, LPM027M128B Specification Ver.01 (2017-12-15), e Sharp, LS027B7DH01: pinagem, alimentação, entradas e conectores indicados.
+- JDI, LPM027M128B Specification Ver.01 (2017-12-15), e Sharp, LS027B7DH01: pinagem, alimentação, entradas e conectores indicados. **A ficha do LPM027M128C, que é a tela decidida, não foi lida** — e é ela que tem de dizer por onde a luz se liga.
 - ST, LSM6DSV16X datasheet: consumo por modo (tabela 4) e pinos (tabela 2); Bosch, BMI270 (BST-BMI270-DS000-08): consumo e pinos (tabela 22); Memsic, MMC5633NJL Rev A: mapa de registradores e I3C.
 - u-blox, MAX-M10N-10B Data sheet R05 (UBXDOC-304424225-18248): máximos absolutos (tabela 12), figura de ruído e correntes (tabelas 13, 15 e 16).
 - Fanstel, BM20C Product Specifications Draft 0.99: pinagem (p. 11) e montagem (p. 17); Azumo, 2.7" Front Light Panel 11103-xx; Sharp, LS027B7DH01A (LD-28305A); Molex, desenho do 2036150003.

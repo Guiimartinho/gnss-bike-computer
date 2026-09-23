@@ -59,12 +59,12 @@ flowchart LR
 
 ## Conferir o resultado
 
-Números de referência (build de 2026-09-22, NCS v3.3.0, imagem da aplicação; o `ANT=1` está em `docs/03-ambiente-build.md#resultado-de-referência`):
+Números de referência (build de 2026-09-23, NCS v3.3.0, imagem da aplicação; o `ANT=1` está em `docs/03-ambiente-build.md#resultado-de-referência`):
 
 | Alvo | FLASH | RAM |
 |---|---|---|
 | nRF54LM20 DK | 636.144 B de 921.456 B do slot (69,04 %) | 393.080 B (75,12 %) |
-| placa `gnssbike` | 636.360 B (69,06 %) | 369.120 B (70,54 %) |
+| placa `gnssbike` | 636.376 B (69,06 %) | 393.120 B (75,13 %) |
 
 - **Avisos esperados: 0** (com `ANT=1`, só o do símbolo obsoleto do `sdk-ant`). Qualquer aviso é defeito seu: corrija.
 - Maiores consumidores de RAM: heap do LVGL (32 KB, `CONFIG_LV_Z_MEM_POOL_SIZE`), `seg_runtime` (22 KB), buffer de desenho do LVGL (19,2 KB), heap do sistema (16 KB, `CONFIG_HEAP_MEM_POOL_SIZE`), quadro da tela (12,5 KB da Sharp; 36,5 KB do JDI no nRF54LM20), `points` (8 KB), as pilhas das threads de serviço e quatro cópias do retrato da tela (2,4 KB cada). Confira com `bash tools/fw/fw.sh size` depois de mexer em buffers estáticos.
