@@ -23,7 +23,8 @@ componente.
 > **Nada disto foi montado, medido ou fabricado.** Não existe placa, não
 > existe layout e nenhum componente passou por bancada. Todo valor abaixo
 > vem de datasheet ou de conta feita aqui, e está marcado como tal. O que
-> depende de medida está na seção [O que só a bancada decide](#o-que-só-a-bancada-decide).
+> depende de decisão, de ficha por ler ou de medida está na lista de
+> [Antes de mandar fabricar](#antes-de-mandar-fabricar).
 
 ## Índice
 
@@ -34,6 +35,8 @@ componente.
 | [03 · Lista de nós](03-netlist.md) | o esquemático como lista: nó, de onde sai, aonde chega |
 | [04 · Placa e caixa](04-pcb-e-caixa.md) | tamanho, camadas, posicionamento, zonas proibidas |
 | [05 · Materiais por folha](05-materiais.md) | o que cada folha consome, ligado à lista de compras |
+| [06 · Conectores e pontos de teste](06-conectores-e-pontos-de-teste.md) | cada conector pino a pino, e onde encostar a ponta de prova |
+| [07 · Sequências e proteção](07-sequencias-e-protecao.md) | em que ordem os trilhos sobem e descem, e o que protege o que sai da caixa |
 
 ## O aparelho em blocos
 
@@ -113,21 +116,17 @@ bloco, e vale dizer exatamente qual foi usada em cada caso:
 > dia, essas diretrizes passam a ser obrigatórias e este esquemático não
 > serve como está.
 
-## O que só a bancada decide
-
-| Em aberto | Por quê | Onde |
-|---|---|---|
-| Pad LGA de cada GPIO no BM20C | a ficha diz que o módulo expõe 64 GPIO, mas o de-para pino a pino não foi levantado aqui; o esquemático liga por nome de sinal, o layout precisa do pad | [01](01-esquematico.md#folha-2--mcu) |
-| Indutor do AEM10900 | a tabela 6 e a fórmula da seção 6.7.2 da ficha não batem; 4,7 µH é a escolha, 6,8 µH é o valor das curvas publicadas | [02](02-calculos.md#colheita-solar) |
-| Tolerância do cristal de 32,768 kHz do módulo | o ANT+ exige ±50 ppm e a ficha do BM20C não informa | [01](01-esquematico.md#folha-2--mcu) |
-| Corrente real da luz do display | depende da tensão direta do LED da amostra | [02](02-calculos.md#luz-do-display) |
-| Isolamento entre a antena do GNSS e a do rádio | os dois ficam na mesma placa de 55 × 97 mm | [04](04-pcb-e-caixa.md#zonas-proibidas) |
-| Calor do carregador linear | de 0,48 a **1,50 W** na corrente constante, conforme a tensão do USB e a carga da célula; numa caixa vedada isso põe a junção perto de 73 °C no pior caso | [02](02-calculos.md#calor-do-carregador) |
-
-## O dry-run de 2026-09-22
+## Os dry-runs
 
 O esquemático foi escrito e depois **revisado contra si mesmo e contra as
-fontes**, com duas passagens independentes: uma refez todas as contas e
+fontes**, duas vezes: em **2026-09-22**, sobre a primeira versão, e em
+**2026-09-23**, sobre a versão completa, já com os cálculos novos e os
+documentos [06](06-conectores-e-pontos-de-teste.md) e
+[07](07-sequencias-e-protecao.md).
+
+### O primeiro, em 2026-09-22
+
+Duas passagens independentes: uma refez todas as contas e
 procurou contradição interna, a outra conferiu folha por folha contra
 [`docs/13`](../docs/13-placa-nova.md), [`14`](../docs/14-hardware-placa-nova.md),
 [`15`](../docs/15-avaliacao-componentes.md), [`19`](../docs/19-lista-de-compras.md)
@@ -146,22 +145,80 @@ trazia o arranjo certo e o rascunho não a leu com cuidado suficiente.
 | `CSB` do BMP585 e do BMI270 | condição enunciada em prosa e sem nó: os dois nasceriam em SPI e o barramento não acharia ninguém | na tabela de [pinos de configuração](03-netlist.md#pinos-de-configuração-amarrados-em-cobre) |
 | Acionamento do LED RGB | catodo direto no pino do MCU, com o anodo num trilho que chega a 5,5 V | um MOSFET por cor, com 1 kΩ, como a especificação já pedia |
 
-### O que continua aberto depois do dry-run
+### O segundo, em 2026-09-23
 
-Não foi resolvido aqui, e precisa de decisão ou de bancada:
+Sobre a versão completa, já com os cálculos novos e os documentos
+[06](06-conectores-e-pontos-de-teste.md) e
+[07](07-sequencias-e-protecao.md). Achou **65 problemas, 2 graves** — e de
+novo quase tudo era erro de quem escreveu.
 
-| Em aberto | Por quê |
-|---|---|
-| **A tecla central está em dois lugares** e a especificação diz que não pode; resolver muda o firmware ([03](03-netlist.md#interface)) | decisão do dono |
-| **A tela decidida (JDI B) não tem luz**; quem tem é o C, sem canal de compra ([01](01-esquematico.md#folha-4--display)) | decisão do dono |
-| **A antena escolhida não cabe na zona reservada**: 10,75 mm contra 8 mm ([04](04-pcb-e-caixa.md#zonas-proibidas)) | decisão de mecânica |
-| **Domínio de tensão dos pinos digitais do nPM1300** ([02](02-calculos.md#pull-ups-do-i²c)) | ler a ficha |
-| **De que lado do sensor interno fica cada pino do MAX17262** ([01](01-esquematico.md#folha-1--energia)) | ler a ficha |
-| Os seis módulos solares em série ou em paralelo, e diodo de bloqueio entre eles: quatro ficam em chanfros de 45°, de modo que **sombreamento parcial é o normal** | falta definir |
-| Corrente de entrada no `VBUS`: carga mais sistema dão cerca de **670 mA**, e uma fonte USB-C comum oferece 500 mA | falta a conta fechada |
-| Sem proteção nas três teclas, que são o que o ciclista toca | falta |
-| Sem capacitor de volume junto do módulo, que é a carga de transitório mais rápido do `3V0` | falta |
-| Sem ponto de teste nos trilhos, e o conector da bateria sem pinagem declarada | falta |
+**Os dois graves foram na mesma peça, o LED RGB, em rodadas diferentes.**
+Na primeira, o catodo estava no pino do MCU, cujo anodo chega a 5,5 V com o
+cabo; entrou um MOSFET por cor. Na segunda descobriu-se que o **resistor
+tinha ficado do lado errado**: o LED é de **anodo comum**, os três dies
+dividem um pino, e com o resistor ali ele fica em paralelo com o die, que
+passa a ver o `VSYS` nu. O resistor vai entre cada catodo e o seu MOSFET —
+e a mesma inversão estava na luz do display.
+
+Dos médios, os que mudaram o desenho: o resistor de série do `MISO` estava
+na ponta que **recebe**, onde não amacia borda nenhuma; o divisor do
+`DIS_STO_CH`, que é o único intertravamento sem firmware, **não tem
+orientação definida em fonte nenhuma**; a derivação da tecla central para o
+`SHPHLD` não estava dita como saindo depois do resistor; e a lista de
+materiais montava **os dois** caminhos do termistor do colhedor, que é o
+caso que mata a carga solar.
+
+E quatro contas estavam erradas, com a pior no calor: dentro da caixa não é
+"o carregador mais a perda dos reguladores", é **tudo o que entra pelo cabo
+e não vira química na célula** — 1,89 W, que põem a caixa em **44,7 °C** a
+25 °C de ambiente, empate com o corte do JEITA **antes de qualquer sol**.
+
+### O que os dry-runs deixaram para trás
+
+Dos 43 do primeiro, os 6 graves foram corrigidos na hora. Dos demais, os que mudavam o
+circuito entraram em 2026-09-23 — a proteção das três teclas, os
+resistores de série do buzzer e do SPI da flash, os pull-downs das portas
+e dos sinais ativos altos, o capacitor de volume do módulo, a topologia do
+painel solar, o orçamento do USB e os pontos de teste. O que **não** foi
+fechado está na lista logo abaixo, e é de dois tipos: decisão do dono e
+ficha por ler.
+
+## Antes de mandar fabricar
+
+Nada aqui é opinião: é o que precisa estar fechado para a placa poder ser
+feita. Enquanto houver item aberto nas duas primeiras seções, **o
+esquemático não está pronto para virar layout**.
+
+### Decisões que são do dono
+
+- [ ] **Ligação da tecla central** — só ao `SHPHLD`, como manda a especificação, ou também a P1.27, como está o devicetree. Resolver muda o firmware ([03](03-netlist.md#interface)).
+- [ ] **Qual painel** — e, por consequência, se existe luz. O JDI B decidido não tem; o C não tem canal autorizado; a Sharp com filme Azumo é o que a lista compra ([01](01-esquematico.md#folha-4--display), [15](../docs/15-avaliacao-componentes.md#a-luz-da-tela-procurada-em-2026-09-23)).
+- [ ] **Qual antena** — a TE L000670 tem 10,75 mm e a zona reservada tem 8 mm ([04](04-pcb-e-caixa.md#zonas-proibidas)).
+
+### Fichas que precisam ser lidas
+
+- [ ] **Domínio de tensão dos pinos digitais do nPM1300** — se for o `VSYS`, o `PMIC_INT` e o I²C da energia não casam com os 3,0 V do MCU ([02](02-calculos.md#pull-ups-do-i²c)).
+- [ ] **De que lado do sensor interno ficam o `BATT` e o `SYS` do MAX17262** — trocar os dois inverte o sinal da corrente ([01](01-esquematico.md#folha-1--energia)).
+- [ ] **Brown-out e `VSYSPOF` do nPM1300** — a partida suave já está levantada (cerca de 1,2 ms, 360 µs/V), estes dois não ([07](07-sequencias-e-protecao.md)).
+- [ ] **Pinagem do cabo Tag-Connect TC2030-CTX-NL** — a Tag-Connect publica mais de um arranjo de seis pinos, e se o cabo comprado puser `nRESET` no 3 e `SWO` no 6, o pad 6 desta placa liga o reset do alvo a uma saída da sonda ([06](06-conectores-e-pontos-de-teste.md#j201--depuração-swd)).
+- [ ] **Pad LGA de cada GPIO do BM20C** — a contagem já bate; falta o de-para para rotear ([01](01-esquematico.md#folha-2--mcu)).
+- [ ] **Tolerância do cristal de 32,768 kHz do BM20C** — o ANT+ pede ±50 ppm e a ficha não informa.
+- [ ] **Um termistor para o AEM10900, não dois** — o do pack pelo conector **ou** o SMD na face de trás, nunca os dois: em paralelo dão 5 kΩ, que o colhedor lê como 44,4 °C contra o corte de 45 °C ([01](01-esquematico.md#folha-1--energia)).
+- [ ] **Indutor do AEM10900** — a tabela 6 e a fórmula da seção 6.7.2 da ficha não batem; 4,7 µH é a escolha e 6,8 µH é o valor das curvas publicadas ([02](02-calculos.md#indutor)).
+- [ ] **O filme Azumo na LS027B7DH01A** — ele foi feito para a LS027B7DH01 sem o A ([19](../docs/19-lista-de-compras.md#display)).
+
+### O que precisa de bancada
+
+- [ ] **Painel com um módulo tapado** — confirmar que o arranjo em paralelo sem diodo perde pouco ([02](02-calculos.md#série-ou-paralelo)).
+- [ ] **Calor do carregador na caixa vedada** — 1,50 W no pior caso põem a junção perto de 73 °C e a caixa inteira de 8 a 16 °C acima do ambiente; o corte por temperatura da célula pode disparar antes do fim da carga, e ao sol isso fica pior ([02](02-calculos.md#calor-do-carregador), [calor da caixa](02-calculos.md#calor-da-caixa-inteira)).
+- [ ] **Isolação entre a antena do GNSS e a do rádio** — o S21, não só a geometria ([04](04-pcb-e-caixa.md#as-duas-antenas)).
+- [ ] **Tensão direta do filme de luz** — sem ela o `R_BL` da montagem com a Sharp não fecha ([02](02-calculos.md#luz-do-display)).
+
+### O que falta definir
+
+- [ ] **Pilha de camadas do fabricante** — sem ela não há largura de trilha, nem 50 Ω da antena, nem 90 Ω do USB ([02](02-calculos.md#corrente-por-trilho-e-largura-de-trilha)).
+- [ ] **Atribuição das quatro vias do conector do filme de luz** — o número de vias é 4, mas **qual contato leva o quê não está em arquivo nenhum do projeto**; sai do desenho 12369-01_T4 da Azumo ([06](06-conectores-e-pontos-de-teste.md#j402--filme-de-luz)).
+- [ ] **Pinagem do conector da bateria, com o fabricante do pack** ([06](06-conectores-e-pontos-de-teste.md)).
 
 ## Verificação
 

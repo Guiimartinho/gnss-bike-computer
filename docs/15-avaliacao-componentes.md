@@ -310,6 +310,40 @@ O BM20C tem pinos LGA, não castelados: a montagem é por estêncil e forno, com
 | Compra | sem canal autorizado: a JDI não lista mais MIP, a Switch Science encerrou as vendas, a DigiKey marca como obsoletos os módulos da Azumo com esse painel e a Data Modul não tem JDI | LS027B7DH01A na DigiKey, com 3.180 em estoque; a LS027B7DH01 sem A está sem estoque |
 | Firmware | o `jdi,lpm013m126` do Zephyr aceita até 255 px por eixo e precisa de mudanças | o port já desenha nele |
 
+### A luz da tela, procurada em 2026-09-23
+
+O dono pediu uma tela com luz por até R$ 509. A busca achou uma coisa que
+muda a pergunta, e três fatos de mercado.
+
+**Estas telas não aceitam backlight.** São MIP **refletivas**: luz atrás
+do painel não ilumina nada, porque o refletor está no caminho. O que elas
+usam é **luz frontal** — um guia de luz transparente laminado sobre o
+vidro e aceso pela borda. É óptica especializada, e é por isso que o filme
+custa o que custa: não é sobrepreço, é outra categoria de componente. A
+única forma de a luz sair barata é vir integrada de fábrica, que é o que o
+LPM027M128**C** tem e o **B** não.
+
+| Achado | Detalhe |
+|---|---|
+| **O filme escolhido é o mais barato da família Azumo** | `11103-06_A1` a US$ 66,45 (10 un.); o `11103-03_A1` custa US$ 78,47 e o RGB `13290-03_A1`, US$ 95,18. O `12336-01_A1`, kit com a tela, US$ 197,08. Não há economia do lado da Azumo |
+| **Existiu um filme feito para o JDI B** | Azumo `12380-06_T3`, "Optical Film 2.7" JDI LPM027M128B Display", **obsoleto** na DigiKey ("no longer manufactured"). Seria a saída para quem já tem o B |
+| **O LPM027M128C existe no AliExpress** | quatro anúncios, de **R$ 324,63** a R$ 2.483,40. **Dois deles nomeiam B e C no mesmo título**, e o B não tem luz: comprar do anúncio errado é receber exatamente o problema. O de R$ 1.324,48 é o único que diz **WLED** com todas as letras |
+| **O painel Sharp sai mais barato no AliExpress** | R$ 113,69 a R$ 270,99, contra os US$ 29,29 da DigiKey na unidade. Não resolve a luz, mas é dinheiro |
+
+**Conclusão:** dentro de R$ 509 não há nada melhor do que o que a lista já
+escolhe. A Sharp com o filme Azumo dá cerca de **R$ 486** por placa (a
+R$ 5,40 por dólar — ajuste pela cotação do dia), o que **já cabe no teto**.
+O único candidato mais barato é o anúncio de R$ 324,63, e ele é cara ou
+coroa justamente na característica que se está comprando.
+
+> [!NOTE]
+> **Esta varredura foi parcial.** O orçamento de busca da sessão acabou e
+> só houve acesso por URL direta; a busca do AliExpress respondeu uma vez e
+> depois passou a devolver produto aleatório. Não foram olhados Taobao,
+> 1688, eBay, Alibaba nem revendedor de excedente, que é onde painel MIP
+> costuma aparecer barato. Nenhum anúncio individual foi aberto: não se
+> sabe vendedor, quantidade, avaliação, nem se a peça é nova ou recuperada.
+
 A cor e o consumo fazem do JDI a melhor tela, mas não há canal autorizado de compra, e a [lista de compras](19-lista-de-compras.md#display) fica com a Sharp LS027B7DH01A e o filme de luz da Azumo. Nenhuma MIP colorida de 2 a 3,5" com SPI e 3,0 V está à venda: as coloridas da Sharp (LS021B7DD02 e LS035Q7DD01) têm interface paralela de 6 bits e pedem 3,2 V e 5 V. A placa segue desenhada para as duas telas no mesmo conector:
 
 - **Pinagem:** conferida nas duas fichas, a ordem dos 10 pinos é a mesma (SCLK, SI, SCS, EXTCOMIN, DISP, VDDA, VDD, EXTMODE, VSS, VSSA).

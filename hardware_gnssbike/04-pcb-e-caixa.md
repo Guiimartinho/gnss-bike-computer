@@ -132,8 +132,8 @@ Total das sobreposições: 90 + 9 + 21 = **120 mm²**.
 
 **Sobram 3.355,7 mm², 62,9 % da placa** (**conta**: 5.335 − 1.979,3), para
 os passivos espalhados, as vias, os furos M2, os pontos de teste, o
-footprint Tag-Connect TC2030-NL, os dois pads do console (`uart20`, TP1 e
-TP2 de [03](03-netlist.md#console--uart20)) e as trilhas. **Pela planta,
+footprint Tag-Connect TC2030-NL, os dois pads do console (`uart20`, `TP201` e
+`TP202` de [06](06-conectores-e-pontos-de-teste.md#pontos-de-teste)) e as trilhas. **Pela planta,
 fecha com folga.**
 
 > [!NOTE]
@@ -289,7 +289,7 @@ já registra as duas como não calculadas.
 > USB não começa. **Nenhum fabricante foi consultado.**
 
 Uma placa de 0,8 mm também **empena mais** que uma de 1,6 mm no forno e sob
-o calor do carregador, que dissipa até 1,20 W a poucos milímetros da célula
+o calor do carregador, que dissipa até 1,50 W a poucos milímetros da célula
 ([02](02-calculos.md#calor-do-carregador)). Não medido.
 
 ## Posicionamento
@@ -489,9 +489,13 @@ na borda de cima. **Risco a mitigar no layout**, nas três frentes que
 [13](../docs/13-placa-nova.md#regras-de-projeto) e
 [14](../docs/14-hardware-placa-nova.md#regras-de-layout) já indicam:
 
-1. **Borda lenta:** resistor em série no `NOR_SCK` e nos dados, junto do
-   pino do MCU, para tirar energia dos harmônicos altos. O valor sai de
-   medida, não de conta: depende da capacitância da trilha, que não existe.
+1. **Borda lenta:** **33 Ω** em série no `NOR_SCK` e nos dados, junto do
+   pino do MCU, para tirar energia dos harmônicos altos. A conta de
+   [02](02-calculos.md#resistor-de-série-no-spi-da-flash) mostra que 33 Ω
+   custa cerca de 1 % do meio período a 8 MHz, longe de atrapalhar o
+   relógio, e que 100 Ω também caberiam. **O valor final sai de medida**,
+   com o espectro na banda (`UBX-MON-SPAN`) e a flash trabalhando: a
+   capacitância real da trilha ainda não existe.
 2. **Trilha curta:** a flash está a cerca de **67 mm** da área livre da
    antena (**conta**: do meio da zona de armazenamento, y 75, à borda da
    zona da antena, y 8), o que ajuda; manter o laço `SCK`/retorno o mais
@@ -561,5 +565,5 @@ montagem, que não existe.**
 | **Plugue do USB-C na caixa** | a boca do conector fica 0,77 mm atrás da face externa; um plugue de capa grossa pode não entrar | [Zonas proibidas](#zonas-proibidas) |
 | **Contatos dos painéis e da antena** | a área dos pads de mola e dos conectores dos três grupos de painéis não está dimensionada em lugar nenhum | [Orçamento de área](#orçamento-de-área) |
 | **Zona do conector do filme de luz** | [14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso) põe o Molex 5034800440 ao lado do FPC do display, mas não lhe dá retângulo, e a medida do corpo dele não está em nenhum documento daqui | [Orçamento de área](#orçamento-de-área) |
-| **Empenamento e calor** | 0,8 mm empena mais, e o carregador linear dissipa até 1,20 W dentro de uma caixa vedada | [02](02-calculos.md#calor-do-carregador) |
+| **Empenamento e calor** | 0,8 mm empena mais, e o carregador linear dissipa até 1,50 W dentro de uma caixa vedada | [02](02-calculos.md#calor-do-carregador) |
 | **Altura real das peças** | o empilhamento de [14](../docs/14-hardware-placa-nova.md#empilhamento-mecânico) fecha em 17,1 mm dentro de 19 mm, com 1,9 mm de folga, a partir de fichas e não de peças medidas | [14](../docs/14-hardware-placa-nova.md#empilhamento-mecânico) |
