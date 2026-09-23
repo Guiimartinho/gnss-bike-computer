@@ -79,15 +79,15 @@ usa, mais os dois reservados. Confira com `python tools/fw/board_check.py`.
 | `BL_PWM` | P3.08 | porta do MOSFET da luz | dig | `pwm20`, canal 0; a luz é o LED **de dentro** do painel |
 
 > [!NOTE]
-> **O `DISP_PWR_EN` ficou sem carga, e o firmware ainda o declara.** Com o
-> JDI LPM027M128C não há REG710 para habilitar, de modo que **P3.07 volta a
-> ficar disponível**. O
+> **O `DISP_PWR_EN` ficou sem carga.** Com o JDI LPM027M128C não há REG710
+> para habilitar, de modo que **P3.07 volta a ficar disponível**. O
 > [devicetree](../zephyr_app/boards/gnss/gnssbike/gnssbike_nrf54lm20a_cpuapp.dts)
-> continua trazendo `power-gpios = <&gpio3 7 ...>` no nó do display, e o
-> pull-down de 100 kΩ do `R403` segura o nível enquanto ninguém o aciona:
-> não faz mal, mas é linha a limpar no firmware quando alguém precisar do
-> pino. A linha fica nesta tabela para o `net_check.py` continuar batendo
-> com o devicetree.
+> continua trazendo `power-gpios = <&gpio3 7 ...>` no nó do display, e isso
+> é de propósito: é o que faz o plano B, com a Sharp e os 5 V, funcionar sem
+> mexer no firmware. Com o JDI montado o pino aciona um regulador que não
+> existe, e o pull-down de 100 kΩ do `R403` segura o nível. Quem quiser o
+> pino para outra coisa tira essa linha do devicetree; até lá, o nó fica
+> nesta tabela para o `net_check.py` continuar batendo.
 
 ### GNSS · `uart21`
 

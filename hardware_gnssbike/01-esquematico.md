@@ -275,11 +275,13 @@ construída. Os footprints ficam no desenho, porque são eles que fazem o
 plano B ser uma troca de montagem e não uma placa nova.
 
 **O `DISP_PWR_EN` (P3.07) fica livre.** Ele era o `EN` do REG710; sem o
-regulador, o pino volta a ficar disponível para outro uso. **O firmware
-ainda o declara** como `power-gpios` do nó do display no
+regulador, **o pino volta a ficar disponível** para outro uso. O firmware
+continua declarando `power-gpios` no nó do display do
 [devicetree](../zephyr_app/boards/gnss/gnssbike/gnssbike_nrf54lm20a_cpuapp.dts),
-com o pull-down de 100 kΩ do `R403` segurando o nível: não faz mal, mas é
-linha a limpar quando alguém quiser o pino.
+e isso é de propósito: é o que faz o plano B funcionar sem mexer no
+firmware. Enquanto o JDI estiver montado, o pino aciona um regulador que
+não existe, com o pull-down de 100 kΩ do `R403` segurando o nível — e quem
+quiser o pino para outra coisa tira essa linha.
 
 **Um conector, duas telas.** Os dez pinos das duas fichas estão na mesma
 ordem (`SCLK`, `SI`, `SCS`, `EXTCOMIN`, `DISP`, `VDDA`, `VDD`, `EXTMODE`,
