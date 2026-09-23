@@ -149,7 +149,7 @@ O legacy mostra velocidade, tempo, frequência cardíaca, potência e segmentos 
 > mesmo conector, o Hirose FH28-10S-0.5SH(05), que as fichas das duas telas
 > citam.
 
-LCD de memória refletivo de 8 cores, com backlight; o LPM027M128B é a mesma tela sem backlight. Os números abaixo foram conferidos nos dois datasheets (JDI LPM027M128B Ver.01 e Sharp LS027B7DH01) — e **a ficha do C nunca foi lida**, o que é de onde tem de sair por onde a luz dele se liga ([esquemático, folha 4](../hardware_gnssbike/01-esquematico.md#folha-4--display)).
+LCD de memória refletivo de 8 cores, com luz frontal integrada; o LPM027M128B é a mesma tela sem luz. Os números abaixo foram conferidos nos dois datasheets (JDI LPM027M128B Ver.01 e Sharp LS027B7DH01), e **a ficha do C foi encontrada em 2026-09-23**: os dois PDF da JDI respondem 404, mas a Switch Science, que vendia o módulo, publica as especificações citando a `3LPM027M128C specification ver.02`. É de lá que sai o que faltava: **a luz do C não passa pelo FPC de 10 vias — ela tem conector próprio, de 5 vias, passo de 0,5 mm e tipo ZIF** ([J402](../hardware_gnssbike/06-conectores-e-pontos-de-teste.md#j402--luz-do-lpm027m128c), [esquemático, folha 4](../hardware_gnssbike/01-esquematico.md#folha-4--display)).
 
 | Item | Sharp LS027B7DH01 (V3) | JDI LPM027M128B/C (proposta) |
 |---|---|---|
@@ -162,9 +162,9 @@ LCD de memória refletivo de 8 cores, com backlight; o LPM027M128B é a mesma te
 | Alimentação | 5,0 V (4,8 a 5,5 V), entradas lógicas de 3 V | 3,0 V (máximo absoluto 3,6 V), entradas lógicas em VDD |
 | SPI | 1 MHz típico, 2 MHz máximo | 1 MHz típico, 2 MHz máximo (pode cair no frio com VDD abaixo de 3,0 V) |
 | Quadro de uma linha | endereço de 8 bits, LSB primeiro | 6 bits de modo, endereço de 10 bits (linha 1 a 240 em binário, MSB primeiro), 1, 3 ou 4 bits por pixel, 16 clocks no fim |
-| Consumo típico a 25 °C | 50 µW parado, 175 µW com 1 atualização/s | 5 µW parado, 30 µW com a tela inteira atualizada a 1 Hz |
+| Consumo típico a 25 °C | 50 µW parado, 175 µW com 1 atualização/s | 5 µW parado, 30 µW com a tela inteira atualizada a 1 Hz, 180 µW a 10 quadros/s |
 | Temperatura de operação | −20 a +70 °C | −20 a +70 °C |
-| Luz | não tem | só no C: LED de 16 mA a 2,67 V |
+| Luz | não tem | só no C: LED de 16 mA a 2,67 V, num FPC próprio de 5 vias com passo de 0,5 mm |
 | Driver no Zephyr | `sharp,ls0xx` (só monocromático) | `jdi,lpm013m126` (8 cores), com mudanças |
 
 Por que ele:
@@ -183,7 +183,7 @@ Cuidados para o esquemático:
 Riscos:
 
 - **Compra.** A Switch Science, principal revenda, encerrou as vendas do LPM027M128C (¥9.460); a JDI não lista MIP no site; os módulos da Azumo com esse painel constam como obsoletos na DigiKey. Restam AliExpress e brokers, **sem canal autorizado, sem procedência e sem garantia**: o anúncio escolhido em 2026-09-23 é de **R$ 776** ([link](https://pt.aliexpress.com/item/1005011938384752.html)). Antes do layout, compre de 3 a 5 amostras e teste.
-- **Por onde a luz se liga é pendência aberta, e de alta prioridade.** O FPC de 10 vias que as duas telas compartilham não tem par para o LED, e na Sharp a luz vinha num filme com cauda própria. O C tem de trazer um FPC com mais vias ou um rabicho separado, e **nenhum documento do projeto registra qual**: a ficha lida é a do B, que não tem luz. Precisa sair da ficha do C ou de uma amostra **antes do layout** ([esquemático, folha 4](../hardware_gnssbike/01-esquematico.md#folha-4--display)).
+- **Por onde a luz se liga: respondido em 2026-09-23.** A ficha do C dá **duas interfaces**, as duas com passo de 0,5 mm e tipo ZIF: o FPC de **10 vias** do sinal e um FPC de **5 vias só para a luz**. O FPC de 10 vias que as duas telas compartilham realmente não tem par para o LED — na Sharp a luz vinha num filme com cauda própria, e no C vem nesse segundo conector. Os **2,67 V e 16 mA** da ficha confirmam os 39 Ω do `R_BL` alimentado do trilho de 3,3 V, que o esquemático já tinha calculado. **Continua aberto, e é menor:** a **ordem das cinco vias** — qual é anodo, qual é catodo e quais não se usam —, que não está em fonte nenhuma, e a **peça do conector de 5 vias** (o que o projeto tem hoje é um Molex de 4 vias, herdado do filme da Sharp, e não serve). Nada disso **bloqueia o layout**: posicionar o conector não depende da ordem das vias, rotear depende ([J402](../hardware_gnssbike/06-conectores-e-pontos-de-teste.md#j402--luz-do-lpm027m128c), [esquemático, folha 4](../hardware_gnssbike/01-esquematico.md#folha-4--display)).
 - **Plano B no mesmo conector.** O LS027 e o JDI usam FPC de 10 vias com passo de 0,5 mm e a mesma ordem de pinos; muda a tensão (5 V contra 3,0 V, e o JDI queima acima de 3,6 V) e talvez o lado de contato. O footprint do regulador de 5 V e a posição de 5 V do jumper ficam na placa **sem peça**, e é isso que deixa a placa aceitar o LS027 monocromático com o filme Azumo se o JDI faltar.
 - **Plano C.** MIP de 64 cores ainda em produção, como o Sharp LS021B7DD02 (2,13", 320 × 240, em estoque na DigiKey), muda o tamanho e usa interface paralela de 6 bits, sem driver no Zephyr; o TFT transflectivo com ST7789 tem driver pronto, mas gasta centenas de vezes mais.
 - **Software.** O `jdi,lpm013m126` do Zephyr guarda largura e altura em `uint8_t` (máximo 255), manda o endereço de 8 bits com os bits invertidos e não manda os 16 clocks finais; para o LPM027M128 ele precisa de largura e altura em 16 bits, endereço de 10 bits e o modo de 1 bit. A alternativa é estender o `src/drivers/lcd/ls027.c` do port. Nos dois casos, o trabalho é pequeno e testável só com o painel na mão.
@@ -440,7 +440,7 @@ Referências do mercado: o Garmin Edge 1040 Solar declara de 35 para 45 h no uso
 | Risco | Detalhe | Como reduzir |
 |---|---|---|
 | Compra do display | o JDI LPM027M128C **é a tela decidida e não tem canal autorizado**: a principal revenda encerrou as vendas, a JDI não lista MIP no site e o que resta é revendedor, a R$ 776 e sem garantia | amostras antes do layout; o conector de 10 vias aceita o LS027 com o filme Azumo como plano B |
-| **Ligação da luz do LPM027M128C** | o FPC de 10 vias não tem par de LED e nenhuma fonte do projeto diz por onde a luz do C se liga; a ficha lida é a do B, que não tem luz | ficha do C ou amostra, **antes do layout**: sem isso a folha 4 não fecha ([esquemático](../hardware_gnssbike/01-esquematico.md#folha-4--display)) |
+| Ligação da luz do LPM027M128C | **respondido em 2026-09-23**: a ficha do C, publicada pela Switch Science a partir da `3LPM027M128C specification ver.02`, dá um FPC de **5 vias** com passo de 0,5 mm **só para a luz**, com 16 mA a 2,67 V, ao lado das 10 vias de sinal. Restam a **ordem das cinco vias**, que não está em fonte nenhuma, e a peça do conector de 5 vias | **não trava mais o layout**: posicionar o conector já dá, rotear é que espera a ordem. Sai da ficha da JDI, se os PDF voltarem do 404, ou de uma amostra ([J402](../hardware_gnssbike/06-conectores-e-pontos-de-teste.md#j402--luz-do-lpm027m128c)) |
 | Dois carregadores na célula | a Nordic não documenta um carregador externo no VBAT do nPM1300 | validar com o nPM1300 EK e a placa de avaliação do AEM10900 antes do esquemático; alternativa BQ25798 |
 | Antena GNSS dentro de uma caixa pequena | o LCD ocupa a face de cima, o plano de terra é pequeno e o BLE transmite até +8 dBm a centímetros da antena; com o F10S a banda L5 também precisa casar (56 % de eficiência contra 66 % em L1) | antena linear L1/L5 na borda de cima, como no mercado; módulo com SAW antes do LNA; antenas de GNSS e de 2,4 GHz em cantos opostos; teste A/B do F10S e do M10N na caixa real, com C/N0 medido por banda |
 | Calor ao sol | no verão a caixa passa de 45 °C, e o corte térmico da carga zera a colheita no sol forte | afastar a célula do painel; medir a temperatura interna; subir o limite só se o datasheet da célula permitir |
@@ -478,7 +478,7 @@ Consultadas em 2026-09-18. Os arquivos do NCS são os de `C:\ncs\v3.3.0`.
 **Display**
 - JDI, LPM027M128B Specification Ver.01, 2017-12-15 ([PDF](https://www.sscc.co.jp/wp-content/themes/sscc-template/assets/images/business/otherproducts/jdimiplcd/download/LPM027M128B_specification_ver01_201701215.pdf))
 - Sharp, [LS027B7DH01](https://cdn-learn.adafruit.com/assets/assets/000/094/215/original/LS027B7DH01_Rev_Jun_2010.pdf)
-- Switch Science, LPM027M128C ([internacional](https://international.switch-science.com/catalog/5395/), [Japão](https://www.switch-science.com/products/5395): vendas encerradas)
+- Switch Science, LPM027M128C ([internacional](https://international.switch-science.com/catalog/5395/), [Japão](https://www.switch-science.com/products/5395): vendas encerradas): publica as especificações do C citando a ficha `3LPM027M128C specification ver.02` — as duas interfaces (10 vias de sinal e 5 vias da luz), 3,0 V, luz de 2,67 V e 16 mA, painel de 5, 30 e 180 µW. Lidas em 2026-09-23; os dois PDF da JDI respondem 404
 - Good Display, [GDEY029Z95](https://www.good-display.com/product/527.html); E Ink, [Spectra 6](https://www.eink.com/brand/detail/Spectra6)
 - DC Rainmaker, [Garmin Edge 850](https://www.dcrainmaker.com/2025/09/garmin-edge-850-in-depth-review-brilliance.html); the5krunner, [COROS DURA](https://the5krunner.com/2024/11/13/coros-dura-review-specifications-opinion/); bikepacking.com, [COROS DURA](https://bikepacking.com/gear/coros-dura-review/)
 - NCS: `zephyr/drivers/display/display_lpm013m126.c`, `ls0xx.c`, `ssd16xx.c`, `uc81xx.c`

@@ -159,7 +159,8 @@ a peça sai do pedido.
 | JP401 | Jumper do `VDD` do painel: **0 Ω fixo na posição do `3V0`**, com a posição do `5V0` sem peça | 0 Ω, Panasonic ERJ-2GE0R00X | 1 | [Passivos](../docs/19-lista-de-compras.md#passivos) |
 | C404 em diante | Desacoplamento do painel | 100 nF, 10 V, X7R, 0402 | a fechar no layout | [Passivos](../docs/19-lista-de-compras.md#passivos) |
 | ~~DS402~~ | Filme de luz frontal, 0,05 mm | Azumo 11103-06_A1 | **0** — a luz agora é do painel; volta só no plano B | [Display](../docs/19-lista-de-compras.md#display) |
-| ~~J402~~ | Conector do filme, 4 vias, passo de 0,5 mm | Molex 5034800440 | **0** — sem filme, sem conector de filme | [Display](../docs/19-lista-de-compras.md#display) |
+| J402 | **Conector da luz do painel, 5 vias, passo de 0,5 mm, tipo ZIF** | **a definir** | 1 | a ficha do C dá duas interfaces, e a luz tem a sua ([06](06-conectores-e-pontos-de-teste.md#j402--luz-do-lpm027m128c)). O Molex 5034800440 do plano B tem **4** vias e não serve |
+| ~~J402 (plano B)~~ | Conector do filme Azumo, 4 vias | Molex 5034800440 | **0** — só se a montagem voltar para a Sharp | [Display](../docs/19-lista-de-compras.md#display) |
 | ~~U401~~ | Conversor de 5 V da tela, com `EN` | TI REG710NA-5/3K | **0** — o JDI vive em 3,0 V | [Display](../docs/19-lista-de-compras.md#display) |
 | ~~C401~~ | Bombeamento do REG710 | 0,22 µF, 25 V, X5R, 0402 | **0** | [Passivos](../docs/19-lista-de-compras.md#passivos) |
 | ~~C402, C403~~ | Saída **e** entrada do REG710 | 10 µF, 25 V, X5R, 0603 | **0** | [Passivos](../docs/19-lista-de-compras.md#passivos) |
@@ -180,7 +181,7 @@ a peça sai do pedido.
 > LPM027M128**B**, que não tem luz. Enquanto isso não sair da ficha do C ou
 > de uma amostra, esta folha **não tem linha de conector para a luz** e o
 > layout não pode posicioná-lo. **Alta prioridade, antes do layout**
-> ([06](06-conectores-e-pontos-de-teste.md#a-luz-do-lpm027m128c)).
+> ([06](06-conectores-e-pontos-de-teste.md#j402--luz-do-lpm027m128c)).
 
 ## Folha 5 · Memória e sensores
 
@@ -247,16 +248,16 @@ Posições de componente por placa, sem contar os 100 nF de desacoplamento
 | 1 · Energia | 57 | 40 | 9 capacitores de 10 µF da referência da Nordic e 6 módulos solares |
 | 2 · MCU | 2 | 1 | o módulo e o capacitor de volume dele |
 | 3 · GNSS | 8 | 5 | a rede em π e o filtro do `1V8` |
-| 4 · Display | 9 | 6 | a tela com luz integrada tirou seis peças da folha |
+| 4 · Display | 10 | 6 | a tela com luz integrada tirou seis peças e devolveu uma, o conector da luz |
 | 5 · Memória e sensores | 16 | 10 | cinco CIs, os pull-ups e os três resistores de série do SPI |
 | 6 · Interface | 22 | 14 | três teclas com proteção, três MOSFET e os pull-downs |
-| **Total** | **114** | **76 (67 %)** | |
+| **Total** | **115** | **76 (66 %)** | |
 
 A conta, somando a coluna **Quantidade** das tabelas acima (**conta**):
 
 ```
-57 + 2 + 8 + 9 + 16 + 22 = 114
-passivas: 40 + 1 + 5 + 6 + 10 + 14 = 76, ou 76 ÷ 114 = 67 %
+57 + 2 + 8 + 10 + 16 + 22 = 115
+passivas: 40 + 1 + 5 + 6 + 10 + 14 = 76, ou 76 ÷ 115 = 66 %
 ```
 
 ```mermaid
@@ -265,7 +266,7 @@ pie showData
     "1 · Energia" : 57
     "2 · MCU" : 2
     "3 · GNSS" : 8
-    "4 · Display" : 9
+    "4 · Display" : 10
     "5 · Memória e sensores" : 16
     "6 · Interface" : 22
 ```
@@ -292,11 +293,14 @@ traz e que nenhuma folha usa.
 > REG710. **Nenhum deles é enfeite**: cada um sai de uma conta ou
 > de um modo de falha descrito em [02](02-calculos.md).
 >
-> E 120 − 6 = **114**, da troca da tela em 2026-09-23: o JDI LPM027M128C
-> traz a luz dentro do painel e vive em 3,0 V, de modo que saem o filme
-> (`DS402`), o conector dele (`J402`), o REG710 (`U401`) e os três
-> capacitores do conversor (`C401`, `C402` e `C403`) — três deles passivos,
-> daí 79 − 3 = 76.
+> E **120 − 6 + 1 = 115**, da troca da tela em 2026-09-23. O JDI
+> LPM027M128C traz a luz dentro do painel e vive em 3,0 V, de modo que saem
+> seis peças: o filme (`DS402`), o conector de 4 vias dele, o REG710
+> (`U401`) e os três capacitores do conversor (`C401`, `C402` e `C403`) —
+> três dessas passivas, daí 79 − 3 = 76. E **volta uma**: a ficha do C
+> mostrou que a luz tem **conector próprio, de 5 vias**, e o `J402` passou a
+> ser ele ([06](06-conectores-e-pontos-de-teste.md#j402--luz-do-lpm027m128c)).
+> A peça ainda não foi escolhida, e o Molex de 4 vias do plano B não serve.
 
 ## Onde os documentos discordam
 
@@ -333,7 +337,7 @@ escrever cada item.
 | **Flash NOR Macronix MX25R6435F** | 5 | a linha traz "a confirmar" em código, estoque e preço; a peça foi escolhida pela ficha em 2026-09-20 e **nenhum distribuidor foi conferido** ([Armazenamento](../docs/19-lista-de-compras.md#armazenamento), [Compras fora da DigiKey](../docs/19-lista-de-compras.md#compras-fora-da-digikey)) |
 | **e-peas AEM10900** | 1 | "a DigiKey não vende"; só a Mouser, **que não pôde ser conferida**, ou a própria e-peas por amostra ([Energia](../docs/19-lista-de-compras.md#energia)) |
 | **Painel JDI LPM027M128C** | 4 | **é a tela decidida em 2026-09-23** e **não tem canal autorizado**: a JDI não lista mais MIP, a Switch Science encerrou as vendas e nenhum distribuidor a vende. O anúncio escolhido é de **R$ 776** no AliExpress ([link](https://pt.aliexpress.com/item/1005011938384752.html)), **sem garantia e sem procedência** ([19](../docs/19-lista-de-compras.md#display)) |
-| **Caminho da luz do LPM027M128C** | 4 | não é falta de código de compra, é falta de **desenho**: o FPC de 10 vias não tem par de LED e nenhuma fonte do projeto diz por onde a luz do C se liga ([06](06-conectores-e-pontos-de-teste.md#a-luz-do-lpm027m128c)) |
+| **Caminho da luz do LPM027M128C** | 4 | não é falta de código de compra, é falta de **desenho**: o FPC de 10 vias não tem par de LED e nenhuma fonte do projeto diz por onde a luz do C se liga ([06](06-conectores-e-pontos-de-teste.md#j402--luz-do-lpm027m128c)) |
 | **`R_BL` do plano B, com a Sharp** | 4 | a linha de 39 Ω existe e é a do JDI, a tela montada; com a Sharp o valor **depende da tensão direta do filme**, que só a amostra dá ([02](02-calculos.md#luz-do-display)) |
 | **Célula LiPo de 2000 mAh** | 1 | sem código: encomenda a um fabricante de packs, com PCM, NTC de 10 kΩ B3380, cabo com o GHR-06V-S e UN38.3 |
 | **Peças do plano B** | 4 | a Sharp LS027B7DH01A, o filme Azumo 11103-06_A1, o Molex 5034800440 e o REG710NA-5/3K continuam na lista de compras com código e estoque; elas **não entram no pedido** enquanto o JDI for a tela, e é por isso que o plano B é uma troca de montagem ([Display](../docs/19-lista-de-compras.md#display)) |

@@ -239,7 +239,7 @@ o B é a mesma tela sem ela. Com `V_DS` do MOSFET em cerca de 50 mV:
 R_BL = (3,3 − 2,67 − 0,05) / 16 mA = 0,58 / 0,016 = 36,3 Ω
 ```
 
-**Escolhido: 39 Ω**, o valor E24 acima (nunca o abaixo: um resistor menor
+**Escolhido: 39 Ω**, o valor E24 acima — e a ficha do C confirma os dois números de entrada. Vale registrar por que a luz vem do `3V3BL` e não do `3V0`: com 3,0 V o resistor cairia para **17,5 Ω** e a corrente ficaria refém da tolerância da tensão direta; os 300 mV a mais é que dão a margem (nunca o abaixo: um resistor menor
 passa mais corrente que a ficha permite). Confere:
 
 ```
@@ -251,17 +251,14 @@ P = 0,58 × 0,0149 = 8,6 mW     (0402 aguenta 63 mW)
 a troca da tela não mexeu em nenhum dos números dela. O `Q401`
 (DMG1012T-7) e o trilho `3V3BL` também continuam como estavam.
 
-> [!CAUTION]
-> **Falta saber por onde essa corrente chega ao painel.** O FPC de 10 vias
-> que as duas telas compartilham **não tem par para o LED**, e o conector do
-> filme (`J402`) existia para a luz separada da Sharp. O C tem de ter um FPC
-> com mais vias ou um rabicho próprio, e **nenhum documento do projeto
-> registra qual dos dois** — a ficha lida pelo projeto é a do
-> LPM027M128**B**, que não tem luz. Os 39 Ω, o `Q401` e o `3V3BL` estão
-> certos; o que falta é o caminho físico
-> ([01](01-esquematico.md#folha-4--display),
-> [06](06-conectores-e-pontos-de-teste.md#a-luz-do-lpm027m128c)). **Alta
-> prioridade, antes do layout.**
+> [!NOTE]
+> **O caminho físico apareceu em 2026-09-23.** A luz do C **não** passa
+> pelo FPC de 10 vias: ela tem um conector próprio, de **5 vias e passo
+> 0,5 mm**, segundo a ficha `3LPM027M128C specification ver.02`. O `J402`
+> passou a ser esse conector
+> ([06](06-conectores-e-pontos-de-teste.md#j402--luz-do-lpm027m128c)). O
+> que ainda falta é **qual das cinco vias é anodo e qual é catodo**: os
+> dois PDF da JDI respondem 404 e o arquivo histórico está bloqueado.
 
 ### Com a Sharp e o filme Azumo
 

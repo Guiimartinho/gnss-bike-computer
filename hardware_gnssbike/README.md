@@ -105,7 +105,7 @@ bloco, e vale dizer exatamente qual foi usada em cada caso:
 | Colheita solar | **lista mínima de materiais da e-peas** (tabela 43 da ficha do AEM10900), com a exceção registrada do indutor | ficha AEM1090x v2.4.0 |
 | Medidor de bateria | **circuito de aplicação do MAX17262** com sensor entre BATT e SYS | ficha Maxim |
 | GNSS | **projeto de referência do MAX-F10S**: entrada com SAW, LNA e SAW já dentro do módulo; a placa entrega alimentação limpa, a linha de 50 Ω e a zona livre | ficha MAX-F10S R03, conferida em [15](../docs/15-avaliacao-componentes.md#gnss) |
-| Display | ficha do painel e do conector: ordem dos 10 pinos, EXTMODE no VDD, VCOM pelo EXTCOMIN | fichas JDI LPM027M128**B** Ver.01 e Sharp LS027B7DH01 (LD-28305A). **A tela montada é o LPM027M128C, e a ficha dele não foi lida**: é dela que tem de sair por onde a luz se liga ([06](06-conectores-e-pontos-de-teste.md#a-luz-do-lpm027m128c)) |
+| Display | ficha do painel e do conector: ordem dos 10 pinos, EXTMODE no VDD, VCOM pelo EXTCOMIN | fichas JDI LPM027M128**B** Ver.01 e Sharp LS027B7DH01 (LD-28305A); do **C**, que é a tela montada, as especificações publicadas da `3LPM027M128C specification ver.02` — 10 vias de sinal, **5 vias só para a luz**, 2,67 V e 16 mA ([06](06-conectores-e-pontos-de-teste.md#j402--luz-do-lpm027m128c)). Os PDF da JDI estão 404: falta a **ordem das cinco vias** |
 
 > [!IMPORTANT]
 > **O documento de diretrizes de projeto de hardware do nRF54LM20 da
@@ -197,7 +197,8 @@ esquemático não está pronto para virar layout**.
 
 ### Fichas que precisam ser lidas
 
-- [ ] **Por onde a luz do JDI LPM027M128C se liga** — **alta prioridade, e bloqueia o layout**. O FPC de 10 vias que as duas telas compartilham (`SCLK`, `SI`, `SCS`, `EXTCOMIN`, `DISP`, `VDDA`, `VDD`, `EXTMODE`, `VSS`, `VSSA`) **não tem par para o LED**, e o `J402` existia para o filme separado da Sharp. O C tem de ter um FPC com mais vias **ou** um rabicho próprio, e **nenhum documento do projeto traz isso**: a ficha lida é a do **B**, que não tem luz. Sai da ficha do C ou de uma amostra, **antes do layout** — sem ela não dá para desenhar a folha 4 nem posicionar o conector ([01](01-esquematico.md#folha-4--display), [06](06-conectores-e-pontos-de-teste.md#a-luz-do-lpm027m128c)).
+- [ ] **Ordem das cinco vias do conector da luz** — a ficha do C dá duas interfaces, **10 vias de sinal e 5 vias só para a luz**, as duas com passo de 0,5 mm, mais 2,67 V e 16 mA, e o `J402` já é esse conector. Falta **qual via é anodo, qual é catodo e quais não se usam**: os dois PDF da JDI respondem 404 ([06](06-conectores-e-pontos-de-teste.md#j402--luz-do-lpm027m128c)).
+- [ ] **Peça do conector de 5 vias** — o `J402` de hoje é um Molex de 4 vias, herdado do filme da Sharp, e não serve.
 - [ ] **Domínio de tensão dos pinos digitais do nPM1300** — se for o `VSYS`, o `PMIC_INT` e o I²C da energia não casam com os 3,0 V do MCU ([02](02-calculos.md#pull-ups-do-i²c)).
 - [ ] **De que lado do sensor interno ficam o `BATT` e o `SYS` do MAX17262** — trocar os dois inverte o sinal da corrente ([01](01-esquematico.md#folha-1--energia)).
 - [ ] **Brown-out e `VSYSPOF` do nPM1300** — a partida suave já está levantada (cerca de 1,2 ms, 360 µs/V), estes dois não ([07](07-sequencias-e-protecao.md)).
@@ -218,7 +219,7 @@ esquemático não está pronto para virar layout**.
 ### O que falta definir
 
 - [ ] **Pilha de camadas do fabricante** — sem ela não há largura de trilha, nem 50 Ω da antena, nem 90 Ω do USB ([02](02-calculos.md#corrente-por-trilho-e-largura-de-trilha)).
-- [ ] **Atribuição das quatro vias do conector do filme de luz** — só no plano B: o número de vias é 4, mas **qual contato leva o quê não está em arquivo nenhum do projeto**; sai do desenho 12369-01_T4 da Azumo ([06](06-conectores-e-pontos-de-teste.md#no-plano-b-o-filme-e-o-j402)).
+- [ ] **Atribuição das quatro vias do conector do filme de luz** — só no plano B: o número de vias é 4, mas **qual contato leva o quê não está em arquivo nenhum do projeto**; sai do desenho 12369-01_T4 da Azumo ([06](06-conectores-e-pontos-de-teste.md#no-plano-b-o-filme-e-o-conector-de-4-vias)).
 - [ ] **Pinagem do conector da bateria, com o fabricante do pack** ([06](06-conectores-e-pontos-de-teste.md)).
 
 ## Verificação

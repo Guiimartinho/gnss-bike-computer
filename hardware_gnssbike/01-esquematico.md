@@ -318,17 +318,21 @@ volta a existir se alguém montar o plano B sem mexer no firmware.
 
 ### Em aberto nesta folha
 
-> [!CAUTION]
-> **Não se sabe por onde a luz do C se liga, e isso trava a folha 4.** O
-> FPC de 10 vias que as duas telas compartilham — `SCLK`, `SI`, `SCS`,
-> `EXTCOMIN`, `DISP`, `VDDA`, `VDD`, `EXTMODE`, `VSS`, `VSSA` — **não tem
-> par para o LED**, e o `J402` existia justamente porque a luz da Sharp
-> vinha num filme separado. O C tem de ter **ou um FPC com mais vias, ou um
-> rabicho próprio para a luz**, e **nenhum documento do projeto traz isso**:
-> a ficha que o projeto leu é a do **LPM027M128B**, que não tem luz. Sem
-> essa informação não dá para desenhar a folha 4 nem posicionar o conector
-> da luz no layout. **Alta prioridade, e antes do layout**: sai da ficha do
-> LPM027M128C ou de uma amostra na mão.
+> [!NOTE]
+> **A luz do C tem conector próprio, e ele apareceu em 2026-09-23.** A
+> ficha `3LPM027M128C specification ver.02`, pelas especificações que a
+> Switch Science publica, dá duas interfaces: o **FPC de 10 vias e passo
+> 0,5 mm** dos sinais, o mesmo do B, e um **FPC de 5 vias e passo 0,5 mm**
+> só para a luz. O `J402` passou a ser esse segundo conector
+> ([06](06-conectores-e-pontos-de-teste.md#j402--luz-do-lpm027m128c)).
+>
+> A mesma ficha confirma os dois números com que a
+> [conta do `R_BL`](02-calculos.md#luz-do-display) foi feita — **2,67 V de
+> tensão direta e 16 mA** —, de modo que os 39 Ω param de ser hipótese.
+>
+> **O que falta é menor:** qual das cinco vias é anodo, qual é catodo e
+> quais não se usam. Os dois PDF da JDI respondem 404 e o arquivo histórico
+> está bloqueado; sai da ficha em mãos ou de uma amostra.
 
 - **Sem canal autorizado e sem garantia.** O anúncio escolhido é de
   **R$ 776** no AliExpress

@@ -238,6 +238,7 @@ layout. **Nada disto foi feito.**
 | **Via tampada e aplainada** — sem ela o MAX17262 não é montável | idem |
 | **A antena não cabe na zona** — 10,75 mm contra 8 mm | decisão de mecânica, **bloqueia a borda de cima** |
 | **Pad LGA de cada GPIO do BM20C** — o esquemático liga por nome de sinal; o layout precisa do pad | ficha da Fanstel |
-| **Por onde a luz do JDI LPM027M128C se liga** — o FPC de 10 vias não tem par para LED | ficha do painel ou amostra |
+| **Ordem das cinco vias do conector da luz** — a ficha já diz que são **5 vias, passo 0,5 mm**, num conector à parte do de 10 vias dos sinais; falta qual é anodo e qual é catodo | ficha em mãos ou amostra |
+| **Peça do conector de 5 vias** do `J402` | escolha de componente |
 | **Orientação do divisor do `DIS_STO_CH`** | ficha do AEM10900 |
 | **Onde fica o NTC do JEITA na célula** | fabricante do pack |

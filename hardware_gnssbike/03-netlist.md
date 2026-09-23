@@ -32,7 +32,7 @@ lê as tabelas desta página e as compara com o devicetree da placa em
 | `3V0` | 3,0 V | nPM1300 `BUCK2` | BM20C `VDD`; BMP585, BMI270, MMC5633NJL e OPT3001; TXU0204 `VCCA`; AEM10900 `I2C_VDD`; buzzer; entrada da `LDSW1`; o `VDD`/`VDDA` do display pelo `JP401`; e o `IN` do REG710 **só no plano B** | alim |
 | `1V8` | 1,8 V | nPM1300 `BUCK1`, por filtro LC | MAX-F10S `VCC` e `V_IO`; TXU0204 `VCCB` | alim |
 | `SD3V0` | 3,0 V | nPM1300 `LDSW1`, do `3V0` | MX25R6435F `VCC` | alim |
-| `3V3BL` | 3,3 V | nPM1300 `LDSW2`, do `VSYS` | anodo do LED da luz, por `R_BL`; o catodo vai ao dreno do `Q401`. Com o JDI o LED está **dentro do painel**, e **por qual conector os dois fios chegam a ele é pendência aberta** ([01](01-esquematico.md#folha-4--display)) | alim |
+| `3V3BL` | 3,3 V | nPM1300 `LDSW2`, do `VSYS` | anodo da luz do painel, por `R_BL` de 39 Ω; o catodo volta ao dreno do `Q401`. Com o JDI o LED está **dentro do painel** e os dois fios chegam pelo **`J402`, um FPC próprio de 5 vias e passo 0,5 mm** ([06](06-conectores-e-pontos-de-teste.md#j402--luz-do-lpm027m128c)) | alim |
 | `VBCKP` | 1,8 V | TPS7A02, do `VBAT` | MAX-F10S `V_BCKP` | alim |
 | `5V0` | 5,0 V | REG710NA-5, do `3V0` | `VDD` e `VDDA` do display, pelo `JP401` — **não montado**: existe só no plano B, com a Sharp | alim |
 | `VINT` | interno | AEM10900 `VINT` | `R_MPP[2:0]`, `T_MPP[1:0]`, `STO_CFG[2]`, `STO_CFG[0]`, `KEEP_ALIVE` | alim |
