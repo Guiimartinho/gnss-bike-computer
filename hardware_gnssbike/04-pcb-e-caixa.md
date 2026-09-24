@@ -14,11 +14,17 @@ vem marcado como **ficha** ou **desenho**.
 **Nesta página:** [O contorno](#o-contorno) · [Orçamento de área](#orçamento-de-área) · [Camadas](#camadas) · [Posicionamento](#posicionamento) · [Zonas proibidas](#zonas-proibidas) · [As duas antenas](#as-duas-antenas) · [Montagem](#montagem) · [O que só a bancada decide](#o-que-só-a-bancada-decide)
 
 > [!WARNING]
-> **Não existe placa, não existe layout e nada foi fabricado nem medido.**
-> Não há arquivo de CAD, não há gerber, não há pilha de camadas de
-> fabricante, nenhuma peça foi colocada e nenhuma trilha foi roteada. O que
-> segue é o conjunto de restrições que o layout terá de respeitar, e as
-> contas que mostram quais delas ainda não fecham.
+> **Não existe placa física e nada foi fabricado nem medido.** Não há
+> gerber, não há pilha de camadas de fabricante e ninguém encostou uma ponta
+> de prova em nada. O que **passou a existir** desde 2026-09-23 é o projeto
+> em KiCad, em [`cad/`](cad/): as 112 peças posicionadas, o plano de terra e
+> parte das trilhas, com a verificação de regras do KiCad e o
+> [dry-run das regras das fichas](09-dry-run-da-pcb.md).
+>
+> Esta página continua sendo **a planta**: os retângulos de zona daqui são o
+> que o layout deve respeitar, e onde a placa de `cad/` diverge deles, a
+> divergência está escrita e medida. Quando os dois discordarem, quem manda
+> é o número medido no arquivo, não o retângulo desta tabela.
 
 ## O contorno
 
@@ -85,28 +91,37 @@ retângulo em documento nenhum.
 | Energia (nPM1300, AEM10900, MAX17262, indutores, conectores) | 16–38, 67–90 | 22 × 23 | 506,0 | 9,5 % |
 | Armazenamento (flash NOR) | 0–14, 67–83 | 14 × 16 | 224,0 | 4,2 % |
 | Barômetro | 4,5–8, 83–86,5 | 3,5 × 3,5 | 12,3 | 0,2 % |
-| BM20C **mais a zona proibida da sua antena** | 45–55, 71,5–87,7 unido a 40–55, 82–91 | ver a conta abaixo | 240,0 | 4,5 % |
+| ME54BS13 **mais a zona proibida da sua antena** | 37,2–54,2, 58,7–71,4 unido a 49,5–55, 54,6–75,4 | ver a conta abaixo | 270,6 | 5,1 % |
 | Botões | 8–47, 88–95 | 39 × 7 | 273,0 | 5,1 % |
 | USB-C | 23–32, 94–97 | 9 × 3 | 27,0 | 0,5 % |
 | Luz ambiente (OPT3001) | 0,4–2,4, 88–90 | 2 × 2 | 4,0 | 0,1 % |
-| **Soma bruta** | | | **2.099,3** | **39,3 %** |
-| Sobreposições contadas duas vezes | | | −120,0 | −2,2 % |
-| **Soma líquida** | | | **1.979,3** | **37,1 %** |
+| **Soma bruta** | | | **2.129,9** | **39,9 %** |
+| Sobreposições contadas duas vezes | | | −102,5 | −1,9 % |
+| **Soma líquida** | | | **2.027,4** | **38,0 %** |
 
-O BM20C entra com a **zona proibida**, não só com o retângulo do módulo: é
-a zona que proíbe cobre, e é ela que o layout tem de respeitar
-([Zonas proibidas](#zonas-proibidas)). Ela passa 5 mm à esquerda do módulo,
-e por isso a área é a **união** dos dois retângulos (**conta**):
+O módulo entra com a **zona proibida**, não só com o retângulo dele: é a
+zona que proíbe cobre, e é ela que o layout tem de respeitar
+([Zonas proibidas](#zonas-proibidas)). Ela vai da antena até a borda da
+placa e sobra 4,4 mm para cima e para baixo do módulo, e por isso a área é
+a **união** dos dois retângulos (**conta**):
 
 ```
-módulo:         x 45 a 55, y 71,5 a 87,7  = 10   × 16,2 = 162,0 mm²
-zona proibida:  x 40 a 55, y 82   a 91    = 15   ×  9   = 135,0 mm²
-comum aos dois: x 45 a 55, y 82   a 87,7  = 10   ×  5,7 =  57,0 mm²
-união = 162,0 + 135,0 − 57,0 = 240,0 mm²        (240,0 ÷ 5.335 = 4,5 %)
+módulo:         x 37,2 a 54,2, y 58,7 a 71,4 = 17,0 × 12,7 = 215,9 mm²
+zona proibida:  x 49,5 a 55,0, y 54,6 a 75,4 =  5,5 × 20,8 = 114,4 mm²
+comum aos dois: x 49,5 a 54,2, y 58,7 a 71,4 =  4,7 × 12,7 =  59,7 mm²
+união = 215,9 + 114,4 − 59,7 = 270,6 mm²       (270,6 ÷ 5.335 = 5,1 %)
 ```
+
+> [!NOTE]
+> **Estes números são novos.** Até 2026-09-23 este documento contava o
+> módulo como o **Fanstel BM20C**, de 10,0 × 16,2 mm, no canto de baixo à
+> direita (x 45–55, y 71,5–87,7), com a zona proibida em x 40–55, y 82–91:
+> união de **240,0 mm², 4,5 %**. O módulo montado é o **MinewSemi
+> ME54BS13**, maior (16,5 × 12,0 × 2,4 mm) e deitado acima das teclas, e
+> todas as contas desta seção foram refeitas a partir dos retângulos novos.
 
 A soma bruta fecha (**conta**): 440,0 + 210,0 + 9,0 + 21,0 + 34,0 + 99,0 +
-506,0 + 224,0 + 12,3 + 240,0 + 273,0 + 27,0 + 4,0 = **2.099,3 mm²**.
+506,0 + 224,0 + 12,3 + 270,6 + 273,0 + 27,0 + 4,0 = **2.129,9 mm²**.
 
 As três sobreposições (**conta**) são exatamente os três pontos que o
 layout terá de resolver:
@@ -115,22 +130,31 @@ layout terá de resolver:
 |---|---|---|
 | GNSS dentro da área livre da antena | 20–35, 2–8 | 15 × 6 = 90 mm² |
 | LED RGB dentro da área livre da antena | 50–53, 0–3 | 3 × 3 = 9 mm² |
-| Botão da direita dentro da **zona proibida** do BM20C | 40–47, 88–91 | 7 × 3 = **21 mm²** |
+| Zona do **ME54BS13** dentro da zona de energia | 37,2–38, 67–71,4 | 0,8 × 4,4 = **3,5 mm²** |
 
-A terceira sai de cruzar a faixa dos botões com a zona proibida inteira, e
-não com o retângulo do módulo (**conta**):
+A terceira sai de cruzar a zona do módulo com a zona de energia
+(**conta**):
 
 ```
-botões:        x  8 a 47, y 88 a 95
-zona proibida: x 40 a 55, y 82 a 91
-em x: de max(40; 8) = 40 a min(55; 47) = 47, ou seja 7 mm
-em y: de max(88; 82) = 88 a min(95; 91) = 91, ou seja 3 mm
-área = 7 × 3 = 21 mm²
+zona de energia: x 16   a 38,0, y 67,0 a 90,0
+zona do módulo:  x 37,2 a 54,2, y 58,7 a 71,4
+em x: de max(37,2; 16) = 37,2 a min(54,2; 38,0) = 38,0, ou seja 0,8 mm
+em y: de max(58,7; 67,0) = 67,0 a min(71,4; 90,0) = 71,4, ou seja 4,4 mm
+área = 0,8 × 4,4 = 3,52 mm², 3,5 mm² arredondado
 ```
 
-Total das sobreposições: 90 + 9 + 21 = **120 mm²**.
+Total das sobreposições: 90 + 9 + 3,5 = **102,5 mm²**.
 
-**Sobram 3.355,7 mm², 62,9 % da placa** (**conta**: 5.335 − 1.979,3), para
+A terceira sobreposição **trocou de lugar com o módulo**. Com o BM20C no
+canto de baixo à direita, quem invadia a zona proibida era a faixa dos
+botões, em 21 mm². Com o ME54BS13 deitado acima das teclas, a faixa dos
+botões (y 88 a 95) e a zona proibida (y 54,6 a 75,4) **não se tocam mais**;
+em troca, o canto de baixo à esquerda do módulo entra na zona de energia.
+Os 3,5 mm² são pouco em área e **muito em significado**: é um conversor
+chaveado encostando no módulo de rádio
+([A zona do ME54BS13](#a-zona-do-me54bs13-em-detalhe)).
+
+**Sobram 3.307,6 mm², 62,0 % da placa** (**conta**: 5.335 − 2.027,4), para
 os passivos espalhados, as vias, os furos M2, os pontos de teste, o
 footprint Tag-Connect TC2030-NL, os dois pads do console (`uart20`, `TP201` e
 `TP202` de [06](06-conectores-e-pontos-de-teste.md#pontos-de-teste)) e as trilhas. **Pela planta,
@@ -181,19 +205,25 @@ união das duas sombras = 2.476,9 + 2.160,0 − 1.598,4 = 3.038,5 mm²  (57,0 %)
 Ou seja: **30 % da placa tem teto de 2,6 mm na frente e de 1,2 mm atrás ao
 mesmo tempo**, e só 43 % está livre das duas. É apertado, mas o inventário
 de peças altas é curto: o módulo GNSS (2,5 mm, sob o display, dentro do
-limite de 2,6 mm), o BM20C (2,0 mm, fora das duas sombras), os dois
-indutores dos bucks em 0806 e o do AEM10900, o conector USB-C e o soquete
-FPC — todos na faixa de baixo ou na borda, fora da sombra da bateria.
+limite de 2,6 mm), o **ME54BS13 (2,4 mm, que entra nas duas sombras e por
+isso decide a própria face — abaixo)**, os dois indutores dos bucks em 0806
+e o do AEM10900, o conector USB-C e o soquete FPC — estes últimos na faixa
+de baixo ou na borda, fora da sombra da bateria.
 
 > [!CAUTION]
-> **O BM20C não pode ir para a face de trás onde está desenhado.** Ele
-> ocupa x 45 a 55 e a sombra da bateria vai até x 45,5: são
-> **0,5 × 11 = 5,5 mm² de sobreposição** (**conta**, com y 71,5 a 82,5),
-> onde o teto é 1,2 mm e o módulo tem 2,0 mm de altura. Duas saídas, as
-> duas de layout: o módulo vai na **face da frente** (o que também decide a
-> ordem do forno, ver [Montagem](#montagem)), ou o módulo anda 0,5 mm para
-> a direita e encosta na borda. Não medido: a folga real depende do pack de
-> bateria comprado.
+> **O ME54BS13 vai na face da frente, e agora não há alternativa.** A zona
+> dele entra **105,4 mm²** dentro da sombra da bateria (**conta**: x de
+> 37,2 a 45,5, 8,3 mm, por y de 58,7 a 71,4, 12,7 mm), onde o teto é 1,2 mm
+> e o módulo tem **2,4 mm** de altura. Com o módulo antigo a sobreposição
+> era de 5,5 mm² e dava para escapar andando 0,5 mm para a direita; com
+> esta, não: **o módulo fica na frente**, o que também decide a ordem do
+> forno ([Montagem](#montagem)).
+>
+> Na frente ele cai na sombra do display: **84,8 mm²** (**conta**: x de
+> 37,2 a 47,54, 10,34 mm, por y de 58,7 a 66,9, 8,2 mm), onde o teto é
+> 2,6 mm. Os 2,4 mm do módulo cabem, com **0,2 mm de folga** — e essa folga
+> sai de ficha, não de peça medida. Não medido: a altura real do módulo e a
+> do pack de bateria comprado.
 
 ### O aperto que não fecha: a antena GNSS
 
@@ -295,9 +325,12 @@ o calor do carregador, que dissipa até 1,50 W a poucos milímetros da célula
 ## Posicionamento
 
 Os retângulos abaixo são os de [14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso),
-nas coordenadas da placa, e batem com o desenho da caixa. As três faixas de
-y correspondem à borda de cima (antena e GNSS), ao meio (sob o display, com
-a bateria atrás) e à base (energia, rádio, botões e USB).
+nas coordenadas da placa, e batem com o desenho da caixa — **com uma
+exceção: o módulo de rádio**, cujo retângulo mudou com a troca do BM20C
+pelo ME54BS13 e não é mais o de lá. As três faixas de y correspondem à
+borda de cima (antena e GNSS), ao meio (sob o display, com a bateria atrás)
+e à base (energia, botões e USB); o módulo fica **a cavalo entre as duas
+últimas**, de y 58,7 a 71,4.
 
 ```mermaid
 flowchart TB
@@ -315,12 +348,12 @@ flowchart TB
             B2["BMI270 e MMC5633NJL<br/>x 8 a 15 · y 20 a 23"]
             B3["buzzer piezo<br/>x 10,5 a 21,5 · y 46,5 a 55,5"]
             B4["LiPo 36 × 60 × 7 mm, atrás<br/>x 9,5 a 45,5 · y 22,5 a 82,5<br/>teto de 1,2 mm embaixo"]
+            B5["ME54BS13 16,5 × 12,0 × 2,4 mm<br/>x 37,2 a 54,2 · y 58,7 a 71,4<br/>deitado, na frente; antena nos últimos<br/>4,46 mm, virada para a borda direita"]
         end
         subgraph Y3["y 67 a 97 · base"]
             direction LR
             C1["flash MX25R6435F<br/>x 0 a 14 · y 67 a 83"]
             C2["energia: nPM1300, MAX17262,<br/>AEM10900, indutores<br/>x 16 a 38 · y 67 a 90"]
-            C3["BM20C 10,0 × 16,2 × 2 mm<br/>x 45 a 55 · y 71,5 a 87,7<br/>antena nos últimos 5,5 mm"]
             C4["BMP585 no respiro, atrás<br/>x 4,5 a 8 · y 83 a 86,5"]
             C5["3 teclas Omron B3S-1002P<br/>6 × 6 × 4,3 mm<br/>x 8 a 47 · y 88 a 95"]
             C6["USB-C IPX8<br/>x 23 a 32 · y 94 a 97"]
@@ -336,7 +369,7 @@ O que o arranjo garante, e por quê:
 
 | Escolha | Razão |
 |---|---|
-| GNSS e sua antena na borda de **cima**, rádio no canto de **baixo à direita** | é a borda que aponta para o céu com o aparelho inclinado no guidão, e põe as duas antenas em pontas opostas ([13](../docs/13-placa-nova.md#antena-gnss-dentro-da-caixa)) |
+| GNSS e sua antena na borda de **cima**, rádio na borda **direita**, acima das teclas | é a borda de cima que aponta para o céu com o aparelho inclinado no guidão ([13](../docs/13-placa-nova.md#antena-gnss-dentro-da-caixa)). O rádio ficava no canto de baixo à direita, em ponta oposta; o ME54BS13, maior e deitado, subiu, e a separação entre as duas antenas caiu de 87,2 para 67,2 mm ([As duas antenas](#as-duas-antenas)) |
 | FPC do display pela **esquerda** | longe das duas antenas ([14](../docs/14-hardware-placa-nova.md#regras-de-layout)); as 10 vias estão na [folha 4](01-esquematico.md#folha-4--display) |
 | Energia (bucks e boost) na base, na diagonal da antena GNSS | laços de chaveamento longe da antena ([13](../docs/13-placa-nova.md#regras-de-projeto), regra 5) |
 | BMP585 na face de trás, junto do respiro, em y 83 a 86,5 | fora da sombra da bateria, que termina em y 82,5 (**conta**) |
@@ -350,36 +383,66 @@ cobre.**
 
 | Zona | Retângulo (placa) | Área | O que é proibido | Origem |
 |---|---|---|---|---|
-| **Antena do BM20C** | x 40–55, y 82–91 | 135 mm² (**conta**: 15 × 9) | cobre, trilha, plano e via **em todas as camadas**; nenhum componente | ficha Fanstel (p. 17), via [14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso) |
+| **Antena do ME54BS13** | x 49,5–55, y 54,6–75,4 | 114,4 mm² (**conta**: 5,5 × 20,8) | cobre, trilha, plano e via **em todas as camadas**; nenhum componente | ficha MinewSemi ME54BS13 V1.0.0, 7.2 |
 | **Antena GNSS** | x 0–55, y 0–8 | 440 mm² (**conta**) | cobre em todas as camadas sob a antena; nada metálico mais alto que 3 mm num raio de 10 mm; a caixa a 3 a 5 mm | [13](../docs/13-placa-nova.md#regras-de-projeto), [14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso) |
 | **Sombra da bateria** | x 9,5–45,5, y 22,5–82,5 | 2.160 mm² (**conta**) | peças acima de 1,2 mm na face de trás; e a bolsa metálica não pode ficar entre a antena GNSS e o céu | [13](../docs/13-placa-nova.md#regras-de-projeto), [14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso) |
 | **Conector USB-C** | x 23–32, y 94–97 | 27 mm² (**conta**) | o anel de vedação passa da borda da placa; nada entre o corpo do conector e a parede | desenho Molex 2036150003 |
 
-### A zona do BM20C, em detalhe
+### A zona do ME54BS13, em detalhe
 
-O módulo tem **10,0 × 16,2 × 2 mm** e **os últimos 5,5 mm são a área da
-antena**. A ficha da Fanstel (p. 17) pede que essa área fique **fora da
-placa ou numa região sem terra e sem trilhas em todas as camadas**, com
-cerca de 5 mm livres para o lado, que o módulo **nunca** fique no meio da
-placa e que metal externo fique a pelo menos 30 mm para o melhor alcance.
+O módulo tem **16,5 × 12,0 × 2,4 mm** e a antena dele é uma **antena de
+PCB** numa das pontas de 12 mm: os últimos **4,46 mm** do comprimento. A
+ficha MinewSemi ME54BS13 V1.0.0, na seção 7.2, pede que essa ponta fique
+**virada para a borda da placa** e que em volta dela fiquem **4 mm livres**,
+sem cobre, trilha, plano ou via em camada nenhuma. Ele fica **deitado**,
+acima das teclas, com a antena na borda **direita**, na **face da frente**.
 
 ```
-módulo:              x 45 a 55, y 71,5 a 87,7   (16,2 mm de comprimento)
-área da antena:      x 45 a 55, y 82,2 a 87,7   (os últimos 5,5 mm)
-zona proibida:       x 40 a 55, y 82   a 91     (a área da antena, mais 5 mm
-                                                 para o lado e a folga de 14)
+zona do módulo:  x 37,2  a 54,2,  y 58,7 a 71,4  (o corpo mais a folga de
+                                                  posicionamento)
+corpo:           x 37,45 a 53,95, y 59,0 a 71,0  (16,5 × 12,0, centro em
+                                                  45,7; 65,0)
+área da antena:  x 49,49 a 53,95, y 59,0 a 71,0  (os últimos 4,46 mm)
+zona proibida:   x 49,5  a 55,0,  y 54,6 a 75,4  (a área da antena, mais os
+                                                  4 mm livres, até a borda)
 ```
 
-Os 30 mm de metal externo **não são cumpridos** e
-[14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso) já
-registra por quem: a bateria, o botão da direita e o parafuso M2 de baixo à
-direita. O parafuso é o único que sai de graça — basta movê-lo para fora da
-zona, como o próprio documento manda. A faixa dos botões invade **21 mm²**
-da zona (**conta**: x de 40 a 47 e y de 88 a 91, 7 × 3, no
-[orçamento de área](#orçamento-de-área)) — é o botão da direita, cujo
-centro fica em x 42,5 — e a bateria fica a poucos milímetros atrás.
-**Consequência medível: alcance menor do que o módulo promete.** Não
-medido.
+**A troca de módulo desfez um conflito e criou outro.** O que sumiu: com o
+BM20C no canto de baixo à direita, a faixa dos botões invadia 21 mm² da
+zona proibida. Com o ME54BS13 deitado acima das teclas, a faixa dos botões
+(y 88 a 95) e a zona proibida (y 54,6 a 75,4) **não se tocam**, e os quatro
+parafusos que o desenho da caixa ainda mostra — em (3,0; 9,0), (52,0; 9,0),
+(3,0; 88,0) e (52,0; 88,0) na placa — também ficam todos fora dela.
+
+O que apareceu no lugar é a regra **7.3** da mesma ficha: **20 mm entre a
+antena do módulo e qualquer conversor chaveado ou indutor.** O retângulo da
+zona de energia desta página termina em x 38 e a antena começa em x 49,5
+(**conta**: 49,5 − 38 = **11,5 mm**), pouco mais da metade do que a ficha
+pede — mas o retângulo é planta, não é peça. **Na placa montada em
+[`cad/`](cad/) a regra é cumprida**: o posicionador carrega a restrição
+(`LONGE_DA_ANTENA` em `cad/make_pcb.py`) e o chaveador mais próximo da
+antena é o `U101`, a **20,9 mm** medidos por
+[`cad/dry_run_pcb.py`](cad/dry_run_pcb.py) ([09](09-dry-run-da-pcb.md)).
+Antes de a restrição existir eram 16,4 mm, do `U103`.
+
+A bolsa da bateria, atrás, termina em x 45,5, a **4 mm** da zona proibida
+(**conta**: 49,5 − 45,5), e isso continua em aberto.
+
+> [!WARNING]
+> **Nenhum verificador pega a regra dos 20 mm.** Ela não proíbe cobre,
+> proíbe **peça**, e o DRC de um CAD não conhece esse tipo de restrição.
+> Quem a cumpre é quem posiciona. Por isso ela virou uma regra do
+> posicionador e uma medida do dry-run, em vez de uma boa intenção: hoje a
+> peça chaveada mais próxima da antena está a **20,9 mm**, e o
+> `dry_run_pcb.py` falha se alguém encostar de novo. O que a regra custou
+> foi empurrar o colhedor solar e o indutor dele para a esquerda dentro da
+> zona de energia. **A consequência elétrica continua não medida: só
+> bancada diz se o alcance e o ruído ficaram onde se espera.**
+
+**O que a ficha do ME54BS13 não responde e a do BM20C respondia:** a regra
+dos **30 mm de metal externo** era da Fanstel. Se a MinewSemi tem
+equivalente, ninguém leu; até lá, a bateria a 4 mm da zona proibida é um
+risco **sem número**, e o alcance do rádio só sai de medida.
 
 ### A zona da antena GNSS, em detalhe
 
@@ -437,24 +500,33 @@ O que este documento acrescenta é a distância que a geometria dá.
 
 | Antena | Onde | Frequência |
 |---|---|---|
-| 2,4 GHz (BLE e ANT+) | no BM20C, últimos 5,5 mm, x 45–55, y 82–88 | 2,40 a 2,48 GHz |
+| 2,4 GHz (BLE e ANT+) | antena de PCB do ME54BS13, últimos 4,46 mm, x 49,49–53,95, y 59,0–71,0 | 2,40 a 2,48 GHz |
 | GNSS L1 e L5 | elementos na parede de cima, fora da placa, x 2,5–25 (L1) e x 30–52,5 (L5), cerca de 2,2 mm à frente da borda de cima ([folha 3](01-esquematico.md#folha-3--gnss)) | 1.575,42 MHz e 1.176,45 MHz |
 
 Distância entre a antena do rádio e o ponto mais próximo do elemento de L5
-(**conta**, do centro (50; 85) ao ponto (52,5; −2,2)):
+(**conta**, do centro (51,7; 65,0) ao ponto (52,5; −2,2)):
 
 ```
-d = raiz de ((52,5 − 50)² + (85 + 2,2)²) = raiz de (6,25 + 7.603,84) = 87,2 mm
+d = raiz de ((52,5 − 51,7)² + (65,0 + 2,2)²) = raiz de (0,64 + 4.515,84) = 67,2 mm
 ```
 
-Cerca de **90 mm em números redondos**, que é o máximo que uma placa de
-55 × 97 mm permite: as duas antenas estão em pontas opostas da diagonal. Em
-comprimentos de onda (**conta**, com c = 3 × 10⁸ m/s):
+Cerca de **67 mm**. Em comprimentos de onda (**conta**, com
+c = 3 × 10⁸ m/s):
 
 | Banda | λ | Distância |
 |---|---|---|
-| 2,44 GHz | 123,0 mm | 0,71 λ |
-| L1, 1.575,42 MHz | 190,4 mm | 0,46 λ |
+| 2,44 GHz | 123,0 mm | 0,55 λ |
+| L1, 1.575,42 MHz | 190,4 mm | 0,35 λ |
+
+> [!CAUTION]
+> **A troca de módulo custou 20 mm de separação.** Com o BM20C no canto de
+> baixo à direita a antena ficava em (50; 85) e a conta dava **87,2 mm,
+> 0,71 λ** em 2,44 GHz: as duas antenas em pontas opostas da diagonal, que
+> é o máximo que uma placa de 55 × 97 mm permite. Com o ME54BS13 deitado
+> acima das teclas a antena subiu para y 65 e a distância caiu para
+> **67,2 mm, 0,55 λ** (**conta**: 87,2 − 67,2 = 20,0 mm a menos). A
+> geometria, que já era o ponto fraco, **piorou**, e o ensaio de S21
+> deixou de ser conferência para virar o que decide se o arranjo serve.
 
 > [!CAUTION]
 > **Menos de um comprimento de onda não é muita separação.**
@@ -511,20 +583,20 @@ com e sem os resistores.
 
 ## Montagem
 
-Três restrições de processo mandam no layout, e todas vêm do BM20C:
+Três restrições de processo mandam no layout, e todas vêm do módulo:
 
-| Restrição | Consequência |
-|---|---|
-| Pinos **LGA, não castelados** | montagem por estêncil e forno; **não se solda à mão e não se retrabalha com ferro**. Um erro sob o módulo custa uma estação de ar quente ou a placa |
-| **No máximo duas passagens pelo forno** | uma face por passagem; nada de retrabalho térmico "de brinde" |
-| **O lado do módulo por último** | a face do BM20C é a **segunda** passagem |
+| Restrição | Consequência | De onde vem |
+|---|---|---|
+| **60 ilhas LGA por baixo**, além dos 20 pads castelados da borda | montagem por estêncil e forno. Os castelados se inspecionam e, no limite, se retocam com ferro; **as 60 ilhas do meio, não**. Um erro sob o módulo custa uma estação de ar quente ou a placa | desenho mecânico da ficha ME54BS13 V1.0.0 |
+| **No máximo duas passagens pelo forno** | uma face por passagem; nada de retrabalho térmico "de brinde" | **regra herdada da ficha do BM20C**: a do ME54BS13 não foi lida quanto a refusão — **a confirmar** |
+| **O lado do módulo por último** | a face do módulo é a **segunda** passagem | idem |
 
-Combinando com a conta da sombra da bateria, que põe o BM20C na **face da
+Combinando com a conta da sombra da bateria, que põe o módulo na **face da
 frente** (acima), a ordem fica:
 
 ```mermaid
 flowchart LR
-    P1["1ª passagem · face de trás<br/>BMP585 no respiro, conector da bateria,<br/>peças até 1,2 mm sob a célula"] --> P2["2ª passagem · face da frente<br/>BM20C, MAX-F10S e blindagem,<br/>nPM1300, AEM10900, MAX17262,<br/>indutores, FPC, USB-C, teclas"]
+    P1["1ª passagem · face de trás<br/>BMP585 no respiro, conector da bateria,<br/>peças até 1,2 mm sob a célula"] --> P2["2ª passagem · face da frente<br/>ME54BS13, MAX-F10S e blindagem,<br/>nPM1300, AEM10900, MAX17262,<br/>indutores, FPC, USB-C, teclas"]
     P2 --> P3["sem 3ª passagem:<br/>o que falhar vai a ar quente,<br/>peça a peça"]
 ```
 
@@ -556,12 +628,12 @@ montagem, que não existe.**
 | **A pilha do fabricante** | sem as espessuras de dielétrico não há largura de trilha para 50 Ω nem para 90 Ω diferencial; 0,66 mm repartido em 3 vãos admite pilhas muito diferentes | [Camadas](#camadas), [02](02-calculos.md#o-que-não-foi-calculado) |
 | **4 camadas em 0,8 mm** | o USB-C manda a espessura e o resto manda as camadas; falta confirmar que o fabricante faz a combinação | [Camadas](#camadas) |
 | **A antena GNSS de verdade** | a TE L000670 não cabe: faltam 2,75 mm contra a zona e 5,65 mm contra a faixa livre acima do display | [Orçamento de área](#orçamento-de-área) |
-| **Isolação entre as duas antenas** | a conta dá 87,2 mm, 0,71 λ em 2,44 GHz; a isolação real depende do plano, da caixa e das correntes de retorno. Medir o S21 antes de ligar o rádio na potência cheia | [As duas antenas](#as-duas-antenas), [15](../docs/15-avaliacao-componentes.md#bancada-antes-do-layout) |
+| **Isolação entre as duas antenas** | a conta dá 67,2 mm, 0,55 λ em 2,44 GHz, 20 mm menos do que com o módulo antigo; a isolação real depende do plano, da caixa e das correntes de retorno. Medir o S21 antes de ligar o rádio na potência cheia | [As duas antenas](#as-duas-antenas), [15](../docs/15-avaliacao-componentes.md#bancada-antes-do-layout) |
 | **Harmônico de 8 MHz da flash** | 0,58 MHz do centro de L1; só o `UBX-MON-SPAN` com a flash trabalhando diz se aparece | [As duas antenas](#as-duas-antenas) |
-| **Alcance do rádio** | a regra dos 30 mm de metal externo não é cumprida pela bateria, pelo botão da direita — que invade 21 mm² da zona proibida — e pelo parafuso de baixo | [Zonas proibidas](#zonas-proibidas) |
+| **Alcance do rádio** | a regra dos **20 mm** entre a antena e um conversor chaveado (ficha 7.3) é cumprida na placa de [`cad/`](cad/) — 20,9 mm medidos —, mas a bolsa da bateria fica a 4 mm da zona proibida, e se a MinewSemi tem regra de metal externo ninguém a leu | [Zonas proibidas](#zonas-proibidas), [09](09-dry-run-da-pcb.md) |
 | **Folga entre placa e caixa** | 3,5 mm no desenho contra os 2,5 mm que [14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso) descreve | [O contorno](#o-contorno) |
 | **Raio de canto da placa** | 3 mm no [desenho](../tools/docs/case_drawing.py) contra os 4 mm de [14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso); as duas fontes discordam e nenhuma foi confirmada | [O contorno](#o-contorno) |
-| **Face de cada peça e ordem do forno** | a conta põe o BM20C na frente; o arquivo de montagem não existe | [Montagem](#montagem) |
+| **Face de cada peça e ordem do forno** | a conta põe o ME54BS13 na frente; o arquivo de montagem não existe | [Montagem](#montagem) |
 | **Plugue do USB-C na caixa** | a boca do conector fica 0,77 mm atrás da face externa; um plugue de capa grossa pode não entrar | [Zonas proibidas](#zonas-proibidas) |
 | **Contatos dos painéis e da antena** | a área dos pads de mola e dos conectores dos três grupos de painéis não está dimensionada em lugar nenhum | [Orçamento de área](#orçamento-de-área) |
 | **Zona do conector do filme de luz** | [14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso) põe o Molex 5034800440 ao lado do FPC do display, mas não lhe dá retângulo, e a medida do corpo dele não está em nenhum documento daqui | [Orçamento de área](#orçamento-de-área) |

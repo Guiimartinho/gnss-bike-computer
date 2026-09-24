@@ -83,8 +83,8 @@ faixa de alta velocidade** (`A2`, `A3`, `A10`, `A11`, `B2`, `B3`, `B10` e
 | `A1` | `GND` | alim | retorno |
 | `A4` | `VBUS` | entrada | 4,0 a 5,5 V; ao `VBUS` do nPM1300, com o TVS **ESD761** junto do conector |
 | `A5` | `CC1` | bidir | **direto** ao `CC1` do nPM1300, com o **TPD4E05U06**; o Rd de 5,1 kΩ é interno ao PMIC |
-| `A6` | `D+` | bidir | unido ao `B6`; par de 90 Ω até o pad G7 do BM20C |
-| `A7` | `D−` | bidir | unido ao `B7`; par de 90 Ω até o pad G6 do BM20C |
+| `A6` | `D+` | bidir | unido ao `B6`; par de 90 Ω até o pad 8 do ME54BS13 |
+| `A7` | `D−` | bidir | unido ao `B7`; par de 90 Ω até o pad 7 do ME54BS13 |
 | `A8` | `SBU1` | — | **não usado**, deixado aberto |
 | `A9` | `VBUS` | entrada | mesmo nó do `A4` |
 | `A12` | `GND` | alim | retorno |
@@ -233,11 +233,11 @@ cabo comprado**, e ver a ressalva logo abaixo da tabela.
 | Contato | Sinal | Direção | Nota |
 |---|---|---|---|
 | 1 | `VTref` | saída | ao **`3V0`**; é o alvo informando à sonda em que tensão falar |
-| 2 | `SWDIO` | bidir | pad **J3** do BM20C |
+| 2 | `SWDIO` | bidir | pad **5** do ME54BS13 |
 | 3 | `GND` | alim | — |
-| 4 | `SWDCLK` | entrada | pad **K3** do BM20C |
+| 4 | `SWDCLK` | entrada | pad **6** do ME54BS13 |
 | 5 | `GND` | alim | pode ser `NC`; aqui vai ao `GND`, como a [lista de nós](03-netlist.md#pinos-de-configuração-amarrados-em-cobre) já registra |
-| 6 | `nRESET` | entrada | pad **G2** do BM20C; a sonda puxa para baixo |
+| 6 | `nRESET` | entrada | pad **4** do ME54BS13; a sonda puxa para baixo |
 
 **Sem o `VTref` a maioria das sondas recusa conectar.** Elas o usam para
 descobrir a tensão de I/O e, em muitos modelos, como prova de que existe

@@ -16,8 +16,8 @@ depende de medida está dito como tal.
 
 | Carga | Pior caso | Origem |
 |---|---|---|
-| Rádio do BM20C a +8 dBm | 10,9 mA | ficha do nRF54LM20A, a 3,0 V |
-| CPU do BM20C (CoreMark da RRAM com cache) | 2,6 mA | ficha |
+| Rádio do módulo a +8 dBm | 10,9 mA | ficha do nRF54LM20A, a 3,0 V |
+| CPU do módulo (CoreMark da RRAM com cache) | 2,6 mA | ficha |
 | Sensores (quatro, lendo) | cerca de 1 mA | estimativa de [13](../docs/13-placa-nova.md#orçamento-de-energia) |
 | Buzzer piezo | cerca de 5 mA | estimativa |
 | Flash NOR apagando um setor, no modo de baixo consumo | 3,1 mA | ficha da MX25R6435F |
@@ -586,7 +586,7 @@ de cada CI**, mais o volume que a ficha de cada peça pede.
 
 ## Capacitor de volume no módulo
 
-O `3V0` já tem os 100 nF por pino, e o BM20C é a carga com o transitório
+O `3V0` já tem os 100 nF por pino, e o ME54BS13 é a carga com o transitório
 mais rápido do trilho: o rádio puxa 10,9 mA em rajada a +8 dBm. O buck
 responde, mas não instantaneamente; entre a borda e a resposta dele quem
 segura a tensão é o capacitor local.
@@ -755,5 +755,5 @@ Dito aqui para não passar por esquecimento.
 | Comportamento térmico da caixa fechada | precisa do material e da geometria reais | no protótipo |
 | Brown-out do nRF54LM20A e `VSYSPOF` do nPM1300 | fichas não lidas nesta rodada ([07](07-sequencias-e-protecao.md)) | antes do primeiro protótipo |
 | Domínio de tensão dos pinos digitais do nPM1300 | nenhum documento do projeto registra ([pull-ups](#pull-ups-do-i²c)) | **antes do layout** |
-| Tolerância do cristal de 32,768 kHz do módulo | a ficha do BM20C não informa, e o ANT+ pede ±50 ppm | antes de confiar no ANT+ |
+| Tolerância do cristal de 32,768 kHz do módulo | não levantada para o ME54BS13, e o ANT+ pede ±50 ppm | antes de confiar no ANT+ |
 | Capacitância efetiva dos cerâmicos sob tensão | só o caso do `CSTO` foi considerado; um 10 µF de 25 V perde metade a 5 V | ao fechar o volume de cada trilho |

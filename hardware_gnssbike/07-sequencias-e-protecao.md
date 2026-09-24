@@ -22,7 +22,7 @@ entre o dedo do ciclista, o cabo do carregador e o silício.
 sequenceDiagram
     participant C as ciclista
     participant P as nPM1300
-    participant M as MCU (BM20C)
+    participant M as MCU (ME54BS13)
     participant G as MAX-F10S
     participant F as flash e luz
     Note over P: ship mode, cerca de 370 nA<br/>só o VBCKP do TPS7A02 continua
@@ -285,7 +285,7 @@ Esta tabela é a conta do que existe e do que falta.
 | USB-C `D+`, `D−`, `CC1`, `CC2` | descarga pelo cabo | **TPD4E05U06**, 4 canais, 0,5 pF, ±12 kV por contato | existe ([03](03-netlist.md#nós-sem-ligação-ao-mcu)) |
 | As três teclas | descarga pelo dedo do ciclista | **100 Ω em série e 1 nF ao `GND`** em cada uma, desde 2026-09-23 | [abaixo](#as-teclas-que-até-2026-09-23-não-tinham-nada) |
 | Painel solar | sobretensão de entrada | a entrada `SRC` do AEM10900, sem componente externo | ficha do AEM10900 |
-| Antena GNSS e antena do rádio | descarga pelo ar e acoplamento entre elas | dentro dos módulos: o MAX-F10S tem SAW, LNA e SAW; o BM20C traz o casamento e a antena | [01](01-esquematico.md#folha-3--gnss) |
+| Antena GNSS e antena do rádio | descarga pelo ar e acoplamento entre elas | dentro dos módulos: o MAX-F10S tem SAW, LNA e SAW; o ME54BS13 traz o casamento e a antena de PCB | [01](01-esquematico.md#folha-3--gnss) |
 
 > [!CAUTION]
 > As antenas estão protegidas contra descarga, **não contra uma à outra**.

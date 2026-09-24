@@ -73,7 +73,7 @@ Três entradas (USB, painel e célula), quatro trilhos de saída
 | C117 | `CSTO` do AEM10900 | 22 µF, 10 V, X5R, 0603 | 1 | [Passivos](../docs/19-lista-de-compras.md#passivos) |
 | C118 | `REG` do MAX17262 | 0,47 µF, 10 V, X5R, 0402 | 1 | [Passivos](../docs/19-lista-de-compras.md#passivos) |
 | JP101 | Jumper de medição de corrente, no caminho da célula | 0 Ω, 1206, ≥ 2 A, ≤ 50 mΩ | 1 | **a definir**: o `ERJ-2GE0R00X` 0402 da lista não serve ([06](06-conectores-e-pontos-de-teste.md#jp101--jumper-de-medição-de-corrente)) |
-| JP102 a JP106 | Jumpers de corrente por bloco: BM20C, GNSS, display, sensores e armazenamento | 0 Ω, 0402 | 5 | [Passivos](../docs/19-lista-de-compras.md#passivos), `ERJ-2GE0R00X`; pedidos por [14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso) e esquecidos até 2026-09-23 |
+| JP102 a JP106 | Jumpers de corrente por bloco: módulo de rádio, GNSS, display, sensores e armazenamento | 0 Ω, 0402 | 5 | [Passivos](../docs/19-lista-de-compras.md#passivos), `ERJ-2GE0R00X`; pedidos por [14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso) e esquecidos até 2026-09-23 |
 | R105, R106, R110 | Pull-up do `ALRT` do MAX17262, do `IRQ` do AEM10900 e do `INT` do OPT3001 | 10 kΩ | 3 | [Passivos](../docs/19-lista-de-compras.md#passivos); nenhum dos três vai a pino do MCU, e o pull-up existe para não ficarem flutuando |
 | C119 em diante | Desacoplamento dos quatro CIs desta folha | 100 nF, 10 V, X7R, 0402 | a fechar no layout | [Passivos](../docs/19-lista-de-compras.md#passivos) |
 
@@ -98,15 +98,27 @@ dois cristais e o casamento ([01](01-esquematico.md#folha-2--mcu)).
 
 | Referência | Componente | Valor ou código | Quantidade | Onde está na lista de compras |
 |---|---|---|---|---|
-| U201 | Módulo com o nRF54LM20A, 10,0 × 16,2 mm | Fanstel BM20C | 1 | [MCU e rádio](../docs/19-lista-de-compras.md#mcu-e-rádio) — sem estoque até 12/11/2026 |
+| U201 | Módulo com o nRF54LM20A, 16,5 × 12,0 × 2,4 mm, antena de PCB | MinewSemi ME54BS13-1Y20TI | 1 | [MCU e rádio](../docs/19-lista-de-compras.md#mcu-e-rádio) — **a lista ainda o traz como plano B**, a US$ 9,00 na DigiKey; a loja da MinewSemi vende a US$ 6,00 |
 | J201 | Footprint de depuração SWD | Tag-Connect TC2030-NL, **só furos e pads** | 0 peças | o cabo TC2030-CTX-NL e o clipe estão em [Placas de avaliação e ferramentas](../docs/19-lista-de-compras.md#placas-de-avaliação-e-ferramentas) |
 | TP201, TP202, TP203 | Pads do console `uart20` e o `GND` ao lado | cobre | 0 peças | [06](06-conectores-e-pontos-de-teste.md#pontos-de-teste) |
 | C201 em diante | Desacoplamento dos pinos `VDD` do módulo | 100 nF, 10 V, X7R, 0402 | a fechar no layout | [Passivos](../docs/19-lista-de-compras.md#passivos) |
 | C210 | **Volume do `3V0` junto do módulo** | 4,7 µF ([02](02-calculos.md#capacitor-de-volume-no-módulo)) | 1 | **a definir**: a lista não tem linha de 4,7 µF |
 
-O plano B do módulo, se o BM20C atrasar, é o MinewSemi ME54BS13-1Y20TI,
-que **tem outro footprint**: trocar o módulo é refazer a folha e o
-layout, não trocar uma linha de lista.
+A alternativa, se o ME54BS13 faltar, é o **Fanstel BM20C** — o módulo que
+esta folha descrevia até 2026-09-23 —, que **tem outro footprint**: trocar
+o módulo é refazer a folha e o layout, não trocar uma linha de lista. Ele é
+menor em planta (10,0 × 16,2 × 2,0 mm), tem antena de chip no lugar da
+antena de PCB, pads só LGA, e traz FCC, ISED, TELEC e conformidade
+europeia, que o ME54BS13 ainda não tem confirmadas
+([README](README.md#fichas-que-precisam-ser-lidas)). Sem estoque na DigiKey
+até 12/11/2026.
+
+> [!WARNING]
+> **A [avaliação](../docs/15-avaliacao-componentes.md#módulo-do-mcu) e a
+> [lista de compras](../docs/19-lista-de-compras.md#mcu-e-rádio) ainda dizem
+> o contrário:** lá o BM20C é o escolhido e o ME54BS13 é o plano B. O
+> esquemático e o CAD já montam o ME54BS13. **Acertar os dois documentos é
+> decisão do dono**, e até ela sair esta linha e a de lá se contradizem.
 
 ## Folha 3 · GNSS
 
