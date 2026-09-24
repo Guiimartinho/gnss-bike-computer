@@ -194,6 +194,21 @@ DONO_DO_KEEPOUT: dict[str, str] = {"U201": "KEEPOUT_ANTENA_MODULO"}
 # other parts sit inside 5 mm of the antenna - one of them at 0.8 mm.
 # It applies to EVERY part, not to a chosen list.
 DIST_ANTENA = 5.0
+
+# ME54BS13 V1.0.0, 7.2, "Interference Isolation Rule": 20 mm between the
+# module and a DC-DC switching supply, a power inductor or a transformer.
+#
+# This constraint was in this file, was taken out on 2026-09-24 on the wrong
+# conclusion that the rule did not exist, and is back. It does exist - the
+# section is 7.2, not the 7.3 that was looked in - and taking it out let a
+# power inductor sit 6.8 mm from the module.
+#
+# It is measured to the MODULE's courtyard, which is what the datasheet says,
+# not to the antenna band: the sentence is "the module must maintain a
+# minimum safe distance from strong interference sources".
+LONGE_DO_MODULO = 20.0
+CHAVEIA = {"L101", "L102", "L103", "U101", "U103"}
+MODULO_DE_RADIO = "U201"
 ANTENA_DO_RADIO = "KEEPOUT_ANTENA_MODULO"
 # The module's OWN decoupling is exempt, and it has to be. Section 7.2 puts
 # the capacitor 0.5 mm from the power pin, and the module's power pads sit
@@ -295,6 +310,13 @@ def livre(x: float, y: float, bx: tuple[float, float, float, float],
         qx = min(max(x0, cx - r if cx < M.W / 2 else -1e9),
                  cx + r if cx > M.W / 2 else 1e9)
         del qx
+    if ref in CHAVEIA:
+        mx, my, mang = BORDA_FIXA[MODULO_DE_RADIO]
+        m = caixa(MODULO_DE_RADIO, mang)
+        dx = max(mx + m[0] - x1, x0 - (mx + m[2]), 0.0)
+        dy = max(my + m[1] - y1, y0 - (my + m[3]), 0.0)
+        if math.hypot(dx, dy) < LONGE_DO_MODULO:
+            return False
     for nome, (kx0, ky0, kx1, ky1), _c, _s in M.ZONES:
         if nome == ANTENA_DO_RADIO and DONO_DO_KEEPOUT.get(ref) != nome                 and ref not in DO_MODULO:
             dx = max(kx0 - x1, x0 - kx1, 0.0)
@@ -452,6 +474,16 @@ def colocar() -> tuple[dict[str, tuple[float, float, int, bool]], list[str]]:
                     y - px * math.sin(r) + py * math.cos(r))
         return None
 
+    def pads_locais(ref: str) -> list[tuple[float, float]]:
+        """Every pad of a footprint, as an offset from the footprint origin."""
+        arv = fp_load.parse(fp_load.carregar(FPS.FP[ref][0])[0])
+        saida = []
+        for p in fp_load.kids(arv, "pad"):
+            a = fp_load.kid(p, "at")
+            if a:
+                saida.append((float(a[1]), float(a[2])))
+        return saida
+
     def encostar(ref: str) -> bool:
         """Put a two terminal part right beside the pin it serves."""
         if ref in lugar or ref not in tam_bruto or len(P.PARTS[ref].pins) != 2:
@@ -483,18 +515,58 @@ def colocar() -> tuple[dict[str, tuple[float, float, int, bool]], list[str]]:
             return False
         (px, py), dono, _n = melhor
         dx, dy, _a, _b = lugar[dono]
-        # step out of the chip, along the line from its centre through the pad
         v = math.hypot(px - dx, py - dy) or 1.0
         ux, uy = (px - dx) / v, (py - dy) / v
-        ang = 0 if abs(ux) >= abs(uy) else 90
-        w, h = tam(ref, ang)
-        # step out of the chip along the line from its centre through the pad,
-        # and if the ring is already full let the spiral find the nearest free
-        # spot to the PIN - not to the part's centre of gravity, which is how a
-        # decoupling capacitor ends up 30 mm from what it decouples
-        d = 0.6 + max(w, h) / 2
-        por(ref, round((px + ux * d) / PASSO) * PASSO,
-            round((py + uy * d) / PASSO) * PASSO, ang)
+
+        # What every one of these datasheets constrains is the loop from the
+        # supply PIN to the capacitor's own PAD, and that is not the distance
+        # between the two parts' centres: a 0402 turned the wrong way puts its
+        # near pad half a millimetre further out for nothing, and stepping a
+        # fixed 0.6 mm out of the chip ignores which pad ends up facing the
+        # pin. So each free candidate is scored pad to pad, both orientations
+        # are tried, and the best wins. C111 sat 2.02 mm from U101's 3V3BL pin
+        # against a 2.00 limit while a slot 1.90 mm away was free one grid
+        # step up - the old rule could not see it, because by centre distance
+        # that slot was the worse of the two.
+        locais = pads_locais(ref)
+        fora = max((math.hypot(a, b) for a, b in locais), default=0.0)
+        espelha = -1.0 if ref in ATRAS else 1.0
+        melhor_pos, melhor_d = None, float("inf")
+        caixas = {a: caixa(ref, a) for a in (0, 90)}
+        raio = PASSO
+        while raio <= 12.0:
+            # a pad can only be `fora` closer than the part's own centre, so
+            # once the ring itself is further than that, nothing on it or
+            # beyond it can beat what is already in hand
+            if raio - fora > melhor_d:
+                break
+            n = max(12, int(2 * math.pi * raio / PASSO))
+            for i in range(n):
+                a = 2 * math.pi * i / n
+                cx = round((px + raio * math.cos(a)) / PASSO) * PASSO
+                cy = round((py + raio * math.sin(a)) / PASSO) * PASSO
+                for ang, bx in caixas.items():
+                    if not livre(cx, cy, bx, postos, ref):
+                        continue
+                    r = math.radians(ang)
+                    d = min(math.hypot(cx + espelha * ax * math.cos(r)
+                                       + ay * math.sin(r) - px,
+                                       cy - espelha * ax * math.sin(r)
+                                       + ay * math.cos(r) - py)
+                            for ax, ay in locais)
+                    if d < melhor_d:
+                        melhor_d, melhor_pos = d, (cx, cy, ang)
+            raio += PASSO
+        if melhor_pos is None:
+            # nothing free within 12 mm: fall back to the old step-out so the
+            # failure is reported by por() instead of vanishing
+            ang = 0 if abs(ux) >= abs(uy) else 90
+            w, h = tam(ref, ang)
+            d = 0.6 + max(w, h) / 2
+            por(ref, round((px + ux * d) / PASSO) * PASSO,
+                round((py + uy * d) / PASSO) * PASSO, ang)
+            return ref in lugar
+        por(ref, melhor_pos[0], melhor_pos[1], melhor_pos[2])
         return ref in lugar
 
     def ordem_de_encostar(ref: str) -> tuple:
@@ -874,7 +946,24 @@ def plano_de_terra(numero: int, camadas: tuple[str, ...], recuo: float) -> str:
     return (f'\t(zone\n\t\t(net {numero})\n\t\t(net_name "GND")\n\t\t(layers {lay})\n'
             f'\t\t(uuid "{uid("gnd", camadas)}")\n\t\t(name "PLANO_GND")\n'
             '\t\t(hatch edge 0.5)\n\t\t(priority 0)\n'
-            '\t\t(connect_pads\n\t\t\t(clearance 0.2)\n\t\t)\n'
+            # SOLID, not thermal reliefs. Left on the KiCad default, eleven
+            # ground pads came out with fewer than two spokes - U101, U102,
+            # U104, U503, U504, both shield rows of the USB-C receptacle and
+            # three passives - because a track runs past the side the second
+            # spoke needed. A one spoke connection is a 0.3 mm neck in series
+            # with the return current of the USB shell and of the MCU, on a
+            # board that carries a 2.4 GHz radio and two switching
+            # converters, and it is the only thing the DRC calls an error
+            # here. Thermal relief is a HAND and WAVE soldering aid; nothing
+            # on this board can be soldered by hand anyway - 0402s, a WLP-9
+            # and a 0.4 mm pitch QFN.
+            #
+            # What it costs, written down because it is a real cost: reworking
+            # a ground pad by hand needs more heat, and a 0402 with one end on
+            # the pour and the other not is a little likelier to tombstone at
+            # reflow. If the assembly house objects, this is the one line to
+            # change - `yes` back to nothing.
+            '\t\t(connect_pads yes\n\t\t\t(clearance 0.2)\n\t\t)\n'
             '\t\t(min_thickness 0.2)\n\t\t(filled_areas_thickness no)\n'
             '\t\t(fill yes\n\t\t\t(thermal_gap 0.3)\n\t\t\t(thermal_bridge_width 0.3)\n\t\t)\n'
             f'\t\t(polygon\n\t\t\t(pts\n{poly}\n\t\t\t)\n\t\t)\n\t)')

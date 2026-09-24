@@ -208,14 +208,138 @@ def render(tris: np.ndarray, cols: np.ndarray, largura: int, altura: int,
     return Image.fromarray(img.astype(np.uint8))
 
 
+def ler_wrl(caminho: pathlib.Path) -> list[tuple[np.ndarray, tuple]]:
+    """The shapes of one of our own VRML bodies, in millimetres.
+
+    Only the dialect footprints.py writes: a run of `Shape` blocks, each with
+    one diffuseColor and one IndexedFaceSet whose faces are polygons closed
+    by -1. Reading it is the whole point of this function - the geometry and
+    the colour are already there, in the file the footprint points at, and
+    drawing a black cuboid instead threw both away.
+
+    VRML here is in tenths of an inch, the unit KiCad uses for .wrl, so
+    everything is multiplied by 2.54 on the way out.
+    """
+    texto = caminho.read_text(encoding="utf-8")
+    saida: list[tuple[np.ndarray, tuple]] = []
+    i = 0
+    while True:
+        i = texto.find("Shape {", i)
+        if i < 0:
+            break
+        j = texto.find("Shape {", i + 7)
+        bloco = texto[i:j if j > 0 else len(texto)]
+        i = i + 7
+
+        k = bloco.find("diffuseColor")
+        cor = (0.13, 0.13, 0.14)
+        if k >= 0:
+            partes = bloco[k + 12:k + 60].split()
+            try:
+                cor = (float(partes[0]), float(partes[1]), float(partes[2]))
+            except (IndexError, ValueError):
+                pass
+
+        k = bloco.find("point [")
+        if k < 0:
+            continue
+        corpo = bloco[k + 7:bloco.index("]", k)]
+        pts = []
+        for linha in corpo.split(","):
+            n = linha.split()
+            if len(n) == 3:
+                pts.append([float(n[0]) * 2.54, float(n[1]) * 2.54,
+                            float(n[2]) * 2.54])
+        k = bloco.find("coordIndex [")
+        if k < 0 or not pts:
+            continue
+        idx = bloco[k + 12:bloco.index("]", k)]
+        tris = []
+        for face in idx.split(","):
+            n = [int(q) for q in face.split() if q.lstrip("-").isdigit()]
+            n = [q for q in n if q >= 0]
+            # a fan: every face this writer emits is convex
+            for m in range(1, len(n) - 1):
+                tris.append([pts[n[0]], pts[n[m]], pts[n[m + 1]]])
+        if tris:
+            saida.append((np.array(tris, dtype=np.float64), cor))
+    return saida
+
+
+# The three things that are NOT on the board and decide its shape anyway.
+# Every rectangle and every ceiling here is a line of 04-pcb-e-caixa.md, and
+# the column that says which one is part of the table on purpose: a number
+# with no line behind it does not belong in a drawing that is supposed to be
+# checkable.
+#
+# The thickness of the display and of the cell are the ones the document
+# gives for the part; the GAP under each of them is the shadow ceiling, which
+# is the clearance the board has to respect, not the part's own thickness.
+MONTAGEM = (
+    # nome, x0, y0, x1, y1, vao ate a placa, espessura, atras, cor, fonte
+    ("display JDI LPM027M128B", 7.46, 5.10, 47.54, 66.90, 2.60, 1.00, False,
+     (0.16, 0.17, 0.20), "04-pcb-e-caixa.md, tabela de zonas: contorno "
+     "40,08 x 61,8 em x 7,46-47,54 e y 5,1-66,9, teto de 2,6 mm"),
+    ("celula LiPo 36 x 60 x 7", 9.50, 22.50, 45.50, 82.50, 1.20, 7.00, True,
+     (0.30, 0.31, 0.34), "04-pcb-e-caixa.md: bolsa de 36 x 60 x 7 mm na face "
+     "de tras, em x 9,5-45,5 e y 22,5-82,5, teto de 1,2 mm"),
+)
+# The six 23 x 8 mm solar modules are deliberately NOT here. They live in the
+# case walls - two on the sloped face and two on each chamfer - and nothing
+# in any document puts them in the BOARD's coordinates, so drawing them over
+# it would be drawing a guess. They reach the board through J103, J104 and
+# J105, and those are on it, with bodies.
+
+
+def pecas_da_caixa(afastar: float = 0.0) -> tuple[np.ndarray, np.ndarray]:
+    """The display and the cell, in the board's own coordinates.
+
+    With `afastar` at zero they sit where the case really holds them, which
+    is what shows whether a part fouls them. Pulled apart, it is the exploded
+    view: the same three things in the same order, far enough apart to see
+    the board between them.
+    """
+    tris: list[np.ndarray] = []
+    cols: list[np.ndarray] = []
+    for _nome, x0, y0, x1, y1, vao, esp, atras, cor, _fonte in MONTAGEM:
+        if atras:
+            z1 = -0.8 - vao - afastar
+            z0 = z1 - esp
+        else:
+            z0 = vao + afastar
+            z1 = z0 + esp
+        cantos = ((x0, y0), (x1, y0), (x1, y1), (x0, y1))
+        base = [(px, py, z0) for px, py in cantos]
+        topo = [(px, py, z1) for px, py in cantos]
+        faces = [(base[0], base[3], base[2]), (base[0], base[2], base[1]),
+                 (topo[0], topo[1], topo[2]), (topo[0], topo[2], topo[3])]
+        for k in range(4):
+            a, b = k, (k + 1) % 4
+            faces.append((base[a], base[b], topo[b]))
+            faces.append((base[a], topo[b], topo[a]))
+        for t in faces:
+            tris.append(np.array(t, dtype=np.float64))
+            cols.append(np.array(cor))
+    if not tris:
+        return np.zeros((0, 3, 3)), np.zeros((0, 3))
+    return np.array(tris), np.array(cols)
+
+
 def caixas_das_pecas() -> tuple[np.ndarray, np.ndarray]:
     """Bodies for the parts whose footprint was generated here.
 
     KiCad's GLB carries only the STEP models of the library footprints, so the
-    ten parts drawn in footprints.py - the radio module, the GNSS receiver,
-    the level translator, the sensors - would appear as bare pads. Their
-    package outline and height are in footprints.CORPO, and the box is built
-    here at the position, rotation and face the board gives them.
+    parts drawn in footprints.py - the radio module, the GNSS receiver, the
+    level translator, the sensors, the key, the buzzer, the receptacle -
+    would appear as bare pads.
+
+    Each of them already has a body in cad/3d/*.wrl, with the package's real
+    shape and the real colour of its material, and until now this function
+    ignored both: it drew a plain cuboid of the courtyard size in one hard
+    coded near-black for all of them. That is exactly what the board looked
+    like - twenty-two identical black bricks - and it is not what any of
+    those parts is. The .wrl is read instead, and only a part with no body
+    file at all falls back to the box.
     """
     sys.path.insert(0, str(HERE))
     import footprints as FPS
@@ -231,6 +355,7 @@ def caixas_das_pecas() -> tuple[np.ndarray, np.ndarray]:
             fp_load.corpo(nome_fp)
         except FileNotFoundError:
             pass
+    pasta3d = HERE / "3d"
     tris: list[np.ndarray] = []
     cols: list[np.ndarray] = []
     for f in fp_load.kids(arv, "footprint"):
@@ -242,14 +367,29 @@ def caixas_das_pecas() -> tuple[np.ndarray, np.ndarray]:
         x, y = float(at[1]), float(at[2])
         ang = math.radians(float(at[3])) if len(at) > 3 else 0.0
         atras = fp_load.kid(f, "layer")[1] == "B.Cu"
-        z0 = -0.8 if atras else 0.0      # the board is 0.8 mm thick
-        z1 = z0 - alt if atras else alt
         ca, sa = math.cos(ang), math.sin(ang)
-        cantos = []
-        for dx, dy in ((-w / 2, -h / 2), (w / 2, -h / 2), (w / 2, h / 2), (-w / 2, h / 2)):
-            cantos.append((x + dx * ca + dy * sa, y - dx * sa + dy * ca))
-        base = [(px, py, z0) for px, py in cantos]
-        topo = [(px, py, z1) for px, py in cantos]
+
+        def por_no_lugar(v: np.ndarray) -> np.ndarray:
+            """The body's own coordinates, put where the board has the part."""
+            vx = -v[..., 0] if atras else v[..., 0]
+            vy, vz = v[..., 1], v[..., 2]
+            return np.stack([x + vx * ca + vy * sa,
+                             y - vx * sa + vy * ca,
+                             (-0.8 - vz) if atras else vz], axis=-1)
+
+        arq = pasta3d / (nome.split(":", 1)[1] + ".wrl")
+        formas = ler_wrl(arq) if arq.exists() else []
+        if formas:
+            for malha, cor in formas:
+                tris.extend(por_no_lugar(malha))
+                cols.extend([np.array(cor)] * len(malha))
+            continue
+
+        # no body file: the courtyard box, which is all anybody knows
+        cantos = [(-w / 2, -h / 2), (w / 2, -h / 2), (w / 2, h / 2), (-w / 2, h / 2)]
+        caixa = np.array([[list(c) + [z] for c in cantos] for z in (0.0, alt)])
+        base = [por_no_lugar(np.array(p)) for p in caixa[0]]
+        topo = [por_no_lugar(np.array(p)) for p in caixa[1]]
         faces = [(base[0], base[3], base[2]), (base[0], base[2], base[1]),
                  (topo[0], topo[1], topo[2]), (topo[0], topo[2], topo[3])]
         for k in range(4):
@@ -272,6 +412,7 @@ def main() -> int:
     j, bina = ler_glb(glb)
     tris, cols = triangulos(j, bina)
     extra_t, extra_c = caixas_das_pecas()
+    n_corpos = len(extra_t)
     if len(extra_t):
         # the boxes are in millimetres with y growing downward, as the board
         # file has them; the GLB is in metres with y already up
@@ -280,7 +421,7 @@ def main() -> int:
         tris = np.concatenate([tris, extra_t])
         cols = np.concatenate([cols, extra_c])
     print(f"{len(tris)} triangulos, {len(j.get('meshes', []))} malhas, "
-          f"{len(extra_t) // 12} corpos desenhados aqui")
+          f"{n_corpos} corpos desenhados aqui")
 
     for nome, az, el, w, h in (("gnssbike-3d-frente.png", 0.0, 90.0, 1100, 1800),
                                ("gnssbike-3d-angulo.png", 28.0, 38.0, 1600, 1300),
@@ -288,6 +429,19 @@ def main() -> int:
         img = render(tris, cols, w, h, az, el)
         img.save(HERE / nome)
         print(f"  {nome}: {w} x {h}")
+
+    # and the stack: display, board, cell, pulled apart so the three are all
+    # visible at once. The board alone never showed what it has to fit
+    # between, which is the thing that decides its size.
+    caixa_t, caixa_c = pecas_da_caixa(afastar=16.0)
+    caixa_t = np.stack([caixa_t[..., 0], -caixa_t[..., 1], caixa_t[..., 2]],
+                       axis=-1) / 1000.0
+    montagem_t = np.concatenate([tris, caixa_t])
+    montagem_c = np.concatenate([cols, caixa_c])
+    img = render(montagem_t, montagem_c, 1500, 1500, 24.0, 26.0)
+    img.save(HERE / "gnssbike-3d-montagem.png")
+    print(f"  gnssbike-3d-montagem.png: 1500 x 1500 "
+          f"({len(MONTAGEM)} pecas da caixa)")
     return 0
 
 

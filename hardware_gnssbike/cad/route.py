@@ -106,7 +106,8 @@ CAMADAS = ("F.Cu", "In2.Cu", "B.Cu")
 NC = len(CAMADAS)
 I_BCU = NC - 1
 CUSTO_VIA = 16.0            # in grid steps, about 2,4 mm
-CUSTO_CURVA = 0.7
+CUSTO_CURVA = 0.7             # virar 90 graus
+CUSTO_CURVA_45 = 0.2          # virar 45: meia virada, meio custo
 # A maze search that cannot get through explores everything it is allowed to
 # before saying so, and on a 367 x 647 grid over two layers that is nearly a
 # million cells for one net that was never going to route. The budget turns a
@@ -480,7 +481,7 @@ class Grade:
         return True
 
 
-def pads_da_placa(arv) -> tuple[list[tuple], dict[str, list[tuple]]]:
+def pads_da_placa(arv) -> tuple[list[tuple], dict[str, list[tuple]], dict]:
     """Every pad: (net, layer index or -1 for through, x, y, half w, half h).
 
     The half sizes are the rotated ones: a 1.5 x 0.7 pad turned 90 degrees is
@@ -489,10 +490,15 @@ def pads_da_placa(arv) -> tuple[list[tuple], dict[str, list[tuple]]]:
     """
     todos = []
     por_rede: dict[str, list[tuple]] = {}
+    # the bounding box of the pads of each footprint, looked up by the
+    # position of any one of them: that box is the pad field the neck-down
+    # has to cover, and no wider neighbourhood is
+    caixa_fp: dict[tuple[float, float], tuple] = {}
     for f in fp_load.kids(arv, "footprint"):
         at = fp_load.kid(f, "at")
         fx, fy = float(at[1]), float(at[2])
         ang = math.radians(float(at[3])) if len(at) > 3 else 0.0
+        meus: list[tuple[float, float, float, float]] = []
         for p in fp_load.kids(f, "pad"):
             a = fp_load.kid(p, "at")
             px, py = float(a[1]), float(a[2])
@@ -541,9 +547,15 @@ def pads_da_placa(arv) -> tuple[list[tuple], dict[str, list[tuple]]]:
             nome = rede[2] if rede else ""
             item = (nome, idx, gx, gy, hw, hh)
             todos.append(item)
+            meus.append((gx, gy, hw, hh))
             if nome:
                 por_rede.setdefault(nome, []).append(item)
-    return todos, por_rede
+        if meus:
+            b = (min(q[0] - q[2] for q in meus), min(q[1] - q[3] for q in meus),
+                 max(q[0] + q[2] for q in meus), max(q[1] + q[3] for q in meus))
+            for gx, gy, _hw, _hh in meus:
+                caixa_fp[(round(gx, 4), round(gy, 4))] = b
+    return todos, por_rede, caixa_fp
 
 
 def a_estrela(g: Grade, rede: str, inicio: tuple[int, int, int],
@@ -610,14 +622,36 @@ def a_estrela(g: Grade, rede: str, inicio: tuple[int, int, int],
             if v[0] != c:
                 passo = CUSTO_VIA
             elif v[1] != ix and v[2] != iy:
-                passo = 1.41421356          # a diagonal is longer
+                # A diagonal step costs more than its length. At the true
+                # 1.414 the shortest path IS the diagonal, so the router
+                # drew long diagonals straight across the board, cutting
+                # through everyone else's channels - which is legal, passes
+                # every rule, and is not how a board is drawn. At 1.9 a
+                # diagonal only pays for itself where it replaces a corner,
+                # which is exactly what a 45 degree chamfer is for.
+                # 2.2, and the number is not taste. A diagonal run of n steps
+                # costs 2.2n and covers n cells each way; the L that replaces
+                # it costs 2n plus 0.7 for its one corner. At 1.9 the diagonal
+                # still won for any n - which is why the board came out with
+                # 45 degree lines crossing it end to end - and at 2.2 the L
+                # wins from about four steps up, while a single diagonal still
+                # beats a corner (2.2 against 2.7). That is a chamfer, which
+                # is what 45 degrees is for.
+                passo = 2.2
             else:
                 passo = 1.0
             if ant is not None and v[0] == c and ant[0] == c:
                 d1 = (ix - ant[1], iy - ant[2])
                 d2 = (v[1] - ix, v[2] - iy)
                 if d1 != d2:
-                    passo += CUSTO_CURVA
+                    # Half a turn costs less than a whole one. Charging the
+                    # same for both is what killed the chamfer: cutting a
+                    # corner is orth -> diag -> orth, which is TWO turns, so
+                    # at 0.7 each it cost 3.6 against the square corner's
+                    # 2.7 and the router squared every corner on the board.
+                    # A 45 degree turn is 0.2, and the chamfer comes to 2.6.
+                    reto = (d1[0] == 0) != (d2[0] == 0) or                            (d1[1] == 0) != (d2[1] == 0)
+                    passo += CUSTO_CURVA if (d1[0] and d1[1]) ==                         (d2[0] and d2[1]) and reto else CUSTO_CURVA_45
             if perto_de is not None and (v[1], v[2]) in perto_de:
                 # the second half of a differential pair: running beside its
                 # partner is cheaper than going its own way, so the two stay
@@ -875,7 +909,7 @@ def costurar_rf(g: Grade, vias: list, segmentos: list) -> int:
     return postas
 
 
-def uma_passagem(arv, numeros, todos, por_rede, prioridade):
+def uma_passagem(arv, numeros, todos, por_rede, caixa_fp, prioridade):
     """One routing attempt with a given order. Returns what came out."""
     g = base(arv, todos)
     segmentos: list[tuple] = []
@@ -883,8 +917,7 @@ def uma_passagem(arv, numeros, todos, por_rede, prioridade):
     falhas: list[str] = []
     falharam: list[str] = []
 
-    def emitir(caminho_cel, rede, larg, larg_pad=None, ponto=None,
-               raio_pad=0.0):
+    def emitir(caminho_cel, rede, larg, larg_pad=None, campo=None):
         i = 0
         while i < len(caminho_cel) - 1:
             a = caminho_cel[i]
@@ -900,21 +933,41 @@ def uma_passagem(arv, numeros, todos, por_rede, prioridade):
                     (caminho_cel[j + 1][1] - caminho_cel[j][1],
                      caminho_cel[j + 1][2] - caminho_cel[j][2]) == d:
                 j += 1
-            p0 = g.pos(a[1], a[2])
-            p1 = g.pos(caminho_cel[j][1], caminho_cel[j][2])
             # The neck lasts while the track is still inside the part's
             # pad field, not just for the first run: a 0.4 mm track two
             # segments out of a 0.4 mm pitch QFN is still between its pads.
             # Necking the whole net instead took VBAT, which carries the
             # 800 mA charging current, to 0.2 mm end to end, because the fuel
             # gauge's WLP bump is 0.2 mm wide.
-            w = larg
-            if larg_pad is not None and ponto is not None:
-                d0 = math.hypot(p0[0] - ponto[0], p0[1] - ponto[1])
-                if d0 <= raio_pad:
-                    w = larg_pad
-            segmentos.append((p0, p1, a[0], rede, w))
-            g.trilha(a[0], p0, p1, w, rede)
+            #
+            # And the neck ends where the FIELD ends, not where the straight
+            # run ends. Deciding one width for the whole run by its first
+            # point is how VBAT left the MAX17262 at 0.2 mm and stayed there
+            # for 9.9 mm across the board, 0.02 mm under what IPC-2221 asks
+            # for its 800 mA: the run happened to begin inside the field. So
+            # the run is cut at the boundary and each piece gets its own
+            # width, which is what a person draws by hand.
+            def no_campo(k: int) -> bool:
+                if larg_pad is None or campo is None:
+                    return False
+                px, py = g.pos(caminho_cel[k][1], caminho_cel[k][2])
+                return (campo[0] <= px <= campo[2] and
+                        campo[1] <= py <= campo[3])
+
+            k0 = i
+            while k0 < j:
+                # a piece is narrow when EITHER of its ends is in the field,
+                # so the wide copper never starts inside it
+                estreito = no_campo(k0) or no_campo(k0 + 1)
+                k1 = k0 + 1
+                while k1 < j and (no_campo(k1) or no_campo(k1 + 1)) == estreito:
+                    k1 += 1
+                p0 = g.pos(caminho_cel[k0][1], caminho_cel[k0][2])
+                p1 = g.pos(caminho_cel[k1][1], caminho_cel[k1][2])
+                w = larg_pad if estreito else larg
+                segmentos.append((p0, p1, a[0], rede, w))
+                g.trilha(a[0], p0, p1, w, rede)
+                k0 = k1
             i = j
 
     n_gnd = terra(g, por_rede, segmentos, vias, falhas)
@@ -951,14 +1004,15 @@ def uma_passagem(arv, numeros, todos, por_rede, prioridade):
         # pad is that wide - and that pad draws microamps while the rest of
         # the rail carries the 800 mA charging current.
         estreitos = [min(2 * q[4], 2 * q[5]) for q in pads]
-        # how far the neck has to last: the reach of the part the pad belongs
-        # to, taken as the spread of this net's pads that share its footprint
-        raios = []
-        for q in pads:
-            perto = [w for w in todos
-                     if abs(w[2] - q[2]) < 6 and abs(w[3] - q[3]) < 6]
-            raios.append(max([math.hypot(w[2] - q[2], w[3] - q[3])
-                              for w in perto] + [0.8]) * 0.5 + 0.8)
+        # How far the neck has to last: out of the pad field of the package
+        # the pad belongs to, and not one millimetre further. Measuring it as
+        # a radius over everything within 6 mm - which is what this did - made
+        # the field 4.9 mm wide around the fuel gauge, because the parts
+        # crowded around it counted as if they were its own pins, and VBAT
+        # left it at 0.2 mm and stayed there for 4.35 mm against the 0.22 mm
+        # IPC-2221 asks of its 800 mA. The field is the box of the FOOTPRINT's
+        # own pads, plus the clearance the neck exists to respect.
+        campos = [caixa_fp.get((round(q[2], 4), round(q[3], 4))) for q in pads]
         celulas = []
         for _n, idx, x, y, _hw, _hh in pads:
             c0, c1 = g.cel(x - MP.ORIGEM[0], y - MP.ORIGEM[1])
@@ -974,10 +1028,11 @@ def uma_passagem(arv, numeros, todos, por_rede, prioridade):
             larg = largura(rede)
             larg_pad = max(LARGURA, min(larg, estreitos[k]))
             q = pads[k]
-            ponto = (q[2] - MP.ORIGEM[0], q[3] - MP.ORIGEM[1])
-            # out to the far corner of the part, so the neck covers the whole
-            # pad field of a fine-pitch package
-            raio_pad = raios[k]
+            # the pad field in grid coordinates; without one, the pad's own
+            # copper, which still has to be escaped
+            b = campos[k] or (q[2] - q[4], q[3] - q[5], q[2] + q[4], q[3] + q[5])
+            campo = (b[0] - MP.ORIGEM[0] - FOLGA, b[1] - MP.ORIGEM[1] - FOLGA,
+                     b[2] - MP.ORIGEM[0] + FOLGA, b[3] - MP.ORIGEM[1] + FOLGA)
             # the RF line stays on the front layer: a via in the middle of
             # it is a stub, and 7.2 of the module datasheet forbids stubs by
             # name. The second track of a pair is pulled towards the first.
@@ -995,7 +1050,7 @@ def uma_passagem(arv, numeros, todos, por_rede, prioridade):
                 falhas.append(f"{rede}: nao roteou")
                 falharam.append(rede)
                 continue
-            emitir(p, rede, larg, larg_pad, ponto, raio_pad)
+            emitir(p, rede, larg, larg_pad, campo)
             feito |= set(p)
             n_ok += 1
             if rede == PAR[0]:
@@ -1131,14 +1186,14 @@ def main() -> int:
     texto = caminho.read_text(encoding="utf-8")
     arv = fp_load.parse(texto)
     numeros, _por_pad = MP.redes()
-    todos, por_rede = pads_da_placa(arv)
+    todos, por_rede, caixa_fp = pads_da_placa(arv)
 
     # Several passes. Whatever failed goes to the front of the next one,
     # so a run that could not find a way through gets the empty board next
     # time. A pass costs about a minute; the board settles in three or four.
     melhor = None
     for nome in ("compridas", "curtas"):
-        r = uma_passagem(arv, numeros, todos, por_rede, nome)
+        r = uma_passagem(arv, numeros, todos, por_rede, caixa_fp, nome)
         segmentos, vias, falhas, falharam, n_gnd, n_ok, n_cost = r
         print(f"  ordem {nome} primeiro: {n_ok} ligacoes, {len(falhas)} falhas",
               flush=True)

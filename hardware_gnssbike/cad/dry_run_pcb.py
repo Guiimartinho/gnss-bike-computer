@@ -35,14 +35,23 @@ PCB = HERE / "gnssbike.kicad_pcb"
 # --- the rules, with their source -------------------------------------------
 # Each entry: id, what it demands, where it is written.
 # Every line below was read in the manufacturer's own PDF, not in a summary
-# of it. Two of the rules this file used to carry were not in either document:
-# "20 mm between the antenna and a switching converter" does not exist - what
-# 7.3 says is the qualitative "do not place modules adjacent to strong
-# interference sources" - and the decoupling distance for the module is not
-# 2 mm but 0.5 mm. Both were corrected on 2026-09-24 after reading
-# ME54BS13-nRF54LM20A_Datasheet_K_EN v1.0.0 and MAX-F10S_IntegrationManual
-# UBXDOC-963802114-12892. The PDFs live in ../datasheets/, which the
-# .gitignore keeps out of this public repository.
+# of it, and not in an earlier version of this comment either.
+#
+# What this file said on 2026-09-24, and got wrong: that "20 mm between the
+# antenna and a switching converter" was a rule nobody could find in the
+# datasheet, and that 7.3 only carried a qualitative "do not place modules
+# adjacent to strong interference sources". The 20 mm is REAL. It is in 7.2,
+# under "Interference Isolation Rule", in a table of four rows - the section
+# number was wrong, not the rule - and deleting it took a measured constraint
+# off the placer. It is back, as ISOLACAO below, with all four rows and with
+# the row nobody had ever carried: 25 mm from a display or an FPC cable.
+#
+# What that older comment did get right, and stays corrected: the module's
+# decoupling distance is 0.5 mm (7.2, "Power Supply Design"), not the 2 mm
+# this once used.
+#
+# The PDFs live in ../datasheets/, which the .gitignore keeps out of this
+# public repository.
 REGRAS = [
     ("RF1", "sem cobre, sem componente e sem caixa metalica fechada sobre a "
             "area da antena do modulo",
@@ -65,6 +74,14 @@ REGRAS = [
     ("RF8", "as duas antenas o mais longe possivel uma da outra",
      "u-blox MAX-F10S IM 4.4; referencia: um quarto de onda de 2,44 GHz e "
      "30,7 mm"),
+    ("RF9", "a distancia de isolacao que a ficha do modulo pede de cada tipo "
+            "de fonte de interferencia: 20 mm de fonte chaveada, indutor de "
+            "potencia ou transformador, 20 mm de USB 3.0/HDMI/DDR/SDIO "
+            "rapido, 15 mm de clock de alta frequencia de MCU ou PHY "
+            "Ethernet, 25 mm de display, camera ou cabo FPC com fiacao",
+     "MinewSemi ME54BS13 V1.0.0, 7.2, Interference Isolation Rule"),
+    ("RF10", "50 mm entre dois modulos de radio na mesma placa",
+     "MinewSemi ME54BS13 V1.0.0, 7.2, Multiple Modules on the Same PCB"),
     ("AL1", "desacoplamento do modulo de radio a 0,5 mm do pino de "
             "alimentacao; dos demais CIs, 2 mm para o de alta frequencia e "
             "5 mm para o de reserva",
@@ -148,6 +165,24 @@ def altura_do_footprint(nome: str):
 
 
 CHAVEADOS = ["L101", "L102", "L103", "U101", "U103"]
+
+# ME54BS13 V1.0.0, 7.2, "Interference Isolation Rule": the table of minimum
+# recommended isolation from the module, by type of source. The datasheet
+# names its own way out in the same paragraph - "Isolation using different
+# PCB layers and shielding covers is recommended" - so a row this board
+# cannot meet is reported with what it measures, not hidden.
+#
+# Rows with nothing on this board to match are left out of the table on
+# purpose rather than carried empty: there is no USB 3.0, HDMI, DDR or
+# high-speed SDIO here (the USB is 2.0 full speed), and the only
+# high-frequency MCU clock is inside the module itself.
+ISOLACAO = (
+    ("fonte chaveada, indutor de potencia ou transformador", 20.0, CHAVEADOS),
+    ("display, camera ou cabo FPC com fiacao", 25.0, ["J401", "J402"]),
+)
+# and the display itself, which is not a part on the board but a rectangle
+# over it - the 25 mm row applies to it more than to its connector
+ZONA_DISPLAY = "SOMBRA_DISPLAY_JDI_MAX_2-6MM"
 PI_GNSS = ["L301", "C301", "C302"]
 MODULO = "U201"          # the radio module
 GNSS = "U301"            # the GNSS receiver
@@ -441,6 +476,50 @@ def main() -> int:
         sep = math.hypot(ax - gx, ay - gy)
         ok.append(f"RF8: as duas antenas estao a {sep:.1f} mm de centro a centro "
                   f"({sep / 30.7:.1f} quartos de onda de 2,44 GHz)")
+
+    # -- RF9: a tabela de isolacao da 7.2 ------------------------------------
+    if MODULO in pecas:
+        cm = pecas[MODULO]["caixa"]
+        perto_demais, medidos = [], []
+        for tipo, limite_mm, refs in ISOLACAO:
+            pior = None
+            for r in refs:
+                if r not in pecas:
+                    continue
+                d = dist_caixas(cm, pecas[r]["caixa"])
+                if pior is None or d < pior[0]:
+                    pior = (d, r)
+            if tipo.startswith("display"):
+                try:
+                    z = zona(ZONA_DISPLAY)
+                    d = dist_caixas(cm, z)
+                    if pior is None or d < pior[0]:
+                        pior = (d, "a propria sombra do display")
+                except KeyError:
+                    pass
+            if pior is None:
+                continue
+            medidos.append((tipo, limite_mm, pior))
+            if pior[0] < limite_mm:
+                perto_demais.append((tipo, limite_mm, pior))
+        if perto_demais:
+            falhou("RF9", "; ".join(
+                f"{t}: {p[1]} a {p[0]:.1f} mm, a ficha pede {lim:.0f}"
+                for t, lim, p in perto_demais))
+        elif medidos:
+            ok.append("RF9: " + "; ".join(
+                f"{t}: {p[1]} a {p[0]:.1f} de {lim:.0f} mm"
+                for t, lim, p in medidos))
+
+    # -- RF10: 50 mm entre os dois modulos -----------------------------------
+    if MODULO in pecas and GNSS in pecas:
+        d = dist_caixas(pecas[MODULO]["caixa"], pecas[GNSS]["caixa"])
+        if d < 50.0:
+            falhou("RF10", f"os dois modulos de radio estao a {d:.1f} mm, "
+                   "contra os 50 mm que a ficha pede")
+        else:
+            ok.append(f"RF10: os dois modulos de radio estao a {d:.1f} mm, "
+                      "acima dos 50 mm da ficha")
 
     # -- AL1: desacoplamento --------------------------------------------------
     piores = []

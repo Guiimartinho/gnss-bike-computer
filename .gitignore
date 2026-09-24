@@ -27,3 +27,9 @@ node_modules/
 zephyr_app/src/rf/ant/radar_pages.c
 zephyr_app/src/rf/ant/power_pages.c
 zephyr_app/src/rf/ant/sensor_pages.c
+
+# KiCad's local editor state: window layout, last used layer, the net colours
+# someone picked on their own machine. It is per person, not per project, and
+# pcbnew drops one beside the board whenever a script opens it.
+*.kicad_prl
+*-backups/

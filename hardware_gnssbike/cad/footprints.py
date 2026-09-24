@@ -147,6 +147,10 @@ CORPO: dict[str, tuple[float, float, float]] = {
     "gnssbike:TPD4E05U06_USON-10_1x2.5mm_P0.5mm": (1.00, 2.50, 0.55),
     "gnssbike:TXU0204_WQFN-14_3x2.5mm_P0.5mm": (3.00, 2.50, 0.80),
     "gnssbike:LED_RGB_APTF1616_1.6x1.6mm": (1.60, 1.60, 0.70),
+    # the spring contacts: the two 2.0 x 2.0 pads at 3.0 mm of pitch that
+    # contato_mola() draws, so 5.0 mm across the pair. The 1.5 mm of leaf is
+    # ALTURA's, and ALTURA says there where it does NOT come from.
+    "gnssbike:ContatoMola_2x2mm_P3mm": (5.00, 2.00, 1.50),
 }
 
 
@@ -330,6 +334,15 @@ ALTURA: dict[str, tuple[float, str]] = {
     # one: the QFN said 0.90 when its datasheet says 0.80.
     "Package_SO:SOIC-8_5.23x5.23mm_P1.27mm": (2.00, "altura normal do SOIC-8 "
         "de 200 mil - CONFERIR no desenho da Macronix"),
+    # NAO lida de ficha nenhuma, porque nao ha peca escolhida: a mola so
+    # precisa sobrar da placa para ser esmagada quando a caixa fecha, e
+    # 1,5 mm e o curso corrente de um contato de mola SMD desse tamanho.
+    # 04-pcb-e-caixa.md registra que a area dos contatos nao esta
+    # dimensionada em lugar nenhum, e parts.py manda CONFERIR antes de
+    # fabricar. O numero existe para o desenho, nao para a compra.
+    "gnssbike:ContatoMola_2x2mm_P3mm": (1.50, "curso corrente de um contato "
+        "de mola SMD - NAO lido de ficha: a mola ainda nao foi escolhida "
+        "(04-pcb-e-caixa.md, parts.py J103/J302)"),
 }
 
 
@@ -628,6 +641,132 @@ def wrl_buzzer(caminho, w: float, h: float, alt: float) -> None:
         encoding="utf-8", newline=NL)
 
 
+def wrl_fpc(caminho, w: float, h: float, alt: float) -> None:
+    """An FPC connector: a pale housing with the dark latch across the back.
+
+    What makes an FPC connector recognisable at a glance is that it is two
+    pieces in two colours - the moulded housing, which is ivory or beige, and
+    the actuator, which is almost always dark brown or black and runs the
+    whole width. Drawn as one black cuboid it reads as an IC, and the one
+    thing a person checks in a 3D view of a flat cable connector is which way
+    the mouth faces.
+
+    NO DIMENSION HERE IS FROM A DATASHEET, because there is no datasheet to
+    take one from: the part is not chosen yet (06-conectores-e-pontos-de-teste
+    .md, J402) and its ALTURA entry says CONFERIR. The outline is the
+    footprint's own courtyard, which is what the board already commits to,
+    and the split between housing and actuator is a proportion, not a cote.
+    """
+    ALOJAMENTO = (0.88, 0.85, 0.76)      # marfim
+    TRAVA = (0.24, 0.17, 0.13)           # marrom escuro
+    CONTATO = (0.80, 0.70, 0.40)
+    trava_h = min(1.8, h * 0.33)
+    partes = [
+        # o alojamento, com a boca no lado -Y
+        _bloco(-w / 2, -h / 2 + trava_h, 0.0, w / 2, h / 2, alt, ALOJAMENTO),
+        # a trava, atravessada na largura toda
+        _bloco(-w / 2, -h / 2, alt * 0.15, w / 2, -h / 2 + trava_h, alt,
+               TRAVA),
+    ]
+    # a fenda da boca, onde o cabo entra
+    partes.append(_bloco(-w / 2 + 0.6, -h / 2 + trava_h - 0.05, alt * 0.25,
+                         w / 2 - 0.6, -h / 2 + trava_h + 0.35, alt * 0.75,
+                         (0.10, 0.09, 0.09)))
+    # os contatos vistos pela boca
+    n = max(2, int((w - 1.6) / 0.5))
+    for i in range(n):
+        bx = -w / 2 + 0.8 + (w - 1.6) * (i + 0.5) / n
+        partes.append(_bloco(bx - 0.12, -h / 2 + trava_h, 0.0,
+                             bx + 0.12, h / 2 - 0.3, 0.10, CONTATO))
+    caminho.write_text(
+        "#VRML V2.0 utf8" + NL +
+        "# conector FPC: alojamento marfim e trava escura, contorno do "
+        "footprint" + NL + "".join(partes), encoding="utf-8", newline=NL)
+
+
+def wrl_led_rgb(caminho, w: float, h: float, alt: float) -> None:
+    """Kingbright APTF1616: white housing, water-clear lens, gold corners.
+
+    Every number here is from the PACKAGE DIMENSIONS block on page 1 of the
+    datasheet: body 1.6 x 1.6, total height 0.7 (with the sheet's general
+    tolerance of +-0.2 over it), the base plate 0.25 thick across the full
+    width, and the moulded encapsulant above it a truncated pyramid 1.2 at
+    the bottom and 1.1 at the top. Four corner terminals of 0.35 x 0.65, each
+    with a castellation on its outer edge. The lens is "Water Clear" by the
+    SELECTION GUIDE, not diffused.
+
+    The 0.45 of lens height is 0.7 - 0.25, arithmetic, not a dimension: the
+    sheet does not cote the lens on its own. The white of the housing is read
+    off the product photograph on the same page, which the sheet does not
+    state in words either - both are said so here rather than passed off as
+    cotes.
+    """
+    BRANCO = (0.93, 0.93, 0.91)          # corpo, da foto do produto
+    LENTE = (0.88, 0.90, 0.93)           # "Water Clear"
+    OURO = (0.83, 0.68, 0.22)
+    base_h = 0.25
+    partes = [_bloco(-w / 2, -h / 2, 0.0, w / 2, h / 2, base_h, BRANCO)]
+    # os quatro terminais de canto, na face de baixo
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            partes.append(_bloco(sx * (w / 2 - 0.35), sy * (h / 2 - 0.65),
+                                 -0.01, sx * w / 2, sy * (h / 2), 0.08, OURO))
+    # o tronco de piramide: 1,2 na base e 1,1 no topo
+    e = VRML_POR_MM
+    b, t = 1.2 / 2, 1.1 / 2
+    z0, z1 = base_h, alt
+    pts = [(-b, -b, z0), (b, -b, z0), (b, b, z0), (-b, b, z0),
+           (-t, -t, z1), (t, -t, z1), (t, t, z1), (-t, t, z1)]
+    pts = [(x * e, y * e, z * e) for x, y, z in pts]
+    faces = [(0, 3, 2), (0, 2, 1), (4, 5, 6), (4, 6, 7)]
+    for k in range(4):
+        i, j = k, (k + 1) % 4
+        faces.append((i, j, 4 + j))
+        faces.append((i, 4 + j, 4 + i))
+    partes.append(_caixa_vrml(pts, faces, LENTE))
+    caminho.write_text(
+        "#VRML V2.0 utf8" + NL +
+        "# Kingbright APTF1616: corpo branco 1,6 x 1,6 x 0,25 e lente "
+        "transparente ate 0,7" + NL + "".join(partes),
+        encoding="utf-8", newline=NL)
+
+
+def wrl_mola(caminho, w: float, h: float, alt: float) -> None:
+    """Two gold spring fingers, one arched leaf over each pad.
+
+    This is where the antenna in the case wall and the three groups of solar
+    modules meet the board, and it was the one part on it with no body at
+    all - four of them, drawn as nothing. A flat pad is not what is there:
+    what is there is a leaf that stands proud of the board and is squashed
+    when the case closes, and that is the only reason its height matters.
+
+    The two pads, 2.0 x 2.0 mm at 3.0 mm of pitch, are the project's own and
+    are in contato_mola(). The ARCH is not: no spring has been chosen yet -
+    `04-pcb-e-caixa.md` says the contact area is not dimensioned anywhere and
+    parts.py says CONFERIR before manufacturing - so the leaf here is a
+    generic SMD spring finger at the height ALTURA declares, and that number
+    is marked in ALTURA as not read from any datasheet. When the part is
+    chosen, its own model goes in 3d/real/ and this is never used again.
+    """
+    OURO = (0.83, 0.68, 0.22)
+    partes = []
+    for cx in (-1.5, 1.5):
+        # the base that is soldered, and the leaf arching back over it
+        partes.append(_bloco(cx - 1.0, -1.0, 0.0, cx + 1.0, -0.4, 0.12, OURO))
+        passos = 8
+        for i in range(passos):
+            t0, t1 = i / passos, (i + 1) / passos
+            y0, y1 = -0.4 + 1.6 * t0, -0.4 + 1.6 * t1
+            z0 = 0.12 + (alt - 0.12) * math.sin(math.pi * t0)
+            z1 = 0.12 + (alt - 0.12) * math.sin(math.pi * t1)
+            partes.append(_bloco(cx - 0.9, y0, min(z0, z1) - 0.06,
+                                 cx + 0.9, y1, max(z0, z1) + 0.06, OURO))
+    caminho.write_text(
+        "#VRML V2.0 utf8" + NL +
+        "# contato de mola de 2 vias: lamina dourada sobre cada pad de 2x2" + NL
+        + "".join(partes), encoding="utf-8", newline=NL)
+
+
 def wrl_usb_c(caminho, w: float, h: float, alt: float) -> None:
     """A USB-C receptacle: a stainless shell with the black tongue inside."""
     caminho.write_text(
@@ -646,6 +785,11 @@ DESENHADOS = {
     "Button_Switch_SMD:SW_SPST_B3S-1000": wrl_tecla,
     "Buzzer_Beeper:Buzzer_CUI_CPT-9019S-SMT": wrl_buzzer,
     "Connector_USB:USB_C_Receptacle_Palconn_UTC16-G": wrl_usb_c,
+    "gnssbike:ContatoMola_2x2mm_P3mm": wrl_mola,
+    "gnssbike:LED_RGB_APTF1616_1.6x1.6mm": wrl_led_rgb,
+    # Only the TE one. The Hirose FH12 has a model in KiCad's own library and
+    # trocar_modelo() keeps it, which is right: a maker's model beats a sketch.
+    "Connector_FFC-FPC:TE_0-1734839-5_1x05-1MP_P0.5mm_Horizontal": wrl_fpc,
 }
 
 
@@ -689,6 +833,20 @@ PACOTE: dict[str, tuple] = {
     "gnssbike:LED_RGB_APTF1616_1.6x1.6mm":
         (1.60, 1.60, 0.70, 0.00, None, 0.35, 0.40, 0.80,
          "Kingbright APTF1616, desenho: 1,6 x 1,6 x 0,7"),
+    "Package_SO:SOIC-8_5.23x5.23mm_P1.27mm":
+        (5.23, 5.28, 2.16, 0.15, None, 0.41, 0.65, 1.27,
+         "Macronix MX25R6435F v1.6, pagina 79, 19 PACKAGE INFORMATION, "
+         "Package Outline for SOP 8L 200MIL: D 5,23 (5,13-5,33), E1 5,28 "
+         "(5,18-5,38), A maximo 2,16 e nominal 1,95, A1 0,15 (0,05-0,20), "
+         "b 0,41, L 0,65, e 1,27; com os terminais E 7,90. Sem pad exposto: "
+         "essa nota e do WSON, pagina 80"),
+    "Package_LGA:Bosch_LGA-14_3x2.5mm_P0.5mm":
+        (3.00, 2.50, 0.87, 0.13, None, 0.25, 0.475, 0.50,
+         "Bosch BST-BMI270-DS000, pagina 143, 8.1 Package outline dimensions: "
+         "D 3,00 (2,95-3,05), E 2,50 (2,45-2,55), A maximo 0,87 e nominal "
+         "0,83, A1 0,13, e 0,50 BSC nos dois eixos; os oito pads laterais sao "
+         "0,475 x 0,250 e os seis de topo 0,250 x 0,475, recuados L1 0,100 da "
+         "aresta (metallized pad detail, mesma pagina)"),
     "Package_TO_SOT_SMD:SOT-523":
         (1.60, 0.80, 0.75, 0.05, None, 0.22, 0.33, 0.50,
          "Diodes DS31783 Rev.8, SOT523: D 1,60, E1 0,80, A2 0,75, A1 0,05, "

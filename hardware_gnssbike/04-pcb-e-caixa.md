@@ -437,30 +437,58 @@ zona proibida. Com o ME54BS13 deitado acima das teclas, a faixa dos botões
 parafusos que o desenho da caixa ainda mostra — em (3,0; 9,0), (52,0; 9,0),
 (3,0; 88,0) e (52,0; 88,0) na placa — também ficam todos fora dela.
 
-O que apareceu no lugar é a regra **7.3** da mesma ficha: **20 mm entre a
-antena do módulo e qualquer conversor chaveado ou indutor.** O retângulo da
-zona de energia desta página termina em x 38 e a antena começa em x 49,5
-(**conta**: 49,5 − 38 = **11,5 mm**), pouco mais da metade do que a ficha
-pede — mas o retângulo é planta, não é peça. **Na placa montada em
-[`cad/`](cad/) a regra é cumprida**: o posicionador carrega a restrição
-(`LONGE_DA_ANTENA` em `cad/make_pcb.py`) e o chaveador mais próximo da
-antena é o `U101`, a **20,9 mm** medidos por
-[`cad/dry_run_pcb.py`](cad/dry_run_pcb.py) ([09](09-dry-run-da-pcb.md)).
-Antes de a restrição existir eram 16,4 mm, do `U103`.
+O que apareceu no lugar é a **regra de isolação da seção 7.2** da mesma
+ficha, `Interference Isolation Rule`, que não é uma distância só: é uma
+tabela de quatro linhas, medida **do módulo** até a fonte de interferência.
+
+| Fonte de interferência | Distância mínima recomendada | Existe nesta placa? |
+|---|---|---|
+| Fonte chaveada DC-DC, indutor de potência, transformador | **20 mm** | sim: `U101`, `U103`, `L101`, `L102`, `L103` |
+| USB 3.0 / HDMI 2.0 / DDR / SDIO de alta velocidade | 20 mm | não: o USB aqui é 2.0 full speed |
+| Clock de alta frequência de MCU, PHY Ethernet | 15 mm | não: o único clock rápido está dentro do próprio módulo |
+| **Display, câmera, cabo FPC com fiação** | **25 mm** | sim: o display e os dois cabos planos |
+
+O retângulo da zona de energia desta página termina em x 38 e a antena começa
+em x 49,5 (**conta**: 49,5 − 38 = **11,5 mm**) — mas o retângulo é planta, não
+é peça. **Na placa montada em [`cad/`](cad/) a linha dos 20 mm é cumprida**: o
+posicionador carrega a restrição (`LONGE_DO_MODULO` em `cad/make_pcb.py`) e
+a regra `RF9` de [`cad/dry_run_pcb.py`](cad/dry_run_pcb.py) mede
+([09](09-dry-run-da-pcb.md)). Sem a restrição, o `L103` fica a **6,8 mm**.
+
+> [!CAUTION]
+> **A linha dos 25 mm do display não é cumprida e não pode ser.** O display
+> mede 40,08 × 61,8 mm numa placa de 55 × 97, e o módulo fica no canto de
+> baixo à direita: a sombra do display chega a **11,3 mm** dele, contra os
+> 25 mm que a ficha pede. Não existe posição na placa que resolva isso — só
+> caberia se o display encolhesse ou a placa crescesse. A própria ficha dá a
+> saída no mesmo parágrafo (*"Isolation using different PCB layers and
+> shielding covers is recommended"*), e ela custa uma blindagem ou uma
+> camada. **A consequência no alcance só sai de bancada.** O `RF9` falha de
+> propósito enquanto isso estiver assim, para não virar esquecimento.
 
 A bolsa da bateria, atrás, termina em x 45,5, a **4 mm** da zona proibida
 (**conta**: 49,5 − 45,5), e isso continua em aberto.
 
 > [!WARNING]
-> **Nenhum verificador pega a regra dos 20 mm.** Ela não proíbe cobre,
-> proíbe **peça**, e o DRC de um CAD não conhece esse tipo de restrição.
-> Quem a cumpre é quem posiciona. Por isso ela virou uma regra do
-> posicionador e uma medida do dry-run, em vez de uma boa intenção: hoje a
-> peça chaveada mais próxima da antena está a **20,9 mm**, e o
-> `dry_run_pcb.py` falha se alguém encostar de novo. O que a regra custou
-> foi empurrar o colhedor solar e o indutor dele para a esquerda dentro da
-> zona de energia. **A consequência elétrica continua não medida: só
-> bancada diz se o alcance e o ruído ficaram onde se espera.**
+> **Nenhum DRC pega a regra dos 20 mm.** Ela não proíbe cobre, proíbe
+> **peça**, e o DRC de um CAD não conhece esse tipo de restrição. Quem a
+> cumpre é quem posiciona. Por isso ela é uma restrição do posicionador e uma
+> medida do dry-run, em vez de uma boa intenção: o `RF9` falha se alguém
+> encostar de novo. O que ela custou foi empurrar o colhedor solar e o
+> indutor dele para dentro da zona de energia, e custou **1,3 mm** ao
+> desacoplamento do `U104`, que foi de 1,7 para **3,3 mm** contra um limite
+> de 2 — a troca está registrada porque é troca, não é acidente. **A
+> consequência elétrica continua não medida: só bancada diz se o alcance e o
+> ruído ficaram onde se espera.**
+
+> [!WARNING]
+> **Esta página já afirmou que a regra dos 20 mm não existia.** Ela existe: é
+> a 7.2, `Interference Isolation Rule`, e o que se leu antes foi a 7.3, que
+> só traz o qualitativo *"do not place modules adjacent to strong
+> interference sources"*. Enquanto a afirmação valeu, a restrição saiu do
+> posicionador e um indutor de potência chegou a **6,8 mm** do módulo.
+> Corrigido em 2026-09-24, lendo a ficha `ME54BS13-nRF54LM20A_Datasheet_K_EN
+> v1.0.0` de novo, página 11.
 
 **O que a ficha do ME54BS13 não responde e a do BM20C respondia:** a regra
 dos **30 mm de metal externo** era da Fanstel. Se a MinewSemi tem
@@ -653,7 +681,8 @@ montagem, que não existe.**
 | **A antena GNSS de verdade** | a TE L000670 não cabe: faltam 2,75 mm contra a zona e 5,65 mm contra a faixa livre acima do display | [Orçamento de área](#orçamento-de-área) |
 | **Isolação entre as duas antenas** | a conta dá 67,2 mm, 0,55 λ em 2,44 GHz, 20 mm menos do que com o módulo antigo; a isolação real depende do plano, da caixa e das correntes de retorno. Medir o S21 antes de ligar o rádio na potência cheia | [As duas antenas](#as-duas-antenas), [15](../docs/15-avaliacao-componentes.md#bancada-antes-do-layout) |
 | **Harmônico de 8 MHz da flash** | 0,58 MHz do centro de L1; só o `UBX-MON-SPAN` com a flash trabalhando diz se aparece | [As duas antenas](#as-duas-antenas) |
-| **Alcance do rádio** | a regra dos **20 mm** entre a antena e um conversor chaveado (ficha 7.3) é cumprida na placa de [`cad/`](cad/) — 20,9 mm medidos —, mas a bolsa da bateria fica a 4 mm da zona proibida, e se a MinewSemi tem regra de metal externo ninguém a leu | [Zonas proibidas](#zonas-proibidas), [09](09-dry-run-da-pcb.md) |
+| **Alcance do rádio** | a linha de **20 mm** da tabela de isolação (ficha **7.2**) é cumprida na placa de [`cad/`](cad/), mas a de **25 mm do display não é e não pode ser** — 11,3 mm medidos; a bolsa da bateria fica a 4 mm da zona proibida; e se a MinewSemi tem regra de metal externo ninguém a leu | [Zonas proibidas](#zonas-proibidas), [09](09-dry-run-da-pcb.md) |
+| **Área do FPC do display** | os **3,4 × 10 mm** da tabela de zonas não saem de ficha nenhuma: o PDF do Hirose FH28 que está em `datasheets/` é só a folha de especificação (ELC4-153887-02), **sem vista, sem corte e sem tabela de cotas**. Falta a folha de desenho da Hirose, ou medir uma amostra | [Orçamento de área](#orçamento-de-área) |
 | **Folga entre placa e caixa** | 3,5 mm no desenho contra os 2,5 mm que [14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso) descreve | [O contorno](#o-contorno) |
 | **Raio de canto da placa** | 3 mm no [desenho](../tools/docs/case_drawing.py) contra os 4 mm de [14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso); as duas fontes discordam e nenhuma foi confirmada | [O contorno](#o-contorno) |
 | **Face de cada peça e ordem do forno** | a conta põe o ME54BS13 na frente; o arquivo de montagem não existe | [Montagem](#montagem) |

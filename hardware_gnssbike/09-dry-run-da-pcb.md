@@ -73,6 +73,8 @@ trilhas de uma colocação que pode já ter mudado.
 | RF6 | terra sob o módulo GNSS na primeira e na segunda camada, sem trilha de sinal cruzando por baixo nessas duas | u-blox MAX-F10S IM, **4.4** |
 | RF7 | a rede π do GNSS junto ao `RF_IN`, com a trilha mais curta possível | u-blox MAX-F10S IM, **4.4** |
 | RF8 | as duas antenas o mais longe possível uma da outra | u-blox MAX-F10S IM, **4.4** |
+| RF9 | a **tabela de isolação** do módulo: **20 mm** de fonte chaveada, indutor de potência ou transformador; 20 mm de USB 3.0/HDMI/DDR/SDIO rápido; 15 mm de clock rápido de MCU ou PHY Ethernet; **25 mm** de display, câmera ou cabo FPC com fiação | ficha ME54BS13 V1.0.0, **7.2**, `Interference Isolation Rule` |
+| RF10 | **50 mm** entre dois módulos de rádio na mesma placa | ficha ME54BS13 V1.0.0, **7.2**, `Multiple Modules on the Same PCB` |
 | AL1 | desacoplamento do **módulo de rádio a 0,5 mm** do pino; dos demais CIs, 2 mm o de alta frequência e 5 mm o de reserva | ficha ME54BS13 V1.0.0, **7.2**; fichas do nPM1300, AEM10900, TPS7A02 |
 | AL2 | largura de trilha suficiente para a corrente, com 10 °C de subida | IPC-2221B, 6.2, curva de condutor externo |
 | AL3 | laço de chaveamento curto: `SW` ao indutor e ao capacitor de saída | ficha do nPM1300, layout recomendado |
@@ -83,23 +85,37 @@ trilhas de uma colocação que pode já ter mudado.
 | ME1 | a placa cabe na caixa com folga | [04](04-pcb-e-caixa.md) |
 | ME2 | altura dos componentes dentro da sombra da bateria e do display | [04](04-pcb-e-caixa.md#as-duas-sombras-display-e-bateria) |
 
-> [!WARNING]
-> **Duas destas regras estavam erradas até 2026-09-24, e a correção veio de
-> ler os PDF.** Este documento afirmava *"20 mm entre a antena do módulo e
-> qualquer conversor chaveado ou indutor, ficha 7.3"*. **Essa regra não
-> existe.** O que 7.3 diz é o qualitativo "não coloque o módulo ao lado de
-> fontes fortes de interferência"; o número que a ficha dá é o **3 a 5 mm** de
-> 7.4, em volta da **área da antena**, e vale para **qualquer** peça, não só
-> para chaveador. E o desacoplamento do módulo não é de 2 mm: 7.2 escreve
-> *"the trace length between capacitor pads and power pins should be
-> ≤ 0.5 mm"*.
+> [!CAUTION]
+> **Este documento já errou duas vezes sobre a mesma ficha, nos dois
+> sentidos, e as duas correções estão aqui.**
 >
-> O estrago que a regra falsa fez: ela mantinha a fonte chaveada a 20 mm e,
-> ao mesmo tempo, **deixava dez peças a menos de 5 mm da antena, uma delas a
-> 0,8 mm**. Medir a coisa errada com rigor não é rigor.
+> **Primeiro erro.** Ele afirmava *"20 mm entre a antena do módulo e qualquer
+> conversor chaveado ou indutor"* e nada mais, sem a tabela. Com isso mantinha
+> a fonte chaveada longe e, ao mesmo tempo, **deixava dez peças a menos de
+> 5 mm da antena, uma delas a 0,8 mm** — porque o **3 a 5 mm** da 7.4, que
+> vale para **qualquer** peça em volta da área da antena, não estava sendo
+> medido. Corrigido: virou o `RF3`.
 >
-> Os dois PDF estão em [`datasheets/`](datasheets/), que o `.gitignore` mantém
-> fora deste repositório público; o que é versionado são as citações.
+> **Segundo erro, ao corrigir o primeiro.** Ele passou a afirmar que a regra
+> dos 20 mm **não existia**, porque foi procurada na 7.3 — que de fato só traz
+> o qualitativo *"do not place modules adjacent to strong interference
+> sources"*. Ela existe, na **7.2**, `Interference Isolation Rule`, e é uma
+> **tabela de quatro linhas**. Enquanto essa afirmação valeu, a restrição saiu
+> do posicionador e o indutor `L103` chegou a **6,8 mm** do módulo. Corrigido:
+> virou o `RF9`, com as quatro linhas, inclusive a de **25 mm de display ou
+> cabo FPC**, que nenhuma versão deste documento tinha.
+>
+> O que continua valendo da primeira correção: o desacoplamento do módulo é de
+> **0,5 mm**, não de 2 — a 7.2 escreve *"the trace length between capacitor
+> pads and power pins should be ≤ 0.5 mm"*.
+>
+> A lição, escrita porque custou duas passagens: **"não achei" não é "não
+> existe"**. Medir a coisa errada com rigor não é rigor, e apagar uma regra
+> porque ela não estava na seção em que se olhou é pior do que não tê-la
+> medido.
+>
+> Os PDF estão em [`datasheets/`](datasheets/), que o `.gitignore` mantém fora
+> deste repositório público; o que é versionado são as citações.
 
 ### Por que RF3 não é uma zona proibida
 
