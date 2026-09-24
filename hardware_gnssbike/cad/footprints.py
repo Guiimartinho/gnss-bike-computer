@@ -45,6 +45,7 @@ _fp(["R102", "R103", "R104", "R105", "R106", "R107", "R108", "R109", "R110",
      "R111", "R112", "R401", "R402", "R403", "R404", "R405", "R501", "R502",
      "R503", "R504", "R505", "R506", "R507", "R508", "R601", "R602", "R603",
      "R604", "R605", "R606", "R607", "R608", "R609", "R610", "R611",
+     "R113", "R114", "R115",
      "JP102", "JP103", "JP104", "JP105", "JP106", "JP401"], R0402,
     "ENCAPSULAMENTO", "0402; a lista de compras usa a serie Panasonic ERJ-2")
 _fp("JP101", "Resistor_SMD:R_1206_3216Metric", "ENCAPSULAMENTO",
@@ -73,7 +74,7 @@ _fp("U103", "Package_DFN_QFN:QFN-28-1EP_4x4mm_P0.4mm_EP2.3x2.3mm",
     "ENCAPSULAMENTO", "AEM10900 QFN28 4x4 P0,4; pad termico e o pino 29")
 _fp("U104", "Package_SON:Texas_X2SON-4_1x1mm_P0.65mm", "EXATO",
     "TPS7A02 em DQN; o pad termico e o pino 5")
-_fp("U501", "Package_SO:SOIC-8_5.23x5.23mm_P1.27mm", "ENCAPSULAMENTO",
+_fp("U501", "Package_SO:SOIC-8_5.275x5.275mm_P1.27mm", "ENCAPSULAMENTO",
     "MX25R6435F em SOP-8 de 200 mil")
 _fp("U503", "Package_LGA:Bosch_LGA-14_3x2.5mm_P0.5mm", "EXATO",
     "BMI270, LGA-14 da Bosch")
@@ -81,9 +82,10 @@ _fp(["Q401", "Q601", "Q602", "Q603"], "Package_TO_SOT_SMD:SOT-523",
     "ENCAPSULAMENTO", "DMG1012T-7; a Diodes nao numera os terminais")
 
 # ---------------------------------------------------------------- conectores
-_fp("J101", "Connector_USB:USB_C_Receptacle_Palconn_UTC16-G", "ENCAPSULAMENTO",
-    "USB-C de 16 contatos; os nomes de pad batem com o padrao USB-IF. "
-    "O Molex 2036150003 e IPX8 e tem furos de blindagem proprios")
+_fp("J101", "Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12", "EXATO",
+    "USB-C de 16 contatos do HRO TYPE-C-31-M-12, que e a peca da lista: o "
+    "footprint do KiCad tem o nome da peca. Os nomes de pad batem com o "
+    "padrao USB-IF e o S1 da blindagem agora tem pino no esquematico")
 _fp("J102", "Connector_JST:JST_GH_SM06B-GHS-TB_1x06-1MP_P1.25mm_Horizontal",
     "EXATO", "JST GH de 6 vias, entrada lateral")
 _fp("J201", "Connector:Tag-Connect_TC2030-IDC-NL_2x03_P1.27mm_Vertical", "EXATO",
@@ -100,11 +102,19 @@ import parts as _P  # noqa: E402
 
 _fp([t[0] for t in _P.TESTE] + ["TP201", "TP202", "TP203"],
     "TestPoint:TestPoint_Pad_D1.0mm", "EXATO", "")
+_fp("JP301", "gnssbike:JumperRF_3x0402", "GERADO",
+    "escolhe entre a antena de chip soldada e o u.FL")
 _fp("J302", "Connector_Coaxial:U.FL_Hirose_U.FL-R-SMT-1_Vertical", "EXATO",
     "conector da antena GNSS: 50 ohm coaxial, no lugar do contato de mola")
-_fp(["J103", "J104", "J105"], "gnssbike:ContatoMola_2x2mm_P3mm",
-    "GERADO",
-    "dois pads de 2,0 x 2,0 mm a 3,0 mm de passo, sem pasta: a mola encosta, nao se solda")
+_fp("J103", "Connector_JST:JST_ZH_S4B-ZR-SM4A-TF_1x04-1MP_P1.50mm_Horizontal",
+    "EXATO",
+    "entrada dos painéis: ZH de 1,5 mm, 4 vias - tres grupos de dois "
+    "modulos e um terra comum. "
+    "Passo diferente do GH de 1,25 da bateria de proposito, para os dois "
+    "chicotes nao trocarem de lugar")
+_fp("D105", "Diode_SMD:D_SOD-523", "ENCAPSULAMENTO",
+    "grampo do SRC; a peca ainda nao foi escolhida, o SOD-523 e so o "
+    "encapsulamento mais provavel de um TVS pequeno de fuga baixa")
 
 # ---------------------------------------------------------------- interface
 _fp(["SW601", "SW602", "SW603"], "Button_Switch_SMD:SW_SPST_B3S-1000", "EXATO",
@@ -145,7 +155,9 @@ CORPO_TODOS: dict[str, tuple[float, float, float]] = {}
 CORPO: dict[str, tuple[float, float, float]] = {
     # nome do footprint -> largura, altura em planta, altura do corpo (mm)
     "gnssbike:MinewSemi_ME54BS13_16.5x12mm": (12.00, 16.50, 2.40),
-    "gnssbike:u-blox_MAX-F10S_9.7x10.1mm": (9.70, 10.10, 2.40),
+    # altura: a ficha da 2,5 tipico e 2,7 MAXIMO (cota C da tabela 21).
+    # Para folga de tampa vale o maximo, nao o tipico.
+    "gnssbike:u-blox_MAX_LCC-18_9.7x10.1mm": (9.70, 10.10, 2.70),
     # 1,448 x 1,468 x 0,64, do desenho 21-100168 Rev A. O nome do
     # footprint ainda diz 1.4x1.4: e o nome, nao a cota.
     "gnssbike:MAX17262_WLP-9_1.4x1.4mm_P0.4mm": (1.448, 1.468, 0.64),
@@ -250,15 +262,23 @@ def wlp(nome, linhas, colunas, pitch, bola, corpo_w, corpo_h, descr):
 
 
 def duas_bordas(nome, n_por_lado, pitch, pad_w, pad_h, span, corpo_w, corpo_h,
-                descr, primeiro_lado="R"):
-    """A module: pads down one edge and up the other, 1..n."""
+                descr, primeiro_lado="R", pad_h_canto=None):
+    """A module: pads down one edge and up the other, 1..n.
+
+    `pad_h_canto` narrows the first and the last pad of each row. u-blox asks
+    for that on the MAX form factor - K = 0,8 for a normal pad and L = 0,7 for
+    a corner one - and the reason is the corner castellation, which is wider
+    than the others and would bridge to its neighbour on a full-width pad.
+    """
     pads = []
     y0 = -(n_por_lado - 1) * pitch / 2.0
     for i in range(n_por_lado):
-        pads.append(_pad(str(i + 1), span / 2.0, -y0 - i * pitch, pad_w, pad_h))
+        h = pad_h_canto if (pad_h_canto and i in (0, n_por_lado - 1)) else pad_h
+        pads.append(_pad(str(i + 1), span / 2.0, -y0 - i * pitch, pad_w, h))
     for i in range(n_por_lado):
+        h = pad_h_canto if (pad_h_canto and i in (0, n_por_lado - 1)) else pad_h
         pads.append(_pad(str(n_por_lado + i + 1), -span / 2.0, y0 + i * pitch,
-                         pad_w, pad_h))
+                         pad_w, h))
     return _corpo(nome, corpo_w, corpo_h, pads, descr)
 
 
@@ -296,11 +316,33 @@ def _gerar():
         "gnssbike:TXU0204_WQFN-14_3x2.5mm_P0.5mm", 14, 0.5, 0.45, 0.28, 2.6,
         3.0, 2.5, "TI TXU0204 em BQA, WQFN-14 com pad termico; "
                   "land pattern aproximado", ep=("PAD", 1.6, 1.6))
-    # MAX-F10S: MAX form factor, 9.7 x 10.1 mm, 18 pads, 9 per edge.
-    GERADOS["gnssbike:u-blox_MAX-F10S_9.7x10.1mm"] = duas_bordas(
-        "gnssbike:u-blox_MAX-F10S_9.7x10.1mm", 9, 1.1, 1.4, 0.8, 9.0,
-        9.7, 10.1, "u-blox MAX-F10S; 18 pads, 9 por borda. Passo e tamanho de "
-                   "pad aproximados: o desenho de montagem nao foi lido")
+    # MAX form factor, 9,7 x 10,1 mm, 18 pads, 9 per edge, LCC with half
+    # vias on the two long edges. It carries EITHER receiver: the MAX-F10S
+    # and the MAX-M10S have the same 18 pins, the same names, the same
+    # directions, the same package and the same recommended land pattern -
+    # MAX-F10S data sheet UBXDOC-963802114-12732 R03 table 10 and figure 4
+    # against MAX-M10S data sheet UBX-20035208 R08 table 10 and figure 4.
+    #
+    # The numbers below are that land pattern, read at last: M10S
+    # integration manual UBX-20053088 R05 table 44, whose every value the
+    # dimensioned figure 25 of the F10S manual repeats.
+    #
+    #   pad into the body      M = 1,0        body edge at 4,85
+    #   pad out of the body    N = 0,8   ->   pad from 3,85 to 5,65
+    #   pad length                             1,8, centred at 4,75
+    #   normal pad width       K = 0,8
+    #   corner pad width       L = 0,7
+    #
+    # What was here before had a 1,4 mm pad centred at 4,50: it reached the
+    # right 1,05 mm under the module but left only 0,35 mm outside instead of
+    # 0,8. That outside part is what lets the solder climb the half via and
+    # is the only part of the joint anyone can inspect.
+    GERADOS["gnssbike:u-blox_MAX_LCC-18_9.7x10.1mm"] = duas_bordas(
+        "gnssbike:u-blox_MAX_LCC-18_9.7x10.1mm", 9, 1.1, 1.8, 0.8, 9.5,
+        9.7, 10.1, "u-blox MAX-F10S ou MAX-M10S; 18 pads, 9 por borda, passo "
+                   "1,1. Land pattern da tabela 44 do UBX-20053088 R05, "
+                   "confirmado na figura 25 do UBXDOC-963802114-12892",
+        pad_h_canto=0.7)
     # Kingbright APTF1616 RGB, 1.6 x 1.6 mm, four terminals.
     GERADOS["gnssbike:LED_RGB_APTF1616_1.6x1.6mm"] = son(
         "gnssbike:LED_RGB_APTF1616_1.6x1.6mm", 4, 0.8, 0.45, 0.55, 1.5,
@@ -330,9 +372,14 @@ ALTURA: dict[str, tuple[float, str]] = {
     # lido no desenho cotado da ficha da Omron, pagina 2
     "Button_Switch_SMD:SW_SPST_B3S-1000": (3.40, "Omron B3S-1002P, desenho "
         "cotado da ficha: altura total 3,4 mm, embolo de 3,3 mm saindo 0,7"),
-    "Connector_USB:USB_C_Receptacle_Palconn_UTC16-G": (3.26, "altura corrente "
-        "de um receptaculo USB-C de montagem em superficie - CONFERIR na "
-        "ficha do Molex 2036150003, que e a peca da lista de compras"),
+    "Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12": (3.26, "altura "
+        "corrente de um receptaculo USB-C de montagem em superficie - "
+        "CONFERIR na ficha do HRO TYPE-C-31-M-12 (LCSC C165948)"),
+    "Connector_JST:JST_ZH_S4B-ZR-SM4A-TF_1x04-1MP_P1.50mm_Horizontal": (4.50,
+        "altura corrente de um header ZH de entrada lateral - CONFERIR na "
+        "ficha da JST"),
+    "Diode_SMD:D_SOD-523": (0.65, "altura corrente de um SOD-523 - a peca do "
+        "D105 ainda nao foi escolhida"),
 
     "Connector_FFC-FPC:TE_0-1734839-5_1x05-1MP_P0.5mm_Horizontal": (1.20,
         "conector FPC horizontal de passo 0,5 - CONFERIR: a peca ainda nao "
@@ -342,7 +389,7 @@ ALTURA: dict[str, tuple[float, str]] = {
     # of these the moment its own datasheet is read, and altura_de() below is
     # what enforces that, so a number here can never quietly outlive the real
     # one: the QFN said 0.90 when its datasheet says 0.80.
-    "Package_SO:SOIC-8_5.23x5.23mm_P1.27mm": (2.00, "altura normal do SOIC-8 "
+    "Package_SO:SOIC-8_5.275x5.275mm_P1.27mm": (2.00, "altura normal do SOIC-8 "
         "de 200 mil - CONFERIR no desenho da Macronix"),
     # NAO lida de ficha nenhuma, porque nao ha peca escolhida: a mola so
     # precisa sobrar da placa para ser esmagada quando a caixa fecha, e
@@ -862,10 +909,15 @@ def wrl_usb_c(caminho, w: float, h: float, alt: float) -> None:
 DESENHADOS = {
     "gnssbike:MinewSemi_ME54BS13_16.5x12mm":
         lambda c, w, h, a: wrl_me54bs13(c),
-    "gnssbike:u-blox_MAX-F10S_9.7x10.1mm": wrl_max_f10s,
+    "gnssbike:u-blox_MAX_LCC-18_9.7x10.1mm": wrl_max_f10s,
     "Button_Switch_SMD:SW_SPST_B3S-1000": wrl_tecla,
     "gnssbike:Buzzer_CPT-1117-83-SMT_11x9mm": wrl_buzzer,
-    "Connector_USB:USB_C_Receptacle_Palconn_UTC16-G": wrl_usb_c,
+    # wrl_usb_c desenha o Molex 2036150003, que saiu da lista em
+    # 2026-09-24 (309 unidades no mundo). O HRO TYPE-C-31-M-12 que
+    # entrou no lugar ainda nao teve o desenho cotado lido, e desenhar
+    # o corpo do Molex com o nome do HRO seria pior do que nao desenhar:
+    # sem entrada aqui, o 3D usa o contorno F.Fab do proprio footprint
+    # do KiCad, que e o contorno do encapsulamento certo.
     "gnssbike:ContatoMola_2x2mm_P3mm": wrl_mola,
     "gnssbike:LED_RGB_APTF1616_1.6x1.6mm": wrl_led_rgb,
     # Only the TE one. The Hirose FH12 has a model in KiCad's own library and
@@ -950,16 +1002,13 @@ PACOTE: dict[str, tuple] = {
          "folga corpo-placa 0,1, rabichos SMT saindo 0,8 pela face de tras. "
          "Corpo de PA natural (marfim), contatos e reforcos de liga de cobre "
          "estanhada"),
-    "Connector_USB:USB_C_Receptacle_Palconn_UTC16-G":
-        (9.99, 8.58, 4.21, 0.20, None, 0.30, 0.90, 0.50,
-         "Molex 2036150003 Product Customer Drawing (PSD 000 rev A, "
-         "2022-04-14), folha 1: 9,99 +-0,12 na flange de vedacao por 8,58 de "
-         "profundidade, 4,21 +-0,12 acima da superficie de montagem, carcaca "
-         "principal 3,56 elevada 0,20 da placa, boca Type-C de 8,34 x 2,56, "
-         "16 rabichos SMT a 0,5 mais 2 pernas passantes. Carcacas de aco "
-         "inoxidavel, alojamento de nylon com fibra de vidro PRETO, anel de "
-         "vedacao de borracha de silica PRETA de 1,15 de espessura (o IPX8). "
-         "CUIDADO: o footprint em uso e do Palconn UTC16-G, nao deste"),
+    # O Molex 2036150003 saiu da lista em 2026-09-24: 309 unidades no
+    # mundo a US$ 5,69, contra 91.943 a US$ 0,186 do HRO TYPE-C-31-M-12
+    # (LCSC C165948), que e o USB-C mais usado do catalogo da JLCPCB.
+    # As cotas do HRO ainda nao foram lidas em desenho cotado, entao
+    # nao ha entrada aqui: uma cota inventada passaria pelo ME3 sem
+    # dizer nada. Corpo de 7,35 mm segundo a parametria da LCSC contra
+    # 8,58 do Molex, e a abertura da caixa muda com isso.
     "Connector_FFC-FPC:Hirose_FH12-10S-0.5SH_1x10-1MP_P0.50mm_Horizontal":
         (9.90, 5.70, 2.55, 0.00, None, 0.30, 0.70, 0.50,
          "Hirose, catalogo da serie FH28 (2019.9 quarta edicao), pagina 3, "
@@ -978,7 +1027,7 @@ PACOTE: dict[str, tuple] = {
          "chato, terminais de 0,3 em cada ponta subindo pelas laterais. "
          "Lente Water Clear (transparente, nao difusa); a COR DO CORPO nao "
          "consta na ficha"),
-    "Package_SO:SOIC-8_5.23x5.23mm_P1.27mm":
+    "Package_SO:SOIC-8_5.275x5.275mm_P1.27mm":
         (5.23, 5.28, 2.16, 0.15, None, 0.41, 0.65, 1.27,
          "Macronix MX25R6435F v1.6, pagina 79, 19 PACKAGE INFORMATION, "
          "Package Outline for SOP 8L 200MIL: D 5,23 (5,13-5,33), E1 5,28 "
@@ -1183,7 +1232,7 @@ _fp("D101", "gnssbike:ESD761_X1SON-2_1x0.6mm", "GERADO", "")
 _fp("D102", "gnssbike:TPD4E05U06_USON-10_1x2.5mm_P0.5mm", "GERADO", "")
 _fp("U502", "gnssbike:BMP585_LGA-8_3.25x3.25mm", "GERADO", "")
 _fp("U302", "gnssbike:TXU0204_WQFN-14_3x2.5mm_P0.5mm", "GERADO", "")
-_fp("U301", "gnssbike:u-blox_MAX-F10S_9.7x10.1mm", "GERADO", "")
+_fp("U301", "gnssbike:u-blox_MAX_LCC-18_9.7x10.1mm", "GERADO", "")
 _fp("D601", "gnssbike:LED_RGB_APTF1616_1.6x1.6mm", "GERADO", "")
 
 
@@ -1278,6 +1327,23 @@ def buzzer_cpt1117() -> str:
                   "buzzer piezo SMD 11,0 x 9,0 x 1,7, duas abas a 10,5 mm")
 
 
+def jumper_rf() -> str:
+    """Three pads at 0402 pitch: a 0 ohm bridges the middle to one side.
+
+    The geometry is the KiCad 0402 land pattern repeated - pads of
+    0,59 x 0,66 mm with 0,975 mm between centres - so an ordinary 0402 0 ohm
+    fits either pair. Nothing here is a number from a datasheet, because
+    there is no part: it is a land pattern for a jumper, and it is drawn from
+    the 0402 the rest of the board already uses.
+    """
+    pads = [_pad("1", -0.975, 0.0, 0.59, 0.66, forma="roundrect"),
+            _pad("2", 0.0, 0.0, 0.59, 0.66, forma="roundrect"),
+            _pad("3", 0.975, 0.0, 0.59, 0.66, forma="roundrect")]
+    return _corpo("gnssbike:JumperRF_3x0402", 2.56, 0.66, pads,
+                  "escolha de antena: 0 ohm entre o pad do meio e um dos lados")
+
+
+GERADOS["gnssbike:JumperRF_3x0402"] = jumper_rf()
 GERADOS["gnssbike:Buzzer_CPT-1117-83-SMT_11x9mm"] = buzzer_cpt1117()
 GERADOS["gnssbike:ContatoMola_2x2mm_P3mm"] = contato_mola()
 _fp("U201", "gnssbike:MinewSemi_ME54BS13_16.5x12mm", "GERADO",

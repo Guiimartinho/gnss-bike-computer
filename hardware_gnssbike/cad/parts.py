@@ -25,7 +25,7 @@ UNCONFIRMED: set[str] = set()
 
 
 def add(ref: str, value: str, pins: list[tuple], *, confirmed: bool,
-        note: str = "", footprint: str = "") -> Part:
+        note: str = "", footprint: str = "", lcsc: str = "") -> Part:
     """pins: (number, name, etype, side). number None means 'not read yet'."""
     ps = []
     for number, name, etype, side in pins:
@@ -33,23 +33,34 @@ def add(ref: str, value: str, pins: list[tuple], *, confirmed: bool,
     if not confirmed:
         UNCONFIRMED.add(ref)
         note = (note + " | PINAGEM NAO CONFIRMADA NA FICHA").strip(" |")
-    p = Part(ref, value, tuple(ps), footprint=footprint, note=note)
+    p = Part(ref, value, tuple(ps), footprint=footprint, note=note, lcsc=lcsc)
     PARTS[ref] = p
     return p
 
 
-def passive(ref: str, value: str, note: str = "", vertical: bool = False) -> Part:
+def passive(ref: str, value: str, note: str = "", vertical: bool = False,
+            lcsc: str = "") -> Part:
     """A two-terminal part. Pins 1 and 2 are the two ends, which is universal."""
     sides = (T, B) if vertical else (L, R)
     return add(ref, value, [(1, "1", "passive", sides[0]), (2, "2", "passive", sides[1])],
-               confirmed=True, note=note)
+               confirmed=True, note=note, lcsc=lcsc)
 
 
 # ---------------------------------------------------------------- folha 1
-# Molex 2036150003, sales drawing 2036150003 PSD 000 rev A: a USB 2.0
-# receptacle with 16 of the 24 contacts, numbered as the USB-IF standard does.
+# The board is made AND assembled at JLCPCB, so every part here has to be one
+# LCSC stocks - the owner's rule of 2026-09-24, with the Minew module and the
+# solar cells as the only exceptions. That is why the `lcsc=` field exists and
+# why several parts below are not the ones the earlier drafts chose.
+#
+# The USB-C receptacle was the Molex 2036150003: 309 in the world at US$ 5,69.
+# This one is the most used USB-C of JLCPCB's whole catalogue - 91.943 in
+# stock at US$ 0,186 - and it carries the same 16 of the 24 USB-IF contacts.
 # A2, A3, A10, A11, B2, B3, B10 and B11 (the SuperSpeed pairs) do not exist.
-add("J101", "Molex 2036150003", [
+#
+# S1 is the shell. It was not in the part before, so the four shell pads of
+# the land pattern sat unconnected; a USB shell that floats is an antenna on
+# the one edge of the board that leaves the case.
+add("J101", "HRO TYPE-C-31-M-12", [
     ("A4", "VBUS_A4", "power_out", T), ("A9", "VBUS_A9", "power_out", T),
     ("B4", "VBUS_B4", "power_out", T), ("B9", "VBUS_B9", "power_out", T),
     ("A5", "CC1", "passive", R), ("B5", "CC2", "passive", R),
@@ -58,15 +69,28 @@ add("J101", "Molex 2036150003", [
     ("A8", "SBU1", "passive", R), ("B8", "SBU2", "passive", R),
     ("A1", "GND_A1", "power_out", B), ("A12", "GND_A12", "power_out", B),
     ("B1", "GND_B1", "power_out", B), ("B12", "GND_B12", "power_out", B),
-], confirmed=True,
-    note="USB-C IPX8, 16 contatos, USB 2.0. As pernas da blindagem sao dois "
-         "furos marcados GND no desenho, sem numero de contato")
+    ("S1", "SHELL", "passive", B),
+], confirmed=True, lcsc="C165948",
+    note="USB-C de 16 contatos, USB 2.0, SMD de borda, 20 V / 5 A, 10.000 "
+         "ciclos. Substitui o Molex 2036150003 (309 unidades, US$ 5,69): "
+         "corpo de 7,35 mm no lugar de 8,58, land pattern proprio, e a "
+         "abertura da caixa muda. CONFERIR o desenho antes de fabricar")
 
-# ESD761: SLVSH10C. It is a BIDIRECTIONAL clamp between IO and GND - it has no
-# anode and no cathode, which is what a draft of this schematic assumed.
-add("D101", "ESD761DPYR", [
+# ESD761 is gone: zero stock at LCSC and at JLCPCB, both sides. This is the
+# same X1SON-2 land pattern and a better capacitance (0,42 pF against 1,1),
+# but it is NOT the same part: the ESD761 was a bidirectional clamp with 24 V
+# of standoff and this one is UNIDIRECTIONAL with 5,5 V. Two consequences:
+# the symbol is polarised, so orientation now matters on the board and on the
+# silkscreen; and a faulty cable that puts 20 V on a CC line is no longer
+# survivable. The bidirectional part that is in stock, TPD1E10B06DPYR
+# (C48260, 299.830 units), costs 12 pF instead of 0,42 - fine for CC, which
+# is hundreds of kbps, and not fine for D+/D-.
+add("D101", "TPD1E05U06DPYR", [
     (1, "IO", "passive", L), (2, "GND", "passive", B),
-], confirmed=True, note="TVS do VBUS, bidirecional, 24 V de trabalho")
+], confirmed=True, lcsc="C436349",
+    note="TVS do VBUS, X1SON-2, 0,42 pF, 5,5 V de trabalho, clamp em 14 V. "
+         "UNIDIRECIONAL: o ESD761 que estava aqui era bidirecional de 24 V e "
+         "esta com estoque zero. Orientacao passa a importar")
 
 # TPD4E05U06 in DQA is a USON of TEN pins, 1.0 x 2.5 mm: four ESD channels,
 # two grounds and four pins TI means to be used for straight-through routing,
@@ -76,7 +100,7 @@ add("D102", "TPD4E05U06DQAR", [
     (4, "D2P", "passive", R), (5, "D2N", "passive", R), (6, "NC1", "passive", R),
     (7, "NC2", "passive", R), (8, "GND2", "passive", B),
     (9, "NC3", "passive", R), (10, "NC4", "passive", R),
-], confirmed=True, note="ESD de CC1, CC2, D+ e D-")
+], confirmed=True, lcsc="C138714", note="ESD de CC1, CC2, D+ e D-")
 
 # nPM1300 Product Specification v1.1, table 35 and figure 50, QFN32.
 # Note VSET1 and VSET2, not RVSET; and VDDIO on pin 12, which is the supply of
@@ -100,10 +124,18 @@ add("U101", "nPM1300-QEAA", [
     (29, "LSOUT1", "power_out", R), (30, "LSIN2", "power_in", L),
     (31, "LSOUT2", "power_out", R), (32, "VOUT2", "power_out", R),
     (33, "AVSS", "power_in", B),
-], confirmed=True, note="PMIC: carregador, 2 bucks, 2 chaves de carga")
+], confirmed=True,
+    note="PMIC: carregador, 2 bucks, 2 chaves de carga. FICA no QFN-32 e vai "
+         "por CONSIGNACAO na JLCPCB: estoque zero na LCSC nos dois carreteis. "
+         "A versao WLCSP-35 (C25346894) tem estoque, mas o passo de bolas de "
+         "0,419 x 0,440 mm e menor que a via de 0,45 da placa e obrigaria "
+         "via-in-pad na placa inteira, provavel ida para 6 camadas, dobro da "
+         "resistencia termica (24,2 para 48,3 C/W) e anteparo de luz na caixa "
+         "(secao 5.2 da ficha: o WLCSP e sensivel a luz e este aparelho tem "
+         "painel solar). Nao compensa")
 
-passive("L101", "2,2 uH", "indutor do BUCK1")
-passive("L102", "2,2 uH", "indutor do BUCK2")
+passive("L101", "2,2 uH", "indutor do BUCK1", lcsc="C337891")
+passive("L102", "2,2 uH", "indutor do BUCK2", lcsc="C337891")
 
 # MAX17262 datasheet 19-100308 rev 0, WLP of nine balls. The 7 mOhm sense is
 # internal, between BATT and SYS: the electrical table gives RSNS = 7 mOhm and
@@ -114,7 +146,7 @@ add("U102", "MAX17262REWL", [
     ("B2", "ALRT", "open_collector", R), ("B3", "SYS", "power_out", R),
     ("C1", "SDA", "bidirectional", L), ("C2", "REG", "power_out", R),
     ("C3", "GND", "power_in", B),
-], confirmed=True, note="medidor de carga; sensor de 7 mOhm INTERNO entre BATT e SYS")
+], confirmed=True, lcsc="C5328777", note="medidor de carga; sensor de 7 mOhm INTERNO entre BATT e SYS")
 
 # AEM10900, DS-AEM10900-v1.6.0, figure 3 and table 2, QFN28 plus thermal pad.
 # There are no CSRC, CINT, CSTO or RDIV pins: a draft of this schematic
@@ -138,16 +170,20 @@ add("U103", "AEM10900", [
     (29, "GND_PAD", "power_in", B),
 ], confirmed=True,
     note="colhedor solar com MPPT; VINT sai em dois pinos, 6 e 18; o pad "
-         "termico e o pino 29 e e a ligacao principal de GND")
+         "termico e o pino 29 e e a ligacao principal de GND. Vai por "
+         "CONSIGNACAO na JLCPCB: a LINHA E-PEAS INTEIRA esta com estoque zero "
+         "na LCSC - AEM10300, 10330, 10900, 10920, 10941, 30330, 30940, "
+         "13920, 00300 e 00330. A DigiKey tambem nao vende: Mouser ou a "
+         "propria e-peas")
 
-passive("L103", "4,7 uH", "indutor do SW_DCDC")
+passive("L103", "4,7 uH", "indutor do SW_DCDC", lcsc="C88536")
 
 # TPS7A02 in DQN is an X2SON of four pins, 1.0 x 1.0 mm, not a SOT-563.
 add("U104", "TPS7A0218PDQN", [
     (1, "OUT", "power_out", R), (2, "GND", "power_in", B),
     (3, "EN", "input", L), (4, "IN", "power_in", L),
     (5, "PAD", "power_in", B),
-], confirmed=True, note="LDO de 1,8 V do VBCKP do receptor; pad termico ao GND")
+], confirmed=True, lcsc="C2862166", note="LDO de 1,8 V do VBCKP do receptor; pad termico ao GND")
 
 # KXOB25-05X3F: the datasheet does NOT number the terminals. The silkscreen on
 # the back marks + on one pad and - on the other, and 1 and 2 below follow the
@@ -162,11 +198,11 @@ for i in range(1, 7):
 add("J102", "JST SM06B-GHS-TB", [
     (1, "1", "passive", R), (2, "2", "passive", R), (3, "3", "passive", R),
     (4, "4", "passive", R), (5, "5", "passive", R), (6, "6", "passive", R),
-], confirmed=True,
+], confirmed=True, lcsc="C133065",
     note="conector da celula, 6 vias, passo 1,25 mm; o catalogo da JST nao da "
          "funcao a contato nenhum, e quem decide e o fabricante do pack")
 
-passive("RT101", "10 k B3380", "NTC do TH_MON, na face de tras sob a celula")
+passive("RT101", "10 k B3380", "NTC do TH_MON, na face de tras sob a celula", lcsc="C209959")
 # APT1608SURCK spec DSAD0926 rev V.22A: the cathode bar is on terminal 1, so
 # the ANODE IS TERMINAL 2. A draft of this schematic had it the other way.
 add("D103", "APT1608SURCK", [(1, "K", "passive", L), (2, "A", "passive", R)],
@@ -285,16 +321,56 @@ for n in [t[0] for t in TESTE] + ["TP201", "TP202", "TP203"]:
 for n, v in (("C201", "100 nF"), ("C210", "4,7 uF")):
     passive(n, v)
 
-# Onde os tres grupos de modulos solares encostam na placa. Eles estao na
-# caixa - dois na face inclinada e dois em cada chanfro - e 04:388 os liga
-# "em 3 grupos, mola ou FPC". Sem estes pads a rede SRC nao saia do
-# colhedor: os seis modulos ficavam sem destino.
-for _n in ("J103", "J104", "J105"):
-    add(_n, "contato de mola, 2 vias", [
-        (1, "P", "passive", R), (2, "N", "passive", B),
-    ], confirmed=False,
-        note="um grupo de dois modulos KXOB25-05X3F; dois pads de 2,0 x 2,0 mm "
-             "a 3,0 mm de passo, sem pasta. CONFERIR a mola antes de fabricar")
+# Por onde os seis modulos solares entram na placa.
+#
+# Eles NAO sao soldados na placa e nao podem ser: ficam na caixa, virados
+# para o sol - dois na face inclinada e dois em cada chanfro - enquanto a
+# placa fica dentro, atras do display. Sao tres orientacoes diferentes, e e
+# isso que faz a colheita render com o guidao apontando para qualquer lado.
+#
+# Ate 2026-09-24 eram tres pares de pads de mola (J103, J104, J105), que 04
+# registrava como nao dimensionados. Viraram UM conector, por tres motivos:
+# a JLCPCB nao monta mola; uma bicicleta vibra, e um contato pressionado que
+# abre e fecha na entrada de um conversor chaveado e um transitorio sujo; e
+# o conector ocupa 8 mm da borda contra os 16 mm dos tres pares.
+#
+# A familia e ZH de 1,5 mm DE PROPOSITO. A bateria e um GH de 1,25 mm de 6
+# vias, e o plugue de um nao entra no header do outro: 4,2 V numa entrada de
+# 2,73 V queima o AEM10900. Alem disso o JST SH de 6 vias lateral, que seria
+# a escolha obvia, saiu de linha - 3 pecas na JLCPCB.
+#
+# QUATRO vias, nao seis: os tres grupos dividem o mesmo terra, entao tres
+# pinos de GND eram o mesmo no repetido. Alem de desperdicio, o corpo de 6
+# vias tem 13,5 mm e fazia sombra no sensor de luz ambiente, que pede o dobro
+# da propria altura livre em volta.
+add("J103", "JST S4B-ZR-SM4A-TF", [
+    (1, "PV_A", "passive", R), (2, "PV_B", "passive", R),
+    (3, "PV_C", "passive", R), (4, "GND", "passive", B),
+], confirmed=False,
+    note="entrada dos seis modulos solares, em tres grupos de dois: frente, "
+         "chanfro esquerdo, chanfro direito, mais o terra comum. ZH de "
+         "1,5 mm, 4 vias, SMD lateral, com trava. CONFERIR o estoque na LCSC "
+         "e a ordem das vias no chicote")
+
+# Os tres 0 ohm que juntam os grupos ao SRC. Sem eles os seis modulos so dao
+# um numero e nunca se sabe qual face esta rendendo; com eles, abre-se um e
+# mede-se o grupo sozinho no sol. Mesmo raciocinio do JP301 da antena.
+for _n in ("R113", "R114", "R115"):
+    passive(_n, "0 R", "junta um grupo de modulos ao SRC; abrir para medir o "
+                       "grupo sozinho na bancada")
+
+# O grampo da entrada do colhedor. O conector certo impede o engano de plugar
+# a bateria no painel; este impede o prejuizo quando o engano vier de outro
+# lugar - fio invertido no crimp, painel trocado, fonte de bancada. O MPPT do
+# AEM10900 vai ate 2,73 V e o arranjo em aberto da 2,07 V, entao um grampo de
+# 3,0 V fica acima do sinal util e abaixo dos 4,2 V de uma celula.
+# VALOR AINDA NAO ESCOLHIDO: falta conferir a corrente de fuga a 2,1 V, que
+# entra direto no orcamento solar, e o maximo absoluto do pino SRC na ficha.
+add("D105", "TVS 3,0 V", [
+    (1, "IO", "passive", L), (2, "GND", "passive", B),
+], confirmed=False,
+    note="grampo do SRC contra ligar a bateria ou uma fonte na entrada solar. "
+         "ESCOLHER a peca: fuga baixa a 2,1 V e maximo absoluto do SRC")
 
 # ---------------------------------------------------------------- folha 3
 # MAX-F10S data sheet UBXDOC-963802114-12732 R03, table 10, page 9.
@@ -322,12 +398,30 @@ add("U302", "TI TXU0204BQAR", [
     (10, "B4", "input", R), (11, "B3", "input", R), (12, "B2Y", "output", R),
     (13, "B1Y", "output", R), (14, "VCCB", "power_in", T),
     ("PAD", "PAD", "passive", B),
-], confirmed=True,
+], confirmed=True, lcsc="C5187479",
     note="direcao FIXA: A1 e A2 vao de A para B; B3 e B4 vao de B para A. "
          "Pad termico ao GND, recomendado pela TI")
 
 add("E301", "TE L000670-01", [(1, "FEED", "passive", R), (2, "GND", "passive", B)],
-    confirmed=False, note="antena linear L1/L5 na borda de cima")
+    confirmed=False, note="antena de chip L1/L5 soldada na borda de cima; "
+                          "14 x 10,75 x 1 mm (docs/14:146). Uma das duas "
+                          "opcoes, escolhida pelo JP301")
+# The board carries BOTH ways of feeding the receiver, and a 0 ohm chooses.
+# The chip soldered on the edge is the shorter path and has no connector in
+# it; the u.FL lets an external element be tried without touching the board.
+# Which one is better is a bench question - the efficiency of the chip falls
+# with the ground plane and this board is 34 mm wide against the 90 x 41 the
+# datasheet measured on - so both are laid out and only one is fitted.
+#
+# THREE pads and one 0 ohm, not two jumpers: the branch that is not chosen
+# has to be an open pad, not a stub. A stub on a 50 ohm line at 1,6 GHz is
+# a quarter wave at 23 mm and a short at the receiver long before that.
+add("JP301", "0 R", [
+    (1, "COMUM", "passive", L), (2, "UFL", "passive", T),
+    (3, "CHIP", "passive", R),
+], confirmed=True,
+    note="escolhe a antena: 0 ohm entre COMUM e UFL, ou entre COMUM e CHIP. "
+         "Monta-se UM so")
 # The GNSS antenna arrives on a u.FL, not on a spring contact. The line it
 # feeds is the L1 + L5 path of the MAX-F10S, and 4.4 of the integration
 # manual asks for 50 ohm on ALL of it: a pair of gold pads that a leaf
@@ -342,15 +436,30 @@ add("E301", "TE L000670-01", [(1, "FEED", "passive", R), (2, "GND", "passive", B
 # here because nothing else records it.
 add("J302", "Hirose U.FL-R-SMT-1", [
     (1, "FEED", "passive", R), (2, "GND", "passive", B),
-], confirmed=False,
+], confirmed=False, lcsc="C88374",
     note="conector coaxial u.FL da antena GNSS L1+L5. Substitui o contato de "
          "mola que 04:271 tinha decidido: mola nao tem impedancia definida, "
          "e a 4.4 do manual do MAX-F10S pede 50 ohm em TODO o caminho de RF. "
          "CONFERIR o cabo e o conector da outra ponta antes de fabricar")
-passive("FB301", "600 R @100 MHz", "ferrite do 1V8 junto do receptor")
+# DEFEITO ABERTO, achado em 2026-09-24. As duas fichas do receptor - MAX-F10S
+# UBXDOC-963802114-12732 R03 e MAX-M10S UBX-20035208 R08 - proibem mais de
+# 0,2 ohm em serie na linha de alimentacao, e pedem 1,8 V +-2 %, que sao
+# 36 mV. O BLM15PX601SN1D tem 230 mOhm de DCR: no pico de partida de 100 mA
+# isso da 23 mV, dois tercos da tolerancia inteira, so no ferrite.
+#
+# Em regime o consumo e 26 mA a 1,8 V e a queda e 6 mV, entao nao e um erro
+# que impeca funcionar - e uma folga que sumiu. ESCOLHER um ferrite de DCR
+# menor (provavelmente 0603, porque em 0402 impedancia alta e DCR alta andam
+# juntas) ou aceitar e registrar a conta. O levantamento da LCSC tambem
+# corrigiu um numero da lista de compras: esta peca e de 900 mA, nao de 1 A,
+# e nao existe 0402 de 600 ohm com 1 A no catalogo.
+passive("FB301", "600 R @100 MHz", "ferrite do 1V8 junto do receptor; DCR de "
+                                   "230 mOhm CONTRA o limite de 200 da ficha "
+                                   "do receptor - defeito aberto",
+        lcsc="C160977")
 passive("C301", "2,2 pF", "paralelo da rede em pi, valor de partida")
 passive("C302", "2,2 pF", "paralelo da rede em pi, valor de partida")
-passive("L301", "3,9 nH", "serie da rede em pi, valor de partida")
+passive("L301", "3,9 nH", "serie da rede em pi, valor de partida", lcsc="C98063")
 passive("C303", "10 uF")
 passive("C304", "100 nF")
 
@@ -390,7 +499,7 @@ add("J402", "Molex 503480-0500", [
 
 add("Q401", "DMG1012T-7", [
     (1, "G", "input", L), (2, "S", "passive", B), (3, "D", "passive", T),
-], confirmed=False,
+], confirmed=False, lcsc="C20512",
     note="chave de canal N da luz. A Diodes NAO publica numero de pino: o "
          "diagrama so mostra a posicao, e a numeracao vem do padrao SOT-523")
 
@@ -408,7 +517,7 @@ add("U501", "MX25R6435F", [
     (3, "WP_N_IO2", "bidirectional", R), (4, "GND", "power_in", B),
     (5, "SI_IO0", "bidirectional", L), (6, "SCLK", "input", L),
     (7, "HOLD_N_IO3", "bidirectional", R), (8, "VCC", "power_in", T),
-], confirmed=True, note="flash NOR SPI; numeros 1, 2, 5 e 6 vem de 03-netlist.md")
+], confirmed=True, lcsc="C2802844", note="flash NOR SPI; numeros 1, 2, 5 e 6 vem de 03-netlist.md")
 
 # BMP585: BST-BMP585-DS003-02 rev 1.2, section 6.1, table 26, page 45.
 # LGA of 8 pins, 3.25 x 3.25 mm - not the 2.0 x 2.0 this project assumed.
@@ -417,7 +526,7 @@ add("U502", "Bosch BMP585", [
     (3, "SDO", "bidirectional", L), (4, "VDDIO", "power_in", T),
     (5, "INT", "output", R), (6, "VSSIO", "power_in", B),
     (7, "CSB", "input", L), (8, "VDD", "power_in", T),
-], confirmed=True,
+], confirmed=True, lcsc="C18184976",
     note="barometro; 0x46 com SDO em 0 e 0x47 com SDO em 1, e a Bosch proibe "
          "SDO flutuando. CSB ao VDDIO para I2C. O pino 9 e so marcacao a laser")
 
@@ -430,7 +539,7 @@ add("U503", "Bosch BMI270", [
     (9, "INT2", "bidirectional", R), (10, "OCSB", "input", R),
     (11, "OSDO", "output", R), (12, "CSB", "input", L),
     (13, "SCX", "input", L), (14, "SDX", "bidirectional", L),
-], confirmed=True,
+], confirmed=True, lcsc="C2836813",
     note="IMU, 0x68 com o SDO no GND; CSB ao VDDIO para I2C; ASDX e ASCX ao "
          "VDDIO ou abertos, NUNCA ao GND")
 
@@ -448,7 +557,7 @@ add("U505", "TI OPT3001DNPR", [
     (1, "VDD", "power_in", T), (2, "ADDR", "input", L), (3, "GND", "power_in", B),
     (4, "SCL", "input", L), (5, "INT", "open_collector", R),
     (6, "SDA", "bidirectional", L),
-], confirmed=True, note="luz ambiente, 0x44 com ADDR no GND")
+], confirmed=True, lcsc="C90462", note="luz ambiente, 0x44 com ADDR no GND")
 
 passive("R501", "100 k", "pull-up do NOR_CS ao SD3V0")
 passive("R502", "47 k", "pull-up do WP ao SD3V0")

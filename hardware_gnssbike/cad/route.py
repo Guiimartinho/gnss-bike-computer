@@ -127,7 +127,10 @@ BLOQUEADO = "\x00"          # a net name no net can have: blocked for everyone
 # the front layer only, with the ground pour beside them and ground vias
 # along both sides: a via in the middle of an RF run is a stub, and a stub is
 # what section 7.2 of the module datasheet forbids by name.
-NAO_ROTEAR = {"RF_IN", "RF_ANT"}
+# RF_UFL and RF_CHIP are the two branches after the choice jumper: both are
+# 50 ohm line and both are routed at the RF width on the front layer, even
+# though only one is ever fitted. The unfitted one ends at an open pad.
+NAO_ROTEAR = {"RF_IN", "RF_ANT", "RF_UFL", "RF_CHIP"}
 SO_FRENTE = NAO_ROTEAR
 # The differential pair. They are routed one after the other, and the second
 # one is drawn towards the first, so they run together instead of taking two

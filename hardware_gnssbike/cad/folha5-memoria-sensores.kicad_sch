@@ -456,7 +456,7 @@
 				(at -15.240 -6.350 0)
 				(effects (font (size 1.27 1.27)) (justify left top))
 			)
-			(property "Footprint" "Package_SO:SOIC-8_5.23x5.23mm_P1.27mm"
+			(property "Footprint" "Package_SO:SOIC-8_5.275x5.275mm_P1.27mm"
 				(at 0 0 0)
 				(effects (font (size 1.27 1.27)) (hide yes))
 			)
@@ -2442,7 +2442,7 @@
 			(at 204.470 45.720 0)
 			(effects (font (size 1.27 1.27)) (justify left top))
 		)
-		(property "Footprint" "Package_SO:SOIC-8_5.23x5.23mm_P1.27mm"
+		(property "Footprint" "Package_SO:SOIC-8_5.275x5.275mm_P1.27mm"
 			(at 219.71 39.37 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)

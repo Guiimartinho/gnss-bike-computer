@@ -261,6 +261,12 @@ class Part:
     footprint: str = ""
     datasheet: str = ""
     note: str = ""
+    # The LCSC catalogue number, because the board is made and assembled at
+    # JLCPCB and their BOM is keyed on it, not on the manufacturer's part
+    # number. Empty means one of three different things, and the BOM says
+    # which: the part is a passive whose value is enough, the part is not
+    # fitted (a land pattern, a test point), or nobody has checked yet.
+    lcsc: str = ""
     # filled by layout()
     x: float = 0.0
     y: float = 0.0

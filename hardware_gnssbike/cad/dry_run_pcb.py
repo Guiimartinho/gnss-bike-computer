@@ -483,7 +483,10 @@ def main() -> int:
                 return min(math.hypot(a["x"] - ponto[0], a["y"] - ponto[1])
                            for a in pecas[ref]["pads"])
 
-            alim = [q for q in pecas.get("J302", {}).get("pads", [])
+            # the antenna end of the line is now behind the choice jumper:
+            # the path is RF_IN -> L301 -> JP301, and from there to whichever
+            # antenna is fitted. JP301 is what the path has to be measured to.
+            alim = [q for q in pecas.get("JP301", {}).get("pads", [])
                     if q["rede"] == "RF_ANT"]
             trechos = [("RF_IN ate L301", perto("L301", p0))]
             if alim:

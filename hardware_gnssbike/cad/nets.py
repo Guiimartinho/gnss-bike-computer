@@ -86,9 +86,19 @@ net("VBCKP", ("U104", "OUT"), ("U301", "V_BCKP"), ("C114", "1"))
 net("VINT", ("U103", "VINT"), ("U103", "VINT2"), ("C116", "1"), ("U103", "R_MPP0"), ("U103", "R_MPP1"), ("U103", "R_MPP2"),
     ("U103", "T_MPP0"), ("U103", "T_MPP1"), ("U103", "STO_CFG0"), ("U103", "STO_CFG2"),
     ("U103", "KEEP_ALIVE"))
-net("SRC", ("U103", "SRC"), ("C115", "1"), ("L103", "1"),
-    ("J103", "P"), ("J104", "P"), ("J105", "P"),
-    *[(f"PV10{i}", "P") for i in range(1, 7)])
+# The six modules are wired in PARALLEL, and that is not a choice: each
+# KXOB25-05X3F already has 3 cells in series and opens at 2,07 V, while the
+# AEM10900 tracks from 0,12 to 2,73 V. Two in series would be 4,14 V, which
+# is 1,4 V past the ceiling. So: everything in parallel, MPP at 80 % of
+# 2,07 = 1,66 V, up to 110 mA with all six normal to the sun.
+#
+# Three groups, one per face of the case, each through its own 0 ohm - open
+# one and the group can be measured alone in the sun.
+net("PV_A", ("J103", "PV_A"), ("R113", "1"), ("PV101", "P"), ("PV102", "P"))
+net("PV_B", ("J103", "PV_B"), ("R114", "1"), ("PV103", "P"), ("PV104", "P"))
+net("PV_C", ("J103", "PV_C"), ("R115", "1"), ("PV105", "P"), ("PV106", "P"))
+net("SRC", ("U103", "SRC"), ("C115", "1"), ("L103", "1"), ("D105", "IO"),
+    ("R113", "2"), ("R114", "2"), ("R115", "2"))
 net("SW_DCDC", ("U103", "SW_DCDC"), ("L103", "2"))
 net("TH_MON", ("U103", "TH_MON"), ("RT101", "1"), ("R106", "2"))
 net("TH_REF", ("U103", "TH_REF"), ("R106", "1"))
@@ -173,7 +183,13 @@ net("GNSS_TIMEPULSE", ("U201", "P1.09"), ("U302", "A4Y"))
 net("GNSS_TIMEPULSE_1V8", ("U302", "B4"), ("U301", "TIMEPULSE"))
 net("GNSS_RESET_N", ("U201", "P1.06"), ("U301", "RESET_N"))
 net("RF_IN", ("U301", "RF_IN"), ("L301", "2"), ("C302", "1"))
-net("RF_ANT", ("E301", "FEED"), ("J302", "FEED"), ("L301", "1"), ("C301", "1"))
+# The antenna side of the pi network stops at the jumper, and the jumper
+# decides which of the two antennas the line reaches. Three nets, not one:
+# with a single net both branches hang off the line at once and the one not
+# fitted is a stub.
+net("RF_ANT", ("L301", "1"), ("C301", "1"), ("JP301", "COMUM"))
+net("RF_UFL", ("JP301", "UFL"), ("J302", "FEED"))
+net("RF_CHIP", ("JP301", "CHIP"), ("E301", "FEED"))
 
 # ------------------------------------------------------------ interface
 net("KEY_L", ("U201", "P1.26"), ("R604", "1"))
@@ -204,6 +220,11 @@ net("BUZ_B_LS", ("R608", "2"), ("LS601", "B"))
 # ------------------------------------------------------------ terra
 net("GND",
     ("J101", "GND_A1"), ("J101", "GND_A12"), ("J101", "GND_B1"), ("J101", "GND_B12"),
+    # The shell, which had no pin in the part until 2026-09-24 and so left the
+    # four shell pads of the land pattern floating. Tied straight to GND, not
+    # through the usual 1 M / 4,7 nF: that network exists to break a ground
+    # loop between two mains-powered boxes, and this one runs off a cell.
+    ("J101", "SHELL"),
     ("D101", "GND"), ("D102", "GND1"), ("D102", "GND2"),
     ("U101", "AVSS"), ("U101", "PVSS1"), ("U101", "PVSS2"), ("U102", "GND"), ("U103", "GND1"), ("U103", "GND2"), ("U103", "GND3"), ("U103", "GND_PAD"), ("U103", "STO_CFG1"),
     ("U104", "GND"), ("U104", "PAD"), ("J102", "6"), ("RT101", "2"),
@@ -224,7 +245,8 @@ net("GND",
     *[(c, "2") for c in ("C101", "C102", "C103", "C104", "C105", "C106", "C110",
                          "C111", "C114", "C115", "C116", "C117", "C118",
                          "C201", "C210", "C404", "C501", "C502", "C503")],
-    ("J302", "GND"), ("J103", "N"), ("J104", "N"), ("J105", "N"),
+    ("J302", "GND"), ("D105", "GND"),
+    ("J103", "GND"),
     ("R102", "2"), ("R103", "2"),
     ("C107", "2"), ("C108", "2"), ("C109", "2"), ("C113", "2"))
 

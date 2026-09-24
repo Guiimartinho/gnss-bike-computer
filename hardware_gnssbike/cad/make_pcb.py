@@ -201,16 +201,27 @@ BORDA_FIXA: dict[str, tuple[float, float, int]] = {
     # sit on RF_IN. So antenna, shunt, series, shunt, pin, laid along the
     # 8.06 mm from the contact's pad at (15,0; 10,5) to the pin at
     # (11,0; 17,5). MAX-F10S IM 4.4.
-    "C301": (15.4, 12.6, 0),
-    "L301": (14.6, 14.8, 90),
-    "C302": (14.8, 16.4, 0),
-    # The three groups of solar modules, on the edges, in the bands the
-    # connectors leave free. They carry the harvester's SRC node, which is
-    # high impedance and low voltage, so they sit as close to the harvester's
+    # Shifted 0,6 mm right on 2026-09-24: the module's land pattern grew when
+    # the real drawing was read - the pad now reaches 0,8 mm outside the body
+    # instead of 0,35 - and the old positions had the inductor sitting on it.
+    "C301": (16.0, 12.6, 0),
+    "L301": (15.2, 14.8, 90),
+    "C302": (15.4, 16.4, 0),
+    # The six solar modules, in three groups of two, on one connector on the
+    # right edge. They carry the harvester's SRC node, which is low voltage
+    # and is the input of a boost, so it sits as close to the harvester's
     # band as the edge allows: a long run of SRC picks up everything.
-    "J103": (_W - 2.5, 30.0, 90),
-    "J104": (_W - 2.5, 38.0, 90),
-    "J105": (_W - 2.5, 46.0, 90),
+    #
+    # The angle is 90 so the housing opens toward +X, that is toward the
+    # board edge: the contacts of this footprint stick out at y = -1,65 and
+    # the body runs from -3,5 to +4,5, so +Y is the cable side. A side-entry
+    # connector pointing inward would make the harness loop back over the
+    # board. The centre is 5,0 from the edge, which leaves the housing 0,5
+    # short of it.
+    # y 32,0: o corpo de 4 vias tem 10,5 mm, entao ele vai de 26,75 a
+    # 37,25 - 9,0 mm livres ate o sensor de luz (que pede duas vezes a
+    # altura do vizinho) e 0,65 mm antes do colhedor.
+    "J103": (_W - 5.0, 32.0, 90),
 }
 
 
