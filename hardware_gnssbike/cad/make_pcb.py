@@ -674,17 +674,86 @@ def contorno(saida: list[str], r: float) -> None:
     arco(P_(r, r), 180, 270)
 
 
-def keepout(nome: str, x0: float, y0: float, x1: float, y1: float) -> str:
+def pad_no_lugar(ref: str, numero: str, lugar: dict):
+    """Where a pad ends up on the board, given the placement."""
+    if ref not in lugar or ref not in FPS.FP:
+        return None
+    arv = fp_load.parse(fp_load.carregar(FPS.FP[ref][0])[0])
+    for q in fp_load.kids(arv, "pad"):
+        if q[1] != numero:
+            continue
+        a = fp_load.kid(q, "at")
+        px, py = float(a[1]), float(a[2])
+        x, y, ang, atras = lugar[ref]
+        if atras:
+            px = -px
+        r = math.radians(ang)
+        return (x + px * math.cos(r) + py * math.sin(r),
+                y - px * math.sin(r) + py * math.cos(r))
+    return None
+
+
+def sem_plano_no_chaveamento(lugar: dict, por_pad: dict) -> list[tuple]:
+    """Where no copper pour may go: under a switching node.
+
+    Section 13 of DS-AEM1090x-v2.4.0, word for word: "PCB track capacitance
+    must be reduced as much as possible on the boost converter switching node
+    SWDCDC. This is done as follows: keep the connection between the SWDCDC
+    pin and the inductor short; REMOVE THE GROUND AND POWER PLANES UNDER THE
+    SWDCDC NODE - the polygon on the opposite external layer may also be
+    removed - increase the distance between SWDCDC and the ground polygon on
+    the external PCB layer where the AEM1090x is mounted." And the same
+    principle for TH_REF.
+
+    A pour under a switching node is capacitance the converter has to charge
+    and discharge at its switching frequency, and on a harvester that runs on
+    microwatts that is not a detail. So the rectangle that holds the node's
+    pads, with margin, is cut out of every plane.
+    """
+    zonas = []
+    for rede, folga in (("SW_DCDC", 0.6), ("TH_REF", 0.4)):
+        pontos = []
+        for (ref, num), nome in por_pad.items():
+            if nome != rede or ref not in lugar:
+                continue
+            q = pad_no_lugar(ref, num, lugar)
+            if q:
+                pontos.append(q)
+        if len(pontos) < 2:
+            continue
+        x0 = min(q[0] for q in pontos) - folga
+        y0 = min(q[1] for q in pontos) - folga
+        x1 = max(q[0] for q in pontos) + folga
+        y1 = max(q[1] for q in pontos) + folga
+        zonas.append((f"SEM_PLANO_{rede}", (x0, y0, x1, y1)))
+    return zonas
+
+
+def keepout(nome: str, x0: float, y0: float, x1: float, y1: float,
+            so_plano: bool = False) -> str:
+    """A forbidden area. With so_plano, only the pour is forbidden.
+
+    An antenna zone forbids every kind of copper. A switching node is
+    different: section 13 of the AEM10900 datasheet asks to "remove the
+    ground and power PLANES under the SWDCDC node", and the node's own track
+    obviously has to be there - it is the whole point of the rule. Forbidding
+    tracks there too put sixteen items_not_allowed in the DRC, every one of
+    them the switching node itself.
+    """
     pts = [P_(x0, y0), P_(x1, y0), P_(x1, y1), P_(x0, y1)]
     poly = "\n".join(f"\t\t\t\t(xy {px:.4f} {py:.4f})" for px, py in pts)
     camadas = " ".join(f'"{ly}"' for ly in CU_LAYERS)
     return (f'\t(zone\n\t\t(net 0)\n\t\t(net_name "")\n\t\t(layers {camadas})\n'
             f'\t\t(uuid "{uid("z", nome)}")\n\t\t(name "{nome}")\n\t\t(hatch edge 0.5)\n'
             '\t\t(connect_pads\n\t\t\t(clearance 0)\n\t\t)\n\t\t(min_thickness 0.25)\n'
-            '\t\t(filled_areas_thickness no)\n\t\t(keepout\n\t\t\t(tracks not_allowed)\n'
+            '\t\t(filled_areas_thickness no)\n\t\t(keepout\n'
             # An antenna zone forbids COPPER, not parts: the radio module's
             # own antenna sits inside its own keep-out, and its pads with it.
-            '\t\t\t(vias not_allowed)\n\t\t\t(pads allowed)\n'
+            # A switching node's zone forbids only the POUR, because the node
+            # itself has to run there.
+            f'\t\t\t(tracks {"allowed" if so_plano else "not_allowed"})\n'
+            f'\t\t\t(vias {"allowed" if so_plano else "not_allowed"})\n'
+            '\t\t\t(pads allowed)\n'
             '\t\t\t(copperpour not_allowed)\n\t\t\t(footprints allowed)\n\t\t)\n'
             '\t\t(fill\n\t\t\t(thermal_gap 0.5)\n\t\t\t(thermal_bridge_width 0.5)\n\t\t)\n'
             f'\t\t(polygon\n\t\t\t(pts\n{poly}\n\t\t\t)\n\t\t)\n\t)')
@@ -824,6 +893,11 @@ def main() -> int:
                 f'\t\t(end {b[0]:.4f} {b[1]:.4f})\n'
                 f'\t\t(stroke (width 0.1) (type dash))\n\t\t(fill none)\n'
                 f'\t\t(layer "Dwgs.User")\n\t\t(uuid "{uid("r", nome)}")\n\t)')
+
+    # The switching nodes get their pour cut away, which is what section 13
+    # of the AEM10900 datasheet asks for by name.
+    for nome_z, (zx0, zy0, zx1, zy1) in sem_plano_no_chaveamento(lugar, por_pad):
+        saida.append(keepout(nome_z, zx0, zy0, zx1, zy1, so_plano=True))
 
     # The ground planes. In1.Cu is the solid one and the reference the return
     # current follows; F.Cu and B.Cu get the leftover copper.

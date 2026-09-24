@@ -309,13 +309,14 @@ _gerar()
 # business looking like a measurement.
 ALTURA: dict[str, tuple[float, str]] = {
     # the parts whose height decides whether the lid closes
-    "Button_Switch_SMD:SW_SPST_B3S-1000": (5.00, "Omron B3S-1002P: corpo de "
-        "3,5 mm mais o botao ate 5,0 - CONFERIR na ficha da Omron"),
+    # lido no desenho cotado da ficha da Omron, pagina 2
+    "Button_Switch_SMD:SW_SPST_B3S-1000": (3.40, "Omron B3S-1002P, desenho "
+        "cotado da ficha: altura total 3,4 mm, embolo de 3,3 mm saindo 0,7"),
     "Connector_USB:USB_C_Receptacle_Palconn_UTC16-G": (3.26, "altura corrente "
         "de um receptaculo USB-C de montagem em superficie - CONFERIR na "
         "ficha do Molex 2036150003, que e a peca da lista de compras"),
-    "Buzzer_Beeper:Buzzer_CUI_CPT-9019S-SMT": (3.00, "CONFERIR: a lista de "
-        "compras traz o CPT-1117-83-SMT, nao o CPT-9019S deste footprint"),
+    "Buzzer_Beeper:Buzzer_CUI_CPT-9019S-SMT": (1.70, "CUI CPT-1117-83-SMT, "
+        "ficha: 11,0 x 9,0 x 1,7 mm - a peca da lista de compras"),
     "Connector_FFC-FPC:TE_0-1734839-5_1x05-1MP_P0.5mm_Horizontal": (1.20,
         "conector FPC horizontal de passo 0,5 - CONFERIR: a peca ainda nao "
         "esta escolhida (06#j402)"),
@@ -587,12 +588,12 @@ def wrl_tecla(caminho, w: float, h: float, alt: float) -> None:
     whether the lid can be pressed, so drawing it as a plain 5 mm block hides
     the only thing about it that matters.
     """
-    corpo_h = 3.5
+    corpo_h = alt - 0.7          # o embolo sai 0,7 mm do corpo
     caminho.write_text(
         "#VRML V2.0 utf8" + NL +
         "# Omron B3S-1002P: corpo de 3,5 mm e botao ate 5,0 mm" + NL +
         _bloco(-w / 2, -h / 2, 0.0, w / 2, h / 2, corpo_h, (0.10, 0.10, 0.11)) +
-        _cilindro(0.0, 0.0, corpo_h, alt, 1.75, (0.20, 0.20, 0.22)),
+        _cilindro(0.0, 0.0, corpo_h, alt, 1.65, (0.20, 0.20, 0.22)),
         encoding="utf-8", newline=NL)
 
 

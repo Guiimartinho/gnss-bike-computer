@@ -682,6 +682,27 @@ def base(arv, todos):
     fx, fy = M.FUROS_DOC[0]
     for c in range(NC):
         g.bloquear(c, fx, fy, M.M2_DRILL_UNVERIFIED / 2 + FOLGA + 0.3)
+    # No via inside a switching node's no-plane area: a ground via there
+    # brings the plane straight back under the node, which is exactly what
+    # section 13 of the AEM10900 datasheet asks to remove. The node's own
+    # track is welcome; its ground is not.
+    # These zones are not in the zone table: they are computed from where the
+    # parts ended up, so they come off the board itself.
+    folga_v = int(math.ceil((VIA_D / 2 + FOLGA) / PASSO))
+    for z in fp_load.kids(arv, "zone"):
+        nm = fp_load.kid(z, "name")
+        if not nm or not nm[1].startswith("SEM_PLANO"):
+            continue
+        pts = fp_load.kid(fp_load.kid(z, "polygon"), "pts")
+        xs = [float(q[1]) - MP.ORIGEM[0] for q in fp_load.kids(pts, "xy")]
+        ys = [float(q[2]) - MP.ORIGEM[1] for q in fp_load.kids(pts, "xy")]
+        ix0, iy0 = g.cel(min(xs), min(ys))
+        ix1, iy1 = g.cel(max(xs), max(ys))
+        for c in range(NC):
+            for ix in range(ix0 - folga_v, ix1 + folga_v + 1):
+                for iy in range(iy0 - folga_v, iy1 + folga_v + 1):
+                    g.v[(c, ix, iy)] = BLOQUEADO
+
     for nome, (x0, y0, x1, y1), _c, _s in M.ZONES:
         if nome not in MP.KEEPOUTS:
             continue
