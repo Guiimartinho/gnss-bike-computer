@@ -19,6 +19,13 @@ Two rules were kept while writing this:
 
 from __future__ import annotations
 
+# The only parts whose pin may appear in two nets: a connector and the part
+# behind it are one electrical node, and the schematic draws them as two.
+# ANY OTHER pin in two nets is a short, and check_sch.py fails on it - a
+# capacitor that ended up in both PWR_SDA and 3V0 once shorted the whole power
+# bus to the 3 V rail, and the merge hid it.
+PASSA_DIRETO = {"J401", "J402", "DS401"}
+
 # name -> [(ref, pin name), ...]
 NETS: dict[str, list[tuple[str, str]]] = {}
 
@@ -58,7 +65,7 @@ net("1V8_GNSS", ("FB301", "2"), ("U301", "VCC"), ("U301", "V_IO"), ("C303", "1")
     ("C304", "1"))
 net("BUCK2_SW", ("U101", "SW2"), ("L102", "1"))
 net("3V0", ("L102", "2"), ("U101", "VOUT2"), ("U101", "LSIN1"),
-    ("U302", "VCCA"), ("U302", "OE"), ("U103", "I2C_VDD"), ("U103", "SDA"),
+    ("U302", "VCCA"), ("U302", "OE"), ("U103", "I2C_VDD"),
     ("C105", "1"), ("C106", "1"), ("C107", "1"), ("C108", "1"),
     ("JP102", "1"), ("JP104", "1"), ("JP105", "1"),
     ("R107", "1"), ("R108", "1"), ("R109", "1"), ("R110", "1"), ("R111", "1"),
@@ -69,17 +76,19 @@ net("3V0_SENS", ("JP105", "2"), ("U502", "VDD"), ("U502", "VDDIO"), ("U502", "CS
     ("U503", "CSB"), ("U504", "VDD"), ("U505", "VDD"),
     ("R504", "1"), ("R505", "1"), ("C502", "1"), ("C503", "1"))
 net("SD3V0", ("U101", "LSOUT1"), ("JP106", "1"), ("R501", "1"), ("R502", "1"),
-    ("R503", "1"), ("C501", "1"))
-net("SD3V0_FLASH", ("JP106", "2"), ("U501", "VCC"))
+    ("R503", "1"))
+# the bulk sits AFTER the jumper, beside the flash, like every other block on
+# this board: 02-calculos.md asks for 22 uF "junto da flash", and a 1206
+# jumper between the part and its energy is what the other blocks avoid
+net("SD3V0_FLASH", ("JP106", "2"), ("U501", "VCC"), ("C501", "1"))
 net("3V3BL", ("U101", "LSOUT2"), ("R401", "1"), ("C111", "1"))
 net("VBCKP", ("U104", "OUT"), ("U301", "V_BCKP"), ("C114", "1"))
 net("VINT", ("U103", "VINT"), ("U103", "VINT2"), ("C116", "1"), ("U103", "R_MPP0"), ("U103", "R_MPP1"), ("U103", "R_MPP2"),
     ("U103", "T_MPP0"), ("U103", "T_MPP1"), ("U103", "STO_CFG0"), ("U103", "STO_CFG2"),
     ("U103", "KEEP_ALIVE"))
-net("SRC", ("U103", "SRC"), ("C115", "1"),
+net("SRC", ("U103", "SRC"), ("C115", "1"), ("L103", "1"),
     *[(f"PV10{i}", "P") for i in range(1, 7)])
-net("SW_DCDC", ("U103", "SW_DCDC"), ("L103", "1"))
-net("SW_DCDC_L", ("L103", "2"), ("U103", "STO"))
+net("SW_DCDC", ("U103", "SW_DCDC"), ("L103", "2"))
 net("TH_MON", ("U103", "TH_MON"), ("RT101", "1"), ("R106", "2"))
 net("TH_REF", ("U103", "TH_REF"), ("R106", "1"))
 net("DIS_STO_CH", ("U103", "DIS_STO_CH"), ("R104", "2"), ("R105", "1"))
@@ -214,17 +223,32 @@ net("GND",
     *[(c, "2") for c in ("C101", "C102", "C103", "C104", "C105", "C106", "C110",
                          "C111", "C114", "C115", "C116", "C117", "C118",
                          "C201", "C210", "C404", "C501", "C502", "C503")],
-    ("R102", "2"), ("R103", "2"))
+    ("R102", "2"), ("R103", "2"),
+    ("C107", "2"), ("C108", "2"), ("C109", "2"), ("C113", "2"))
 
 # ------------------------------------------------------------ nao ligados
 # Pins that the documents leave with no destination, and why. Writing them
 # here keeps them off the drawing as loose ends and out of the netlist as
 # silent errors.
 SEM_LIGACAO: dict[str, str] = {
-    "U101 LDSW2_IN": "entrada da LDSW2, ja no VSYS",
-    "D102 NC": "pino sem funcao na matriz de ESD",
-    "U503 P10 / P11": "a Bosch manda deixar abertos",
+    "U101 GPIO0, GPIO1, GPIO2, GPIO4": "GPIO do PMIC que este projeto nao usa; "
+        "CONFERIR na ficha o estado de reset, porque entrada flutuante vira "
+        "fuga e o orcamento solar depende da corrente de repouso",
+    "U101 LED2": "o terceiro dreno de LED do PMIC, sem LED",
+    "U103 BUFSRC, ZMPP": "CONFERIR na DS-AEM10900-v1.6.0 se o BUFSRC pede "
+        "capacitor e se o ZMPP pode ficar aberto com R_MPP fixo",
+    "U201 RF": "o pino 2 do modulo e para antena externa; o ME54BS13 tem "
+        "antena de PCB integrada, entao fica aberto",
+    "U301 SDA, SCL": "o receptor fala por UART; a interface I2C dele nao e usada",
+    "U301 SAFEBOOT_N": "aberto e o nivel alto que NAO entra em safeboot; "
+        "nada de pull-down aqui",
+    "U301 LNA_EN, VCC_RF": "o MAX-F10S ja tem SAW, LNA e SAW dentro do modulo",
+    "U503 INT2": "a segunda interrupcao do IMU nao e usada",
+    "U503 OCSB, OSDO": "a Bosch manda deixar abertos com a interface OIS "
+        "desligada",
+    "J101 SBU1, SBU2": "as duas linhas laterais do USB-C, sem uso em USB 2.0",
     "J201 NC3": "o padrao TC2030 nao usa o pino 3",
+    "D102 NC1 a NC4": "a TI os reserva para roteamento reto, nao sao pinos",
 }
 
 # The nPM1300's VDDIO (pin 12) is the supply of its TWI and of its GPIOs. It
@@ -235,6 +259,11 @@ NETS["3V0"].append(("U101", "VDDIO"))
 # PVDD (pin 4) is the power input of both bucks.
 NETS["VSYS"].append(("U101", "PVDD"))
 
+ABERTO["indutor do AEM10900"] = (
+    "03-netlist.md so diz \"SWDCDC -> indutor de 4,7 uH\" e nao diz onde a "
+    "outra ponta vai. Aqui ela vai ao SRC, que e a topologia de um boost - "
+    "e o AEM10900 eleva 1,67 V para 3,9 V. CONFERIR na figura 3 da "
+    "DS-AEM10900-v1.6.0 antes de fabricar")
 ABERTO["ST_STO do AEM10900"] = (
     "03-netlist.md leva um no ST_STO do AEM10900 ao ponto de teste TP111, "
     "mas a ficha DS-AEM10900-v1.6.0 nao tem esse pino: e de outro CI da "

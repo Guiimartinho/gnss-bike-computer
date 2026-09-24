@@ -1072,7 +1072,7 @@
 			(exclude_from_sim no)
 			(in_bom no)
 			(on_board yes)
-			(property "Reference" "#PWR031"
+			(property "Reference" "#PWR030"
 				(at 0 0 0)
 				(effects (font (size 1.27 1.27)) (hide yes))
 			)
@@ -1307,17 +1307,17 @@
 	)
 	(wire
 		(pts
-			(xy 156.210 83.820) (xy 153.670 83.820)
-		)
-		(stroke (width 0) (type default))
-		(uuid "3ac6f84c-6d39-4264-890c-5d474f888dc9")
-	)
-	(wire
-		(pts
 			(xy 270.510 31.750) (xy 270.510 29.210)
 		)
 		(stroke (width 0) (type default))
 		(uuid "2fc57afd-ca9f-40c7-8c2e-533b0acd578c")
+	)
+	(wire
+		(pts
+			(xy 156.210 83.820) (xy 153.670 83.820)
+		)
+		(stroke (width 0) (type default))
+		(uuid "3ac6f84c-6d39-4264-890c-5d474f888dc9")
 	)
 	(wire
 		(pts
@@ -3831,41 +3831,6 @@
 		)
 	)
 	(symbol
-		(lib_id "power:SD3V0")
-		(at 153.670 83.820 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom no)
-		(on_board yes)
-		(dnp no)
-		(uuid "342b0d0c-5a59-431a-8678-d77ea6faa8f7")
-		(property "Reference" "#PWR030"
-			(at 153.67000000000002 83.82 0)
-			(effects (font (size 1.27 1.27)) (hide yes))
-		)
-		(property "Value" "SD3V0"
-			(at 153.670 80.010 0)
-			(effects (font (size 1.27 1.27)))
-		)
-		(property "Footprint" ""
-			(at 153.67000000000002 83.82 0)
-			(effects (font (size 1.27 1.27)) (hide yes))
-		)
-		(property "Datasheet" ""
-			(at 153.67000000000002 83.82 0)
-			(effects (font (size 1.27 1.27)) (hide yes))
-		)
-		(pin "1" (uuid "6e7e3a11-43b6-4f5b-8b7b-12d6527071d1"))
-		(instances
-			(project "gnssbike"
-				(path "/9c874366-f223-4aef-8b18-3e2a2bab2b25/613acabb-6b32-418f-89ed-a184dc396d24"
-					(reference "#PWR030")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "power:SD3V0_FLASH")
 		(at 270.510 29.210 0)
 		(unit 1)
@@ -3874,7 +3839,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "79630b78-4fdd-4b39-82b8-a9e228feafde")
-		(property "Reference" "#PWR031"
+		(property "Reference" "#PWR030"
 			(at 270.51 29.21 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
@@ -3891,6 +3856,41 @@
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
 		(pin "1" (uuid "60815132-c2c2-400e-820e-3976e8bbb6af"))
+		(instances
+			(project "gnssbike"
+				(path "/9c874366-f223-4aef-8b18-3e2a2bab2b25/613acabb-6b32-418f-89ed-a184dc396d24"
+					(reference "#PWR030")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:SD3V0_FLASH")
+		(at 153.670 83.820 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(dnp no)
+		(uuid "edc43fc2-d698-4a42-8b7f-7941c79178b1")
+		(property "Reference" "#PWR031"
+			(at 153.67000000000002 83.82 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Value" "SD3V0_FLASH"
+			(at 153.670 80.010 0)
+			(effects (font (size 1.27 1.27)))
+		)
+		(property "Footprint" ""
+			(at 153.67000000000002 83.82 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Datasheet" ""
+			(at 153.67000000000002 83.82 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(pin "1" (uuid "190ea777-095b-4ea6-887f-092fc48e97bf"))
 		(instances
 			(project "gnssbike"
 				(path "/9c874366-f223-4aef-8b18-3e2a2bab2b25/613acabb-6b32-418f-89ed-a184dc396d24"

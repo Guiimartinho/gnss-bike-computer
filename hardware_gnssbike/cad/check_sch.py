@@ -38,6 +38,8 @@ KICAD = pathlib.Path(r"D:\KiCAD\bin\kicad-cli.exe")
 RAIZ = HERE / "gnssbike.kicad_sch"
 NET = HERE / "gnssbike.net"
 fails: list[str] = []
+# pins found in two nets outside the declared pass-through connectors
+CURTOS: list[str] = []
 
 
 def check(ok: bool, what: str) -> None:
@@ -124,6 +126,8 @@ def esperado_unificado() -> dict[str, frozenset]:
     for name, membros in bruto.items():
         for m in membros:
             if m in de_pino:
+                if m[0] not in N.PASSA_DIRETO:
+                    CURTOS.append(f"{m[0]}.{m[1]} esta em {de_pino[m]} e em {name}")
                 a, b = raiz(de_pino[m]), raiz(name)
                 if a != b:
                     pai[b] = a
@@ -171,6 +175,11 @@ def main() -> int:
             achado[membros] = nome
 
     esperado = esperado_unificado()
+    check(not CURTOS,
+          f"nenhum pino em dois nos fora dos conectores que atravessam sinal "
+          f"({len(CURTOS)})")
+    for c in CURTOS[:8]:
+        print(f"      {c}")
     faltando = {k: v for k, v in esperado.items() if v not in achado}
     sobrando = [v for k, v in achado.items() if k not in esperado.values()]
     check(not faltando,
