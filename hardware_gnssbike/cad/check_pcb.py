@@ -42,10 +42,18 @@ def check(ok: bool, what: str) -> None:
 
 
 def main() -> int:
-    print("gerando...")
-    import make_pro
-    make_pro.main()
-    MP.main()
+    # Regenerating wipes the tracks, and then the DRC is run on an empty
+    # board and says nothing about the routing. After route.py has run, the
+    # board on disk is the thing to check, so: --como-esta checks the file
+    # as it stands and prints what it found there.
+    como_esta = "--como-esta" in sys.argv
+    if como_esta:
+        print("conferindo o arquivo como esta, sem regerar")
+    else:
+        print("gerando...")
+        import make_pro
+        make_pro.main()
+        MP.main()
     print()
 
     arv = fp_load.parse(PCB.read_text(encoding="utf-8"))
@@ -118,21 +126,16 @@ def main() -> int:
     # ---- geometry ----
     lugar, _f = MP.colocar()
 
-    def _tam(r: str) -> tuple[float, float]:
-        # the same box the placer used: the minimum, and swapped when the part
-        # is turned a quarter turn
-        w, h = fp_load.carregar(FPS.FP[r][0])[1]
-        w, h = max(w, 1.8), max(h, 1.8)
-        return (h, w) if lugar[r][2] % 180 else (w, h)
-
-    tam = {r: _tam(r) for r in lugar}
+    # the SAME courtyard the placer used, imported and not copied
+    cx = {r: MP.caixa(r, lugar[r][2]) for r in lugar}
+    tam = {r: (cx[r][2] - cx[r][0], cx[r][3] - cx[r][1]) for r in lugar}
     sobre = []
     itens = sorted(lugar.items())
     for i, (ra, (ax, ay, _ang, _b)) in enumerate(itens):
-        aw, ah = tam[ra]
+        a0, a1 = (ax + cx[ra][0], ay + cx[ra][1]), (ax + cx[ra][2], ay + cx[ra][3])
         for rb, (bx, by, _ang2, _b2) in itens[i + 1:]:
-            bw, bh = tam[rb]
-            if abs(ax - bx) * 2 < aw + bw and abs(ay - by) * 2 < ah + bh:
+            b0, b1 = (bx + cx[rb][0], by + cx[rb][1]), (bx + cx[rb][2], by + cx[rb][3])
+            if a1[0] > b0[0] and b1[0] > a0[0] and                     a1[1] > b0[1] and b1[1] > a0[1]:
                 sobre.append((ra, rb))
     check(not sobre, f"nenhum contorno de peca sobre outro ({len(sobre)})")
     for a, b in sobre[:6]:

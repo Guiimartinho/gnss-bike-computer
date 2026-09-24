@@ -8,6 +8,7 @@ numbers or the board will be wired wrong.
 
 from __future__ import annotations
 
+import math
 import pathlib
 import sys
 
@@ -71,6 +72,10 @@ def kid(node, name):
 
 
 _cache: dict[str, tuple[str, tuple[float, float], list[str]]] = {}
+# the real courtyard, not the symmetric one: x0, y0, x1, y1 around the
+# footprint origin. It is what decides whether a capacitor can sit 0.5 mm
+# from the pin it decouples, which is what the datasheets ask for.
+CAIXA: dict[str, tuple[float, float, float, float]] = {}
 
 
 def carregar(nome: str) -> tuple[str, tuple[float, float], list[str]]:
@@ -94,6 +99,19 @@ def carregar(nome: str) -> tuple[str, tuple[float, float], list[str]]:
             camada = kid(g, "layer")
             if not camada or "CrtYd" not in camada[1]:
                 continue
+            if chave == "fp_circle":
+                # A circle is a centre and a point ON it, not two corners.
+                # Read as two points it gives half the box: the D1.0mm test
+                # point has a courtyard of radius 1.0 and was read as 0.5,
+                # which let TP201 and TP203 sit exactly 2.0 mm apart with
+                # their courtyards touching - the one DRC error the board had.
+                c, e = kid(g, "center"), kid(g, "end")
+                if c and e:
+                    cx_, cy_ = float(c[1]), float(c[2])
+                    r_ = math.hypot(float(e[1]) - cx_, float(e[2]) - cy_)
+                    xs += [cx_ - r_, cx_ + r_]
+                    ys += [cy_ - r_, cy_ + r_]
+                    continue
             for tag in ("start", "end", "center", "mid"):
                 p = kid(g, tag)
                 if p:
@@ -121,6 +139,7 @@ def carregar(nome: str) -> tuple[str, tuple[float, float], list[str]]:
     # symmetric box around the origin: twice the furthest edge.
     tam = (2 * max(abs(min(xs)), abs(max(xs))),
            2 * max(abs(min(ys)), abs(max(ys))))
+    CAIXA[nome] = (min(xs), min(ys), max(xs), max(ys))
     _cache[nome] = (texto, tam, pads)
     return _cache[nome]
 

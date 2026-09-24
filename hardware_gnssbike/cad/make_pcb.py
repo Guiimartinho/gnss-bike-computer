@@ -35,7 +35,8 @@ DIEL = (0.80 - 4 * CU) / 3.0
 CU_LAYERS = ("F.Cu", "In1.Cu", "In2.Cu", "B.Cu")
 KEEPOUTS = {"KEEPOUT_ANTENA_GNSS", "KEEPOUT_ANTENA_MODULO"}
 BORDA = 0.8                    # keep parts this far inside the outline
-FOLGA = 0.5                    # between two courtyards
+FOLGA = 0.05                   # between two courtyards: the courtyard
+                               # already carries the maker's clearance
 PASSO = 0.5                    # placement grid
 
 # The part that anchors each zone of 04-pcb-e-caixa.md.
@@ -86,23 +87,65 @@ ATRAS = {"U502", "J102", "RT101"}
 #              to y 8. 04 already counted that overlap as 90 mm2 and left it
 #              open; here the receiver sits below the keep-out, at y 8.5.
 BORDA_FIXA: dict[str, tuple[float, float, int]] = {
-    "J101": (27.5, 90.85, 180),    # USB-C, bottom edge, opening out
+    # The mouth of a USB-C faces +Y in this footprint: the contacts leave at
+    # the back, so the body sits on the far side of the pads. At 180 it was
+    # pointing INTO the board, which no rule catches and no cable forgives.
+    "J101": (27.5, 91.66, 0),     # USB-C, bottom edge, mouth out
     "SW601": (11.0, 80.5, 0),     # the three keys, in a row above it
     "SW602": (27.5, 80.5, 0),
     "SW603": (44.0, 80.5, 0),
     "U201": (45.7, 65.0, 270),    # radio module, antenna to the right edge
     "J401": (5.75, 34.5, 270),     # display flat cable, out to the left
     "J402": (5.05, 23.0, 270),     # the light's cable, same side
-    "J102": (4.05, 62.0, 90),      # battery connector, back face, out to the left
+    # on the back face the footprint is mirrored, so the angle that sends
+    # the cable to the left is 270, not 90
+    "J102": (4.05, 62.0, 270),     # battery connector, back face, cable left
     "U505": (2.5, 89.0, 0),       # ambient light, under its window
     "D601": (51.5, 10.5, 0),      # RGB LED, under its light pipe
     "U301": (27.5, 13.8, 0),      # GNSS receiver, just below the antenna zone
 }
 
-# Rotations that are not about the case but about the circuit.
+# Which chip each capacitor decouples, from 05-materiais.md. The netlist
+# cannot say it: a decoupling capacitor sits between a rail and ground, and
+# the rail touches everything. The bill of materials is where it is written -
+# "C101 a C109: entradas e saidas do nPM1300", "C113, C114: entrada e saida do
+# TPS7A02", "C115, C116: CSRC e CINT do AEM10900" - and without it the placer
+# sends the capacitor to the centre of gravity of a rail, which is nowhere.
+DECOPLA: dict[str, str] = {
+    "C101": "U101", "C102": "U101", "C103": "U101", "C104": "U101",
+    "C105": "U101", "C106": "U101", "C107": "U101", "C108": "U101",
+    "C109": "U101", "C110": "U101", "C111": "U101", "C112": "U101",
+    "C113": "U104", "C114": "U104",
+    "C115": "U103", "C116": "U103", "C117": "U103",
+    "C118": "U102",
+    "C201": "U201", "C210": "U201",
+    "C301": "E301", "C302": "U301", "C303": "U301", "C304": "U301",
+    "C404": "J401",
+    "C501": "U501", "C502": "U504", "C503": "U503",
+    "C601": "SW601", "C602": "SW602", "C603": "SW603",
+    # the pull-ups of a bus go beside the master, not beside a slave
+    "R107": "U201", "R108": "U201", "R504": "U201", "R505": "U201",
+    "R109": "U201",
+    # the series resistors of the flash: two at the MCU, one at the flash
+    "R506": "U201", "R507": "U201", "R508": "U501",
+    # the gate pull-downs go at the transistor
+    "R402": "Q401", "R609": "Q601", "R610": "Q602", "R611": "Q603",
+}
+
 # A part is allowed inside the keep-out that exists because of it: the
 # radio module sits over its own antenna zone, which forbids copper, not it.
 DONO_DO_KEEPOUT: dict[str, str] = {"U201": "KEEPOUT_ANTENA_MODULO"}
+
+# The ME54BS13 asks for 20 mm between its antenna and any switching converter
+# or inductor (ficha V1.0.0, 7.3). That is not a keep-out - a keep-out
+# forbids copper, and this forbids a PART - so no DRC will ever catch it, and
+# the placer has to carry it. Measured before this rule existed: the AEM10900
+# sat 16.4 mm away and its inductor 18.1 mm.
+LONGE_DA_ANTENA = {"L101", "L102", "L103", "U101", "U103"}
+DIST_ANTENA = 20.0
+ANTENA_DO_RADIO = "KEEPOUT_ANTENA_MODULO"
+
+# Rotations that are not about the case but about the circuit.
 
 ROTACAO: dict[str, int] = {
     "J201": 0,
@@ -174,13 +217,20 @@ def redes() -> tuple[dict[str, int], dict[tuple[str, str], str]]:
     return numeros, por_pad
 
 
-def livre(x: float, y: float, w: float, h: float,
+def livre(x: float, y: float, bx: tuple[float, float, float, float],
           postos: list[tuple[float, float, float, float]],
-          ref: str = "") -> bool:
-    """Is the rectangle inside the board, out of the keep-outs and free?"""
+          ref: str = "", borda: float | None = None) -> bool:
+    """Is the courtyard, placed at (x, y), inside the board and free?
+
+    The box comes relative to the footprint origin, not centred on it: a
+    connector's courtyard sits to one side of its pads, and treating it as
+    centred is what pushed every decoupling capacitor two millimetres further
+    out than it had to be.
+    """
     eps = 1e-6
-    x0, y0, x1, y1 = x - w / 2, y - h / 2, x + w / 2, y + h / 2
-    if x0 < BORDA - eps or y0 < BORDA - eps or             x1 > M.W - BORDA + eps or y1 > M.H - BORDA + eps:
+    b = BORDA if borda is None else borda
+    x0, y0, x1, y1 = x + bx[0], y + bx[1], x + bx[2], y + bx[3]
+    if x0 < b - eps or y0 < b - eps or             x1 > M.W - b + eps or y1 > M.H - b + eps:
         return False
     r = M.RADIUS_DRAWING
     for cx, cy in ((r, r), (M.W - r, r), (r, M.H - r), (M.W - r, M.H - r)):
@@ -188,6 +238,11 @@ def livre(x: float, y: float, w: float, h: float,
                  cx + r if cx > M.W / 2 else 1e9)
         del qx
     for nome, (kx0, ky0, kx1, ky1), _c, _s in M.ZONES:
+        if nome == ANTENA_DO_RADIO and ref in LONGE_DA_ANTENA:
+            dx = max(kx0 - x1, x0 - kx1, 0.0)
+            dy = max(ky0 - y1, y0 - ky1, 0.0)
+            if math.hypot(dx, dy) < DIST_ANTENA:
+                return False
         if nome not in KEEPOUTS or DONO_DO_KEEPOUT.get(ref) == nome:
             continue
         if x1 > kx0 and kx1 > x0 and y1 > ky0 and ky1 > y0:
@@ -199,10 +254,10 @@ def livre(x: float, y: float, w: float, h: float,
     return True
 
 
-def espiral(cx: float, cy: float, w: float, h: float,
+def espiral(cx: float, cy: float, bx: tuple[float, float, float, float],
             postos: list, raio_max: float = 60.0, ref: str = ""):
     """The nearest free slot to (cx, cy), searched outwards."""
-    if livre(cx, cy, w, h, postos, ref):
+    if livre(cx, cy, bx, postos, ref):
         return (cx, cy)
     passo = PASSO
     r = passo
@@ -212,10 +267,39 @@ def espiral(cx: float, cy: float, w: float, h: float,
             a = 2 * math.pi * i / n
             x = round((cx + r * math.cos(a)) / PASSO) * PASSO
             y = round((cy + r * math.sin(a)) / PASSO) * PASSO
-            if livre(x, y, w, h, postos, ref):
+            if livre(x, y, bx, postos, ref):
                 return (x, y)
         r += passo
     return None
+
+
+def caixa(ref: str, ang: int) -> tuple[float, float, float, float]:
+    """The real courtyard, turned: x0, y0, x1, y1 around the origin.
+
+    Module level on purpose. While this lived inside colocar() the checker
+    had a copy of its own - the symmetric box, twice the furthest edge, with
+    a 1.8 mm floor - and the two disagreed: the checker reported 54
+    overlapping courtyards on a board where KiCad reported one. A rule
+    measured by two definitions is not a rule.
+    """
+    fp_load.carregar(FPS.FP[ref][0])
+    x0, y0, x1, y1 = fp_load.CAIXA[FPS.FP[ref][0]]
+    for _ in range((ang // 90) % 4):
+        x0, y0, x1, y1 = y0, -x1, y1, -x0
+    # a minimum, because a test point's courtyard is barely bigger than
+    # its own pad and two of them then land on top of each other
+    if x1 - x0 < 1.2:
+        m = (x0 + x1) / 2
+        x0, x1 = m - 0.6, m + 0.6
+    if y1 - y0 < 1.2:
+        m = (y0 + y1) / 2
+        y0, y1 = m - 0.6, m + 0.6
+    return (x0, y0, x1, y1)
+
+
+def tam(ref: str, ang: int) -> tuple[float, float]:
+    x0, y0, x1, y1 = caixa(ref, ang)
+    return (x1 - x0, y1 - y0)
 
 
 def colocar() -> tuple[dict[str, tuple[float, float, int, bool]], list[str]]:
@@ -240,13 +324,6 @@ def colocar() -> tuple[dict[str, tuple[float, float, int, bool]], list[str]]:
     for ref, (nome, _o, _n) in FPS.FP.items():
         tam_bruto[ref] = fp_load.carregar(nome)[1]
 
-    def tam(ref: str, ang: int) -> tuple[float, float]:
-        # a minimum, because a test point's courtyard is barely bigger than
-        # its own pad and two of them then land on top of each other
-        w, h = tam_bruto[ref]
-        w, h = max(w, 1.8), max(h, 1.8)
-        return (h, w) if ang % 180 else (w, h)
-
     lugar: dict[str, tuple[float, float, int, bool]] = {}
     fx, fy = M.FUROS_DOC[0]
     raio = M.M2_DRILL_UNVERIFIED / 2 + 0.6
@@ -256,21 +333,23 @@ def colocar() -> tuple[dict[str, tuple[float, float, int, bool]], list[str]]:
 
     def por(ref: str, cx: float, cy: float, ang: int = 0,
             preso: bool = False) -> None:
-        w, h = tam(ref, ang)
+        bx = caixa(ref, ang)
         if preso:
             # a fixed position has to be legal on its own: overlapping here
-            # silently is how two connectors end up on top of each other
-            p = (cx, cy) if livre(cx, cy, w, h, postos, ref) else None
+            # silently is how two connectors end up on top of each other.
+            # A connector that comes out of the case may touch the edge - that
+            # is the point of it - so the edge margin does not apply to it.
+            p = (cx, cy) if livre(cx, cy, bx, postos, ref, borda=0.0) else None
             if p is None:
                 falhas.append(f"{ref}: a posicao fixa ({cx:.1f}; {cy:.1f}) nao "
-                              f"esta livre para {w:.1f} x {h:.1f} mm")
+                              f"esta livre para o contorno {bx}")
         else:
-            p = espiral(cx, cy, w, h, postos, ref=ref)
+            p = espiral(cx, cy, bx, postos, ref=ref)
         if p is None:
             falhas.append(f"{ref}: nao coube perto de ({cx:.1f}; {cy:.1f})")
             return
         lugar[ref] = (p[0], p[1], ang, ref in ATRAS)
-        postos.append((p[0] - w / 2, p[1] - h / 2, p[0] + w / 2, p[1] + h / 2))
+        postos.append((p[0] + bx[0], p[1] + bx[1], p[0] + bx[2], p[1] + bx[3]))
 
     # ---- 1. the parts whose orientation the case decides ----
     for ref, (cx, cy, ang) in BORDA_FIXA.items():
@@ -289,13 +368,119 @@ def colocar() -> tuple[dict[str, tuple[float, float, int, bool]], list[str]]:
         por(ref, round((x0 + x1) / 2 / PASSO) * PASSO,
             round((y0 + y1) / 2 / PASSO) * PASSO, ang)
 
+    # ---- 3. decoupling and inductors, hugging the pin they serve ----
+    # The datasheets do not say "near": the ME54BS13 asks for 0.5 mm between a
+    # capacitor's pad and the power pin, and both the nPM1300 and the AEM10900
+    # ask for the inductor and the reactive parts "as close as possible" to
+    # their pins. A capacitor 7 mm away is 15 nH of loop, which at 200 mA and a
+    # 2 ns edge is 1.5 V of ringing on a 3.7 V rail - the capacitor stops being
+    # a capacitor and becomes part of the problem.
+    def pad_global(ref: str, numero: str) -> tuple[float, float] | None:
+        if ref not in lugar:
+            return None
+        nome_fp = FPS.FP[ref][0]
+        texto = fp_load.carregar(nome_fp)[0]
+        arv = fp_load.parse(texto)
+        for p in fp_load.kids(arv, "pad"):
+            if p[1] != numero:
+                continue
+            a = fp_load.kid(p, "at")
+            px, py = float(a[1]), float(a[2])
+            x, y, ang, atras = lugar[ref]
+            if atras:
+                px = -px
+            r = math.radians(ang)
+            return (x + px * math.cos(r) + py * math.sin(r),
+                    y - px * math.sin(r) + py * math.cos(r))
+        return None
+
+    def encostar(ref: str) -> bool:
+        """Put a two terminal part right beside the pin it serves."""
+        if ref in lugar or ref not in tam_bruto or len(P.PARTS[ref].pins) != 2:
+            return False
+        melhor = None
+        # the bill of materials decides first; the netlist only breaks ties
+        dono_bom = DECOPLA.get(ref)
+        for _nome, pinos in N.NETS.items():
+            refs = {r for r, _p in pinos}
+            if ref not in refs:
+                continue
+            if dono_bom is None and len(refs) > 8:
+                continue
+            if dono_bom is not None and dono_bom not in refs:
+                continue
+            for outro, pino in pinos:
+                if outro == ref or outro not in lugar:
+                    continue
+                if dono_bom is not None and outro != dono_bom:
+                    continue
+                if dono_bom is None and len(P.PARTS[outro].pins) < 4:
+                    continue
+                numero = next(q.number for q in P.PARTS[outro].pins
+                              if q.name == pino or q.number == pino)
+                p = pad_global(outro, numero)
+                if p and (melhor is None or len(P.PARTS[outro].pins) > melhor[2]):
+                    melhor = (p, outro, len(P.PARTS[outro].pins))
+        if melhor is None:
+            return False
+        (px, py), dono, _n = melhor
+        dx, dy, _a, _b = lugar[dono]
+        # step out of the chip, along the line from its centre through the pad
+        v = math.hypot(px - dx, py - dy) or 1.0
+        ux, uy = (px - dx) / v, (py - dy) / v
+        ang = 0 if abs(ux) >= abs(uy) else 90
+        w, h = tam(ref, ang)
+        # step out of the chip along the line from its centre through the pad,
+        # and if the ring is already full let the spiral find the nearest free
+        # spot to the PIN - not to the part's centre of gravity, which is how a
+        # decoupling capacitor ends up 30 mm from what it decouples
+        d = 0.6 + max(w, h) / 2
+        por(ref, round((px + ux * d) / PASSO) * PASSO,
+            round((py + uy * d) / PASSO) * PASSO, ang)
+        return ref in lugar
+
+    def ordem_de_encostar(ref: str) -> tuple:
+        """Who gets first pick of the ring around a chip.
+
+        The smallest capacitor decouples the highest frequency, and it is the
+        one whose loop to the pin has to be shortest: a 100 nF part 4 mm away
+        is not decoupling anything above a few tens of megahertz, while a
+        10 uF bulk capacitor 4 mm away is doing its job. So the ring is
+        handed out by capacitance, smallest first, and only then to
+        everything else. Alphabetical order - which is what this did before -
+        put C101 ahead of C112 for no reason at all.
+        """
+        if ref not in DECOPLA or not ref.startswith("C"):
+            return (1, 0.0, ref)
+        v = P.PARTS[ref].value.lower().replace(",", ".")
+        mult = {"p": 1e-12, "n": 1e-9, "u": 1e-6, "µ": 1e-6}
+        f = 1.0
+        for letra, m in mult.items():
+            if letra + "f" in v:
+                f = m
+                break
+        try:
+            num = float(v.split()[0])
+        except (ValueError, IndexError):
+            num = 1.0
+        return (0, num * f, ref)
+
+    # first pass: the parts that hug an anchor, before the other
+    # chips take the ring around it
+    for ref in sorted(FPS.FP, key=ordem_de_encostar):
+        encostar(ref)
+
     for ref, dono in JUNTO.items():
         if ref not in tam_bruto or dono not in lugar or ref in lugar:
             continue
         dx, dy = lugar[dono][0], lugar[dono][1]
         por(ref, dx, dy, ROTACAO.get(ref, 0))
 
-    # ---- 3 and 4. the rest, by connectivity, turned along it ----
+    # second pass: now the chips that follow an anchor are placed too
+    for ref in sorted(FPS.FP, key=ordem_de_encostar):
+        encostar(ref)
+
+    # ---- 4. the rest, by connectivity, turned along it ----
     ligados: dict[str, set[str]] = {}
     for _nome, pinos in N.NETS.items():
         refs = {r for r, _p in pinos}
@@ -576,9 +761,18 @@ def main() -> int:
                 f'\t\t(stroke (width 0.1) (type dash))\n\t\t(fill none)\n'
                 f'\t\t(layer "Dwgs.User")\n\t\t(uuid "{uid("r", nome)}")\n\t)')
 
-    # the ground planes: In1.Cu solid, and the leftover copper on the back
+    # The ground planes. In1.Cu is the solid one and the reference the return
+    # current follows; F.Cu and B.Cu get the leftover copper.
+    #
+    # The front pour is not decoration. Without it every ground pad on the
+    # front face depended on a via of its own to reach In1.Cu, and in the
+    # crowded corner around the power supply eighteen of the ninety-five had
+    # nowhere to put one - so eighteen ground pads had no ground. With the
+    # pour, KiCad ties them to it when it fills, and the stubs that do fit
+    # stay as the low impedance path they were meant to be.
     if "GND" in numeros:
         saida.append(plano_de_terra(numeros["GND"], ("In1.Cu",), 0.3))
+        saida.append(plano_de_terra(numeros["GND"], ("F.Cu",), 0.3))
         saida.append(plano_de_terra(numeros["GND"], ("B.Cu",), 0.3))
 
     # the single mounting hole

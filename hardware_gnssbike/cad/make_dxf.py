@@ -63,7 +63,7 @@ ZONES = [
     # name, rect, colour, source
     ("KEEPOUT_ANTENA_GNSS", (0.0, 0.0, 55.0, 8.0), 1,
      "04#zonas-proibidas: sem cobre em nenhuma camada"),
-    ("KEEPOUT_ANTENA_MODULO", (45.5, 54.0, 55.0, 76.0), 1,
+    ("KEEPOUT_ANTENA_MODULO", (49.5, 54.6, 55.0, 75.4), 1,
      "ficha ME54BS13 V1.0.0 7.2: 4 mm livres em volta do lado de RF, virado "
      "para a borda da placa; sem cobre, trilha, plano ou via"),
     ("SOMBRA_BATERIA_MAX_1-2MM", (9.5, 22.5, 45.5, 82.5), 30,
