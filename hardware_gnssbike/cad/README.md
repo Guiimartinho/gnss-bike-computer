@@ -56,6 +56,33 @@ Um pino de folha ganhava um espaço de 5,08 mm para um rótulo de 1,27. A dois
 passos de grade — o padrão do KiCad — o bloco do MCU caiu de 116 para 73 mm de
 altura, e foi isso que tirou o diagrama de A2.
 
+### Bloco é só para circuito integrado
+
+Um retângulo com nomes de pino nas laterais é como se desenha um **CI**, e só
+um CI. Este gerador desenhava **tudo** assim — 127 peças, todas retângulos:
+resistores, capacitores cerâmicos, diodos, o TVS. Uma folha de blocos ligados
+por linhas não mostra circuito nenhum.
+
+Cada classe passou a ter o símbolo dela, no padrão, com o eixo dos terminais
+em x e o corpo entre −1,27 e +1,27 mm:
+
+| Classe | Símbolo | Quantas |
+|---|---|---|
+| `R`, `JP` | ziguezague | 42 |
+| `C` | duas placas paralelas (cerâmico); placa curva e `+` quando for eletrolítico | 31 |
+| `L` | quatro arcos | 4 |
+| `FB` | quatro arcos dentro do retângulo, que é o que distingue a ferrite do indutor | 1 |
+| `RT` | ziguezague com a seta na diagonal | 1 |
+| `D` | triângulo e barra; com setas para fora se for LED | 2 |
+| `SW` | dois contatos, a barra e o êmbolo | 3 |
+| `LS` | círculo com a diagonal | 1 |
+| `TP` | círculo na ponta do terminal | 14 |
+| `U`, `J`, `DS` | **retângulo**, que é o certo para eles | 36 |
+
+Peça de dois terminais não mostra **número nem nome de pino**: "1" e "2" num
+resistor é ruído, e o símbolo já diz onde é o quê onde importa — a barra do
+catodo, a placa curva.
+
 Três tipos de nó, cada um desenhado do jeito que se faz:
 
 | Tipo | Como aparece | Quantos |

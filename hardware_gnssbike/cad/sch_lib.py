@@ -58,6 +58,192 @@ def esc(s: str) -> str:
     return s.replace("\\", "\\\\").replace('"', '\\"')
 
 
+# --- simbolos ---------------------------------------------------------------
+# A block with pin names down its sides is how an INTEGRATED CIRCUIT is drawn,
+# and only an integrated circuit. A resistor drawn as a block is a block, and a
+# sheet of blocks joined by lines does not show a circuit - which is what this
+# generator produced: 127 parts, every one of them a rectangle, resistors and
+# ceramic capacitors and diodes and the TVS alike.
+#
+# Everything below is the standard symbol for its class, drawn in the
+# symbol's own frame with the lead axis on x, the body between -1.27 and
+# +1.27, and the pins at +-3.81. A part whose two pins are on TOP and BOTTOM
+# gets the same art turned a quarter turn.
+CORPO_2T = 1.27
+
+
+def _traco(pts, largura=0.254, preenche="none") -> str:
+    p = " ".join(f"(xy {x:.4f} {y:.4f})" for x, y in pts)
+    return (f'\t\t\t\t(polyline\n\t\t\t\t\t(pts {p})\n'
+            f'\t\t\t\t\t(stroke (width {largura}) (type default))\n'
+            f'\t\t\t\t\t(fill (type {preenche}))\n\t\t\t\t)')
+
+
+def _circulo(x, y, r, largura=0.254, preenche="none") -> str:
+    return (f'\t\t\t\t(circle\n\t\t\t\t\t(center {x:.4f} {y:.4f})'
+            f'\n\t\t\t\t\t(radius {r:.4f})\n'
+            f'\t\t\t\t\t(stroke (width {largura}) (type default))\n'
+            f'\t\t\t\t\t(fill (type {preenche}))\n\t\t\t\t)')
+
+
+def _arco(x0, y0, xm, ym, x1, y1, largura=0.254) -> str:
+    return (f'\t\t\t\t(arc\n\t\t\t\t\t(start {x0:.4f} {y0:.4f})'
+            f'\n\t\t\t\t\t(mid {xm:.4f} {ym:.4f})'
+            f'\n\t\t\t\t\t(end {x1:.4f} {y1:.4f})\n'
+            f'\t\t\t\t\t(stroke (width {largura}) (type default))\n'
+            f'\t\t\t\t\t(fill (type none))\n\t\t\t\t)')
+
+
+def classe_do_simbolo(p) -> str | None:
+    """Which symbol this part gets, or None to keep the block."""
+    pre = "".join(c for c in p.ref if c.isalpha())
+    lados = {q.side for q in p.pins}
+    if len(p.pins) == 1 and pre == "TP":
+        return "tp"
+    if len(p.pins) == 3 and pre == "Q":
+        return None          # o MOSFET fica para uma passagem propria
+    if len(p.pins) != 2:
+        return None
+    v = (p.value + " " + p.note).lower()
+    if pre in ("R", "JP"):
+        return "r"
+    if pre == "RT":
+        return "rt"
+    if pre == "C":
+        return "c_pol" if ("elet" in v or "tant" in v) else "c"
+    if pre == "L":
+        return "l"
+    if pre == "FB":
+        return "fb"
+    if pre == "D":
+        if "esd" in v or "tvs" in v or "tpd" in v:
+            return "tvs"
+        if "led" in v or v.startswith("apt"):
+            return "led"
+        return "d"
+    if pre == "SW":
+        return "sw"
+    if pre == "LS":
+        return "buz"
+    if pre == "PV":
+        return "pv"
+    if pre == "E":
+        return "ant"
+    return None
+
+
+def _arte_bruta(cl: str) -> list[str]:
+    """The class's art, lead axis on x, body from -1.27 to 1.27."""
+    a = CORPO_2T
+    if cl == "r":
+        return [_traco([(-a, 0), (-1.016, 0.762), (-0.508, -0.762), (0, 0.762),
+                        (0.508, -0.762), (1.016, 0.762), (a, 0)])]
+    if cl == "rt":
+        # resistor com a seta na diagonal: termistor
+        return [_traco([(-a, 0), (-1.016, 0.762), (-0.508, -0.762), (0, 0.762),
+                        (0.508, -0.762), (1.016, 0.762), (a, 0)]),
+                _traco([(-1.27, -1.27), (1.27, 1.27)], largura=0.152),
+                _traco([(1.27, 1.27), (0.6, 1.1), (0.95, 0.5), (1.27, 1.27)],
+                       largura=0.152, preenche="outline")]
+    if cl == "c":
+        return [_traco([(-a, 0), (-0.254, 0)]), _traco([(0.254, 0), (a, 0)]),
+                _traco([(-0.254, -1.016), (-0.254, 1.016)], largura=0.305),
+                _traco([(0.254, -1.016), (0.254, 1.016)], largura=0.305)]
+    if cl == "c_pol":
+        return [_traco([(-a, 0), (-0.254, 0)]), _traco([(0.254, 0), (a, 0)]),
+                _traco([(-0.254, -1.016), (-0.254, 1.016)], largura=0.305),
+                _arco(0.254, 1.016, 0.762, 0.0, 0.254, -1.016, largura=0.305),
+                _traco([(-1.016, 0.889), (-0.508, 0.889)], largura=0.152),
+                _traco([(-0.762, 0.635), (-0.762, 1.143)], largura=0.152)]
+    if cl == "l":
+        # quatro arcos, que e como se desenha um indutor
+        arcos = []
+        for i in range(4):
+            x0 = -a + i * (2 * a / 4)
+            x1 = x0 + 2 * a / 4
+            arcos.append(_arco(x0, 0, (x0 + x1) / 2, 0.635, x1, 0))
+        return arcos
+    if cl == "fb":
+        arcos = []
+        for i in range(4):
+            x0 = -a + i * (2 * a / 4)
+            x1 = x0 + 2 * a / 4
+            arcos.append(_arco(x0, 0, (x0 + x1) / 2, 0.508, x1, 0))
+        # o retangulo por cima e o que distingue a ferrite do indutor
+        arcos.append(_traco([(-a, 0.889), (a, 0.889), (a, -0.254),
+                             (-a, -0.254), (-a, 0.889)], largura=0.152))
+        return arcos
+    if cl in ("d", "led", "tvs", "pv"):
+        art = [_traco([(-a, 0), (-0.508, 0)]), _traco([(0.508, 0), (a, 0)])]
+        if cl == "tvs":
+            # bidirecional: dois triangulos costas com costas
+            art += [_traco([(-0.508, -1.016), (-0.508, 1.016), (0.254, 0),
+                            (-0.508, -1.016)], preenche="outline"),
+                    _traco([(0.508, -1.016), (0.508, 1.016), (-0.254, 0),
+                            (0.508, -1.016)], preenche="outline")]
+            return art
+        art.append(_traco([(-0.508, -1.016), (-0.508, 1.016), (0.508, 0),
+                           (-0.508, -1.016)], preenche="outline"))
+        art.append(_traco([(0.508, -1.016), (0.508, 1.016)]))
+        if cl == "led":
+            for dy in (0.0, 0.508):
+                art.append(_traco([(-0.2, 1.1 + dy), (0.4, 1.7 + dy)],
+                                  largura=0.152))
+                art.append(_traco([(0.4, 1.7 + dy), (0.1, 1.6 + dy),
+                                   (0.3, 1.4 + dy), (0.4, 1.7 + dy)],
+                                  largura=0.152, preenche="outline"))
+        if cl == "pv":
+            # as setas apontam PARA o diodo: e uma celula, nao um LED
+            for dy in (0.0, 0.508):
+                art.append(_traco([(0.4, 1.7 + dy), (-0.2, 1.1 + dy)],
+                                  largura=0.152))
+                art.append(_traco([(-0.2, 1.1 + dy), (0.1, 1.2 + dy),
+                                   (-0.1, 1.4 + dy), (-0.2, 1.1 + dy)],
+                                  largura=0.152, preenche="outline"))
+            art.append(_traco([(-a, -1.4), (a, -1.4)], largura=0.152))
+        return art
+    if cl == "sw":
+        # tecla de pressionar: dois contatos, a barra e o embolo
+        return [_traco([(-a, 0), (-0.762, 0)]), _traco([(0.762, 0), (a, 0)]),
+                _circulo(-0.762, 0, 0.2, preenche="outline"),
+                _circulo(0.762, 0, 0.2, preenche="outline"),
+                _traco([(-1.016, 0.635), (1.016, 0.635)]),
+                _traco([(0, 0.635), (0, 1.27)], largura=0.152),
+                _traco([(-0.508, 1.27), (0.508, 1.27)], largura=0.305)]
+    if cl == "buz":
+        return [_traco([(-a, 0), (-0.635, 0)]), _traco([(0.635, 0), (a, 0)]),
+                _circulo(0, 0, 0.889),
+                _traco([(-0.4, -0.5), (0.4, 0.5)], largura=0.152)]
+    if cl == "ant":
+        return [_traco([(-a, 0), (0, 0)]),
+                _traco([(0, 0), (0, 1.016)]),
+                _traco([(-0.889, 1.016), (0.889, 1.016)]),
+                _traco([(-0.889, 1.016), (-1.397, 1.778)], largura=0.152),
+                _traco([(0.889, 1.016), (1.397, 1.778)], largura=0.152)]
+    if cl == "tp":
+        return [_traco([(-a, 0), (0.508, 0)]),
+                _circulo(0.889, 0, 0.381)]
+    return []
+
+
+def arte_do_simbolo(p) -> list[str]:
+    """The class's art, turned to the axis this part's pins are on."""
+    cl = classe_do_simbolo(p)
+    if cl is None:
+        return []
+    bruta = _arte_bruta(cl)
+    if {q.side for q in p.pins} != {"T", "B"}:
+        return bruta
+    # a quarter turn: (x, y) -> (-y, x)
+    import re as _re
+
+    def gira(m):
+        x, y = float(m.group(1)), float(m.group(2))
+        return f"{-y:.4f} {x:.4f}"
+
+    return [_re.sub(r"(-?\d+\.\d+) (-?\d+\.\d+)", gira, t) for t in bruta]
+
+
 @dataclass(frozen=True)
 class Pin:
     number: str
@@ -91,8 +277,21 @@ class Part:
             out[p.side].append(p)
         return out
 
+    def eixo(self) -> str:
+        """For a part with a symbol: which way its two leads run."""
+        lados = {q.side for q in self.pins}
+        return "v" if lados == {"T", "B"} else "h"
+
     def size(self) -> tuple[float, float]:
-        """Body size, from the pin counts and the longest name."""
+        """Body size, from the pin counts and the longest name.
+
+        A part with a symbol of its own has the symbol's size, which is small
+        and fixed: 2,54 mm of body with the pins 2,54 beyond it. A block is
+        what an IC gets, and only there does the size come from counting
+        pins and measuring names.
+        """
+        if classe_do_simbolo(self):
+            return (2 * CORPO_2T, 2 * CORPO_2T)
         s = self._sides()
         rows = max(len(s["L"]), len(s["R"]), 1)
         cols = max(len(s["T"]), len(s["B"]), 1)
@@ -112,6 +311,15 @@ class Part:
 
     def pin_local(self) -> dict[str, tuple[float, float, int]]:
         """Pin number to its tip in symbol space, and the pin angle."""
+        if classe_do_simbolo(self):
+            a = CORPO_2T + PIN_LEN
+            p = list(self.pins)
+            if len(p) == 1:
+                return {p[0].number: (a, 0.0, 180)}
+            if self.eixo() == "v":
+                return {p[0].number: (0.0, a, 270),
+                        p[1].number: (0.0, -a, 90)}
+            return {p[0].number: (-a, 0.0, 0), p[1].number: (a, 0.0, 180)}
         w, h = self.size()
         hw, hh = w / 2.0, h / 2.0
         s = self._sides()
@@ -154,8 +362,15 @@ class Part:
         w, h = self.size()
         hw, hh = w / 2.0, h / 2.0
         loc = self.pin_local()
-        out = [f'\t\t(symbol "{self.sym_name}"',
-               '\t\t\t(pin_names (offset 0.508))',
+        # A two terminal symbol shows neither pin numbers nor pin names:
+        # "1" and "2" on a resistor are noise, and the standard symbol already
+        # says which end is which where it matters (the cathode bar, the
+        # curved plate).
+        esconde = "\n\t\t\t(pin_numbers hide)" if classe_do_simbolo(self) else ""
+        nomes = ("(pin_names (offset 0.508) hide)" if classe_do_simbolo(self)
+                 else "(pin_names (offset 0.508))")
+        out = [f'\t\t(symbol "{self.sym_name}"{esconde}',
+               f'\t\t\t{nomes}',
                '\t\t\t(exclude_from_sim no)\n\t\t\t(in_bom yes)\n\t\t\t(on_board yes)',
                f'\t\t\t(property "Reference" "{esc(self.ref)}"\n\t\t\t\t(at {-hw:.3f} {hh + 1.27:.3f} 0)'
                f'\n\t\t\t\t(effects (font (size {TEXT} {TEXT})) (justify left bottom))\n\t\t\t)',
@@ -167,12 +382,17 @@ class Part:
                f'\n\t\t\t\t(effects (font (size {TEXT} {TEXT})) (hide yes))\n\t\t\t)',
                f'\t\t\t(property "Description" "{esc(self.note)}"\n\t\t\t\t(at 0 0 0)'
                f'\n\t\t\t\t(effects (font (size {TEXT} {TEXT})) (hide yes))\n\t\t\t)',
-               f'\t\t\t(symbol "{self.ref}_0_1"',
-               f'\t\t\t\t(rectangle\n\t\t\t\t\t(start {-hw:.3f} {-hh:.3f})'
-               f'\n\t\t\t\t\t(end {hw:.3f} {hh:.3f})'
-               '\n\t\t\t\t\t(stroke (width 0.254) (type default))'
-               '\n\t\t\t\t\t(fill (type background))\n\t\t\t\t)',
-               '\t\t\t)',
+               f'\t\t\t(symbol "{self.ref}_0_1"']
+        arte = arte_do_simbolo(self)
+        if arte:
+            out += arte
+        else:
+            out.append(
+                f'\t\t\t\t(rectangle\n\t\t\t\t\t(start {-hw:.3f} {-hh:.3f})'
+                f'\n\t\t\t\t\t(end {hw:.3f} {hh:.3f})'
+                '\n\t\t\t\t\t(stroke (width 0.254) (type default))'
+                '\n\t\t\t\t\t(fill (type background))\n\t\t\t\t)')
+        out += ['\t\t\t)',
                f'\t\t\t(symbol "{self.ref}_1_1"']
         for p in self.pins:
             px, py, ang = loc[p.number]

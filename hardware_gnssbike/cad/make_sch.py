@@ -167,7 +167,21 @@ def montar_folha(nome: str, arquivo: str, pagina: str, root_uuid: str,
     router.build_obstacles()
 
     # ---- supplies and grounds, one power symbol per pin ----
+    # A power symbol is a symbol AND a label, and only the symbol was being
+    # given room: two ground pins two grid steps apart each got their own
+    # symbol, the symbols did not collide, and the words printed straight
+    # over each other - "GNDGNDGND" across the bottom of every chip. What is
+    # reserved now is the whole thing, the name included.
     ocupados: set[tuple[float, float]] = set()
+    caixas: list[tuple[float, float, float, float]] = []
+
+    def _cabe(qx: float, qy: float, rede: str) -> bool:
+        w = len(rede) * 0.9 + 0.8
+        h = 4.2                     # the symbol plus its name under it
+        a = (qx - w / 2, qy - h / 2, qx + w / 2, qy + h / 2)
+        return not any(a[2] > b[0] and b[2] > a[0] and a[3] > b[1] and b[3] > a[1]
+                       for b in caixas)
+
     for rede, terra in S.TRILHOS.items():
         if rede not in N.NETS:
             continue
@@ -175,18 +189,36 @@ def montar_folha(nome: str, arquivo: str, pagina: str, root_uuid: str,
             px, py = ponto(ref, pin_name)
             lado = lado_do_pino(ref, pin_name)
             dx, dy = {"L": (-1, 0), "R": (1, 0), "T": (0, -1), "B": (0, 1)}[lado]
-            passo = 2
-            while passo < 8:
-                qx, qy = px + dx * passo * GRID, py + dy * passo * GRID
-                if (qx, qy) not in ocupados and router.key(qx, qy) not in router.blocked:
+            # First pass: a spot where the NAME also fits. Second: any free
+            # spot at all. A long stub to save a label is worse than the
+            # label - at fourteen grid steps one of them ran across a
+            # component and split a net.
+            passo = None
+            for exigir_rotulo in (True, False):
+                for tentativa in range(2, 9):
+                    qx, qy = (px + dx * tentativa * GRID,
+                              py + dy * tentativa * GRID)
+                    if (qx, qy) in ocupados:
+                        continue
+                    if router.key(qx, qy) in router.blocked:
+                        continue
+                    if exigir_rotulo and not _cabe(qx, qy, rede):
+                        continue
+                    passo = tentativa
                     break
-                passo += 1
+                if passo is not None:
+                    break
+            if passo is None:
+                passo = 2
+            qx, qy = px + dx * passo * GRID, py + dy * passo * GRID
             ocupados.add((qx, qy))
+            w_r = len(rede) * 0.9 + 0.8
+            caixas.append((qx - w_r / 2, qy - 2.1, qx + w_r / 2, qy + 2.1))
             router.pin_cells.add(router.key(qx, qy))
             sch.powers.append(PowerPort(rede, qx, qy, ground=terra,
                                         ref=f"#PWR{len(sch.powers) + 1:03d}"))
             sch.wires.append(((px, py), (qx, qy)))
-            for k in range(min(passo, 8) + 1):
+            for k in range(min(passo, 14) + 1):
                 cel = router.key(px + dx * k * GRID, py + dy * k * GRID)
                 router.used.setdefault(cel, set()).add(rede)
                 d = router.dirs.setdefault(cel, {}).setdefault(rede, set())

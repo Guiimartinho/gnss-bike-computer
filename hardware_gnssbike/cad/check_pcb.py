@@ -216,6 +216,18 @@ def main() -> int:
     # own font size.
     import tempfile
 
+    # the angle each label is drawn at, from the board file: the SVG's <text>
+    # element is invisible (it exists so the PDF is searchable) and carries no
+    # rotation, so a vertical designator would be measured as if it were
+    # horizontal - which is a box turned 90 degrees from the one that prints.
+    bruto = PCB.read_text(encoding="utf-8")
+    ang_rotulo: dict[str, int] = {}
+    for corpo in re.findall(r'\(footprint "[^"]+"(.*?)\n\t\)\n', bruto, re.S):
+        m = re.search(r'\(property "Reference" "([^"]+)"\s*\n\s*'
+                      r'\(at [-\d.]+ [-\d.]+ ([-\d.]+)\)', corpo)
+        if m:
+            ang_rotulo[m.group(1)] = int(float(m.group(2))) % 180
+
     sobrepostos: list[tuple[str, str]] = []
     n_textos = 0
     with tempfile.TemporaryDirectory() as tmp:
@@ -234,8 +246,12 @@ def main() -> int:
                     r'textLength="([-\d.]+)" font-size="([-\d.]+)"[^>]*>'
                     r'([^<]*)</text>', texto, re.S):
                 # the SVG font-size is the em box, 4/3 of the glyph height
-                itens.append((m.group(5), float(m.group(1)), float(m.group(2)),
-                              float(m.group(3)), float(m.group(4)) * 0.75))
+                w = float(m.group(3))
+                h = float(m.group(4)) * 0.75
+                if ang_rotulo.get(m.group(5), 0):
+                    w, h = h, w
+                itens.append((m.group(5), float(m.group(1)),
+                              float(m.group(2)), w, h))
             n_textos += len(itens)
             for i, a in enumerate(itens):
                 for b in itens[i + 1:]:

@@ -457,8 +457,16 @@ def tam(ref: str, ang: int) -> tuple[float, float]:
 # dropped 1.8 mm above their part: at a fixed offset, 37 pairs of reference
 # designators sat on top of each other, and a designator you cannot read
 # identifies nothing.
-TEXTO_ALT = 0.8
-TEXTO_TRACO = 0.15
+# 0.6 mm with a 0.12 mm stroke. 0.8/0.15 is the number a fab publishes as
+# its conservative floor, and it is the right floor for a board with room;
+# on this one it is a designator taller than half the parts it names, and it
+# read as clutter rather than as labelling. 0.6/0.12 is what dense boards
+# use and what most houses print without comment - but it IS below the
+# conservative figure, and no fab has been consulted for this board at all
+# (that is already an open item), so it is one of the things to confirm with
+# the one that is chosen.
+TEXTO_ALT = 0.6
+TEXTO_TRACO = 0.12
 # Width of a character as a fraction of the text height. 1.06, measured in
 # KiCad's own SVG export and not guessed: "C101" at 0.8 mm comes out with
 # textLength 3.38, which is 0.845 per character. At the 0.75 this carried,
@@ -469,9 +477,12 @@ TEXTO_LARG = 1.06
 TEXTO_FOLGA = 0.12         # between two labels
 
 
-def _caixa_texto(ref: str, x: float, y: float) -> tuple:
+def _caixa_texto(ref: str, x: float, y: float, ang: int = 0) -> tuple:
+    """The rectangle a label occupies, turned if the label is turned."""
     w = len(ref) * TEXTO_ALT * TEXTO_LARG + TEXTO_FOLGA
     h = TEXTO_ALT + TEXTO_FOLGA
+    if ang % 180:
+        w, h = h, w
     return (x - w / 2, y - h / 2, x + w / 2, y + h / 2)
 
 
@@ -479,8 +490,14 @@ def _cruza(a: tuple, b: tuple) -> bool:
     return a[2] > b[0] and b[2] > a[0] and a[3] > b[1] and b[3] > a[1]
 
 
-def rotulos(lugar: dict) -> dict[str, tuple[float, float]]:
-    """Where each reference designator goes: offset from its own footprint.
+def rotulos(lugar: dict) -> dict[str, tuple[float, float, int]]:
+    """Where each reference designator goes, and at what angle.
+
+    The angle is not free: it follows the PART. A component turned 90 degrees
+    gets a label turned 90 degrees, so the text reads along the thing it
+    names, and a board where every designator is horizontal over a column of
+    vertical resistors reads as noise - which is what this produced, 123
+    labels and not one of them turned, over 44 parts that are.
 
     Two rules, in order. A label may NEVER sit on another label - that is
     what makes the board unreadable. A label SHOULD not sit on another
@@ -496,7 +513,7 @@ def rotulos(lugar: dict) -> dict[str, tuple[float, float]]:
     for ref, (x, y, ang, _a) in lugar.items():
         bx = caixa(ref, ang)
         corpos.append((x + bx[0], y + bx[1], x + bx[2], y + bx[3]))
-    saida: dict[str, tuple[float, float]] = {}
+    saida: dict[str, tuple[float, float, int]] = {}
     # biggest parts first: they have the most room around them and the most
     # to lose from a label landing in the middle of a fine pitch package
     ordem = sorted(lugar, key=lambda r: -(
@@ -505,8 +522,11 @@ def rotulos(lugar: dict) -> dict[str, tuple[float, float]]:
     for ref in ordem:
         x, y, ang, _atras = lugar[ref]
         bx = caixa(ref, ang)
+        rot = 90 if ang % 180 else 0
         meia_w = len(ref) * TEXTO_ALT * TEXTO_LARG / 2
         meia_h = TEXTO_ALT / 2
+        if rot:
+            meia_w, meia_h = meia_h, meia_w
         melhor = None
         for passo in (0.0, 0.3, 0.7, 1.2, 1.8, 2.6, 3.6):
             for dx, dy in ((0.0, bx[1] - meia_h - 0.25 - passo),
@@ -524,7 +544,7 @@ def rotulos(lugar: dict) -> dict[str, tuple[float, float]]:
                 cx_, cy_ = x + dx, y + dy
                 if not (0.3 < cx_ < M.W - 0.3 and 0.3 < cy_ < M.H - 0.3):
                     continue
-                t = _caixa_texto(ref, cx_, cy_)
+                t = _caixa_texto(ref, cx_, cy_, rot)
                 if any(_cruza(t, q) for q in postas):
                     continue
                 livre_de_peca = not any(_cruza(t, c) for c in corpos)
@@ -537,10 +557,10 @@ def rotulos(lugar: dict) -> dict[str, tuple[float, float]]:
         if melhor is None:
             # nothing anywhere: leave it on the part and say so by putting it
             # dead centre, which is visibly deliberate rather than a near miss
-            saida[ref] = (0.0, 0.0)
-            postas.append(_caixa_texto(ref, x, y))
+            saida[ref] = (0.0, 0.0, rot)
+            postas.append(_caixa_texto(ref, x, y, rot))
             continue
-        saida[ref] = melhor[0]
+        saida[ref] = (melhor[0][0], melhor[0][1], rot)
         postas.append(melhor[1])
     return saida
 
@@ -1261,7 +1281,7 @@ def main() -> int:
         # with the same transform pad_global() uses, and mirrored on the back
         # face for the same reason the pads are.
         _r = math.radians(ang)
-        _dx, _dy = desloca[ref]
+        _dx, _dy, _ang_rot = desloca[ref]
         _rot = (_dx * math.cos(_r) - _dy * math.sin(_r),
                 _dx * math.sin(_r) + _dy * math.cos(_r))
         if atras:
@@ -1270,7 +1290,7 @@ def main() -> int:
                f'\t\t(at {px:.4f} {py:.4f} {ang})\n'
                f'\t\t(uuid "{uid("fp", ref)}")\n'
                f'\t\t(property "Reference" "{ref}"\n'
-               f'\t\t\t(at {_rot[0]:.4f} {_rot[1]:.4f} 0)\n'
+               f'\t\t\t(at {_rot[0]:.4f} {_rot[1]:.4f} {_ang_rot})\n'
                f'\t\t\t(layer "{"B" if atras else "F"}.SilkS")\n'
                f'\t\t\t(uuid "{uid("fpref", ref)}")\n'
                f'\t\t\t(effects (font (size {TEXTO_ALT} {TEXTO_ALT}) '
