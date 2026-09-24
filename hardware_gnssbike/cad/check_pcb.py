@@ -185,7 +185,15 @@ def main() -> int:
               if fp_load.kid(g, "layer")[1] == "Edge.Cuts"]
     arcos = [g for g in fp_load.kids(arv, "gr_arc")
              if fp_load.kid(g, "layer")[1] == "Edge.Cuts"]
-    check(len(linhas) == 4 and len(arcos) == 4, "contorno com 4 linhas e 4 arcos")
+    # Four sides and four rounded corners, plus the four extra segments of
+    # the notch that section 7.4 of the ME54BS13 datasheet asks for under the
+    # module's antenna. Counting only 4 and 4 was a check written before the
+    # notch existed, and it failed on a board that had got BETTER.
+    recorte = any(n == "RECORTE_ANTENA_MODULO" for n, _z, _c, _s in M.ZONES)
+    n_linhas = 8 if recorte else 4
+    check(len(linhas) == n_linhas and len(arcos) == 4,
+          f"contorno com {n_linhas} linhas e 4 arcos"
+          + (" (4 lados mais o recorte da antena)" if recorte else ""))
     furos = [f for f in fps
              if next((p[2] for p in fp_load.kids(f, "property")
                       if p[1] == "Reference"), "") == "REF**"]

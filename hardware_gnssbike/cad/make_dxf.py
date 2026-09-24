@@ -63,9 +63,20 @@ ZONES = [
     # name, rect, colour, source
     ("KEEPOUT_ANTENA_GNSS", (0.0, 0.0, 55.0, 8.0), 1,
      "04#zonas-proibidas: sem cobre em nenhuma camada"),
-    ("KEEPOUT_ANTENA_MODULO", (49.5, 54.6, 55.0, 75.4), 1,
-     "ficha ME54BS13 V1.0.0 7.2: 4 mm livres em volta do lado de RF, virado "
-     "para a borda da placa; sem cobre, trilha, plano ou via"),
+    # The module moved to the bottom right CORNER, which is what figure 1 of
+    # section 7.5 calls "Best": the antenna hangs off the edge with the board
+    # hollowed out beneath it. It also takes the two antennas from 65.7 mm
+    # apart to 84.5, because the diagonal of the board is the longest line
+    # there is.
+    ("KEEPOUT_ANTENA_MODULO", (50.3, 76.0, 55.0, 94.0), 1,
+     "ficha ME54BS13 V1.0.0, 7.3 e 7.4: sobre a area da antena nao pode cobre, "
+     "componente nem caixa metalica fechada, e 3 a 5 mm em volta dela nao "
+     "pode trilha de sinal, metal nem fonte de interferencia"),
+    ("RECORTE_ANTENA_MODULO", (50.7, 79.2, 55.0, 90.8), 2,
+     "ficha ME54BS13 V1.0.0, 7.4: a placa sob a area da antena e VAZADA, "
+     "para deixar a regiao suspensa. Comeca em x 50,7: a ultima coluna de "
+     "pads LGA do modulo chega a 50,275, e o corte tem de deixar os 0,3 mm "
+     "de cobre a borda"),
     ("SOMBRA_BATERIA_MAX_1-2MM", (9.5, 22.5, 45.5, 82.5), 30,
      "04#as-duas-sombras: teto de 1,2 mm na face de tras"),
     ("SOMBRA_DISPLAY_JDI_MAX_2-6MM", (7.46, 5.1, 47.54, 66.9), 30,
@@ -75,21 +86,30 @@ ZONES = [
     ("ZONA_GNSS_MAX-F10S", (20.0, 2.0, 35.0, 16.0), 3,
      "04#posicionamento: modulo sob blindagem, frente"),
     ("ZONA_LED_RGB", (50.0, 0.0, 53.0, 3.0), 3, "04#posicionamento"),
-    ("ZONA_IMU_MAGNETOMETRO", (8.0, 20.0, 15.0, 23.0), 3,
-     "04#posicionamento: BMI270 e MMC5633NJL"),
+    ("ZONA_IMU_MAGNETOMETRO", (24.0, 24.0, 40.0, 38.0), 3,
+     "BMI270 e MMC5633NJL, na mesma faixa da flash: sob o display, longe das "
+     "duas antenas e das correntes de chaveamento"),
     ("ZONA_FPC_DISPLAY_J401", (3.7, 29.5, 7.1, 39.5), 3,
      "04#posicionamento: 10 vias, sai pela esquerda"),
-    ("ZONA_BUZZER", (10.5, 46.5, 21.5, 55.5), 3, "04#posicionamento"),
-    ("ZONA_ENERGIA", (16.0, 67.0, 38.0, 90.0), 3,
-     "04#posicionamento: nPM1300, MAX17262, AEM10900, indutores"),
-    ("ZONA_FLASH_MX25R6435F", (0.0, 67.0, 14.0, 83.0), 3, "04#posicionamento"),
+    ("ZONA_BUZZER", (30.0, 42.0, 42.0, 53.0), 3,
+     "04#posicionamento, deslocado para a direita: a esquerda da faixa ficou "
+     "para os conectores do display"),
+    ("ZONA_ENERGIA", (5.0, 56.0, 44.0, 76.0), 3,
+     "nPM1300, MAX17262, AEM10900, TPS7A02, indutores e conectores. Mais "
+     "larga e mais alta do que 04#posicionamento pedia, porque ela deixou de "
+     "dividir a faixa de baixo com o modulo de radio"),
+    ("ZONA_FLASH_MX25R6435F", (4.0, 24.0, 20.0, 38.0), 3,
+     "flash NOR, subida para a faixa sob o display: ela fala SPI com o modulo "
+     "e nao tem por que dividir o canto de baixo com a energia"),
     ("ZONA_BAROMETRO_BMP585", (4.5, 83.0, 8.0, 86.5), 3,
      "04#posicionamento: face de tras, no respiro"),
-    ("ZONA_MODULO_ME54BS13", (37.2, 58.7, 54.2, 71.4), 3,
-     "MinewSemi ME54BS13, 16,5 x 12,0 mm, deitado com a antena na borda "
-     "direita. MAIOR que os 10 x 16,2 que 04-pcb-e-caixa.md supunha"),
-    ("ZONA_BOTOES", (8.0, 88.0, 47.0, 95.0), 3,
-     "04#posicionamento: 3 teclas Omron B3S-1002P"),
+    ("ZONA_MODULO_ME54BS13", (37.2, 78.7, 54.2, 91.3), 3,
+     "MinewSemi ME54BS13, 16,5 x 12,0 mm, deitado no canto de baixo a direita "
+     "com a antena na borda. MAIOR que os 10 x 16,2 que 04-pcb-e-caixa.md "
+     "supunha para o Fanstel"),
+    ("ZONA_BOTOES", (4.0, 76.5, 38.0, 84.5), 3,
+     "3 teclas Omron B3S-1002P, subidas e encolhidas para a esquerda: a "
+     "faixa de 5 mm em volta da antena do modulo comeca em x 44,3"),
     ("ZONA_USB_C", (23.0, 94.0, 32.0, 97.0), 3,
      "04#posicionamento: Molex 2036150003"),
     ("ZONA_LUZ_AMBIENTE_OPT3001", (0.4, 88.0, 2.4, 90.0), 3, "04#posicionamento"),

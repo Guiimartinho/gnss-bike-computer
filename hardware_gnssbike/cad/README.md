@@ -88,9 +88,21 @@ retângulos dele não cabem a peça real, e a placa segue a peça:
 ## Verificação
 
 ```sh
-python hardware_gnssbike/cad/check_sch.py     # regera e confere o esquematico
-python hardware_gnssbike/cad/check_pcb.py     # regera e confere a placa
-python hardware_gnssbike/cad/make_3d.py       # as vistas 3D
+python hardware_gnssbike/cad/check_sch.py              # regera e confere o esquematico
+python hardware_gnssbike/cad/make_pcb.py               # 1. coloca as pecas
+python hardware_gnssbike/cad/route.py                  # 2. roteia o que consegue
+python hardware_gnssbike/cad/check_pcb.py --como-esta  # 3. confere o arquivo como esta
+python hardware_gnssbike/cad/dry_run_pcb.py            # 4. as regras das fichas
+```
+
+A ordem importa: sem `--como-esta`, o passo 3 **regera a placa** e apaga as
+trilhas. Depois, as vistas:
+
+```sh
+python hardware_gnssbike/cad/make_dxf.py     # contorno e zonas em DXF
+"D:/KiCAD/bin/kicad-cli.exe" pcb export glb --output hardware_gnssbike/cad/gnssbike.glb     --include-tracks --include-zones --subst-models hardware_gnssbike/cad/gnssbike.kicad_pcb
+python hardware_gnssbike/cad/make_3d.py      # as tres vistas 3D em PNG
+"D:/KiCAD/bin/kicad-cli.exe" pcb export svg --output hardware_gnssbike/cad/gnssbike-2d.svg     --layers "F.Cu,In1.Cu,In2.Cu,B.Cu,F.SilkS,Edge.Cuts,F.Fab"     --page-size-mode 2 --exclude-drawing-sheet hardware_gnssbike/cad/gnssbike.kicad_pcb
 ```
 
 **Esquemático** — os 7 arquivos abrem; o **próprio KiCad** percorre a

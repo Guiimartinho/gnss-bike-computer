@@ -90,11 +90,16 @@ BORDA_FIXA: dict[str, tuple[float, float, int]] = {
     # The mouth of a USB-C faces +Y in this footprint: the contacts leave at
     # the back, so the body sits on the far side of the pads. At 180 it was
     # pointing INTO the board, which no rule catches and no cable forgives.
-    "J101": (27.5, 91.66, 0),     # USB-C, bottom edge, mouth out
-    "SW601": (11.0, 80.5, 0),     # the three keys, in a row above it
-    "SW602": (27.5, 80.5, 0),
-    "SW603": (44.0, 80.5, 0),
-    "U201": (45.7, 65.0, 270),    # radio module, antenna to the right edge
+    "J101": (21.0, 91.66, 0),     # USB-C, bottom edge, mouth out
+    "SW601": (9.5, 80.5, 0),      # the three keys, in a row above it, kept
+    "SW602": (21.0, 80.5, 0),     # left of the antenna's 5 mm clear band
+    "SW603": (32.5, 80.5, 0),
+    # bottom right CORNER, which is the datasheet's "Best" (7.5, figure 1):
+    # antenna over the cut-out, off the board edge, and as far from the GNSS
+    # antenna as the board allows - 84.5 mm instead of 65.7
+    # x so that the courtyard ends exactly on the board edge: 55 - 17/2.
+    # The antenna band then runs from x 50.3 to the edge, over the notch.
+    "U201": (46.5, 85.0, 270),
     "J401": (5.75, 34.5, 270),     # display flat cable, out to the left
     "J402": (5.05, 23.0, 270),     # the light's cable, same side
     # on the back face the footprint is mirrored, so the angle that sends
@@ -136,14 +141,28 @@ DECOPLA: dict[str, str] = {
 # radio module sits over its own antenna zone, which forbids copper, not it.
 DONO_DO_KEEPOUT: dict[str, str] = {"U201": "KEEPOUT_ANTENA_MODULO"}
 
-# The ME54BS13 asks for 20 mm between its antenna and any switching converter
-# or inductor (ficha V1.0.0, 7.3). That is not a keep-out - a keep-out
-# forbids copper, and this forbids a PART - so no DRC will ever catch it, and
-# the placer has to carry it. Measured before this rule existed: the AEM10900
-# sat 16.4 mm away and its inductor 18.1 mm.
-LONGE_DA_ANTENA = {"L101", "L102", "L103", "U101", "U103"}
-DIST_ANTENA = 20.0
+# What the ME54BS13 datasheet actually asks around its antenna, read in
+# V1.0.0 and not in a summary of it:
+#
+#   7.3  no copper pour, no component and no fully enclosed metal housing
+#        over the antenna area, and the RF side never faces inward;
+#   7.4  "no signal traces, metal objects, or other interference sources
+#        should exist within 3-5 mm around the antenna area", the module at
+#        the edge or corner, and the PCB beneath the antenna hollowed out.
+#
+# There is NO "20 mm from a switching converter" rule; this file carried one
+# until 2026-09-24, and while it kept the power supply 20 mm away it let ten
+# other parts sit inside 5 mm of the antenna - one of them at 0.8 mm.
+# It applies to EVERY part, not to a chosen list.
+DIST_ANTENA = 5.0
 ANTENA_DO_RADIO = "KEEPOUT_ANTENA_MODULO"
+# The module's OWN decoupling is exempt, and it has to be. Section 7.2 puts
+# the capacitor 0.5 mm from the power pin, and the module's power pads sit
+# 2.1 mm from its own antenna band - so no point exists that satisfies both
+# 0.5 mm from the pin and 5 mm from the antenna. The 3-5 mm of 7.4 is about
+# foreign interference sources, not about the module's own support parts,
+# which every figure in 7.5 draws right against it.
+DO_MODULO = {r for r, dono in ()} | {"C201", "C210"}
 
 # Rotations that are not about the case but about the circuit.
 
@@ -238,7 +257,7 @@ def livre(x: float, y: float, bx: tuple[float, float, float, float],
                  cx + r if cx > M.W / 2 else 1e9)
         del qx
     for nome, (kx0, ky0, kx1, ky1), _c, _s in M.ZONES:
-        if nome == ANTENA_DO_RADIO and ref in LONGE_DA_ANTENA:
+        if nome == ANTENA_DO_RADIO and DONO_DO_KEEPOUT.get(ref) != nome                 and ref not in DO_MODULO:
             dx = max(kx0 - x1, x0 - kx1, 0.0)
             dy = max(ky0 - y1, y0 - ky1, 0.0)
             if math.hypot(dx, dy) < DIST_ANTENA:
@@ -600,8 +619,25 @@ def contorno(saida: list[str], r: float) -> None:
                      f'\t\t(stroke (width {w}) (type solid))\n\t\t(layer "Edge.Cuts")\n'
                      f'\t\t(uuid "{uid("a", c, a0)}")\n\t)')
 
+    # The notch under the module's antenna. Section 7.4 of the ME54BS13
+    # datasheet asks for the PCB beneath the antenna to be hollowed out so
+    # the antenna region is suspended, and figure 1 of 7.5 - the one it calls
+    # "Best" - shows exactly this: the module in a corner with its RF end
+    # over the void. Taking it out to the board edge makes it a notch rather
+    # than a slot, which avoids leaving a 1 mm rib of board on the outside.
+    recorte = next((z for n, z, _c, _s in M.ZONES
+                    if n == "RECORTE_ANTENA_MODULO"), None)
+
     linha(P_(r, 0.0), P_(M.W - r, 0.0))
-    linha(P_(M.W, r), P_(M.W, M.H - r))
+    if recorte:
+        rx0, ry0, _rx1, ry1 = recorte
+        linha(P_(M.W, r), P_(M.W, ry0))
+        linha(P_(M.W, ry0), P_(rx0, ry0))
+        linha(P_(rx0, ry0), P_(rx0, ry1))
+        linha(P_(rx0, ry1), P_(M.W, ry1))
+        linha(P_(M.W, ry1), P_(M.W, M.H - r))
+    else:
+        linha(P_(M.W, r), P_(M.W, M.H - r))
     linha(P_(M.W - r, M.H), P_(r, M.H))
     linha(P_(0.0, M.H - r), P_(0.0, r))
     arco(P_(M.W - r, r), 270, 360)

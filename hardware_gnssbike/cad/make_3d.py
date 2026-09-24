@@ -223,13 +223,21 @@ def caixas_das_pecas() -> tuple[np.ndarray, np.ndarray]:
     import make_pcb as MP
 
     arv = fp_load.parse((HERE / "gnssbike.kicad_pcb").read_text(encoding="utf-8"))
+    # CORPO_TODOS is filled while the footprints are read, and this runs in a
+    # process of its own: without touching them first it would know only the
+    # ten generated footprints and miss the eight library ones that got a box.
+    for _ref, (nome_fp, _o, _n) in FPS.FP.items():
+        try:
+            fp_load.corpo(nome_fp)
+        except FileNotFoundError:
+            pass
     tris: list[np.ndarray] = []
     cols: list[np.ndarray] = []
     for f in fp_load.kids(arv, "footprint"):
         nome = f[1]
-        if nome not in FPS.CORPO:
+        if nome not in FPS.CORPO_TODOS:
             continue
-        w, h, alt = FPS.CORPO[nome]
+        w, h, alt = FPS.CORPO_TODOS[nome]
         at = fp_load.kid(f, "at")
         x, y = float(at[1]), float(at[2])
         ang = math.radians(float(at[3])) if len(at) > 3 else 0.0

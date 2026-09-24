@@ -182,7 +182,7 @@ def corpo(nome: str) -> str:
     corpo = corpo[:-1].rstrip()
     for prop in ("Reference", "Value", "Footprint", "Datasheet", "Description"):
         corpo = _tira_propriedade(corpo, prop)
-    return corpo
+    return FPS.trocar_modelo(nome, corpo)
 
 
 if __name__ == "__main__":

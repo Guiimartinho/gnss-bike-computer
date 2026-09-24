@@ -202,6 +202,14 @@ class Grade:
         if x < BORDA_COBRE or y < BORDA_COBRE or \
                 x > M.W - BORDA_COBRE or y > M.H - BORDA_COBRE:
             return False
+        # the notch under the module's antenna is not board: copper there is
+        # copper hanging in the air, and the DRC calls it what it is
+        for nome, (rx0, ry0, rx1, ry1), _c, _s in M.ZONES:
+            if nome != "RECORTE_ANTENA_MODULO":
+                continue
+            if rx0 - BORDA_COBRE < x < rx1 + BORDA_COBRE and \
+                    ry0 - BORDA_COBRE < y < ry1 + BORDA_COBRE:
+                return False
         r = M.RADIUS_DRAWING
         for cx, cy in ((r, r), (M.W - r, r), (r, M.H - r), (M.W - r, M.H - r)):
             fora_x = x < r if cx < M.W / 2 else x > M.W - r
@@ -583,9 +591,13 @@ def terra(g: Grade, por_rede, segmentos, vias, falhas) -> int:
         if posto is None:
             falhas.append(f"GND: sem lugar para a via ao lado de ({bx:.1f}; {by:.1f})")
             continue
+        # the stub necks down to the pad, exactly like a signal track: a
+        # 0.4 mm stub leaving a 0.3 mm ground pad sticks out on both sides and
+        # lands inside the neighbouring pad's clearance
+        larg_g = max(LARGURA, min(LARGURA_ALIM, 2 * hw, 2 * hh))
         vias.append((posto[0], posto[1], "GND"))
-        segmentos.append(((bx, by), posto, idx, "GND", LARGURA_ALIM))
-        g.trilha(idx, (bx, by), posto, LARGURA_ALIM, "GND")
+        segmentos.append(((bx, by), posto, idx, "GND", larg_g))
+        g.trilha(idx, (bx, by), posto, larg_g, "GND")
         g.via(posto[0], posto[1], "GND")
         n_gnd += 1
     return n_gnd
@@ -661,7 +673,8 @@ def uma_passagem(arv, numeros, todos, por_rede, prioridade):
     falhas: list[str] = []
     falharam: list[str] = []
 
-    def emitir(caminho_cel, rede, larg):
+    def emitir(caminho_cel, rede, larg, larg_pad=None, ponto=None,
+               raio_pad=0.0):
         i = 0
         while i < len(caminho_cel) - 1:
             a = caminho_cel[i]
@@ -679,8 +692,19 @@ def uma_passagem(arv, numeros, todos, por_rede, prioridade):
                 j += 1
             p0 = g.pos(a[1], a[2])
             p1 = g.pos(caminho_cel[j][1], caminho_cel[j][2])
-            segmentos.append((p0, p1, a[0], rede, larg))
-            g.trilha(a[0], p0, p1, larg, rede)
+            # The neck lasts while the track is still inside the part's
+            # pad field, not just for the first run: a 0.4 mm track two
+            # segments out of a 0.4 mm pitch QFN is still between its pads.
+            # Necking the whole net instead took VBAT, which carries the
+            # 800 mA charging current, to 0.2 mm end to end, because the fuel
+            # gauge's WLP bump is 0.2 mm wide.
+            w = larg
+            if larg_pad is not None and ponto is not None:
+                d0 = math.hypot(p0[0] - ponto[0], p0[1] - ponto[1])
+                if d0 <= raio_pad:
+                    w = larg_pad
+            segmentos.append((p0, p1, a[0], rede, w))
+            g.trilha(a[0], p0, p1, w, rede)
             i = j
 
     n_gnd = terra(g, por_rede, segmentos, vias, falhas)
@@ -710,6 +734,14 @@ def uma_passagem(arv, numeros, todos, por_rede, prioridade):
         # pad is that wide - and that pad draws microamps while the rest of
         # the rail carries the 800 mA charging current.
         estreitos = [min(2 * q[4], 2 * q[5]) for q in pads]
+        # how far the neck has to last: the reach of the part the pad belongs
+        # to, taken as the spread of this net's pads that share its footprint
+        raios = []
+        for q in pads:
+            perto = [w for w in todos
+                     if abs(w[2] - q[2]) < 6 and abs(w[3] - q[3]) < 6]
+            raios.append(max([math.hypot(w[2] - q[2], w[3] - q[3])
+                              for w in perto] + [0.8]) * 0.5 + 0.8)
         celulas = []
         for _n, idx, x, y, _hw, _hh in pads:
             c0, c1 = g.cel(x - MP.ORIGEM[0], y - MP.ORIGEM[1])
@@ -719,7 +751,13 @@ def uma_passagem(arv, numeros, todos, por_rede, prioridade):
         for k, alvo in enumerate(celulas[1:], start=1):
             if alvo & feito:
                 continue
-            larg = max(LARGURA, min(largura(rede), estreitos[k]))
+            larg = largura(rede)
+            larg_pad = max(LARGURA, min(larg, estreitos[k]))
+            q = pads[k]
+            ponto = (q[2] - MP.ORIGEM[0], q[3] - MP.ORIGEM[1])
+            # out to the far corner of the part, so the neck covers the whole
+            # pad field of a fine-pitch package
+            raio_pad = raios[k]
             p = None
             for folga in (100, 350):
                 p = a_estrela(g, rede, next(iter(alvo)), feito, folga)
@@ -729,7 +767,7 @@ def uma_passagem(arv, numeros, todos, por_rede, prioridade):
                 falhas.append(f"{rede}: nao roteou")
                 falharam.append(rede)
                 continue
-            emitir(p, rede, larg)
+            emitir(p, rede, larg, larg_pad, ponto, raio_pad)
             feito |= set(p)
             n_ok += 1
 

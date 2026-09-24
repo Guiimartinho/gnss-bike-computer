@@ -126,6 +126,12 @@ def _uid(*p):
 # Body height of each generated footprint, in mm, from its datasheet. It is
 # what turns the board's 3D view from a bare set of pads into something you
 # can look at, and it is also the number the case has to clear.
+# Every body drawn by this file, generated footprint or library one, so the
+# project's own renderer can draw the same box the KiCad viewer shows. KiCad
+# exports GLB from STEP only, so a model written as VRML never reaches the
+# GLB and has to be drawn again on this side.
+CORPO_TODOS: dict[str, tuple[float, float, float]] = {}
+
 CORPO: dict[str, tuple[float, float, float]] = {
     # nome do footprint -> largura, altura em planta, altura do corpo (mm)
     "gnssbike:MinewSemi_ME54BS13_16.5x12mm": (12.00, 16.50, 2.40),
@@ -287,6 +293,246 @@ def _gerar():
 _gerar()
 
 
+# The KiCad 3D library ships thousands of models but not one for every
+# footprint, and eighteen of the ones this board uses are missing: the tactile
+# key, the USB-C receptacle, SOT-523, X2SON-4, the 4 mm QFN-28, SOIC-8, the
+# buzzer and the light's FPC connector, plus the test points and the mounting
+# hole, which have no body at all. Those parts showed as bare pads, which is
+# useless for the one thing a 3D view of a PCB is for: seeing whether anything
+# collides and whether it all fits under the lid.
+#
+# So they get the same treatment as the ten footprints drawn here: a box. Its
+# X and Y come from the footprint's own F.Fab outline, which is the package
+# outline and is therefore exact. Its height comes from this table. Where the
+# number is from the part's datasheet it says so; where it is the usual value
+# for the package it says THAT, because a height nobody checked has no
+# business looking like a measurement.
+ALTURA: dict[str, tuple[float, str]] = {
+    # the parts whose height decides whether the lid closes
+    "Button_Switch_SMD:SW_SPST_B3S-1000": (5.00, "Omron B3S-1002P: corpo de "
+        "3,5 mm mais o botao ate 5,0 - CONFERIR na ficha da Omron"),
+    "Connector_USB:USB_C_Receptacle_Palconn_UTC16-G": (3.26, "altura corrente "
+        "de um receptaculo USB-C de montagem em superficie - CONFERIR na "
+        "ficha do Molex 2036150003, que e a peca da lista de compras"),
+    "Buzzer_Beeper:Buzzer_CUI_CPT-9019S-SMT": (3.00, "CONFERIR: a lista de "
+        "compras traz o CPT-1117-83-SMT, nao o CPT-9019S deste footprint"),
+    "Connector_FFC-FPC:TE_0-1734839-5_1x05-1MP_P0.5mm_Horizontal": (1.20,
+        "conector FPC horizontal de passo 0,5 - CONFERIR: a peca ainda nao "
+        "esta escolhida (06#j402)"),
+    # the flat ones, all well under the 2,6 mm the display leaves
+    "Package_TO_SOT_SMD:SOT-523": (0.60, "altura normal do SOT-523"),
+    "Package_SON:Texas_X2SON-4_1x1mm_P0.65mm": (0.40, "altura normal do X2SON"),
+    "Package_DFN_QFN:QFN-28-1EP_4x4mm_P0.4mm_EP2.3x2.3mm": (0.90,
+        "altura normal de um QFN"),
+    "Package_SO:SOIC-8_5.23x5.23mm_P1.27mm": (2.00, "altura normal do SOIC-8"),
+}
+# No body at all, and that is correct: a test point is a pad and a mounting
+# hole is a hole.
+SEM_CORPO = {"TestPoint:TestPoint_Pad_D1.0mm",
+             "MountingHole:MountingHole_2.2mm_M2",
+             "Connector:Tag-Connect_TC2030-IDC-NL_2x03_P1.27mm_Vertical"}
+
+
+def fab_do_footprint(nome: str) -> tuple[float, float] | None:
+    """The package outline of a footprint, from its own F.Fab drawing."""
+    import fp_load as _fl
+
+    arv = _fl.parse(_fl.carregar(nome)[0])
+    xs: list[float] = []
+    ys: list[float] = []
+    for chave in ("fp_line", "fp_rect", "fp_poly", "fp_circle"):
+        for g in _fl.kids(arv, chave):
+            lay = _fl.kid(g, "layer")
+            if not lay or lay[1] not in ("F.Fab", "B.Fab"):
+                continue
+            for tag in ("start", "end", "center", "mid"):
+                q = _fl.kid(g, tag)
+                if q:
+                    xs.append(float(q[1]))
+                    ys.append(float(q[2]))
+            pts = _fl.kid(g, "pts")
+            if pts:
+                for q in _fl.kids(pts, "xy"):
+                    xs.append(float(q[1]))
+                    ys.append(float(q[2]))
+    if not xs:
+        return None
+    return (max(xs) - min(xs), max(ys) - min(ys))
+
+
+# Where KiCad keeps its own 3D models.
+LIB3D = __import__("pathlib").Path(r"D:\KiCAD\share\kicad\3dmodels")
+NL = chr(10)
+TAB = chr(9)
+
+
+# A part the maker does publish a model for goes in cad/3d/real/, and it
+# wins over the box drawn here. Put the file there under the footprint's own
+# name - SW_SPST_B3S-1000.step for the key, USB_C_Receptacle_Palconn_UTC16-G
+# .step for the receptacle - and the next run picks it up with nothing else
+# to change. STEP is preferred because it is the only format KiCad's GLB and
+# STEP exports read; a .wrl works in the 3D viewer alone.
+#
+# The model files themselves are NOT committed: this repository is public and
+# a manufacturer's 3D model carries the manufacturer's terms, the same reason
+# the datasheets stay out. cad/3d/real/ is in the .gitignore, and 3d/LEIAME.md
+# lists which parts are worth fetching and under what name.
+def modelo_de_verdade(base: str) -> str | None:
+    """A manufacturer model dropped into cad/3d/real/, if there is one."""
+    import pathlib as _pl
+
+    pasta = _pl.Path(__file__).resolve().parent / "3d" / "real"
+    for ext in (".step", ".stp", ".STEP", ".wrl"):
+        p = pasta / (base + ext)
+        if p.exists():
+            return "3d/real/" + p.name
+    return None
+
+
+def linha_de_modelo(rel: str) -> str:
+    return (TAB + '(model "${KIPRJMOD}/' + rel + '"' + NL +
+            TAB * 2 + "(offset (xyz 0 0 0))" + NL +
+            TAB * 2 + "(scale (xyz 1 1 1))" + NL +
+            TAB * 2 + "(rotate (xyz 0 0 0))" + NL +
+            TAB + ")" + NL)
+
+
+def trocar_modelo(nome: str, corpo: str) -> str:
+    """Give a library footprint a body when KiCad has no model for it.
+
+    Leaves the model alone when the file is really there - 85 of this board's
+    footprints are in that case and use KiCad's own STEP. When it is not,
+    draws the box and points the footprint at it. When the part has no body
+    to speak of - a test point, a mounting hole, a Tag-Connect that is only
+    pads - takes the model line out, so nothing pretends otherwise.
+    """
+    import pathlib as _pl
+    import re as _re
+
+    m = _re.search(r'\(model "([^"]+)"', corpo)
+    if not m:
+        return corpo
+    caminho = m.group(1)
+    if caminho.startswith("${KIPRJMOD}"):
+        return corpo                      # already one of ours
+    rel = caminho.replace("${KICAD8_3DMODEL_DIR}/", "")
+    if (LIB3D / rel).exists() or (LIB3D / rel.replace(".wrl", ".step")).exists():
+        return corpo                      # KiCad has it: use KiCad's
+
+    def sem_bloco(texto: str) -> str:
+        i = texto.index("(model ")
+        d, j = 0, i
+        while j < len(texto):
+            c = texto[j]
+            if c == '"':
+                j += 1
+                while j < len(texto) and texto[j] != '"':
+                    j += 2 if texto[j] == "\\" else 1
+            elif c == "(":
+                d += 1
+            elif c == ")":
+                d -= 1
+                if d == 0:
+                    break
+            j += 1
+        inicio = texto.rfind(NL, 0, i) + 1
+        return texto[:inicio] + texto[j + 1:].lstrip(NL)
+
+    base_real = nome.split(":", 1)[1]
+    real = modelo_de_verdade(base_real)
+    if real:
+        return sem_bloco(corpo).rstrip(NL) + NL + linha_de_modelo(real)
+    if nome in SEM_CORPO:
+        return sem_bloco(corpo)
+    tam = fab_do_footprint(nome)
+    if tam is None or nome not in ALTURA:
+        return sem_bloco(corpo)
+    alt, _fonte = ALTURA[nome]
+    base = nome.split(":", 1)[1]
+    pasta = _pl.Path(__file__).resolve().parent / "3d"
+    pasta.mkdir(exist_ok=True)
+    wrl_caixa(pasta / (base + ".wrl"), tam[0], tam[1], alt, cor=(0.18, 0.18, 0.20))
+    CORPO_TODOS[nome] = (tam[0], tam[1], alt)
+    return sem_bloco(corpo).rstrip(NL) + NL + linha_de_modelo("3d/" + base + ".wrl")
+
+
+def _caixa_vrml(pts, faces, cor) -> str:
+    return ("Shape {\n  appearance Appearance { material Material { "
+            f"diffuseColor {cor[0]} {cor[1]} {cor[2]} }} }}\n"
+            "  geometry IndexedFaceSet {\n    coord Coordinate { point [\n"
+            + ",\n".join(f"      {x:.4f} {y:.4f} {z:.4f}" for x, y, z in pts)
+            + " ] }\n    coordIndex [\n"
+            + ",\n".join("      " + " ".join(str(i) for i in f) + " -1"
+                         for f in faces)
+            + " ]\n  }\n}\n")
+
+
+def _bloco(x0, y0, z0, x1, y1, z1, cor) -> str:
+    e = VRML_POR_MM
+    pts = [(x0 * e, y0 * e, z0 * e), (x1 * e, y0 * e, z0 * e),
+           (x1 * e, y1 * e, z0 * e), (x0 * e, y1 * e, z0 * e),
+           (x0 * e, y0 * e, z1 * e), (x1 * e, y0 * e, z1 * e),
+           (x1 * e, y1 * e, z1 * e), (x0 * e, y1 * e, z1 * e)]
+    faces = [(0, 3, 2, 1), (4, 5, 6, 7), (0, 1, 5, 4),
+             (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7)]
+    return _caixa_vrml(pts, faces, cor)
+
+
+def wrl_me54bs13(caminho) -> None:
+    """The radio module as the mechanical drawing of V1.0.0 draws it.
+
+    Not one box but two, because the part is not one box: a 12.00 x 16.50 mm
+    printed circuit 0.80 mm thick, and a metal shield can 1.60 mm high over
+    everything except the last 4.46 mm, which is the antenna and has to stay
+    open. Seeing that in the 3D view is the difference between believing the
+    antenna faces the board edge and knowing it.
+    """
+    W, H, ANT, ESP, ALT = 12.00, 16.50, 4.46, 0.80, 2.40
+    # footprint coordinates: the antenna is at -Y, which is up on the screen
+    pcb = _bloco(-W / 2, -H / 2, 0.0, W / 2, H / 2, ESP, (0.05, 0.28, 0.12))
+    lata = _bloco(-W / 2 + 0.1, -H / 2 + ANT, ESP, W / 2 - 0.1, H / 2 - 0.1,
+                  ALT, (0.62, 0.63, 0.66))
+    # the meander, drawn flat on the antenna end so it is visible
+    trilha = _bloco(-W / 2 + 0.6, -H / 2 + 0.6, ESP, W / 2 - 0.6,
+                    -H / 2 + 1.2, ESP + 0.05, (0.78, 0.66, 0.30))
+    trilha += _bloco(-W / 2 + 0.6, -H / 2 + 2.4, ESP, W / 2 - 0.6,
+                     -H / 2 + 3.0, ESP + 0.05, (0.78, 0.66, 0.30))
+    caminho.write_text(
+        "#VRML V2.0 utf8\n"
+        "# MinewSemi ME54BS13, do desenho mecanico da ficha V1.0.0:\n"
+        "# 12,00 x 16,50 x 2,40 mm, com a antena nos 4,46 mm de uma ponta,\n"
+        "# fora da blindagem. Corpo desenhado aqui: a Minew nao publica STEP.\n"
+        + pcb + lata + trilha, encoding="utf-8", newline="\n")
+
+
+def wrl_max_f10s(caminho, w: float, h: float, alt: float) -> None:
+    """The GNSS receiver: a printed circuit under a metal shield can.
+
+    u-blox publishes no STEP for the MAX-F10S and their site does not serve
+    a page this can read, so the body is drawn from the dimensions the
+    footprint already carries. The can covers the whole part, which is why
+    section 4.4 of the integration manual can ask for ground under it.
+    """
+    caminho.write_text(
+        "#VRML V2.0 utf8" + NL +
+        "# u-blox MAX-F10S, 9,7 x 10,1 x 2,4 mm, blindagem metalica sobre" + NL +
+        "# toda a peca. Corpo desenhado aqui: a u-blox nao publica STEP." + NL +
+        _bloco(-w / 2, -h / 2, 0.0, w / 2, h / 2, 0.8, (0.05, 0.28, 0.12)) +
+        _bloco(-w / 2 + 0.1, -h / 2 + 0.1, 0.8, w / 2 - 0.1, h / 2 - 0.1,
+               alt, (0.62, 0.63, 0.66)),
+        encoding="utf-8", newline=NL)
+
+
+# The two modules are drawn properly instead of as a plain box: they are the
+# parts whose shape says something - where the shield ends and the antenna
+# begins - and they are the two the owner asked to see as they really are.
+DESENHADOS = {
+    "gnssbike:MinewSemi_ME54BS13_16.5x12mm":
+        lambda c, w, h, a: wrl_me54bs13(c),
+    "gnssbike:u-blox_MAX-F10S_9.7x10.1mm": wrl_max_f10s,
+}
+
+
 def _com_modelo() -> None:
     """Give every generated footprint a body, and reference it.
 
@@ -302,8 +548,12 @@ def _com_modelo() -> None:
     for nome, (w, h, alt) in CORPO.items():
         if nome not in GERADOS:
             continue
+        CORPO_TODOS[nome] = (w, h, alt)
         base = nome.split(":", 1)[1]
-        wrl_caixa(pasta / (base + ".wrl"), w, h, alt)
+        if nome in DESENHADOS:
+            DESENHADOS[nome](pasta / (base + ".wrl"), w, h, alt)
+        else:
+            wrl_caixa(pasta / (base + ".wrl"), w, h, alt)
         modelo = (
             '\t(model "${KIPRJMOD}/3d/' + base + '.wrl"\n'
             '\t\t(offset (xyz 0 0 0))\n'

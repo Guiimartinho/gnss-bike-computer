@@ -33,27 +33,53 @@ PCB = HERE / "gnssbike.kicad_pcb"
 
 # --- the rules, with their source -------------------------------------------
 # Each entry: id, what it demands, where it is written.
+# Every line below was read in the manufacturer's own PDF, not in a summary
+# of it. Two of the rules this file used to carry were not in either document:
+# "20 mm between the antenna and a switching converter" does not exist - what
+# 7.3 says is the qualitative "do not place modules adjacent to strong
+# interference sources" - and the decoupling distance for the module is not
+# 2 mm but 0.5 mm. Both were corrected on 2026-09-24 after reading
+# ME54BS13-nRF54LM20A_Datasheet_K_EN v1.0.0 and MAX-F10S_IntegrationManual
+# UBXDOC-963802114-12892. The PDFs live in ../datasheets/, which the
+# .gitignore keeps out of this public repository.
 REGRAS = [
-    ("RF1", "nenhum componente dentro da area livre da antena do modulo",
-     "MinewSemi ME54BS13 V1.0.0, 7.2"),
-    ("RF2", "a antena do modulo olha para fora da borda da placa",
-     "MinewSemi ME54BS13 V1.0.0, 7.2"),
-    ("RF3", "20 mm entre a antena do modulo e conversor chaveado ou indutor",
+    ("RF1", "sem cobre, sem componente e sem caixa metalica fechada sobre a "
+            "area da antena do modulo",
      "MinewSemi ME54BS13 V1.0.0, 7.3"),
-    ("RF4", "a rede pi do GNSS junto ao RF_IN, com a trilha mais curta possivel",
-     "u-blox MAX-F10S Integration Manual UBXDOC-963802114-12892, 2.3"),
-    ("RF5", "separacao entre a antena GNSS (1,575 GHz) e a do radio (2,44 GHz)",
-     "pratica: um quarto de onda de 2,44 GHz e 30,7 mm"),
-    ("AL1", "capacitor de alta frequencia (ate 1 uF) a 2 mm do pino, "
-            "capacitor de reserva (acima de 1 uF) a 5 mm",
-     "fichas do nPM1300, AEM10900, TPS7A02, MAX17262, ME54BS13"),
+    ("RF2", "o lado de RF do modulo virado para a borda, nunca para dentro "
+            "da placa",
+     "MinewSemi ME54BS13 V1.0.0, 7.3"),
+    ("RF3", "5 mm em volta da area da antena sem trilha de sinal, sem metal e "
+            "sem fonte de interferencia; modulo na borda ou no canto",
+     "MinewSemi ME54BS13 V1.0.0, 7.4"),
+    ("RF4", "a placa vazada sob a area da antena do modulo, deixando-a suspensa",
+     "MinewSemi ME54BS13 V1.0.0, 7.4"),
+    ("RF5", "5 mm entre o receptor GNSS e qualquer componente de RF",
+     "u-blox MAX-F10S Integration Manual UBXDOC-963802114-12892, 4.4"),
+    ("RF6", "terra sob o modulo GNSS na primeira e na segunda camada, sem "
+            "trilha de sinal cruzando por baixo nessas duas",
+     "u-blox MAX-F10S Integration Manual UBXDOC-963802114-12892, 4.4"),
+    ("RF7", "a rede pi do GNSS junto ao RF_IN, com a trilha mais curta possivel",
+     "u-blox MAX-F10S Integration Manual UBXDOC-963802114-12892, 4.4"),
+    ("RF8", "as duas antenas o mais longe possivel uma da outra",
+     "u-blox MAX-F10S IM 4.4; referencia: um quarto de onda de 2,44 GHz e "
+     "30,7 mm"),
+    ("AL1", "desacoplamento do modulo de radio a 0,5 mm do pino de "
+            "alimentacao; dos demais CIs, 2 mm para o de alta frequencia e "
+            "5 mm para o de reserva",
+     "MinewSemi ME54BS13 V1.0.0, 7.2; fichas do nPM1300, AEM10900, TPS7A02"),
+    ("AL4", "no maximo 0,2 ohm em serie na linha VCC do GNSS",
+     "u-blox MAX-F10S Integration Manual UBXDOC-963802114-12892, 4.1.1"),
+    ("AL5", "footprint de filtro pi reservado junto ao pino de alimentacao "
+            "do modulo de radio, por ele vir de fonte chaveada",
+     "MinewSemi ME54BS13 V1.0.0, 7.2"),
     ("AL2", "largura de trilha suficiente para a corrente, 10 C de subida",
      "IPC-2221B, 6.2, curva de condutor externo"),
     ("AL3", "laco de chaveamento curto: SW ao indutor e ao capacitor de saida",
      "ficha do nPM1300, layout recomendado"),
-    ("GN1", "todo pad de terra de superficie ligado ao terra, por via "
-            "propria ou pelo plano da propria face",
-     "pratica: o retorno segue por baixo do sinal"),
+    ("GN1", "uma via de terra junto de cada pad de terra do modulo de radio, "
+            "e todo pad de terra de superficie ligado ao terra",
+     "MinewSemi ME54BS13 V1.0.0, 7.2"),
     ("GN2", "costura de vias de terra na borda a cada 5 mm no maximo",
      "lambda/10 a 2,44 GHz em FR-4 e 6,1 mm"),
     ("ME1", "a placa cabe na caixa com folga",
@@ -82,6 +108,15 @@ CORRENTE = {
 
 CHAVEADOS = ["L101", "L102", "L103", "U101", "U103"]
 PI_GNSS = ["L301", "C301", "C302"]
+MODULO = "U201"          # the radio module
+GNSS = "U301"            # the GNSS receiver
+# The antenna band of the ME54BS13, from its mechanical drawing: 4.46 mm of
+# the module's 16.5 mm length, across the whole 12 mm width. It is NOT the
+# keep-out rectangle, which is drawn larger and reaches the board edge.
+ANT_MOD = 4.46
+FOLGA_ANTENA = 5.0       # 7.4: "3-5 mm around the antenna area"
+FOLGA_RF_GNSS = 5.0      # MAX-F10S IM 4.4: "at least a 5 mm distance"
+LIMITE_MODULO = 0.5      # 7.2: "trace length ... should be <= 0.5 mm"
 
 # How far a decoupling capacitor may sit from the pin it serves. One number
 # for both kinds is wrong in both directions: twelve 10 uF bulk capacitors
@@ -174,13 +209,45 @@ def ler(caminho: pathlib.Path):
                     "w": float(fp_load.kid(s, "width")[1]),
                     "n": int(fp_load.kid(s, "net")[1]),
                     "c": fp_load.kid(s, "layer")[1]})
+    # the cut-outs of the board outline, as boxes. A notch for the antenna
+    # is what 7.4 asks for, and it lives on Edge.Cuts like the outline.
+    ex, ey = [], []
+    seg_edge = []
+    for chave in ("gr_line", "gr_arc", "gr_rect"):
+        for g in fp_load.kids(arv, chave):
+            lay = fp_load.kid(g, "layer")
+            if not lay or lay[1] != "Edge.Cuts":
+                continue
+            pts = []
+            for tag in ("start", "end", "mid", "center"):
+                q = fp_load.kid(g, tag)
+                if q:
+                    pts.append((float(q[1]) - MP.ORIGEM[0],
+                                float(q[2]) - MP.ORIGEM[1]))
+            if pts:
+                seg_edge.append(pts)
+                ex += [q[0] for q in pts]
+                ey += [q[1] for q in pts]
+    # A notch is a corner of Edge.Cuts that sits INSIDE the board instead of
+    # on its rectangle. Collecting those points is enough to say where the
+    # board has a bite taken out of it, and it works whether the cut was
+    # drawn as lines or as a rectangle.
+    cortes = []
+    borda = 0.6
+    dentro = [(x, y) for x, y in zip(ex, ey)
+              if borda < x < M.W - borda and borda < y < M.H - borda]
+    if dentro:
+        cortes.append((min(q[0] for q in dentro), min(q[1] for q in dentro),
+                       max(q[0] for q in dentro), max(q[1] for q in dentro)))
+    del seg_edge
+
     vias = []
     for v in fp_load.kids(arv, "via"):
         a = fp_load.kid(v, "at")
         vias.append({"x": float(a[1]) - MP.ORIGEM[0],
                      "y": float(a[2]) - MP.ORIGEM[1],
                      "n": int(fp_load.kid(v, "net")[1])})
-    return pecas, pads, seg, vias
+    return pecas, pads, seg, vias, cortes
 
 
 def dist_caixas(a, b) -> float:
@@ -217,7 +284,7 @@ def main() -> int:
     if not PCB.exists():
         print("gnssbike.kicad_pcb nao existe: rode make_pcb.py")
         return 1
-    pecas, pads, seg, vias = ler(PCB)
+    pecas, pads, seg, vias, cortes = ler(PCB)
     achados: list[tuple[str, str]] = []
     ok: list[str] = []
 
@@ -227,79 +294,111 @@ def main() -> int:
     print(f"dry-run de {PCB.name}: {len(pecas)} pecas, {len(seg)} segmentos, "
           f"{len(vias)} vias\n")
 
-    # -- RF1: area livre da antena do modulo ---------------------------------
-    ant_mod = zona("KEEPOUT_ANTENA_MODULO")
-    dono = MP.DONO_DO_KEEPOUT
-    invadem = []
-    for ref, p in pecas.items():
-        if dono.get(ref) == "KEEPOUT_ANTENA_MODULO":
-            continue
-        d = dist_caixas(p["caixa"], ant_mod)
-        if d < 0:
-            invadem.append((ref, d))
-    if invadem:
-        falhou("RF1", f"{len(invadem)} pecas dentro da area livre da antena: " +
-               ", ".join(f"{r} ({-d:.2f} mm)" for r, d in sorted(invadem)[:6]))
-    else:
-        perto = sorted(((dist_caixas(p["caixa"], ant_mod), r)
-                        for r, p in pecas.items()
-                        if dono.get(r) != "KEEPOUT_ANTENA_MODULO"))[:3]
-        ok.append("RF1: area livre da antena do modulo vazia; a peca mais "
-                  "proxima e " + ", ".join(f"{r} a {d:.2f} mm" for d, r in perto))
+    # -- a area real da antena do modulo, do desenho mecanico ----------------
+    def rect_antena():
+        """The 4.46 x 12 mm band at the RF end of U201, in board coordinates.
 
-    # -- RF3: 20 mm dos chaveadores ------------------------------------------
-    ax = (ant_mod[0] + ant_mod[2]) / 2
-    ay = (ant_mod[1] + ant_mod[3]) / 2
-    ruins = []
-    for ref in CHAVEADOS:
-        if ref not in pecas:
-            continue
-        d = dist_caixas(pecas[ref]["caixa"], ant_mod)
-        ruins.append((d, ref))
-    ruins.sort()
-    fora = [(d, r) for d, r in ruins if d < 20.0]
-    if fora:
-        falhou("RF3", f"{len(fora)} de {len(ruins)} chaveadores a menos de 20 mm "
-               "da antena do modulo: " +
-               ", ".join(f"{r} {d:.1f} mm" for d, r in fora))
-    else:
-        ok.append(f"RF3: o chaveador mais proximo da antena e {ruins[0][1]} "
-                  f"a {ruins[0][0]:.1f} mm")
+        The keep-out rectangle of make_dxf is a planning shape drawn out to
+        the board edge; the datasheet's rules talk about the ANTENNA AREA,
+        which is 4.46 mm of the module's 16.5 mm length. Measuring the rules
+        against the planning rectangle answers a different question.
+        """
+        if MODULO not in pecas:
+            return None
+        m = pecas[MODULO]
+        x0, y0, x1, y1 = m["caixa"]
+        a = int(round(m["ang"])) % 360
+        if a == 0:      # antenna at -Y in the footprint
+            return (x0, y0, x1, y0 + ANT_MOD)
+        if a == 180:
+            return (x0, y1 - ANT_MOD, x1, y1)
+        if a == 270:    # rotated so the antenna points +X
+            return (x1 - ANT_MOD, y0, x1, y1)
+        return (x0, y0, x0 + ANT_MOD, y1)
 
-    # -- RF4: a rede pi do GNSS ----------------------------------------------
-    if "U301" in pecas and all(r in pecas for r in PI_GNSS):
-        rf_in = [q for q in pecas["U301"]["pads"] if q["rede"] == "RF_IN"]
+    ant = rect_antena()
+
+    # -- RF1: nada sobre a area da antena ------------------------------------
+    if ant:
+        invadem = [(r, dist_caixas(p["caixa"], ant)) for r, p in pecas.items()
+                   if r != MODULO and dist_caixas(p["caixa"], ant) < 0]
+        if invadem:
+            falhou("RF1", f"{len(invadem)} pecas sobre a area da antena: " +
+                   ", ".join(f"{r}" for r, _d in sorted(invadem)[:6]))
+        else:
+            ok.append(f"RF1: a area da antena ({ant[2]-ant[0]:.2f} x "
+                      f"{ant[3]-ant[1]:.2f} mm) esta livre de componente")
+
+    # -- RF3: 5 mm em volta da area da antena --------------------------------
+    if ant:
+        # The module's own decoupling is not a foreign interference source,
+        # and it CANNOT obey both rules of this datasheet at once: 7.2 wants
+        # it 0.5 mm from the power pin and that pin is 2.1 mm from the
+        # antenna band. The exemption is named, printed and limited to those
+        # two capacitors.
+        perto = sorted((dist_caixas(p["caixa"], ant), r)
+                       for r, p in pecas.items()
+                       if r != MODULO and r not in MP.DO_MODULO)
+        dentro = [(d, r) for d, r in perto if d < FOLGA_ANTENA]
+        proprias = sorted((dist_caixas(pecas[r]["caixa"], ant), r)
+                          for r in MP.DO_MODULO if r in pecas)
+        if dentro:
+            falhou("RF3", f"{len(dentro)} pecas alheias a menos de "
+                   f"{FOLGA_ANTENA:.0f} mm da area da antena: " +
+                   ", ".join(f"{r} {d:.1f}" for d, r in dentro[:8]))
+        else:
+            ok.append(f"RF3: a peca alheia mais proxima da area da antena e "
+                      f"{perto[0][1]} a {perto[0][0]:.1f} mm; o desacoplamento "
+                      "do proprio modulo fica mais perto de proposito (" +
+                      ", ".join(f"{r} {d:.1f}" for d, r in proprias) + ")")
+
+    # -- RF4: a placa vazada sob a antena ------------------------------------
+    if ant:
+        vazado = any(cx1 > ant[0] and ant[2] > cx0 and
+                     cy1 > ant[1] and ant[3] > cy0
+                     for (cx0, cy0, cx1, cy1) in cortes)
+        if not vazado:
+            falhou("RF4", "a placa nao e vazada sob a area da antena; a ficha "
+                   "pede a regiao suspensa")
+        else:
+            ok.append("RF4: a placa e vazada sob a area da antena")
+
+    # -- RF5: 5 mm do receptor GNSS a componente de RF -----------------------
+    if GNSS in pecas:
+        rf = [r for r in ("E301", "L301", "C301", "C302", MODULO) if r in pecas]
+        dd = sorted((dist_caixas(pecas[GNSS]["caixa"], pecas[r]["caixa"]), r)
+                    for r in rf)
+        # the pi network is the receiver's OWN RF front end: it has to be
+        # close, and 4.4 is about foreign RF parts
+        alheios = [(d, r) for d, r in dd if r not in PI_GNSS]
+        if alheios and alheios[0][0] < FOLGA_RF_GNSS:
+            falhou("RF5", f"{alheios[0][1]} esta a {alheios[0][0]:.1f} mm do "
+                   f"receptor GNSS, contra {FOLGA_RF_GNSS:.0f} mm")
+        elif alheios:
+            ok.append(f"RF5: o componente de RF alheio mais proximo do receptor "
+                      f"e {alheios[0][1]} a {alheios[0][0]:.1f} mm")
+
+    # -- RF7: a rede pi do GNSS ----------------------------------------------
+    if GNSS in pecas and all(r in pecas for r in PI_GNSS):
+        rf_in = [q for q in pecas[GNSS]["pads"] if q["rede"] == "RF_IN"]
         if rf_in:
             p0 = (rf_in[0]["x"], rf_in[0]["y"])
-            dd = []
-            for r in PI_GNSS:
-                q = min(pecas[r]["pads"],
-                        key=lambda a: math.hypot(a["x"] - p0[0], a["y"] - p0[1]))
-                dd.append((math.hypot(q["x"] - p0[0], q["y"] - p0[1]), r))
-            dd.sort()
-            pior = dd[-1]
-            if pior[0] > 5.0:
-                falhou("RF4", f"a rede pi esta longe do RF_IN: " +
-                       ", ".join(f"{r} {d:.1f} mm" for d, r in dd) +
-                       " (o limite pratico e 5 mm)")
+            dd = sorted((min(math.hypot(a["x"] - p0[0], a["y"] - p0[1])
+                             for a in pecas[r]["pads"]), r) for r in PI_GNSS)
+            if dd[-1][0] > 5.0:
+                falhou("RF7", "a rede pi esta longe do RF_IN: " +
+                       ", ".join(f"{r} {d:.1f}" for d, r in dd))
             else:
-                ok.append("RF4: rede pi do GNSS a " +
+                ok.append("RF7: rede pi do GNSS a " +
                           ", ".join(f"{r} {d:.1f} mm" for d, r in dd))
-            # e a antena, do outro lado da rede pi?
-            if "E301" in pecas:
-                de = dist_caixas(pecas["E301"]["caixa"],
-                                 zona("KEEPOUT_ANTENA_GNSS"))
-                ok.append(f"RF4: E301 esta a {de:.2f} mm da area da antena GNSS")
 
-    # -- RF5: separacao das duas antenas -------------------------------------
+    # -- RF8: separacao das duas antenas -------------------------------------
     ag = zona("KEEPOUT_ANTENA_GNSS")
     gx, gy = (ag[0] + ag[2]) / 2, (ag[1] + ag[3]) / 2
-    sep = math.hypot(ax - gx, ay - gy)
-    lim = 30.7
-    if sep < lim:
-        falhou("RF5", f"as duas antenas estao a {sep:.1f} mm (minimo {lim:.1f})")
-    else:
-        ok.append(f"RF5: as duas antenas estao a {sep:.1f} mm de centro a centro "
+    if ant:
+        ax, ay = (ant[0] + ant[2]) / 2, (ant[1] + ant[3]) / 2
+        sep = math.hypot(ax - gx, ay - gy)
+        ok.append(f"RF8: as duas antenas estao a {sep:.1f} mm de centro a centro "
                   f"({sep / 30.7:.1f} quartos de onda de 2,44 GHz)")
 
     # -- AL1: desacoplamento --------------------------------------------------
@@ -359,8 +458,17 @@ def main() -> int:
         # temperature. The rail that feeds the TPS7A02 has to neck to 0.2 mm
         # because the part's pad is 0.2 mm wide, and no width of track fixes
         # a pad.
+        # A neck-down is not an undersized conductor: it is the track
+        # matching a pad that is narrower than the rule wants, and no width
+        # of copper fixes a pad. Recognised by what it actually is - one end
+        # sitting on a pad of this net whose narrow side is no wider than the
+        # track - instead of by a length that someone picked.
+        colado = any(
+            q["rede"] == rede and
+            math.hypot(q["x"] - e[0], q["y"] - e[1]) < 0.6
+            for e in (s["a"], s["b"]) for q in pads)
         comp = math.hypot(s["b"][0] - s["a"][0], s["b"][1] - s["a"][1])
-        if comp < 2.0:
+        if colado or comp < 2.0:
             necks += 1
             continue
         estreitas.append((rede, s["w"], pedida))
