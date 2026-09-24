@@ -1,0 +1,5 @@
+gnssbike.glb
+_drc.json
+_*.svg
+*.net
+__pycache__/

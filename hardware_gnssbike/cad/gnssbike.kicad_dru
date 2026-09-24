@@ -1,0 +1,9 @@
+(version 1)
+
+(rule "folga interna do receptaculo USB-C"
+	(constraint hole_clearance (min 0.175mm))
+	(condition "A.memberOfFootprint('J101') && B.memberOfFootprint('J101')"))
+
+(rule "folga interna do TPS7A02 em X2SON de 1 x 1 mm"
+	(constraint clearance (min 0.115mm))
+	(condition "A.memberOfFootprint('U104') && B.memberOfFootprint('U104')"))

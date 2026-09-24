@@ -1,0 +1,196 @@
+#!/usr/bin/env python3
+"""Check gnssbike.kicad_pcb: KiCad reads it, and what is on it is what we meant.
+
+  1. the file parses and KiCad loads it;
+  2. KiCad's own DRC runs. Unconnected nets are expected - nothing is routed -
+     so they are counted, not treated as failures; anything else is;
+  3. every part of parts.py is on the board exactly once, except the ones
+     footprints.py declares to live in the case;
+  4. every pad carries the net nets.py gives it, and no pad carries another;
+  5. no two courtyards overlap, nothing crosses the outline, and nothing sits
+     inside an antenna keep-out;
+  6. the outline is still 55 x 97 mm with one mounting hole.
+
+Run: python hardware_gnssbike/cad/check_pcb.py
+"""
+
+from __future__ import annotations
+
+import json
+import pathlib
+import subprocess
+import sys
+
+HERE = pathlib.Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+
+import footprints as FPS  # noqa: E402
+import fp_load  # noqa: E402
+import make_dxf as M  # noqa: E402
+import make_pcb as MP  # noqa: E402
+import parts as P  # noqa: E402
+
+KICAD = pathlib.Path(r"D:\KiCAD\bin\kicad-cli.exe")
+PCB = HERE / "gnssbike.kicad_pcb"
+fails: list[str] = []
+
+
+def check(ok: bool, what: str) -> None:
+    print(("  ok    " if ok else "  FALHA ") + what)
+    if not ok:
+        fails.append(what)
+
+
+def main() -> int:
+    print("gerando...")
+    import make_pro
+    make_pro.main()
+    MP.main()
+    print()
+
+    arv = fp_load.parse(PCB.read_text(encoding="utf-8"))
+    check(arv[0] == "kicad_pcb", "o arquivo abre como kicad_pcb")
+
+    # ---- DRC ----
+    rel = HERE / "_drc.json"
+    r = subprocess.run([str(KICAD), "pcb", "drc", "--format", "json",
+                        "--output", str(rel), str(PCB)],
+                       capture_output=True, text=True)
+    check(rel.exists(), "o KiCad roda o DRC"
+          + ("" if rel.exists() else f": {r.stdout.strip()} {r.stderr.strip()}"))
+    if rel.exists():
+        d = json.loads(rel.read_text(encoding="utf-8"))
+        viol = d.get("violations", [])
+        soltos = d.get("unconnected_items", [])
+        graves = [v for v in viol if v.get("severity") == "error"]
+        print(f"        DRC: {len(viol)} violacoes, {len(graves)} de erro, "
+              f"{len(soltos)} ligacoes sem trilha (nada foi roteado)")
+        tipos: dict[str, int] = {}
+        for v in graves:
+            tipos[v.get("type", "?")] = tipos.get(v.get("type", "?"), 0) + 1
+        for t, n in sorted(tipos.items(), key=lambda kv: -kv[1]):
+            print(f"          {t}: {n}")
+        check(not graves, f"o DRC nao acusa erro de projeto ({len(graves)})")
+
+    # ---- the parts ----
+    fps = fp_load.kids(arv, "footprint")
+    refs_na_placa: list[str] = []
+    for f in fps:
+        ref = next((p[2] for p in fp_load.kids(f, "property") if p[1] == "Reference"), None)
+        if ref and ref != "REF**":
+            refs_na_placa.append(ref)
+    esperadas = {r for r in P.PARTS if r not in FPS.FORA_DA_PLACA}
+    na_placa = set(refs_na_placa)
+    check(len(refs_na_placa) == len(na_placa), "nenhuma referencia repetida")
+    faltam = esperadas - na_placa
+    check(not faltam, f"todas as {len(esperadas)} pecas de placa estao nela"
+                      + ("" if not faltam else f"; faltam {sorted(faltam)}"))
+    sobram = na_placa - esperadas
+    check(not sobram, f"nenhuma peca a mais (achou {sorted(sobram)})")
+
+    # ---- the nets on the pads ----
+    _numeros, por_pad = MP.redes()
+    erros = []
+    vistos = set()
+    for f in fps:
+        ref = next((p[2] for p in fp_load.kids(f, "property") if p[1] == "Reference"), None)
+        if ref not in P.PARTS:
+            continue
+        for pad in fp_load.kids(f, "pad"):
+            num = pad[1]
+            rede = fp_load.kid(pad, "net")
+            tem = rede[2] if rede else None
+            quer = por_pad.get((ref, num))
+            if quer != tem:
+                erros.append(f"{ref}.{num}: esperava {quer}, achou {tem}")
+            if quer:
+                vistos.add((ref, num))
+    check(not erros, f"cada pad leva a rede da lista de nos ({len(erros)} erros)")
+    for e in erros[:8]:
+        print(f"      {e}")
+    falta_pad = set(por_pad) - vistos - {(r, n) for (r, n) in por_pad
+                                         if r in FPS.FORA_DA_PLACA}
+    check(not falta_pad,
+          f"nenhuma ligacao da lista ficou sem pad ({len(falta_pad)})")
+    for e in sorted(falta_pad)[:8]:
+        print(f"      {e[0]}.{e[1]}")
+
+    # ---- geometry ----
+    lugar, _f = MP.colocar()
+
+    def _tam(r: str) -> tuple[float, float]:
+        # the same box the placer used: the minimum, and swapped when the part
+        # is turned a quarter turn
+        w, h = fp_load.carregar(FPS.FP[r][0])[1]
+        w, h = max(w, 1.8), max(h, 1.8)
+        return (h, w) if lugar[r][2] % 180 else (w, h)
+
+    tam = {r: _tam(r) for r in lugar}
+    sobre = []
+    itens = sorted(lugar.items())
+    for i, (ra, (ax, ay, _ang, _b)) in enumerate(itens):
+        aw, ah = tam[ra]
+        for rb, (bx, by, _ang2, _b2) in itens[i + 1:]:
+            bw, bh = tam[rb]
+            if abs(ax - bx) * 2 < aw + bw and abs(ay - by) * 2 < ah + bh:
+                sobre.append((ra, rb))
+    check(not sobre, f"nenhum contorno de peca sobre outro ({len(sobre)})")
+    for a, b in sobre[:6]:
+        print(f"      {a} e {b}")
+
+    fora = []
+    dentro_keepout = []
+    for ref, (x, y, _ang, _b) in lugar.items():
+        w, h = tam[ref]
+        x0, y0, x1, y1 = x - w / 2, y - h / 2, x + w / 2, y + h / 2
+        if x0 < 0 or y0 < 0 or x1 > M.W or y1 > M.H:
+            fora.append(ref)
+        for nome, (kx0, ky0, kx1, ky1), _c, _s in M.ZONES:
+            # a part is allowed in the keep-out that exists because of it: the
+            # radio module sits over its own antenna zone
+            if nome in MP.KEEPOUTS and MP.DONO_DO_KEEPOUT.get(ref) != nome \
+                    and x1 > kx0 and kx1 > x0 and y1 > ky0 and ky1 > y0:
+                dentro_keepout.append((ref, nome))
+    check(not fora, f"nenhuma peca passa da borda ({len(fora)})")
+    check(not dentro_keepout,
+          f"nenhuma peca dentro de area de antena ({len(dentro_keepout)})")
+    for ref, z in dentro_keepout[:5]:
+        print(f"      {ref} em {z}")
+
+    # ---- the board has to fit the case ----
+    # 04-pcb-e-caixa.md: case 62 x 104 mm outside, walls about 2 mm, so the
+    # inside is about 58 x 100 mm.
+    dentro_caixa = (58.0, 100.0)
+    check(M.W <= dentro_caixa[0] and M.H <= dentro_caixa[1],
+          f"a placa de {M.W:g} x {M.H:g} mm cabe na caixa "
+          f"({dentro_caixa[0]:g} x {dentro_caixa[1]:g} mm por dentro): sobra "
+          f"{(dentro_caixa[0] - M.W) / 2:.1f} mm de cada lado e "
+          f"{(dentro_caixa[1] - M.H) / 2:.1f} mm em cima e embaixo")
+
+    planos = [z for z in fp_load.kids(arv, "zone")
+              if fp_load.kid(z, "name") and fp_load.kid(z, "name")[1] == "PLANO_GND"]
+    check(len(planos) == 2,
+          f"dois planos de terra, um interno e um na face de tras ({len(planos)})")
+
+    linhas = [g for g in fp_load.kids(arv, "gr_line")
+              if fp_load.kid(g, "layer")[1] == "Edge.Cuts"]
+    arcos = [g for g in fp_load.kids(arv, "gr_arc")
+             if fp_load.kid(g, "layer")[1] == "Edge.Cuts"]
+    check(len(linhas) == 4 and len(arcos) == 4, "contorno com 4 linhas e 4 arcos")
+    furos = [f for f in fps
+             if next((p[2] for p in fp_load.kids(f, "property")
+                      if p[1] == "Reference"), "") == "REF**"]
+    check(len(furos) == 1, f"um furo de fixacao ({len(furos)})")
+
+    print()
+    print(f"  {len(na_placa)} pecas na placa, {len(FPS.FORA_DA_PLACA)} fora dela, "
+          f"{len(set(por_pad.values()))} redes")
+    if fails:
+        print(f"\n{len(fails)} verificacoes falharam")
+        return 1
+    print("\na placa confere com o esquematico")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
