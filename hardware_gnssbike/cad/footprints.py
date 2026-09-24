@@ -459,7 +459,7 @@ def trocar_modelo(nome: str, corpo: str) -> str:
     if nome in DESENHADOS:
         DESENHADOS[nome](pasta / (base + ".wrl"), tam[0], tam[1], alt)
     elif est:
-        wrl_ci(pasta / (base + ".wrl"), tam[0], tam[1], alt, est)
+        wrl_ci(pasta / (base + ".wrl"), tam[0], tam[1], alt, est, nome)
     else:
         wrl_caixa(pasta / (base + ".wrl"), tam[0], tam[1], alt, cor=cor_de(nome))
     CORPO_TODOS[nome] = (tam[0], tam[1], alt)
@@ -634,7 +634,77 @@ DESENHADOS = {
 }
 
 
-def wrl_ci(caminho, w: float, h: float, alt: float, estilo: str) -> None:
+# The mechanical drawing of each package, read in the part's own datasheet.
+# Not the footprint outline, which is a land pattern and is deliberately
+# bigger than the body; not "the usual value for the package" either. Each
+# entry is: body w x h x A, standoff A1, exposed pad (or None), terminal
+# width b, terminal length L, pitch e, and where the numbers come from.
+#
+# w and h follow the FOOTPRINT's orientation, which is not always the
+# datasheet's: the TPD4E05U06 drawing gives 2.50 x 1.00 and the footprint
+# stands it on end. conferir_2d_3d() compares the two ignoring orientation,
+# so a transposition shows up as a match and a wrong package does not.
+PACOTE: dict[str, tuple] = {
+    "Package_DFN_QFN:QFN-28-1EP_4x4mm_P0.4mm_EP2.3x2.3mm":
+        (4.00, 4.00, 0.80, 0.00, (2.60, 2.60), 0.20, 0.40, 0.40,
+         "e-peas DS-AEM1090x-v2.4.0, figura 29: QFN28 4x4"),
+    "Package_SON:Texas_X2SON-4_1x1mm_P0.65mm":
+        (1.00, 1.00, 0.48, 0.03, None, 0.28, 0.30, 0.65,
+         "TI SBVS277C, desenho do DQN0004A: 1,05/0,95 x 1,05/0,95, "
+         "altura 0,48 +0,12/-0,10"),
+    "gnssbike:TXU0204_WQFN-14_3x2.5mm_P0.5mm":
+        (3.00, 2.50, 0.75, 0.03, (1.50, 1.00), 0.25, 0.40, 0.50,
+         "TI SCES936A, desenho do BQA0014A: 3,1/2,9 x 2,6/2,4, altura 0,8/0,7, "
+         "pad exposto 1,6/1,4 x 1,1/0,9"),
+    "gnssbike:OPT3001_USON-6_2x2mm_P0.65mm":
+        (2.00, 2.00, 0.60, 0.03, (0.65, 1.35), 0.30, 0.30, 0.65,
+         "TI SBOS681B, desenho do DNP0006A: 2,1/1,9 quadrado, altura 0,65/0,55, "
+         "pad exposto 0,65 x 1,35"),
+    "gnssbike:TPD4E05U06_USON-10_1x2.5mm_P0.5mm":
+        (1.00, 2.50, 0.40, 0.03, None, 0.20, 0.36, 0.50,
+         "TI, desenho do DQA0010A: 2,6/2,4 x 1,1/0,9, altura 0,45/0,35"),
+    "Package_TO_SOT_SMD:SOT-523":
+        (1.60, 0.80, 0.75, 0.05, None, 0.22, 0.33, 0.50,
+         "Diodes DS31783 Rev.8, SOT523: D 1,60, E1 0,80, A2 0,75, A1 0,05, "
+         "b 0,22, e 0,50 BSC"),
+}
+
+
+def conferir_2d_3d() -> list[str]:
+    """Does the body the datasheet gives fit the footprint that was drawn?
+
+    A land pattern is bigger than the body, on purpose, so the two are never
+    equal - but they cannot disagree by much either, and a footprint chosen
+    for the wrong package shows up here as a body that does not fit inside
+    its own outline or that rattles around in it. Orientation is ignored,
+    because a footprint may stand the package on end.
+    """
+    import fp_load as _fl
+
+    achados = []
+    for nome, dados in PACOTE.items():
+        w, h, alt = dados[0], dados[1], dados[2]
+        fab = fab_do_footprint(nome)
+        if fab is None:
+            achados.append(f"{nome}: o footprint nao tem contorno em F.Fab")
+            continue
+        corpo = tuple(sorted((w, h)))
+        desenho = tuple(sorted(fab))
+        for i, (c, d) in enumerate(zip(corpo, desenho)):
+            if abs(c - d) > 0.15:
+                achados.append(
+                    f"{nome}: a ficha da {'menor' if i == 0 else 'maior'} "
+                    f"medida do corpo como {c:.2f} mm e o footprint desenha "
+                    f"{d:.2f} mm ({abs(c - d):.2f} de diferenca)")
+        cy = _fl.CAIXA.get(nome)
+        if cy and (w > cy[2] - cy[0] + 0.01 or h > cy[3] - cy[1] + 0.01):
+            achados.append(f"{nome}: o corpo de {w:.2f} x {h:.2f} nao cabe no "
+                           f"contorno de {cy[2]-cy[0]:.2f} x {cy[3]-cy[1]:.2f}")
+    return achados
+
+
+def wrl_ci(caminho, w: float, h: float, alt: float, estilo: str,
+           nome: str = "") -> None:
     """A moulded package with the shape its family actually has.
 
     A board where every part is the same black cuboid tells you nothing. What
@@ -649,6 +719,12 @@ def wrl_ci(caminho, w: float, h: float, alt: float, estilo: str) -> None:
     EPOXI = (0.09, 0.09, 0.10)
     SILICIO = (0.24, 0.21, 0.28)
     partes = []
+    # the datasheet's own numbers when there are any: body, standoff,
+    # exposed pad, terminal width and length, pitch
+    dados = PACOTE.get(nome)
+    a1, ep, bw, bl, passo_t = 0.03, None, 0.25, 0.35, 0.5
+    if dados:
+        w, h, alt, a1, ep, bw, bl, passo_t = dados[:8]
 
     if estilo == "wlp":
         # bare die, with the ball grid under it
@@ -684,18 +760,28 @@ def wrl_ci(caminho, w: float, h: float, alt: float, estilo: str) -> None:
                                  bx + 0.18, by + 0.15, 0.10, METAL))
     else:
         # qfn, dfn, son, lga: a moulded body with metal underneath
-        partes.append(_bloco(-w / 2, -h / 2, 0.0, w / 2, h / 2, alt, EPOXI))
-        ep = min(w, h) * 0.45
-        partes.append(_bloco(-ep / 2, -ep / 2, -0.01, ep / 2, ep / 2, 0.02,
-                             METAL))
-        # the ring of lead flags, so the pitch is visible
-        passo = 0.5
-        n = max(2, int((w - 0.6) / passo))
-        for i in range(n):
-            bx = -w / 2 + 0.3 + (w - 0.6) * (i + 0.5) / n
-            for by in (-h / 2 + 0.15, h / 2 - 0.15):
-                partes.append(_bloco(bx - 0.12, by - 0.12, -0.01,
-                                     bx + 0.12, by + 0.12, 0.02, METAL))
+        partes.append(_bloco(-w / 2, -h / 2, a1, w / 2, h / 2, a1 + alt, EPOXI))
+        if ep:
+            partes.append(_bloco(-ep[0] / 2, -ep[1] / 2, 0.0,
+                                 ep[0] / 2, ep[1] / 2, a1 + 0.02, METAL))
+        # the terminals, at the pitch and the size the drawing gives
+        for eixo, comp in ((0, w), (1, h)):
+            n = max(1, int(round((comp - bw) / passo_t)))
+            for i in range(n + 1):
+                d = -comp / 2 + bw / 2 + i * passo_t
+                if d > comp / 2 - bw / 2 + 1e-6:
+                    break
+                for lado in (-1, 1):
+                    if eixo == 0:
+                        bx0, bx1 = d - bw / 2, d + bw / 2
+                        by = lado * (h / 2 - bl / 2)
+                        by0, by1 = by - bl / 2, by + bl / 2
+                    else:
+                        by0, by1 = d - bw / 2, d + bw / 2
+                        bx = lado * (w / 2 - bl / 2)
+                        bx0, bx1 = bx - bl / 2, bx + bl / 2
+                    partes.append(_bloco(bx0, by0, 0.0, bx1, by1,
+                                         a1 + 0.02, METAL))
 
     # pin 1, as the dot the real package carries
     partes.append(_cilindro(-w / 2 + 0.35, -h / 2 + 0.35, alt, alt + 0.02,
@@ -742,7 +828,7 @@ def _com_modelo() -> None:
         if nome in DESENHADOS:
             DESENHADOS[nome](pasta / (base + ".wrl"), w, h, alt)
         elif est:
-            wrl_ci(pasta / (base + ".wrl"), w, h, alt, est)
+            wrl_ci(pasta / (base + ".wrl"), w, h, alt, est, nome)
         else:
             wrl_caixa(pasta / (base + ".wrl"), w, h, alt, cor=cor_de(nome))
         modelo = (

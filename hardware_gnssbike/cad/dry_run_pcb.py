@@ -89,6 +89,9 @@ REGRAS = [
     ("OP1", "nenhum componente a menos de duas vezes a propria altura do "
             "sensor de luz: reflexao optica secundaria",
      "TI OPT3001 SBOS681B, layout guidelines"),
+    ("ME3", "o corpo que a ficha de cada peca cota cabe no footprint que "
+            "foi desenhado para ela, e bate com o contorno dele",
+     "desenho mecanico de cada ficha, em footprints.PACOTE"),
     ("ME1", "a placa cabe na caixa com folga",
      "hardware_gnssbike/04-pcb-e-caixa.md"),
     ("ME2", "altura dos componentes dentro da sombra da bateria e do display",
@@ -605,6 +608,22 @@ def main() -> int:
         else:
             ok.append("OP1: nenhuma peca de altura conhecida a menos de duas "
                       "alturas do sensor de luz")
+
+    # -- ME3: o 2D e o 3D contam a mesma historia ------------------------
+    import footprints as _FP
+    for _n in _FP.PACOTE:
+        try:
+            fp_load.carregar(_n)
+        except FileNotFoundError:
+            pass
+    div = _FP.conferir_2d_3d()
+    if div:
+        falhou("ME3", f"{len(div)} encapsulamentos em que a ficha e o "
+               "footprint discordam: " + "; ".join(div[:3]))
+    else:
+        ok.append(f"ME3: os {len(_FP.PACOTE)} encapsulamentos com cota de "
+                  "ficha cabem no footprint desenhado para eles e batem com "
+                  "o contorno")
 
     # -- resultado -------------------------------------------------------------
     for linha in ok:
