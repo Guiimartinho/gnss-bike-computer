@@ -259,7 +259,28 @@ add("J201", "Tag-Connect TC2030-NL", [
     (5, "GND", "power_in", B), (6, "RESET", "output", R),
 ], confirmed=True, note="so furos e pads; pinagem do padrao TC2030 da Tag-Connect")
 
-for n in ("TP201", "TP202", "TP203"):
+# The sixteen test points of 06-conectores-e-pontos-de-teste.md. Eleven of
+# the twelve on the power sheet were missing from the board entirely - only
+# the three of the console sheet existed - and a rail you cannot put a probe
+# on is a rail you cannot debug. TP111 and TP401 are NOT here, and both
+# absences are the document's own: ST_STO is a node the AEM10900 datasheet
+# does not have, and 5V0 belongs to a REG710NA-5 that is not fitted with the
+# JDI panel.
+TESTE = (
+    ("TP101", "VBUS", "o que a fonte USB entrega, depois do TVS"),
+    ("TP102", "VBUSOUT", "saida do limitador do nPM1300"),
+    ("TP103", "VBAT", "lado SYS do medidor, 3,0 a 4,2 V"),
+    ("TP104", "VSYS", "saida do power path; chega a 5,5 V com cabo"),
+    ("TP105", "3V0", "BUCK2, o trilho do MCU"),
+    ("TP106", "1V8", "BUCK1; maximo absoluto de 1,98 V no V_IO do receptor"),
+    ("TP107", "SD3V0", "LDSW1, a flash; desligado tem de estar em 0 V"),
+    ("TP108", "3V3BL", "LDSW2, a luz"),
+    ("TP109", "VBCKP", "TPS7A02; continua de pe com o aparelho desligado"),
+    ("TP110", "VINT", "interno do AEM10900; ponto de LEITURA, nao de alimentacao"),
+    ("TP112", "GND", "referencia do bloco de energia, com via propria ao plano"),
+)
+
+for n in [t[0] for t in TESTE] + ["TP201", "TP202", "TP203"]:
     add(n, "pad", [(1, "1", "passive", R)], confirmed=True, note="ponto de teste")
 for n, v in (("C201", "100 nF"), ("C210", "4,7 uF")):
     passive(n, v)

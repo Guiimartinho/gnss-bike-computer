@@ -14,10 +14,15 @@ How a four layer board of this kind is routed, and what this does:
            layer. The cost of a via is high enough that a run only changes
            layer when it has to.
   power    uses the wider track of the Alimentacao net class.
-  RF       is NOT routed here. RF_IN and RF_ANT need a controlled 50 ohm
-           width, and that width does not exist until the fabricator gives
-           the stackup - which 04-pcb-e-caixa.md already carries as an open
-           item. They are left for the person who has that number.
+  RF       goes FIRST, on the front layer only, at the calculated 50 ohm
+           width for this stack-up (0.196 mm), with ground vias down both
+           sides. First because its path is the one that is not negotiable
+           and it has to leave the receiver's pin before anything else takes
+           the room; front only because a via in the middle of an RF run is
+           a stub, which 7.2 of the module datasheet forbids by name. The
+           width still assumes the dielectric constant of ordinary FR-4 -
+           the fabricator's own stack-up is an open item in
+           04-pcb-e-caixa.md, and the dry-run prints the assumption.
 
 Order matters: the switching nodes of the two bucks and of the harvester go
 first and stay short, because their loop area is what radiates; then the USB
@@ -225,14 +230,24 @@ def largura(rede: str) -> float:
         return LARGURA_RF
     if rede.startswith("USB_D"):
         # LARGURA_USB_CALC is the geometry that gives 90 ohm differential on
-        # this stack-up, and it is 0.352 mm. It does not fit: the USB-C
-        # receptacle has 0.5 mm pitch pads, which leaves 0.2 mm between two
-        # of them, and a 0.352 mm track with the USB class's 0.2 mm clearance
-        # cannot leave the connector at all. A person necks the escape down
-        # and widens the track once it is clear of the pad field; this router
-        # picks one width per connection, so it uses the one that routes and
-        # the dry-run prints the calculated geometry as what the final,
-        # hand-finished pair has to meet.
+        # this stack-up: 0.352 mm at a 0.2 mm gap. It does not fit the
+        # connector - a USB-C receptacle has 0.5 mm pitch pads, leaving 0.2 mm
+        # between two of them, and a 0.352 mm track with the USB class's
+        # 0.2 mm clearance cannot leave the pad field at all.
+        #
+        # A neck gets it out of the pad field - emitir() cuts one and the
+        # search knows about it - but not across the board: at 0.352 mm with
+        # the USB class's 0.2 mm of clearance there is no channel from the
+        # receptacle in one bottom corner to the module in the other, and
+        # both halves of the pair come out unrouted. Worse, the two pads of
+        # each signal on a Type-C are the SAME signal on opposite rows, so
+        # joining them means crossing the connector's own pad field.
+        #
+        # So: the pair is routed at the width that fits, and the gap is
+        # REPORTED rather than hidden - US1 in the dry-run prints the routed
+        # width against the 0.352 mm that 90 ohm needs on this stack-up. It
+        # is a pair that has to be finished by hand, and saying so is the
+        # honest version of a pair that silently is not 90 ohm.
         return LARGURA_USB
     if e_alimentacao(rede):
         return LARGURA_ALIM
@@ -561,11 +576,34 @@ def pads_da_placa(arv) -> tuple[list[tuple], dict[str, list[tuple]], dict]:
 def a_estrela(g: Grade, rede: str, inicio: tuple[int, int, int],
               alvos: set[tuple[int, int, int]], folga: int = 200,
               orcamento: int = ORCAMENTO, so_camada: int | None = None,
-              perto_de: frozenset | None = None):
-    """Shortest path from one cell to any target, changing layer at a cost."""
+              perto_de: frozenset | None = None,
+              campos: list | None = None, larg_estreita: float = LARGURA):
+    """Shortest path from one cell to any target, changing layer at a cost.
+
+    `campos` are the pad fields of this net, in CELL coordinates. Inside one
+    of them the track is allowed to be as narrow as the pad it is leaving,
+    and the search has to know that or it never finds the way out: emitir()
+    already cut the neck, but it only ever saw paths the search had already
+    found. With one width for the whole search the USB pair at its calculated
+    0.352 mm could not leave a 0.5 mm pitch receptacle at all, and came out
+    with zero segments.
+    """
     if inicio in alvos:
         return [inicio]
     off = _disco_off(extra_de(rede))
+    # The neck is as wide as the PAD, not as the narrowest track on the
+    # board, and the search has to look for exactly the width that emitir()
+    # will draw. Assuming the minimum put USB_DM 0.335 mm from KEY_R where
+    # the geometry needs 0.378.
+    off_estreito = _disco_off(max(0.0, (folga_de(rede) - FOLGA)
+                                  + (larg_estreita - LARGURA) / 2))
+
+    def _off(ix: int, iy: int):
+        if campos:
+            for x0, y0, x1, y1 in campos:
+                if x0 <= ix <= x1 and y0 <= iy <= y1:
+                    return off_estreito
+        return off
     tx = sum(t[1] for t in alvos) / len(alvos)
     ty = sum(t[2] for t in alvos) / len(alvos)
     bx0 = min([inicio[1]] + [t[1] for t in alvos]) - folga
@@ -600,7 +638,7 @@ def a_estrela(g: Grade, rede: str, inicio: tuple[int, int, int],
         vizinhos = [(c, ix + 1, iy), (c, ix - 1, iy), (c, ix, iy + 1),
                     (c, ix, iy - 1)]
         for dx, dy in ((1, 1), (1, -1), (-1, 1), (-1, -1)):
-            if g.livre_t((c, ix + dx, iy), rede, off) and                     g.livre_t((c, ix, iy + dy), rede, off):
+            if g.livre_t((c, ix + dx, iy), rede, _off(ix + dx, iy)) and                     g.livre_t((c, ix, iy + dy), rede, _off(ix, iy + dy)):
                 vizinhos.append((c, ix + dx, iy + dy))
         if so_camada is None:
             vizinhos += [(k, ix, iy) for k in range(NC) if k != c]
@@ -609,7 +647,7 @@ def a_estrela(g: Grade, rede: str, inicio: tuple[int, int, int],
                 continue
             if not (bx0 <= v[1] <= bx1 and by0 <= v[2] <= by1):
                 continue
-            if not g.dentro(v[1], v[2]) or not g.livre_t(v, rede, off):
+            if not g.dentro(v[1], v[2]) or                     not g.livre_t(v, rede, _off(v[1], v[2])):
                 continue
             if v[0] != c:
                 # a layer change is a via: every via here goes right through
@@ -617,7 +655,7 @@ def a_estrela(g: Grade, rede: str, inicio: tuple[int, int, int],
                 # for its hole
                 if not g.cabe_via(v[1], v[2], rede):
                     continue
-                if not g.livre_t((v[0], ix, iy), rede, off):
+                if not g.livre_t((v[0], ix, iy), rede, _off(ix, iy)):
                     continue
             if v[0] != c:
                 passo = CUSTO_VIA
@@ -874,6 +912,54 @@ def costurar(g: Grade, vias: list) -> int:
     return postas
 
 
+def costurar_area(g: Grade, vias: list) -> int:
+    """Ground vias on a grid across the whole board, not only its edge.
+
+    Edge stitching keeps the boundary of the two surface pours from becoming
+    a radiating slot. It does nothing for the MIDDLE: a patch of top pour
+    that reaches the internal plane only through a via 20 mm away is not
+    ground at 2.4 GHz, it is an antenna with a long feed. What ties the three
+    layers into one ground is a mesh, and a mesh is what this lays down.
+
+    The pitch is the same number the edge uses and for the same reason: a
+    tenth of a wavelength in FR-4 at 2.44 GHz is 6.1 mm, so anything under
+    that keeps every point of pour within half a stitch of a via. 4.0 mm
+    leaves margin without spending the room the signals need.
+
+    It runs LAST, after the signals and after the edge, on whatever is free,
+    so a stitch never costs a connection.
+    """
+    passo = 4.0
+    d = BORDA_COBRE + VIA_D / 2 + 0.45
+    postas = 0
+    n_x = max(2, int((M.W - 2 * d) / passo) + 1)
+    n_y = max(2, int((M.H - 2 * d) / passo) + 1)
+    for i in range(n_x):
+        for j in range(n_y):
+            x = d + (M.W - 2 * d) * i / (n_x - 1)
+            y = d + (M.H - 2 * d) * j / (n_y - 1)
+            achou = None
+            for r in (0.0, 0.4, 0.8, 1.3):
+                for ang in range(0, 360, 45) if r else (0,):
+                    vx = x + r * math.cos(math.radians(ang))
+                    vy = y + r * math.sin(math.radians(ang))
+                    c0, c1 = g.cel(vx, vy)
+                    if not g.dentro(c0, c1) or not g.cabe_via(c0, c1, "GND"):
+                        continue
+                    if min(vx, vy, M.W - vx, M.H - vy) < BORDA_COBRE + VIA_D / 2:
+                        continue
+                    achou = g.pos(c0, c1)
+                    break
+                if achou:
+                    break
+            if achou is None:
+                continue
+            vias.append((achou[0], achou[1], "GND"))
+            g.via(achou[0], achou[1], "GND")
+            postas += 1
+    return postas
+
+
 def costurar_rf(g: Grade, vias: list, segmentos: list) -> int:
     """Ground vias along both sides of the RF line.
 
@@ -1036,6 +1122,16 @@ def uma_passagem(arv, numeros, todos, por_rede, caixa_fp, prioridade):
             # the RF line stays on the front layer: a via in the middle of
             # it is a stub, and 7.2 of the module datasheet forbids stubs by
             # name. The second track of a pair is pulled towards the first.
+            # every pad field of this net, in cell coordinates: inside one
+            # of them the escape may be as narrow as the pad
+            campos_cel = []
+            for q in pads:
+                b = caixa_fp.get((round(q[2], 4), round(q[3], 4)))
+                if not b:
+                    b = (q[2] - q[4], q[3] - q[5], q[2] + q[4], q[3] + q[5])
+                a0 = g.cel(b[0] - MP.ORIGEM[0] - FOLGA, b[1] - MP.ORIGEM[1] - FOLGA)
+                a1 = g.cel(b[2] - MP.ORIGEM[0] + FOLGA, b[3] - MP.ORIGEM[1] + FOLGA)
+                campos_cel.append((a0[0], a0[1], a1[0], a1[1]))
             so_camada = 0 if rede in SO_FRENTE else None
             perto = None
             if rede == PAR[1] and PAR[0] in caminhos:
@@ -1043,7 +1139,8 @@ def uma_passagem(arv, numeros, todos, por_rede, caixa_fp, prioridade):
             p = None
             for folga in (100, 350):
                 p = a_estrela(g, rede, next(iter(alvo)), feito, folga,
-                              so_camada=so_camada, perto_de=perto)
+                              so_camada=so_camada, perto_de=perto,
+                              campos=campos_cel, larg_estreita=larg_pad)
                 if p:
                     break
             if p is None:
@@ -1065,7 +1162,8 @@ def uma_passagem(arv, numeros, todos, por_rede, caixa_fp, prioridade):
 
     n_cost = costurar(g, vias)
     n_cost += costurar_rf(g, vias, segmentos)
-    return segmentos, vias, falhas, falharam, n_gnd, n_ok, n_cost
+    n_malha = costurar_area(g, vias)
+    return segmentos, vias, falhas, falharam, n_gnd, n_ok, n_cost, n_malha
 
 
 def conferir(segmentos, vias) -> list[str]:
@@ -1194,14 +1292,14 @@ def main() -> int:
     melhor = None
     for nome in ("compridas", "curtas"):
         r = uma_passagem(arv, numeros, todos, por_rede, caixa_fp, nome)
-        segmentos, vias, falhas, falharam, n_gnd, n_ok, n_cost = r
+        segmentos, vias, falhas, falharam, n_gnd, n_ok, n_cost, n_malha = r
         print(f"  ordem {nome} primeiro: {n_ok} ligacoes, {len(falhas)} falhas",
               flush=True)
         if melhor is None or len(falhas) < len(melhor[2]):
             melhor = r
         if not falhas:
             break
-    segmentos, vias, falhas, _f, n_gnd, n_ok, n_cost = melhor
+    segmentos, vias, falhas, _f, n_gnd, n_ok, n_cost, n_malha = melhor
 
     ruins = conferir(segmentos, vias)
     print(f"  conferencia geometrica: {len(ruins)} pares perto demais")
@@ -1212,13 +1310,20 @@ def main() -> int:
 
     print(f"{len(segmentos)} segmentos, {len(vias)} vias")
     print(f"  {n_gnd} pads de terra com via ao plano, "
-          f"{n_cost} vias de costura na borda")
+          f"{n_cost} vias de costura na borda, {n_malha} na malha da area")
     print(f"  {n_ok} ligacoes roteadas, {len(NAO_ROTEAR)} redes deixadas de fora "
           f"({', '.join(sorted(NAO_ROTEAR))})")
     if falhas:
-        print(f"  NAO ROTEADO: {len(falhas)}")
-        for f in falhas[:12]:
-            print(f"    {f}")
+        # Grouped by net, not the first twelve lines. Printed flat, the list
+        # was 134 ground via failures with the signal nets buried behind
+        # them - USB_DP and USB_DM came out with zero segments and nothing in
+        # the report said so.
+        import collections as _c
+        por_rede_falha = _c.Counter(f.split(":", 1)[0] for f in falhas)
+        print(f"  NAO ROTEADO: {len(falhas)} em {len(por_rede_falha)} redes")
+        for rede, n in por_rede_falha.most_common():
+            exemplo = next(f for f in falhas if f.startswith(rede + ":"))
+            print(f"    {rede}: {n}x  ({exemplo.split(': ', 1)[1]})")
     return 1 if falhas else 0
 
 

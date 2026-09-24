@@ -38,18 +38,37 @@ PAPEIS = {"A4": (297.0, 210.0), "A3": (420.0, 297.0), "A2": (594.0, 420.0),
 ORDEM = ["A4", "A3", "A2", "A1", "A0"]
 
 MARGEM = 20.0
-COL_GAP = 24.0
-ROW_GAP = 30.0
+# Routing channels between parts. They were 24 and 30, which is a corridor
+# wider than most of the symbols it separates: with 69 parts on the power
+# sheet that alone forced A1 - 841 x 594 mm of paper for a block that fits
+# on a third of it. A schematic sheet bigger than A4 is almost always a
+# layout that was spread to fill the paper rather than paper chosen to hold
+# the layout. 14 and 18 still leave more than a wire's width between any two
+# symbols, and check_sch.py is what proves it: it fails if a wire crosses a
+# component on any sheet.
+COL_GAP = 16.0
+ROW_GAP = 22.0
 LABEL_X = 12.0     # how far inside the left and right margins a label sits
 
 
-def escolher_papel(n_pecas: int, n_labels: int) -> str:
-    """The smallest standard sheet that holds this block with room to route."""
-    for nome in ORDEM[1:]:
+def escolher_papel(refs: list[str], n_labels: int) -> str:
+    """The smallest standard sheet the drawing actually fits on.
+
+    Measured, not estimated. The old version budgeted a fixed 30 x 18 mm cell
+    plus the channels for EVERY part - 54 x 48 mm each, whether it was a
+    0402 or an eighty pad module - and started from A3, so A4 was never even
+    considered. Sixty-nine parts then "needed" 178.848 mm2 and landed on A1,
+    where the real drawing occupies about a third of the sheet.
+
+    This lays the parts out on the candidate sheet and asks whether the last
+    row ended above the bottom margin. That is the same code that draws them,
+    so the answer cannot drift from the drawing.
+    """
+    for nome in ORDEM:
         w, h = PAPEIS[nome]
-        cabe = ((w - 2 * MARGEM - 2 * LABEL_X) // (30.0 + COL_GAP)) * \
-               ((h - 2 * MARGEM) // (18.0 + ROW_GAP))
-        if cabe >= n_pecas and (h - 2 * MARGEM) / (2 * GRID) >= n_labels:
+        if (h - 2 * MARGEM) / (2 * GRID) < n_labels:
+            continue
+        if posicionar(refs, nome) <= h - MARGEM:
             return nome
     return "A0"
 
@@ -88,8 +107,12 @@ def ordenar_por_ligacao(refs: list[str]) -> list[str]:
     return saida
 
 
-def posicionar(refs: list[str], papel: str) -> None:
-    """Grid placement with channels, biggest part first."""
+def posicionar(refs: list[str], papel: str) -> float:
+    """Grid placement with channels, biggest part first.
+
+    Returns the y the last row ends at, which is what escolher_papel() asks
+    to know whether the block fits on this sheet.
+    """
     w_pag, h_pag = PAPEIS[papel]
     x_lim = w_pag - MARGEM - LABEL_X
     x = MARGEM + LABEL_X
@@ -106,6 +129,7 @@ def posicionar(refs: list[str], papel: str) -> None:
         part.y = snap(y + h / 2.0)
         x += w + COL_GAP
         alt_linha = max(alt_linha, h)
+    return y + alt_linha
 
 
 def pinos_do_no(nome: str, folha: str) -> list[tuple[str, str]]:
@@ -130,7 +154,7 @@ def montar_folha(nome: str, arquivo: str, pagina: str, root_uuid: str,
     refs = ordenar_por_ligacao(S.por_folha()[nome])
     entre = sorted(n for n, k in tipo.items()
                    if k == "ENTRE" and any(S.sheet_of(r) == nome for r, _p in N.NETS[n]))
-    papel = escolher_papel(len(refs), len(entre))
+    papel = escolher_papel(refs, len(entre))
     posicionar(refs, papel)
     w_pag, h_pag = PAPEIS[papel]
 
@@ -274,7 +298,41 @@ def main() -> int:
                              "vive na caixa e chega por contato ou cabo").strip(" |")
 
     tipo, _folhas = S.classificar()
-    raiz = Schematic(PROJETO, "A0", title="GNSS Bike Computer - diagrama de blocos",
+
+    # How big each block has to be, and therefore how big the sheet is. The
+    # blocks were a fixed 190 x 240 mm on a 370 x 350 mm pitch, which spans
+    # 990 x 680 and forces A0 - for a diagram of six rectangles and the lines
+    # between them. A block only has to hold its title and its pins: the pins
+    # go two per row at 4 grid steps, and the widest pin NAME decides the
+    # width. Measured, the diagram fits on A2.
+    entre_raiz = sorted(n for n, k in tipo.items() if k == "ENTRE")
+    pinos_por_folha: dict[str, list[str]] = {n: [] for n, _f, _p in S.FOLHAS}
+    for rede in entre_raiz:
+        for folha in sorted({S.sheet_of(r) for r, _p in N.NETS[rede]}):
+            pinos_por_folha[folha].append(rede)
+    n_max = max(len(v) for v in pinos_por_folha.values())
+    letra = max((len(r) for v in pinos_por_folha.values() for r in v),
+                default=8)
+    # Two grid steps between pins, not four. Four is a 5,08 mm slot for a
+    # 1,27 mm label, and on the MCU block - 33 crossing signals - it alone
+    # made the block 116 mm tall and pushed the diagram off A3 onto A2.
+    PASSO_PINO = 2 * GRID
+    bloco_h = snap(20.0 + ((n_max + 1) // 2) * PASSO_PINO + 10.0)
+    # the pin name is drawn inside the block, from each side
+    bloco_w = snap(max(70.0, 2 * (letra * 2.1) + 24.0))
+    passo_x = bloco_w + 34.0
+    passo_y = bloco_h + 30.0
+    largura = 30.0 + 2 * passo_x + bloco_w + 30.0
+    altura = 40.0 + passo_y + bloco_h + 20.0
+    papel_raiz = "A0"
+    for nome_p in ORDEM:
+        w, h = PAPEIS[nome_p]
+        if largura <= w and altura <= h:
+            papel_raiz = nome_p
+            break
+
+    raiz = Schematic(PROJETO, papel_raiz,
+                     title="GNSS Bike Computer - diagrama de blocos",
                      rev="A", date=DATA)
 
     # the six blocks, two rows of three
@@ -282,8 +340,9 @@ def main() -> int:
     for i, (nome, arquivo, pagina) in enumerate(S.FOLHAS):
         col, lin = i % 3, i // 3
         blocos.append(SheetSymbol(nome, arquivo,
-                                  x=snap(60.0 + col * 370.0), y=snap(90.0 + lin * 350.0),
-                                  w=snap(190.0), h=snap(240.0), page=pagina))
+                                  x=snap(30.0 + col * passo_x),
+                                  y=snap(40.0 + lin * passo_y),
+                                  w=bloco_w, h=bloco_h, page=pagina))
     raiz.sheets = blocos
     por_nome = {b.name: b for b in blocos}
 
@@ -296,7 +355,7 @@ def main() -> int:
             i = contador[folha]
             contador[folha] += 1
             lado = 180 if (i % 2 == 0) else 0
-            py = snap(b.y + 10.0 + (i // 2) * 4 * GRID)
+            py = snap(b.y + 10.0 + (i // 2) * PASSO_PINO)
             b.pins.append((rede, py, lado, "bidirectional"))
 
     todas: list[tuple[str, Schematic]] = []

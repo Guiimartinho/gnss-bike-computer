@@ -28,6 +28,7 @@ import footprints as FPS  # noqa: E402
 import fp_load  # noqa: E402
 import make_dxf as M  # noqa: E402
 import make_pcb as MP  # noqa: E402
+import nets as N  # noqa: E402
 import parts as P  # noqa: E402
 
 PCB = HERE / "gnssbike.kicad_pcb"
@@ -82,6 +83,10 @@ REGRAS = [
      "MinewSemi ME54BS13 V1.0.0, 7.2, Interference Isolation Rule"),
     ("RF10", "50 mm entre dois modulos de radio na mesma placa",
      "MinewSemi ME54BS13 V1.0.0, 7.2, Multiple Modules on the Same PCB"),
+    ("US1", "o par USB_DP/USB_DM roteado, com a largura e o afastamento que "
+            "dao 90 ohm diferenciais nesta pilha",
+     "USB 2.0, 7.1.6: 90 ohm +-15%; a geometria sai do empilhamento, "
+     "calculada em route.py"),
     ("AL1", "desacoplamento do modulo de radio a 0,5 mm do pino de "
             "alimentacao; dos demais CIs, 2 mm para o de alta frequencia e "
             "5 mm para o de reserva",
@@ -561,6 +566,92 @@ def main() -> int:
         else:
             ok.append(f"RF10: os dois modulos de radio estao a {d:.1f} mm, "
                       "acima dos 50 mm da ficha")
+
+    # -- US1: o par diferencial do USB ---------------------------------------
+    # Not "is it routed" but "is it the pair the spec asks for". The width
+    # that gives 90 ohm differential on this stack-up is computed in route.py
+    # and printed here beside what is actually drawn, because a pair routed
+    # at the wrong width is not a pair - it is two tracks - and nothing else
+    # in the chain would ever say so.
+    import route as _R
+    _numeros, _ = MP.redes()
+    _por_num = {n: r for r, n in _numeros.items()}
+    par = {}
+    for r in ("USB_DP", "USB_DM"):
+        sg = [q for q in seg if _por_num.get(q["n"], "") == r]
+        comp = sum(math.hypot(q["b"][0] - q["a"][0], q["b"][1] - q["a"][1])
+                   for q in sg)
+        larg = sorted({round(q["w"], 3) for q in sg})
+        par[r] = (len(sg), comp, larg)
+    alvo = _R.LARGURA_USB_CALC
+    faltando = [r for r, v in par.items() if v[0] == 0]
+    if faltando:
+        falhou("US1", "o par nao esta roteado: " + ", ".join(faltando))
+    else:
+        larguras = sorted({w for v in par.values() for w in v[2]})
+        maior = max(larguras)
+        if maior < alvo - 1e-6:
+            falhou("US1", "o par esta roteado a " +
+                   ", ".join(f"{w:.3f}" for w in larguras) +
+                   f" mm, e 90 ohm diferenciais nesta pilha pedem "
+                   f"{alvo:.3f} mm com {_R.PASSO_PAR:.1f} de afastamento. "
+                   f"Comprimentos: " +
+                   ", ".join(f"{r} {v[1]:.1f} mm" for r, v in par.items()) +
+                   ". Tem de ser terminado a mao")
+        else:
+            ok.append("US1: o par esta roteado a " +
+                      ", ".join(f"{w:.3f}" for w in larguras) +
+                      f" mm, contra os {alvo:.3f} que dao 90 ohm")
+
+    # -- AL5: o filtro pi no pino de alimentacao do modulo -------------------
+    # 7.2, Power Supply Design: "For switching power supply applications, a
+    # pi-type filter circuit footprint must be reserved near the module power
+    # input pins." The module here is fed from BUCK2 of the nPM1300, which is
+    # switching, so the rule applies. What is measured is the SHAPE of a pi:
+    # a series element between the rail and the pin, with a capacitor to
+    # ground on each side of it. Whether the series part is a 0 ohm jumper or
+    # a ferrite is a stuffing decision - the footprint is what the datasheet
+    # asks to be reserved - but a rail with no series element at all has no
+    # pi footprint to stuff.
+    alim_mod = [q["rede"] for q in pecas.get(MODULO, {}).get("pads", [])
+                if q.get("pad") == "VDD" or q["rede"] in ("3V0_MOD",)]
+    rede_mod = alim_mod[0] if alim_mod else None
+    if rede_mod and rede_mod in N.NETS:
+        # the series element: a two terminal part on this net whose other end
+        # is on a different net
+        serie = []
+        for ref, _p in N.NETS[rede_mod]:
+            if ref == MODULO or ref not in P.PARTS:
+                continue
+            if len(P.PARTS[ref].pins) != 2:
+                continue
+            outras = {n for n, v in N.NETS.items()
+                      if n != rede_mod and any(t[0] == ref for t in v)}
+            if outras - {"GND"}:
+                serie.append((ref, sorted(outras - {"GND"})[0]))
+        caps_mod = [r for r, _p in N.NETS[rede_mod]
+                    if r.startswith("C") and r in P.PARTS]
+        montante = serie[0][1] if serie else None
+        caps_up = [r for r, _p in N.NETS.get(montante, [])
+                   if r.startswith("C") and r in P.PARTS] if montante else []
+        if not serie:
+            falhou("AL5", f"o trilho {rede_mod} chega ao pino do modulo sem "
+                   "elemento em serie: nao ha footprint de pi para povoar")
+        elif not caps_mod or not caps_up:
+            falhou("AL5", f"{serie[0][0]} esta em serie entre {montante} e "
+                   f"{rede_mod}, mas faltam capacitores de um dos lados "
+                   f"(montante {len(caps_up)}, lado do modulo {len(caps_mod)})")
+        else:
+            pino = [q for q in pecas[MODULO]["pads"] if q["rede"] == rede_mod]
+            d = "?"
+            if pino and serie[0][0] in pecas:
+                p0 = (pino[0]["x"], pino[0]["y"])
+                d = "%.1f" % min(math.hypot(a["x"] - p0[0], a["y"] - p0[1])
+                                 for a in pecas[serie[0][0]]["pads"])
+            ok.append(f"AL5: filtro pi do modulo montado como "
+                      f"{'+'.join(caps_up)} | {serie[0][0]} | "
+                      f"{'+'.join(caps_mod)}, com o elemento em serie a "
+                      f"{d} mm do pino de alimentacao")
 
     # -- AL1: desacoplamento --------------------------------------------------
     piores = []

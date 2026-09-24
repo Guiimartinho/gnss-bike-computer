@@ -96,7 +96,10 @@ _fp("J402", "Connector_FFC-FPC:TE_0-1734839-5_1x05-1MP_P0.5mm_Horizontal",
     "ENCAPSULAMENTO",
     "5 vias, passo 0,5 mm. A peca e o Molex 503480-0500, que a JDI nomeia no "
     "desenho de contorno; a KiCad nao tem essa serie")
-_fp(["TP201", "TP202", "TP203"], "TestPoint:TestPoint_Pad_D1.0mm", "EXATO", "")
+import parts as _P  # noqa: E402
+
+_fp([t[0] for t in _P.TESTE] + ["TP201", "TP202", "TP203"],
+    "TestPoint:TestPoint_Pad_D1.0mm", "EXATO", "")
 _fp(["J302", "J103", "J104", "J105"], "gnssbike:ContatoMola_2x2mm_P3mm",
     "GERADO",
     "dois pads de 2,0 x 2,0 mm a 3,0 mm de passo, sem pasta: a mola encosta, nao se solda")

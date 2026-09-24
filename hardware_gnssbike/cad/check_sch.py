@@ -225,8 +225,11 @@ def main() -> int:
 
         # nothing may hang off the page: a part outside the frame is invisible
         # on paper and in the PDF
+        # the sheet the generator would choose for these parts. It takes the
+        # refs, not a count: the size comes from laying them out, not from a
+        # budget per part.
         w_pag, h_pag = MK.PAPEIS[MK.escolher_papel(
-            len(refs), len(kids(arv, "hierarchical_label")))]
+            refs, len(kids(arv, "hierarchical_label")))]
         fora = []
         for ref in refs:
             x0, y0, x1, y1 = P.PARTS[ref].box()
@@ -236,7 +239,7 @@ def main() -> int:
             at = kid(lb, "at")
             if not (0 < float(at[1]) < w_pag and 0 < float(at[2]) < h_pag):
                 fora.append(lb[1])
-        check(not fora, f"{nome}: nada fora da folha {MK.escolher_papel(len(refs), 0)} "
+        check(not fora, f"{nome}: nada fora da folha {MK.escolher_papel(refs, 0)} "
                         f"({len(fora)})")
 
         sobrepostas = []

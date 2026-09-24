@@ -76,6 +76,12 @@ JUNTO: dict[str, str] = {
     "SW601": "SW602", "SW603": "SW602",
     "Q601": "D601", "Q602": "D601", "Q603": "D601",
     "J201": "U201", "TP201": "U201", "TP202": "U201", "TP203": "U201",
+    # Each power test point goes beside what it measures, which is what
+    # 06-conectores-e-pontos-de-teste.md asks for point by point: the VBUS one
+    # "junto do conector", the ground one "com via propria ao plano".
+    "TP101": "J101", "TP102": "U101", "TP103": "U102", "TP104": "U101",
+    "TP105": "U101", "TP106": "U101", "TP107": "U101", "TP108": "U101",
+    "TP109": "U104", "TP110": "U103", "TP112": "U101",
 }
 # The back face. Nothing about the case decides this: these are the parts
 # that do not have to be reached from the front and that free the front face
@@ -443,6 +449,96 @@ def tam(ref: str, ang: int) -> tuple[float, float]:
     return (x1 - x0, y1 - y0)
 
 
+# Silkscreen text. 0.8 mm tall with a 0.15 mm stroke is not a preference:
+# it is the floor almost every fab publishes for legible silkscreen, and what
+# this file wrote before - 0.7 with a 0.1 stroke - is below it, so it would
+# not print reliably whatever the layout did. Raising it makes the collision
+# problem worse, which is why the labels are now PLACED instead of all being
+# dropped 1.8 mm above their part: at a fixed offset, 37 pairs of reference
+# designators sat on top of each other, and a designator you cannot read
+# identifies nothing.
+TEXTO_ALT = 0.8
+TEXTO_TRACO = 0.15
+TEXTO_LARG = 0.75          # width of a character as a fraction of its height
+TEXTO_FOLGA = 0.12         # between two labels
+
+
+def _caixa_texto(ref: str, x: float, y: float) -> tuple:
+    w = len(ref) * TEXTO_ALT * TEXTO_LARG + TEXTO_FOLGA
+    h = TEXTO_ALT + TEXTO_FOLGA
+    return (x - w / 2, y - h / 2, x + w / 2, y + h / 2)
+
+
+def _cruza(a: tuple, b: tuple) -> bool:
+    return a[2] > b[0] and b[2] > a[0] and a[3] > b[1] and b[3] > a[1]
+
+
+def rotulos(lugar: dict) -> dict[str, tuple[float, float]]:
+    """Where each reference designator goes: offset from its own footprint.
+
+    Two rules, in order. A label may NEVER sit on another label - that is
+    what makes the board unreadable. A label SHOULD not sit on another
+    part's courtyard, but on a board at 48% occupancy that is not always
+    possible, and a designator printed over a chip's body is still legible
+    while two designators printed over each other are not.
+
+    Candidates are tried from the part's own courtyard outwards, nearest
+    first, so a label stays next to the thing it names.
+    """
+    postas: list[tuple] = []
+    corpos = []
+    for ref, (x, y, ang, _a) in lugar.items():
+        bx = caixa(ref, ang)
+        corpos.append((x + bx[0], y + bx[1], x + bx[2], y + bx[3]))
+    saida: dict[str, tuple[float, float]] = {}
+    # biggest parts first: they have the most room around them and the most
+    # to lose from a label landing in the middle of a fine pitch package
+    ordem = sorted(lugar, key=lambda r: -(
+        (caixa(r, lugar[r][2])[2] - caixa(r, lugar[r][2])[0]) *
+        (caixa(r, lugar[r][2])[3] - caixa(r, lugar[r][2])[1])))
+    for ref in ordem:
+        x, y, ang, _atras = lugar[ref]
+        bx = caixa(ref, ang)
+        meia_w = len(ref) * TEXTO_ALT * TEXTO_LARG / 2
+        meia_h = TEXTO_ALT / 2
+        melhor = None
+        for passo in (0.0, 0.3, 0.7, 1.2, 1.8, 2.6, 3.6):
+            for dx, dy in ((0.0, bx[1] - meia_h - 0.25 - passo),
+                           (0.0, bx[3] + meia_h + 0.25 + passo),
+                           (bx[2] + meia_w + 0.3 + passo, 0.0),
+                           (bx[0] - meia_w - 0.3 - passo, 0.0),
+                           (bx[2] + meia_w + 0.3 + passo,
+                            bx[1] - meia_h - 0.25 - passo),
+                           (bx[0] - meia_w - 0.3 - passo,
+                            bx[1] - meia_h - 0.25 - passo),
+                           (bx[2] + meia_w + 0.3 + passo,
+                            bx[3] + meia_h + 0.25 + passo),
+                           (bx[0] - meia_w - 0.3 - passo,
+                            bx[3] + meia_h + 0.25 + passo)):
+                cx_, cy_ = x + dx, y + dy
+                if not (0.3 < cx_ < M.W - 0.3 and 0.3 < cy_ < M.H - 0.3):
+                    continue
+                t = _caixa_texto(ref, cx_, cy_)
+                if any(_cruza(t, q) for q in postas):
+                    continue
+                livre_de_peca = not any(_cruza(t, c) for c in corpos)
+                if melhor is None or (livre_de_peca and not melhor[2]):
+                    melhor = ((dx, dy), t, livre_de_peca)
+                if livre_de_peca:
+                    break
+            if melhor is not None and melhor[2]:
+                break
+        if melhor is None:
+            # nothing anywhere: leave it on the part and say so by putting it
+            # dead centre, which is visibly deliberate rather than a near miss
+            saida[ref] = (0.0, 0.0)
+            postas.append(_caixa_texto(ref, x, y))
+            continue
+        saida[ref] = melhor[0]
+        postas.append(melhor[1])
+    return saida
+
+
 def colocar() -> tuple[dict[str, tuple[float, float, int, bool]], list[str]]:
     """Place every part: x, y, rotation and which face.
 
@@ -691,15 +787,32 @@ def colocar() -> tuple[dict[str, tuple[float, float, int, bool]], list[str]]:
     for ref in sorted(FPS.FP, key=ordem_de_encostar):
         encostar(ref)
 
-    for ref, dono in JUNTO.items():
+    # A test point takes what is LEFT. It is a pad to touch a probe on, and
+    # it must never push a decoupling capacitor off the ring it needs: when
+    # the eleven points of the power sheet were placed with the rest of
+    # JUNTO, AL1 went from zero capacitors out of limit to three, one of them
+    # 4.0 mm from a pin that wants 2.
+    for ref, dono in sorted(JUNTO.items(),
+                            key=lambda kv: kv[0].startswith("TP")):
         if ref not in tam_bruto or dono not in lugar or ref in lugar:
             continue
+        if ref.startswith("TP"):
+            continue                     # depois do desacoplamento
         dx, dy = lugar[dono][0], lugar[dono][1]
         por(ref, dx, dy, ROTACAO.get(ref, 0))
 
     # second pass: now the chips that follow an anchor are placed too
     for ref in sorted(FPS.FP, key=ordem_de_encostar):
         encostar(ref)
+
+    # and only now the test points, on whatever the decoupling left
+    for ref, dono in JUNTO.items():
+        if not ref.startswith("TP") or ref not in tam_bruto or ref in lugar:
+            continue
+        if dono not in lugar:
+            continue
+        dx, dy = lugar[dono][0], lugar[dono][1]
+        por(ref, dx, dy, ROTACAO.get(ref, 0))
 
     # ---- 4. the rest, by connectivity, turned along it ----
     ligados: dict[str, set[str]] = {}
@@ -1110,9 +1223,18 @@ def main() -> int:
         r"D:\KiCAD\share\kicad\footprints\MountingHole.pretty"
         r"\MountingHole_2.2mm_M2.kicad_mod").read_text(encoding="utf-8")
     corpo_furo = furo[furo.index("\n"):].rstrip()[:-1].rstrip()
+    # The library footprint carries a visible "REF**" on the silkscreen. It
+    # names nothing - the hole is not a part - and on this board it was the
+    # one label left sitting on another, over J402's.
+    corpo_furo = corpo_furo.replace(
+        '(property "Reference" "REF**"',
+        '(property "Reference" "REF**" (hide yes)', 1)
     saida.append('\t(footprint "MountingHole:MountingHole_2.2mm_M2"\n'
                  f'\t\t(at {fx:.4f} {fy:.4f})\n\t\t(uuid "{uid("furo")}")'
                  + corpo_furo.replace("\n", "\n\t") + "\n\t)")
+
+    # where each reference designator goes, decided once for the whole board
+    desloca = rotulos(lugar)
 
     # the parts
     for ref, (x, y, ang, atras) in sorted(lugar.items()):
@@ -1127,10 +1249,12 @@ def main() -> int:
         cab = (f'\t(footprint "{nome_fp}"\n\t\t(layer "{camada}")\n'
                f'\t\t(at {px:.4f} {py:.4f} {ang})\n'
                f'\t\t(uuid "{uid("fp", ref)}")\n'
-               f'\t\t(property "Reference" "{ref}"\n\t\t\t(at 0 -1.8 0)\n'
+               f'\t\t(property "Reference" "{ref}"\n'
+               f'\t\t\t(at {desloca[ref][0]:.4f} {desloca[ref][1]:.4f} 0)\n'
                f'\t\t\t(layer "{"B" if atras else "F"}.SilkS")\n'
                f'\t\t\t(uuid "{uid("fpref", ref)}")\n'
-               '\t\t\t(effects (font (size 0.7 0.7) (thickness 0.1))'
+               f'\t\t\t(effects (font (size {TEXTO_ALT} {TEXTO_ALT}) '
+               f'(thickness {TEXTO_TRACO}))'
                + (' (justify mirror)' if atras else '') + ')\n\t\t)\n'
                f'\t\t(property "Value" "{P.PARTS[ref].value}"\n\t\t\t(at 0 1.8 0)\n'
                f'\t\t\t(layer "{"B" if atras else "F"}.Fab")\n'
@@ -1140,11 +1264,13 @@ def main() -> int:
         saida.append(cab + corpo + "\n\t)")
 
     notas = [
-        "GNSS BIKE COMPUTER - placa 55 x 97 mm, 0,8 mm, 4 camadas",
+        f"GNSS BIKE COMPUTER - placa {M.W:g} x {M.H:g} mm, "
+        f"{M.THICKNESS:g} mm, 4 camadas",
         f"{len(lugar)} pecas colocadas, {len(FPS.FORA_DA_PLACA)} fora da placa "
         "(painel, antena e modulos solares vivem na caixa)",
-        "furo M2 unico; reparticao do dieletrico PROVISORIA (0,22 mm por vao)",
-        "NADA ROTEADO, NADA FABRICADO, NADA MEDIDO",
+        f"furo M2 unico; empilhamento assimetrico {DIEL_RF:g} / "
+        f"{DIEL_NUCLEO:.2f} / {DIEL_RF:g} mm, para os 50 ohm da linha de RF",
+        "ROTEAMENTO PARCIAL; NADA FABRICADO, NADA MEDIDO",
     ]
     for i, s in enumerate(notas):
         p = P_(0.0, M.H + 3.0 + i * 2.0)

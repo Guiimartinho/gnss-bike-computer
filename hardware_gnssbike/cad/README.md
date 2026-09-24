@@ -30,14 +30,31 @@ roteadas**, em KiCad 8, gerados a partir dos documentos de
 
 ```mermaid
 flowchart TB
-    RAIZ["folha raiz · A0<br/>diagrama de blocos<br/>as 36 linhas entre as folhas"]
-    RAIZ --> F1["1 Energia · A2<br/>55 pecas"]
-    RAIZ --> F2["2 MCU e depuracao · A3<br/>7 pecas"]
-    RAIZ --> F3["3 GNSS · A3<br/>9 pecas"]
-    RAIZ --> F4["4 Display e luz · A3<br/>11 pecas"]
-    RAIZ --> F5["5 Memoria e sensores · A3<br/>16 pecas"]
-    RAIZ --> F6["6 Interface · A3<br/>22 pecas"]
+    RAIZ["folha raiz · A3<br/>diagrama de blocos<br/>as 36 linhas entre as folhas"]
+    RAIZ --> F1["1 Energia · A3<br/>69 pecas"]
+    RAIZ --> F2["2 MCU e depuracao · A4<br/>7 pecas"]
+    RAIZ --> F3["3 GNSS · A4<br/>10 pecas"]
+    RAIZ --> F4["4 Display e luz · A4<br/>11 pecas"]
+    RAIZ --> F5["5 Memoria e sensores · A4<br/>16 pecas"]
+    RAIZ --> F6["6 Interface · A4<br/>22 pecas"]
 ```
+
+### O tamanho da folha é medido, não escolhido
+
+**Cinco das sete folhas são A4 e as outras duas A3.** Antes eram A0, A2 e
+cinco A3, e a causa era a mesma do contorno da placa: o desenho era espalhado
+para encher o papel em vez de o papel ser escolhido para caber o desenho.
+
+| O que fazia | O que faz agora |
+|---|---|
+| Orçava **54 × 48 mm por peça**, fosse um 0402 ou um módulo de 80 pads | **desenha** na folha candidata e pergunta se a última linha terminou acima da margem — é o mesmo código que desenha, então a resposta não pode divergir do desenho |
+| Nunca considerava A4: a busca começava em A3 | começa em **A4** |
+| Corredores de 24 e 30 mm entre peças, mais largos que os próprios símbolos | **16 e 22 mm**, e quem prova que ainda cabe fio é o `check_sch.py`, que falha se um fio cruzar componente |
+| Raiz em **A0 fixo**, blocos de 190 × 240 mm num passo de 370 × 350 | blocos dimensionados pelo que contêm (o do MCU tem 33 sinais atravessando), **A3** medido |
+
+Um pino de folha ganhava um espaço de 5,08 mm para um rótulo de 1,27. A dois
+passos de grade — o padrão do KiCad — o bloco do MCU caiu de 116 para 73 mm de
+altura, e foi isso que tirou o diagrama de A2.
 
 Três tipos de nó, cada um desenhado do jeito que se faz:
 
@@ -95,6 +112,7 @@ Com 34 mm de largura, três decisões deixaram de ser gosto:
 
 ```sh
 python hardware_gnssbike/cad/check_sch.py                 # regera e confere o esquematico
+"D:/KiCAD/bin/kicad-cli.exe" sch export pdf --output hardware_gnssbike/cad/gnssbike-esquematico.pdf hardware_gnssbike/cad/gnssbike.kicad_sch
 python hardware_gnssbike/cad/make_pcb.py                  # 1. coloca as pecas
 python hardware_gnssbike/cad/route.py                     # 2. roteia o que consegue
 "D:/KiCAD/bin/python.exe" hardware_gnssbike/cad/fill_zones.py   # 3. preenche as malhas de terra
@@ -179,6 +197,28 @@ segue **0,127 mm** de folga e **0,2 mm** de furo a cobre, que é o que uma
 fábrica de quatro camadas faz sem custo extra. **Nenhuma fábrica foi
 consultada** — e a pilha de camadas, a largura de 50 Ω e a de 90 Ω
 diferencial esperam a mesma resposta.
+
+## Serigrafia e pontos de teste
+
+**Os dezesseis pontos de teste de [06](../06-conectores-e-pontos-de-teste.md)
+estão na placa**, menos dois que o próprio documento não pode ter: o `TP111`
+mede `ST_STO`, que a ficha do AEM10900 não tem, e o `TP401` mede `5V0`, de um
+regulador que não é montado com o painel JDI. A lista mora em `parts.TESTE` e
+o `nets.py` **recusa** um ponto que aponte para um nó inexistente.
+
+**As referências estão em serigrafia nas duas faces**, cada peça na sua, no
+mínimo que a fábrica imprime — **0,8 mm de altura com traço de 0,15** — e
+**nenhuma cai sobre outra**. Não é automático: com todas no mesmo deslocamento
+de 1,8 mm acima da peça, **37 pares ficavam sobrepostos**. O `rotulos()` de
+[`make_pcb.py`](make_pcb.py) procura, para cada rótulo, o lugar livre mais
+perto do contorno da própria peça, com duas regras em ordem — nunca sobre
+outro rótulo, de preferência fora do contorno de outra peça.
+
+| Medida | Antes | Agora |
+|---|---|---|
+| Altura do texto | 0,7 mm, traço 0,1 | **0,8 mm, traço 0,15** (mínimo de fábrica) |
+| Pares sobrepostos | **37** | **0** |
+| Referências visíveis | 128, uma delas `REF**` | **127** (o `REF**` do furo foi escondido) |
 
 ## Três footprints eram de outra peça
 

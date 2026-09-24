@@ -22,14 +22,19 @@ HERE = pathlib.Path(__file__).resolve().parent
 KICAD = pathlib.Path(r"D:\KiCAD\bin\kicad-cli.exe")
 PCB = HERE / "gnssbike.kicad_pcb"
 
-# camada de cobre -> como ela se chama na pagina
+# Copper layer -> what the page is called, and which silkscreen goes with it.
+# The silkscreen is per FACE: the front one names the parts on the front and
+# the back one names the parts on the back, and printing F.SilkS over the
+# B.Cu page labels the wrong side of the board. Four of this board's parts
+# are on the back - the buzzer, the battery connector, the barometer and the
+# thermistor - and on the back page they were unnamed.
 COBRE = (
-    ("F.Cu", "1 - F.Cu: frente"),
-    ("In1.Cu", "2 - In1.Cu: plano de terra"),
-    ("In2.Cu", "3 - In2.Cu: roteamento interno"),
-    ("B.Cu", "4 - B.Cu: verso"),
+    ("F.Cu", "F.SilkS", "1 - F.Cu: frente"),
+    ("In1.Cu", "F.SilkS", "2 - In1.Cu: plano de terra"),
+    ("In2.Cu", "F.SilkS", "3 - In2.Cu: roteamento interno"),
+    ("B.Cu", "B.SilkS", "4 - B.Cu: verso"),
 )
-CONTEXTO = "Edge.Cuts,F.SilkS,F.Fab"
+CONTEXTO = "Edge.Cuts,F.Fab"
 
 
 def exporta(saida: pathlib.Path, camadas: str) -> None:
@@ -56,12 +61,13 @@ def main() -> int:
     tmp.mkdir(exist_ok=True)
     junto = fitz.open()
     paginas = []
-    for camada, rotulo in COBRE:
+    for camada, silk, rotulo in COBRE:
         p = tmp / (camada.replace(".", "_") + ".pdf")
-        exporta(p, camada + "," + CONTEXTO)
+        exporta(p, camada + "," + silk + "," + CONTEXTO)
         paginas.append((p, rotulo))
     todas = tmp / "todas.pdf"
-    exporta(todas, ",".join(c for c, _r in COBRE) + "," + CONTEXTO)
+    exporta(todas, ",".join(c for c, _s, _r in COBRE) +
+            ",F.SilkS,B.SilkS," + CONTEXTO)
     paginas.append((todas, "5 - as quatro camadas juntas"))
 
     for p, rotulo in paginas:

@@ -280,6 +280,18 @@ ABERTO["VDDIO do nPM1300"] = (
     "o TWI e os GPIO do PMIC ficam sem alimentacao. E o arranjo da referencia "
     "da Nordic, mas a consequencia na partida nao foi verificada")
 
+# The test points of 06-conectores-e-pontos-de-teste.md hang on the rails
+# they measure. Appended here instead of being typed into each net() call
+# above so that the list lives in ONE place - parts.TESTE - and a point that
+# is added there cannot be forgotten here.
+import parts as _P  # noqa: E402
+
+for _tp, _rede, _porque in _P.TESTE:
+    if _rede not in NETS:
+        raise SystemExit(f"{_tp} mede {_rede}, que nao existe na lista de nos")
+    NETS[_rede].append((_tp, "1"))
+
+
 def resumo() -> str:
     pins = sum(len(v) for v in NETS.values())
     return (f"{len(NETS)} nos, {pins} ligacoes de pino, "
