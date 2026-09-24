@@ -172,8 +172,14 @@ def main() -> int:
 
     planos = [z for z in fp_load.kids(arv, "zone")
               if fp_load.kid(z, "name") and fp_load.kid(z, "name")[1] == "PLANO_GND"]
-    check(len(planos) == 2,
-          f"dois planos de terra, um interno e um na face de tras ({len(planos)})")
+    camadas_plano = set()
+    for z in planos:
+        lay = fp_load.kid(z, "layers") or fp_load.kid(z, "layer")
+        camadas_plano.update(lay[1:])
+    esperadas = {"In1.Cu", "F.Cu", "B.Cu"}
+    check(camadas_plano == esperadas,
+          f"plano de terra em In1.Cu e nas duas faces ({len(planos)} zonas em "
+          f"{sorted(camadas_plano)})")
 
     linhas = [g for g in fp_load.kids(arv, "gr_line")
               if fp_load.kid(g, "layer")[1] == "Edge.Cuts"]
