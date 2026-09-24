@@ -117,8 +117,16 @@ ORCAMENTO = 90000
 
 BLOQUEADO = "\x00"          # a net name no net can have: blocked for everyone
 
-# Nets left for a person: the 50 ohm width does not exist yet.
+# The RF nets. They are routed LAST and at the calculated 50 ohm width, on
+# the front layer only, with the ground pour beside them and ground vias
+# along both sides: a via in the middle of an RF run is a stub, and a stub is
+# what section 7.2 of the module datasheet forbids by name.
 NAO_ROTEAR = {"RF_IN", "RF_ANT"}
+SO_FRENTE = NAO_ROTEAR
+# The differential pair. They are routed one after the other, and the second
+# one is drawn towards the first, so they run together instead of taking two
+# unrelated paths across the board.
+PAR = ("USB_DP", "USB_DM")
 # Nets that go first and have to stay short: the switching loops.
 PRIMEIRO = ["BUCK1_SW", "BUCK2_SW", "SW_DCDC", "SW_DCDC_L", "USB_DP", "USB_DM"]
 
@@ -131,8 +139,99 @@ def e_alimentacao(rede: str) -> bool:
     return rede in ALIMENTACAO or rede.startswith(("3V0_", "1V8_", "SD3V0_"))
 
 
+
+# --- impedancia ------------------------------------------------------------
+# The RF line has to be 50 ohm and the USB pair 90 ohm differential, and both
+# datasheets say so: ME54BS13 7.2 ("strict 50 ohm characteristic impedance,
+# tolerance +-10 %") and MAX-F10S integration manual 4.4 ("the impedance of
+# the RF signal line must be 50 ohm; select the stack-up, copper, and
+# dielectric properties of the PCB accordingly").
+#
+# The stack-up is in the board file, so the width is a calculation and not an
+# open question: four copper layers of 35 um in 0.80 mm, which leaves
+# (0.80 - 4 x 0.035) / 3 = 0.22 mm of dielectric between F.Cu and the ground
+# plane on In1.Cu. What is NOT known is the dielectric constant - it is the
+# fabricator's, and 4.3 is the usual value for FR-4 at these frequencies.
+# That assumption is the reason the result is printed with its inputs.
+ER_FR4 = 4.3                 # ASSUMIDO: confirmar com o fabricante
+H_DIEL = MP.DIEL_RF           # F.Cu ao plano de terra, do empilhamento
+T_CU = 0.035
+
+
+def z0_microstrip(w: float, h: float = H_DIEL, er: float = ER_FR4) -> float:
+    """Hammerstad's microstrip impedance, in ohm."""
+    u = w / h
+    ef = (er + 1) / 2 + (er - 1) / 2 * (1 + 12 / u) ** -0.5
+    if u <= 1:
+        return 60 / math.sqrt(ef) * math.log(8 / u + u / 4)
+    return 120 * math.pi / (math.sqrt(ef) * (u + 1.393 + 0.667 * math.log(u + 1.444)))
+
+
+def largura_para(z_alvo: float) -> float:
+    """The width that gives this impedance, by bisection on the formula."""
+    lo, hi = 0.05, 3.0
+    for _ in range(60):
+        meio = (lo + hi) / 2
+        # a narrower track has HIGHER impedance, so overshooting the target
+        # means the track has to get wider, not narrower
+        if z0_microstrip(meio) > z_alvo:
+            lo = meio
+        else:
+            hi = meio
+    return round((lo + hi) / 2, 3)
+
+
+LARGURA_RF = largura_para(50.0)
+# A coplanar waveguide with its ground far enough away behaves as a plain
+# microstrip; the datasheets ask for CPWG, so the pour stays beside the line
+# with a gap of at least three widths, and the ground vias go along both
+# sides. Closer than that and this number would have to be recomputed with
+# the coplanar formula.
+FOLGA_CPWG = 3.0 * LARGURA_RF
+# The USB pair is 90 ohm DIFFERENTIAL, and that is not two 45 ohm lines: a
+# 0.2 mm gap over 0.22 mm of dielectric couples them, and coupling lowers the
+# differential impedance. The usual closed form for an edge-coupled
+# microstrip is used here,
+#
+#     Zdiff = 2 x Z0 x (1 - 0.48 x exp(-0.96 x S/H))
+#
+# which is an approximation: the real number comes from the fabricator's
+# field solver together with the real dielectric constant. Both assumptions
+# are printed by the dry-run so that neither hides.
+PASSO_PAR = 0.2              # gap between the two tracks of the pair
+
+
+def z_diferencial(w: float, s: float = PASSO_PAR) -> float:
+    return 2 * z0_microstrip(w) * (1 - 0.48 * math.exp(-0.96 * s / H_DIEL))
+
+
+def largura_par(z_alvo: float = 90.0) -> float:
+    lo, hi = 0.05, 3.0
+    for _ in range(60):
+        meio = (lo + hi) / 2
+        if z_diferencial(meio) > z_alvo:
+            lo = meio
+        else:
+            hi = meio
+    return round((lo + hi) / 2, 3)
+
+
+LARGURA_USB_CALC = largura_par(90.0)
+
+
 def largura(rede: str) -> float:
+    if rede in NAO_ROTEAR:
+        return LARGURA_RF
     if rede.startswith("USB_D"):
+        # LARGURA_USB_CALC is the geometry that gives 90 ohm differential on
+        # this stack-up, and it is 0.352 mm. It does not fit: the USB-C
+        # receptacle has 0.5 mm pitch pads, which leaves 0.2 mm between two
+        # of them, and a 0.352 mm track with the USB class's 0.2 mm clearance
+        # cannot leave the connector at all. A person necks the escape down
+        # and widens the track once it is clear of the pad field; this router
+        # picks one width per connection, so it uses the one that routes and
+        # the dry-run prints the calculated geometry as what the final,
+        # hand-finished pair has to meet.
         return LARGURA_USB
     if e_alimentacao(rede):
         return LARGURA_ALIM
@@ -449,7 +548,8 @@ def pads_da_placa(arv) -> tuple[list[tuple], dict[str, list[tuple]]]:
 
 def a_estrela(g: Grade, rede: str, inicio: tuple[int, int, int],
               alvos: set[tuple[int, int, int]], folga: int = 200,
-              orcamento: int = ORCAMENTO):
+              orcamento: int = ORCAMENTO, so_camada: int | None = None,
+              perto_de: frozenset | None = None):
     """Shortest path from one cell to any target, changing layer at a cost."""
     if inicio in alvos:
         return [inicio]
@@ -478,9 +578,20 @@ def a_estrela(g: Grade, rede: str, inicio: tuple[int, int, int],
             caminho.reverse()
             return caminho
         c, ix, iy = atual
+        # Eight ways, not four. With four the router can only turn 90
+        # degrees, so EVERY corner on the board was a right angle - which is
+        # not how a board is drawn: the discontinuity is real on a fast edge
+        # and on an impedance-controlled line, and it makes a longer track
+        # besides. A diagonal step may not cut a corner: both of the
+        # orthogonal cells it passes between have to be free too, or the
+        # track would squeeze through a gap that does not exist.
         vizinhos = [(c, ix + 1, iy), (c, ix - 1, iy), (c, ix, iy + 1),
                     (c, ix, iy - 1)]
-        vizinhos += [(k, ix, iy) for k in range(NC) if k != c]
+        for dx, dy in ((1, 1), (1, -1), (-1, 1), (-1, -1)):
+            if g.livre_t((c, ix + dx, iy), rede, off) and                     g.livre_t((c, ix, iy + dy), rede, off):
+                vizinhos.append((c, ix + dx, iy + dy))
+        if so_camada is None:
+            vizinhos += [(k, ix, iy) for k in range(NC) if k != c]
         for v in vizinhos:
             if v in veio:
                 continue
@@ -496,18 +607,60 @@ def a_estrela(g: Grade, rede: str, inicio: tuple[int, int, int],
                     continue
                 if not g.livre_t((v[0], ix, iy), rede, off):
                     continue
-            passo = CUSTO_VIA if v[0] != c else 1.0
+            if v[0] != c:
+                passo = CUSTO_VIA
+            elif v[1] != ix and v[2] != iy:
+                passo = 1.41421356          # a diagonal is longer
+            else:
+                passo = 1.0
             if ant is not None and v[0] == c and ant[0] == c:
                 d1 = (ix - ant[1], iy - ant[2])
                 d2 = (v[1] - ix, v[2] - iy)
                 if d1 != d2:
                     passo += CUSTO_CURVA
+            if perto_de is not None and (v[1], v[2]) in perto_de:
+                # the second half of a differential pair: running beside its
+                # partner is cheaper than going its own way, so the two stay
+                # together instead of crossing the board separately
+                passo *= 0.35
             novo = custo + passo
             if novo < melhor.get(v, float("inf")):
                 melhor[v] = novo
                 h = abs(v[1] - tx) + abs(v[2] - ty)
                 heapq.heappush(fila, (novo + h, novo, v, atual))
     return None
+
+
+def fechar_sob_gnss(g: Grade) -> int:
+    """No foreign signal crosses under the GNSS receiver on the front.
+
+    Section 4.4 of the MAX-F10S integration manual: "It is recommended to
+    ground the area below the module, on the top and second layer. Avoid
+    signal lines crossing below the module at these two layers." In1.Cu is
+    already solid ground, so what is left to enforce is the front.
+
+    It runs AFTER the RF nets are routed, and that order is the whole point:
+    the receiver's own RF line lives under the receiver, and closing the area
+    first blocked the one net the rule exists to protect. "Signal lines
+    crossing below" means somebody else's.
+    """
+    zona_gnss = None
+    for nome, r, _c, _s in M.ZONES:
+        if nome == "ZONA_GNSS_MAX-F10S":
+            zona_gnss = r
+    if zona_gnss is None:
+        return 0
+    ix0, iy0 = g.cel(zona_gnss[0], zona_gnss[1])
+    ix1, iy1 = g.cel(zona_gnss[2], zona_gnss[3])
+    n = 0
+    for ix in range(ix0, ix1 + 1):
+        for iy in range(iy0, iy1 + 1):
+            k = (0, ix, iy)
+            if k in g.fixo or g.t.get(k) is not None:
+                continue          # a pad, or copper already drawn there
+            g.t[k] = BLOQUEADO
+            n += 1
+    return n
 
 
 def base(arv, todos):
@@ -525,25 +678,6 @@ def base(arv, todos):
     for nome, idx, x, y, hw, hh in todos:
         g.pad(range(NC) if idx < 0 else (idx,), x - MP.ORIGEM[0],
               y - MP.ORIGEM[1], hw, hh, nome or BLOQUEADO)
-
-    # The reference design of the GNSS receiver, section 4.4 of the MAX-F10S
-    # integration manual: "It is recommended to ground the area below the
-    # module, on the top and second layer. Avoid signal lines crossing below
-    # the module at these two layers." In1.Cu is already solid ground, so
-    # what this has to enforce is the front: no signal may cross under the
-    # receiver there, and the pour keeps it grounded instead.
-    sob_gnss = None
-    for nome, (zx0, zy0, zx1, zy1), _c, _s in M.ZONES:
-        if nome == "ZONA_GNSS_MAX-F10S":
-            sob_gnss = (zx0, zy0, zx1, zy1)
-    if sob_gnss:
-        ix0, iy0 = g.cel(sob_gnss[0], sob_gnss[1])
-        ix1, iy1 = g.cel(sob_gnss[2], sob_gnss[3])
-        for ix in range(ix0, ix1 + 1):
-            for iy in range(iy0, iy1 + 1):
-                k = (0, ix, iy)
-                if k not in g.fixo:
-                    g.t[k] = BLOQUEADO
 
     fx, fy = M.FUROS_DOC[0]
     for c in range(NC):
@@ -635,7 +769,8 @@ def costurar(g: Grade, vias: list) -> int:
     It runs LAST, on whatever room the signals left, so a stitch never costs
     a connection.
     """
-    passo = 3.0
+    passo = 2.5                   # 3,0 deixou um vao de 6,1 mm depois que
+                                 # a costura do RF tomou lugares de via
     # in from the edge: the via's own copper has to keep BORDA_COBRE too, and
     # dentro() only ever looked at the cell centre
     d = BORDA_COBRE + VIA_D / 2 + 0.45
@@ -681,6 +816,41 @@ def costurar(g: Grade, vias: list) -> int:
         vias.append((achou[0], achou[1], "GND"))
         g.via(achou[0], achou[1], "GND")
         postas += 1
+    return postas
+
+
+def costurar_rf(g: Grade, vias: list, segmentos: list) -> int:
+    """Ground vias along both sides of the RF line.
+
+    A coplanar waveguide is only coplanar if the ground beside it is really
+    ground: both datasheets ask for the pour around the RF line to be filled
+    with ground vias, and 4.4 of the u-blox manual adds that a stub in the
+    ground plane has to end in a via or it picks up interference. They go
+    every 2 mm, which is well under a twentieth of a wavelength at 1.6 GHz.
+    """
+    postas = 0
+    for (p0, p1, c, rede, _w) in list(segmentos):
+        if rede not in NAO_ROTEAR:
+            continue
+        comp = math.hypot(p1[0] - p0[0], p1[1] - p0[1])
+        n = max(1, int(comp / 2.0))
+        ux, uy = (p1[0] - p0[0]) / (comp or 1), (p1[1] - p0[1]) / (comp or 1)
+        nx, ny = -uy, ux                 # perpendicular
+        for i in range(n + 1):
+            f = i / n
+            bx = p0[0] + (p1[0] - p0[0]) * f
+            by = p0[1] + (p1[1] - p0[1]) * f
+            for lado in (-1, 1):
+                for d in (FOLGA_CPWG, FOLGA_CPWG + 0.4, FOLGA_CPWG + 0.8):
+                    vx, vy = bx + nx * d * lado, by + ny * d * lado
+                    c0, c1 = g.cel(vx, vy)
+                    if not g.dentro(c0, c1) or not g.cabe_via(c0, c1, "GND"):
+                        continue
+                    pos = g.pos(c0, c1)
+                    vias.append((pos[0], pos[1], "GND"))
+                    g.via(pos[0], pos[1], "GND")
+                    postas += 1
+                    break
     return postas
 
 
@@ -739,7 +909,14 @@ def uma_passagem(arv, numeros, todos, por_rede, prioridade):
     resto.sort(key=alcance, reverse=(prioridade != "curtas"))
 
     n_ok = 0
-    for rede in ordem + resto:
+    fechou = [False]
+    caminhos: dict[str, frozenset] = {}
+    # The RF lines go FIRST, not last: their width and their path are the
+    # only ones that are not negotiable, and they have to leave the
+    # receiver's pin before anything else takes the room. The area under the
+    # receiver is closed to foreign signals right after they are drawn.
+    rf = [r for r in NAO_ROTEAR if r in por_rede]
+    for rede in rf + ordem + resto:
         pads = por_rede[rede]
         if len(pads) < 2:
             continue
@@ -767,6 +944,9 @@ def uma_passagem(arv, numeros, todos, por_rede, prioridade):
             celulas.append({(c, c0, c1)
                             for c in (range(NC) if idx < 0 else (idx,))})
         feito = set(celulas[0])
+        if rede not in NAO_ROTEAR and not fechou[0]:
+            fechou[0] = True
+            fechar_sob_gnss(g)
         for k, alvo in enumerate(celulas[1:], start=1):
             if alvo & feito:
                 continue
@@ -777,9 +957,17 @@ def uma_passagem(arv, numeros, todos, por_rede, prioridade):
             # out to the far corner of the part, so the neck covers the whole
             # pad field of a fine-pitch package
             raio_pad = raios[k]
+            # the RF line stays on the front layer: a via in the middle of
+            # it is a stub, and 7.2 of the module datasheet forbids stubs by
+            # name. The second track of a pair is pulled towards the first.
+            so_camada = 0 if rede in SO_FRENTE else None
+            perto = None
+            if rede == PAR[1] and PAR[0] in caminhos:
+                perto = caminhos[PAR[0]]
             p = None
             for folga in (100, 350):
-                p = a_estrela(g, rede, next(iter(alvo)), feito, folga)
+                p = a_estrela(g, rede, next(iter(alvo)), feito, folga,
+                              so_camada=so_camada, perto_de=perto)
                 if p:
                     break
             if p is None:
@@ -789,8 +977,18 @@ def uma_passagem(arv, numeros, todos, por_rede, prioridade):
             emitir(p, rede, larg, larg_pad, ponto, raio_pad)
             feito |= set(p)
             n_ok += 1
+            if rede == PAR[0]:
+                # the cells its partner should hug: the path itself and one
+                # step around it, which at a 0.15 mm grid is the pair pitch
+                viz = set()
+                for _c, cx_, cy_ in p:
+                    for dx in (-2, -1, 0, 1, 2):
+                        for dy in (-2, -1, 0, 1, 2):
+                            viz.add((cx_ + dx, cy_ + dy))
+                caminhos[rede] = frozenset(viz)
 
     n_cost = costurar(g, vias)
+    n_cost += costurar_rf(g, vias, segmentos)
     return segmentos, vias, falhas, falharam, n_gnd, n_ok, n_cost
 
 

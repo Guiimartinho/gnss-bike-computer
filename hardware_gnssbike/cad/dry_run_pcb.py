@@ -82,6 +82,13 @@ REGRAS = [
      "MinewSemi ME54BS13 V1.0.0, 7.2"),
     ("GN2", "costura de vias de terra na borda a cada 5 mm no maximo",
      "lambda/10 a 2,44 GHz em FR-4 e 6,1 mm"),
+    ("AL6", "nenhuma via sob o pad termico: ela suga a solda da junta no "
+            "forno, e sob o DQN do TPS7A02 a ficha proibe por escrito",
+     "TI TPS7A02 SBVS277C, 8.4.1; TI OPT3001 SBOS681B, layout (via no pad "
+     "termico so com diametro abaixo de 0,2 mm)"),
+    ("OP1", "nenhum componente a menos de duas vezes a propria altura do "
+            "sensor de luz: reflexao optica secundaria",
+     "TI OPT3001 SBOS681B, layout guidelines"),
     ("ME1", "a placa cabe na caixa com folga",
      "hardware_gnssbike/04-pcb-e-caixa.md"),
     ("ME2", "altura dos componentes dentro da sombra da bateria e do display",
@@ -545,12 +552,59 @@ def main() -> int:
     # de 2 mm, o que deixa cerca de 58 x 100 por dentro. O numero de fora e
     # o que aparece na tabela do documento e e o errado a usar aqui: a placa
     # entra na cavidade, nao no contorno externo.
-    folga = (53.0 - M.W) / 2, (89.0 - M.H) / 2
+    folga = (58.0 - M.W) / 2, (100.0 - M.H) / 2
     if min(folga) < 0.5:
         falhou("ME1", f"folga de {folga[0]:.1f} x {folga[1]:.1f} mm na caixa")
     else:
         ok.append(f"ME1: a placa de {M.W} x {M.H} deixa {folga[0]:.1f} mm de cada "
                   f"lado e {folga[1]:.1f} mm em cima e embaixo")
+
+    # -- AL6: via sob pad termico ---------------------------------------
+    # Which pad of which part is a thermal pad. It is the one the datasheet
+    # numbers last and connects to ground, and the two that matter here say
+    # so by name.
+    TERMICOS = {("U104", "5"), ("U103", "29"), ("U101", "33"),
+                ("U505", "7"), ("U302", "15")}
+    sobre_termico = []
+    for q in pads:
+        if (q["ref"], q["pad"]) not in TERMICOS:
+            continue
+        for v in vias:
+            if abs(v["x"] - q["x"]) < 1.2 and abs(v["y"] - q["y"]) < 1.2:
+                sobre_termico.append((q["ref"], q["pad"],
+                                      round(math.hypot(v["x"] - q["x"],
+                                                       v["y"] - q["y"]), 2)))
+                break
+    if sobre_termico:
+        falhou("AL6", f"{len(sobre_termico)} vias sobre um pad termico: " +
+               ", ".join(f"{r}.{p} a {d} mm" for r, p, d in sobre_termico[:6]))
+    else:
+        ok.append(f"AL6: nenhuma via sobre os {len(TERMICOS)} pads termicos")
+
+    # -- OP1: reflexao optica no sensor de luz ---------------------------
+    if "U505" in pecas:
+        alt_de = {}
+        import footprints as _F
+        for r, (nome_fp, _o, _n) in _F.FP.items():
+            if nome_fp in _F.CORPO_TODOS:
+                alt_de[r] = _F.CORPO_TODOS[nome_fp][2]
+            elif nome_fp in _F.ALTURA:
+                alt_de[r] = _F.ALTURA[nome_fp][0]
+        perto_luz = []
+        for r, p in pecas.items():
+            if r == "U505" or r not in alt_de:
+                continue
+            d = dist_caixas(p["caixa"], pecas["U505"]["caixa"])
+            if d < 2 * alt_de[r]:
+                perto_luz.append((r, round(d, 2), alt_de[r]))
+        if perto_luz:
+            falhou("OP1", f"{len(perto_luz)} pecas a menos de duas alturas do "
+                   "sensor de luz: " +
+                   ", ".join(f"{r} a {d} mm, alta {h}" for r, d, h in
+                             sorted(perto_luz, key=lambda t: t[1])[:5]))
+        else:
+            ok.append("OP1: nenhuma peca de altura conhecida a menos de duas "
+                      "alturas do sensor de luz")
 
     # -- resultado -------------------------------------------------------------
     for linha in ok:

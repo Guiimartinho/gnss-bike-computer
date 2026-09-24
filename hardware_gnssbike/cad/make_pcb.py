@@ -31,7 +31,17 @@ import parts as P  # noqa: E402
 
 ORIGEM = (25.0, 25.0)          # where the board's top left sits on the sheet
 CU = 0.035
-DIEL = (0.80 - 4 * CU) / 3.0
+# The stack-up is ASYMMETRIC, and that is the point. Section 4.4 of the
+# MAX-F10S integration manual says to "select the stack-up, copper, and
+# dielectric properties of the PCB accordingly to fulfil this condition" -
+# the condition being 50 ohm on the RF line. With the dielectric split
+# evenly, 0.22 mm each, a 50 ohm microstrip is 0.431 mm wide and does not fit
+# between the module's pads: it cannot leave its own pin. A thin prepreg to
+# the ground plane and a thick core in the middle brings it to 0.196 mm,
+# which routes, and it is the usual four layer stack-up for a board with RF.
+DIEL_RF = 0.10                 # F.Cu to the ground plane on In1.Cu
+DIEL_NUCLEO = 0.80 - 4 * CU - 2 * DIEL_RF    # In1.Cu to In2.Cu
+DIEL = (DIEL_RF, DIEL_NUCLEO, DIEL_RF)
 CU_LAYERS = ("F.Cu", "In1.Cu", "In2.Cu", "B.Cu")
 KEEPOUTS = {"KEEPOUT_ANTENA_GNSS", "KEEPOUT_ANTENA_MODULO"}
 BORDA = 0.8                    # keep parts this far inside the outline
@@ -90,31 +100,35 @@ BORDA_FIXA: dict[str, tuple[float, float, int]] = {
     # The mouth of a USB-C faces +Y in this footprint: the contacts leave at
     # the back, so the body sits on the far side of the pads. At 180 it was
     # pointing INTO the board, which no rule catches and no cable forgives.
-    "J101": (16.0, 80.66, 0),     # USB-C, bottom edge, mouth out
+    "J101": (18.0, 91.66, 0),     # USB-C, bottom edge, mouth out
     # 10.2 mm apart: the courtyard is 10.0 wide and two of them at 10.0
     # touch, which the placer refuses and is right to refuse
-    "SW601": (6.6, 71.2, 0),      # the three keys, below the display and
-    "SW602": (16.8, 71.2, 0),     # left of the antenna's 5 mm clear band
-    "SW603": (27.0, 71.2, 0),
+    "SW601": (7.0, 80.5, 0),      # the three keys, below the display and
+    "SW602": (17.5, 80.5, 0),     # left of the antenna's 5 mm clear band
+    "SW603": (28.0, 80.5, 0),
     # bottom right CORNER, which is the datasheet's "Best" (7.5, figure 1):
     # antenna over the notch, off the board edge, and as far from the GNSS
-    # antenna as this board allows. x so that the courtyard ends exactly on
-    # the edge: 50 - 17/2.
-    # y 74.5 and not 78: the module's castellated pads run along its two long
-    # edges, and the power pins on the lower one need a capacitor within
-    # 0.5 mm. Against the bottom edge there was no room at all for one - the
-    # 0603 bulk capacitor's courtyard ran past the 0.8 mm border margin, and
-    # it was pushed 11.2 mm away, behind everything else.
-    "U201": (41.5, 74.5, 270),
-    "J401": (5.0, 34.5, 270),     # display flat cable, out to the left
-    "J402": (4.3, 23.0, 270),     # the light's cable, same side
+    # antenna as the board allows. x so that the courtyard ends exactly on
+    # the edge: 55 - 17/2. y leaves 5.75 mm below the module, because the
+    # power pins on its lower castellated edge need a capacitor within
+    # 0.5 mm and a 0603 courtyard does not fit against the border margin.
+    "U201": (46.5, 84.5, 270),
+    "J401": (5.0, 35.5, 270),     # display flat cable, out to the left
+    "J402": (4.3, 24.0, 270),     # the light's cable, same side
     # on the back face the footprint is mirrored, so the angle that sends
     # the cable to the left is 270, not 90
-    "J102": (4.0, 55.0, 270),     # battery connector, back face, cable left
-    "U505": (2.0, 79.0, 0),       # ambient light, under its window
-    "D601": (46.5, 10.2, 0),      # RGB LED, under its light pipe
-    "U301": (25.0, 13.8, 0),      # GNSS receiver, just below the antenna zone
+    "J102": (4.0, 60.0, 270),     # battery connector, back face, cable left
+    # The light sensor moved out of the bottom left corner. Its datasheet
+    # asks for every nearby component to be at least twice its own height
+    # away, because of secondary optical reflections, and the 5 mm tactile
+    # key was 4.55 mm from it against the 10 mm that rule gives. Up here the
+    # nearest part of known height is the GNSS module, 2.4 mm tall and
+    # 16.8 mm away. The case window follows the sensor.
+    "U505": (2.5, 12.0, 0),       # ambient light, under its window
+    "D601": (51.0, 10.2, 0),      # RGB LED, under its light pipe
+    "U301": (27.5, 13.8, 0),      # GNSS receiver, just below the antenna zone
 }
+
 
 
 # Which chip each capacitor decouples, from 05-materiais.md. The netlist
@@ -596,7 +610,7 @@ def cabecalho(n_redes: int, nomes: dict[str, int]) -> str:
         if i < 3:
             tipo = "core" if i == 1 else "prepreg"
             pilha.append(f'\t\t\t(layer "dielectric {i + 1}"\n\t\t\t\t(type "{tipo}")\n'
-                         f'\t\t\t\t(thickness {DIEL:.4f})\n\t\t\t\t(material "FR4")\n'
+                         f'\t\t\t\t(thickness {DIEL[i]:.4f})\n\t\t\t\t(material "FR4")\n'
                          f'\t\t\t\t(epsilon_r 4.5)\n\t\t\t\t(loss_tangent 0.02)\n\t\t\t)')
     pilha += [('\t\t\t(layer "B.Mask"\n\t\t\t\t(type "Bottom Solder Mask")\n'
                '\t\t\t\t(thickness 0.01)\n\t\t\t)'),

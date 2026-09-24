@@ -29,8 +29,8 @@ import sys
 HERE = pathlib.Path(__file__).resolve().parent
 
 # Board, from hardware_gnssbike/04-pcb-e-caixa.md#o-contorno
-W = 50.0
-H = 86.0
+W = 55.0
+H = 97.0
 THICKNESS = 0.8
 
 # The two sources disagree on the corner radius; both are written out.
@@ -43,7 +43,7 @@ RADIUS_DOC14 = 4.0  # docs/14-hardware-placa-nova.md#placa-de-circuito-impresso
 # make_pcb.py: outside every zone, every keep-out and both shadows, and,
 # among the tied points, the closest to the centre of the board, because with
 # one screw the distance to the centre is the lever arm.
-FUROS_DOC = [(3.2, 43.0)]
+FUROS_DOC = [(3.2, 48.0)]
 
 # The four screws the case drawing still has, at (6.5, 12.5), (55.5, 12.5),
 # (6.5, 91.5) and (55.5, 91.5) in case coordinates, are 3.5 mm inside on every
@@ -62,59 +62,62 @@ M2_DRILL_UNVERIFIED = 2.2
 ZONES = [
     # name, rect, colour, source
     #
-    # The floorplan of a 50 x 86 mm board. It is not a shrunk copy of the
-    # 55 x 97 one: the blocks were laid out again from what actually decides
-    # the size, which is the display and its connector, not the electronics.
-    # The parts take 1467 mm2 of courtyard; on this board that is 34 % of the
-    # area instead of 27,5 %.
-    ("KEEPOUT_ANTENA_GNSS", (0.0, 0.0, 50.0, 8.0), 1,
+    # The floorplan of the 55 x 97 mm board. The blocks are the ones laid out
+    # for the 50 x 86 attempt - they were right - spread over the area the
+    # case actually has. The board is NOT sized by the electronics: the
+    # display and its connector set the minimum at 49.58 x 84.83, and what is
+    # left over is ground plane, which on a chip antenna is what radiates
+    # (docs/13: the same chip gives 43,4 dB-Hz on an 80 x 40 mm plane and
+    # 34,7 on a 24 x 15 one).
+    ("KEEPOUT_ANTENA_GNSS", (0.0, 0.0, 55.0, 8.0), 1,
      "04#zonas-proibidas: sem cobre em nenhuma camada"),
     # The module sits in the bottom right CORNER with its antenna over a
-    # notch, which is what figure 1 of section 7.5 calls "Best". The keep-out
-    # is the antenna band carried out to the two edges.
-    ("KEEPOUT_ANTENA_MODULO", (45.3, 66.9, 50.0, 86.0), 1,
+    # notch, which is what figure 1 of section 7.5 calls "Best".
+    ("KEEPOUT_ANTENA_MODULO", (50.3, 75.0, 55.0, 97.0), 1,
      "ficha ME54BS13 V1.0.0, 7.3 e 7.4: sobre a area da antena nao pode cobre, "
      "componente nem caixa metalica fechada, e 3 a 5 mm em volta dela nao "
      "pode trilha de sinal, metal nem fonte de interferencia"),
-    ("RECORTE_ANTENA_MODULO", (45.7, 68.9, 50.0, 80.1), 2,
+    ("RECORTE_ANTENA_MODULO", (50.7, 79.4, 55.0, 89.6), 2,
      "ficha ME54BS13 V1.0.0, 7.4: a placa sob a area da antena e VAZADA, para "
-     "deixar a regiao suspensa. Comeca em x 45,7: a ultima coluna de pads LGA "
-     "do modulo chega a 45,275, e o corte tem de deixar os 0,3 mm de cobre a "
+     "deixar a regiao suspensa. Comeca em x 50,7: a ultima coluna de pads LGA "
+     "do modulo chega a 50,275, e o corte tem de deixar os 0,3 mm de cobre a "
      "borda"),
-    ("SOMBRA_BATERIA_MAX_1-2MM", (7.0, 18.0, 43.0, 78.0), 30,
+    ("SOMBRA_BATERIA_MAX_1-2MM", (11.0, 20.0, 47.0, 80.0), 30,
      "04#as-duas-sombras: teto de 1,2 mm na face de tras"),
-    ("SOMBRA_DISPLAY_JDI_MAX_2-6MM", (8.90, 5.1, 48.98, 66.9), 30,
-     "04#as-duas-sombras: contorno 40,08 x 61,8 do LPM027M128C"),
-    ("DISPLAY_AREA_ATIVA", (11.30, 6.6, 46.58, 65.4), 8,
+    ("SOMBRA_DISPLAY_JDI_MAX_2-6MM", (9.00, 5.1, 49.08, 66.9), 30,
+     "04#as-duas-sombras: contorno 40,08 x 61,8 do LPM027M128C, encostado no "
+     "conector dele a esquerda"),
+    ("DISPLAY_AREA_ATIVA", (11.40, 6.6, 46.68, 65.4), 8,
      "04#as-duas-sombras: 35,28 x 58,8, so referencia"),
-    ("ZONA_GNSS_MAX-F10S", (17.0, 8.5, 33.0, 20.0), 3,
+    ("ZONA_GNSS_MAX-F10S", (19.5, 8.5, 35.5, 20.0), 3,
      "04#posicionamento: receptor logo abaixo da zona da antena"),
-    ("ZONA_LED_RGB", (44.0, 8.5, 48.0, 12.0), 3,
+    ("ZONA_LED_RGB", (49.0, 8.5, 53.0, 12.0), 3,
      "04#posicionamento, abaixo da zona da antena GNSS"),
-    ("ZONA_FLASH_MX25R6435F", (3.0, 21.0, 19.0, 33.0), 3,
+    ("ZONA_FLASH_MX25R6435F", (4.0, 22.0, 20.0, 34.0), 3,
      "flash NOR, na faixa sob o display: fala SPI com o modulo"),
-    ("ZONA_IMU_MAGNETOMETRO", (23.0, 21.0, 39.0, 33.0), 3,
+    ("ZONA_IMU_MAGNETOMETRO", (26.0, 22.0, 42.0, 34.0), 3,
      "BMI270 e MMC5633NJL, na mesma faixa da flash: sob o display, longe das "
      "duas antenas e das correntes de chaveamento"),
-    ("ZONA_FPC_DISPLAY_J401", (0.8, 29.0, 9.0, 40.0), 3,
+    ("ZONA_FPC_DISPLAY_J401", (0.8, 30.0, 9.0, 41.0), 3,
      "04#posicionamento: 10 vias, sai pela esquerda"),
-    ("ZONA_BUZZER", (29.0, 36.0, 41.0, 47.0), 3, "04#posicionamento"),
-    ("ZONA_ENERGIA", (3.0, 46.0, 44.0, 66.0), 3,
+    ("ZONA_BUZZER", (32.0, 40.0, 44.0, 51.0), 3, "04#posicionamento"),
+    ("ZONA_ENERGIA", (3.0, 52.0, 48.0, 74.0), 3,
      "nPM1300, MAX17262, AEM10900, TPS7A02, indutores e conectores, na faixa "
      "larga sob a metade de baixo do display"),
-    ("ZONA_BAROMETRO_BMP585", (4.0, 67.0, 8.0, 71.0), 3,
+    ("ZONA_BAROMETRO_BMP585", (4.0, 76.0, 8.0, 80.0), 3,
      "04#posicionamento: face de tras, no respiro"),
-    ("ZONA_BOTOES", (2.0, 67.5, 32.0, 75.5), 3,
+    ("ZONA_BOTOES", (2.0, 76.0, 36.0, 85.0), 3,
      "3 teclas Omron B3S-1002P, abaixo do display e a esquerda da faixa de "
      "5 mm em volta da antena do modulo"),
-    ("ZONA_MODULO_ME54BS13", (33.0, 67.75, 50.0, 81.25), 3,
+    ("ZONA_MODULO_ME54BS13", (38.0, 77.75, 55.0, 91.25), 3,
      "MinewSemi ME54BS13, 16,5 x 12,0 mm, deitado no canto de baixo a direita "
      "com a antena sobre o recorte"),
-    ("ZONA_USB_C", (10.0, 77.0, 22.0, 86.0), 3,
+    ("ZONA_USB_C", (12.0, 88.0, 24.0, 97.0), 3,
      "04#posicionamento: Molex 2036150003, na borda de baixo"),
-    ("ZONA_LUZ_AMBIENTE_OPT3001", (0.4, 78.0, 2.4, 80.0), 3,
+    ("ZONA_LUZ_AMBIENTE_OPT3001", (1.2, 10.5, 3.8, 13.5), 3,
      "04#posicionamento"),
 ]
+
 
 
 # Overlaps that the documents already flag as unresolved, drawn so that they
