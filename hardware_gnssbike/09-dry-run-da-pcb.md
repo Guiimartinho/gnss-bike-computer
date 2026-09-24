@@ -131,21 +131,22 @@ lado de cada número — sem ela a largura seria um chute.
 
 ## Resultado da posição
 
-Medido em 2026-09-24, na placa de 112 peças, com 471 segmentos e 221 vias:
+Medido em 2026-09-24, na placa de **50 × 86 mm** e 112 peças, com 498 segmentos e 207 vias:
 
 | Id | Medida | Situação |
 |---|---|---|
 | RF1 | a área da antena (**4,46 × 12,50 mm**) está livre de componente | cumprida |
 | RF3 | a peça alheia mais próxima da área da antena é o `R107`, a **5,7 mm** | cumprida |
+| RF6 | nenhuma trilha de sinal passa por baixo do receptor GNSS na face da frente; ali o plano de terra é contínuo | cumprida, imposta no roteador |
 | RF4 | a placa **é vazada** sob a área da antena | cumprida |
-| RF5 | o componente de RF alheio mais próximo do receptor GNSS está a **59,9 mm** | cumprida |
+| RF5 | o componente de RF alheio mais próximo do receptor GNSS está a **49,2 mm** | cumprida |
 | RF7 | rede π do GNSS: `C302` a 1,6 mm, `L301` a 1,8 mm, `C301` a 3,2 mm do `RF_IN` | cumprida |
-| RF8 | as duas antenas estão a **84,9 mm** de centro a centro, 2,8 quartos de onda de 2,44 GHz | cumprida |
+| RF8 | as duas antenas estão a **74,1 mm** de centro a centro, 2,4 quartos de onda de 2,44 GHz | cumprida |
 | AL1 | 1 de 25 capacitores além do limite: `C111` a 2,0 mm de `U101`, contra 2 mm | **marginal** |
 | AL2 | 2 segmentos do `VBAT` a 0,20 mm contra os 0,22 que a IPC-2221 pede para 0,8 A | **a rever** |
 | GN1 | os 95 pads de terra estão ligados; **70 (74 %)** por via própria ao plano interno | cumprida |
 | GN2 | **72 vias** de costura na borda, maior vão **3,5 mm** contra o limite de 5 | cumprida |
-| ME1 | a placa de 55 × 97 deixa 1,5 mm de cada lado na cavidade de 58 × 100 | cumprida |
+| ME1 | a placa de **50 × 86** deixa 1,5 mm de cada lado na cavidade de 53 × 89 | cumprida |
 
 ### A planta nova, e por que ela mudou
 
@@ -199,9 +200,9 @@ desenhada sem mais nada a mudar.
 | Medida | Valor |
 |---|---|
 | Camadas de roteamento | **3**: `F.Cu`, `In2.Cu` e `B.Cu`; `In1.Cu` é plano de terra |
-| Segmentos | 471 |
-| Vias | 221, sendo **63** de pad de terra ao plano interno, **70** de costura na borda e o resto de troca de camada |
-| Ligações de sinal e alimentação fechadas | **117 ligações**, de 471 segmentos |
+| Segmentos | 498 |
+| Vias | 207, sendo **60** de pad de terra ao plano interno, **54** de costura na borda e o resto de troca de camada |
+| Ligações de sinal e alimentação fechadas | **114 ligações**, de 498 segmentos |
 | Redes deixadas de fora de propósito | `RF_IN` e `RF_ANT` |
 | **Erros de regra de projeto do KiCad** | **0** |
 | Conferência geométrica independente | **0** pares perto demais |

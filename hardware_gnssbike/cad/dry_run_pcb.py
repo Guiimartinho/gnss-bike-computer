@@ -545,7 +545,7 @@ def main() -> int:
     # de 2 mm, o que deixa cerca de 58 x 100 por dentro. O numero de fora e
     # o que aparece na tabela do documento e e o errado a usar aqui: a placa
     # entra na cavidade, nao no contorno externo.
-    folga = (58.0 - M.W) / 2, (100.0 - M.H) / 2
+    folga = (53.0 - M.W) / 2, (89.0 - M.H) / 2
     if min(folga) < 0.5:
         falhou("ME1", f"folga de {folga[0]:.1f} x {folga[1]:.1f} mm na caixa")
     else:

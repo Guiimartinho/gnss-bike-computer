@@ -526,6 +526,25 @@ def base(arv, todos):
         g.pad(range(NC) if idx < 0 else (idx,), x - MP.ORIGEM[0],
               y - MP.ORIGEM[1], hw, hh, nome or BLOQUEADO)
 
+    # The reference design of the GNSS receiver, section 4.4 of the MAX-F10S
+    # integration manual: "It is recommended to ground the area below the
+    # module, on the top and second layer. Avoid signal lines crossing below
+    # the module at these two layers." In1.Cu is already solid ground, so
+    # what this has to enforce is the front: no signal may cross under the
+    # receiver there, and the pour keeps it grounded instead.
+    sob_gnss = None
+    for nome, (zx0, zy0, zx1, zy1), _c, _s in M.ZONES:
+        if nome == "ZONA_GNSS_MAX-F10S":
+            sob_gnss = (zx0, zy0, zx1, zy1)
+    if sob_gnss:
+        ix0, iy0 = g.cel(sob_gnss[0], sob_gnss[1])
+        ix1, iy1 = g.cel(sob_gnss[2], sob_gnss[3])
+        for ix in range(ix0, ix1 + 1):
+            for iy in range(iy0, iy1 + 1):
+                k = (0, ix, iy)
+                if k not in g.fixo:
+                    g.t[k] = BLOQUEADO
+
     fx, fy = M.FUROS_DOC[0]
     for c in range(NC):
         g.bloquear(c, fx, fy, M.M2_DRILL_UNVERIFIED / 2 + FOLGA + 0.3)

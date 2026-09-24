@@ -451,7 +451,10 @@ def trocar_modelo(nome: str, corpo: str) -> str:
     base = nome.split(":", 1)[1]
     pasta = _pl.Path(__file__).resolve().parent / "3d"
     pasta.mkdir(exist_ok=True)
-    wrl_caixa(pasta / (base + ".wrl"), tam[0], tam[1], alt, cor=(0.18, 0.18, 0.20))
+    if nome in DESENHADOS:
+        DESENHADOS[nome](pasta / (base + ".wrl"), tam[0], tam[1], alt)
+    else:
+        wrl_caixa(pasta / (base + ".wrl"), tam[0], tam[1], alt, cor=cor_de(nome))
     CORPO_TODOS[nome] = (tam[0], tam[1], alt)
     return sem_bloco(corpo).rstrip(NL) + NL + linha_de_modelo("3d/" + base + ".wrl")
 
@@ -526,10 +529,101 @@ def wrl_max_f10s(caminho, w: float, h: float, alt: float) -> None:
 # The two modules are drawn properly instead of as a plain box: they are the
 # parts whose shape says something - where the shield ends and the antenna
 # begins - and they are the two the owner asked to see as they really are.
+
+
+# What each package actually looks like. A board where every drawn part is
+# the same grey box tells you nothing; these are the colours of the real
+# materials, so a moulded plastic IC reads as black epoxy, a shield can as
+# tin plate and a ceramic capacitor as the pale tan it is. The key is matched
+# against the footprint name, first hit wins.
+COR_PACOTE = (
+    ("MinewSemi", (0.62, 0.63, 0.66)),     # shield can
+    ("u-blox", (0.62, 0.63, 0.66)),        # shield can
+    ("USB_C", (0.78, 0.79, 0.80)),         # stainless shell
+    ("FFC-FPC", (0.90, 0.88, 0.82)),       # ivory housing with a dark latch
+    ("SW_SPST", (0.10, 0.10, 0.11)),       # black body
+    ("Buzzer", (0.09, 0.09, 0.10)),        # black can
+    ("LED_RGB", (0.92, 0.92, 0.90)),       # clear lens
+    ("TestPoint", (0.80, 0.70, 0.35)),
+    ("QFN", (0.09, 0.09, 0.10)),
+    ("SOIC", (0.09, 0.09, 0.10)),
+    ("SON", (0.09, 0.09, 0.10)),
+    ("SOT", (0.09, 0.09, 0.10)),
+    ("WLP", (0.22, 0.20, 0.24)),           # bare silicon, purple-grey
+    ("LGA", (0.12, 0.12, 0.13)),
+)
+COR_PADRAO = (0.11, 0.11, 0.12)
+
+
+def cor_de(nome: str) -> tuple[float, float, float]:
+    for chave, c in COR_PACOTE:
+        if chave.lower() in nome.lower():
+            return c
+    return COR_PADRAO
+
+
+def _cilindro(x, y, z0, z1, raio, cor, lados: int = 20) -> str:
+    """A can: the buzzer, and the plunger of a tactile switch."""
+    e = VRML_POR_MM
+    pts = []
+    for z in (z0, z1):
+        for i in range(lados):
+            a = 2 * math.pi * i / lados
+            pts.append(((x + raio * math.cos(a)) * e,
+                        (y + raio * math.sin(a)) * e, z * e))
+    faces = []
+    for i in range(lados):
+        j = (i + 1) % lados
+        faces.append((i, j, lados + j, lados + i))
+    faces.append(tuple(range(lados - 1, -1, -1)))
+    faces.append(tuple(range(lados, 2 * lados)))
+    return _caixa_vrml(pts, faces, cor)
+
+
+def wrl_tecla(caminho, w: float, h: float, alt: float) -> None:
+    """Omron B3S: a black body with a round plunger on top.
+
+    It is the tallest part on the board, and the one whose shape decides
+    whether the lid can be pressed, so drawing it as a plain 5 mm block hides
+    the only thing about it that matters.
+    """
+    corpo_h = 3.5
+    caminho.write_text(
+        "#VRML V2.0 utf8" + NL +
+        "# Omron B3S-1002P: corpo de 3,5 mm e botao ate 5,0 mm" + NL +
+        _bloco(-w / 2, -h / 2, 0.0, w / 2, h / 2, corpo_h, (0.10, 0.10, 0.11)) +
+        _cilindro(0.0, 0.0, corpo_h, alt, 1.75, (0.20, 0.20, 0.22)),
+        encoding="utf-8", newline=NL)
+
+
+def wrl_buzzer(caminho, w: float, h: float, alt: float) -> None:
+    """A piezo buzzer is a can with a hole, not a cube."""
+    caminho.write_text(
+        "#VRML V2.0 utf8" + NL +
+        "# buzzer piezo SMD: lata redonda com o furo de som no topo" + NL +
+        _cilindro(0.0, 0.0, 0.0, alt, min(w, h) / 2, (0.09, 0.09, 0.10)) +
+        _cilindro(0.0, 0.0, alt, alt + 0.02, 0.6, (0.35, 0.35, 0.36)),
+        encoding="utf-8", newline=NL)
+
+
+def wrl_usb_c(caminho, w: float, h: float, alt: float) -> None:
+    """A USB-C receptacle: a stainless shell with the black tongue inside."""
+    caminho.write_text(
+        "#VRML V2.0 utf8" + NL +
+        "# receptaculo USB-C: carcaca de aco com a lingueta preta" + NL +
+        _bloco(-w / 2, -h / 2, 0.0, w / 2, h / 2, alt, (0.78, 0.79, 0.80)) +
+        _bloco(-w / 2 + 1.4, h / 2 - 1.2, alt * 0.35, w / 2 - 1.4, h / 2 - 0.1,
+               alt * 0.65, (0.10, 0.10, 0.11)),
+        encoding="utf-8", newline=NL)
+
+
 DESENHADOS = {
     "gnssbike:MinewSemi_ME54BS13_16.5x12mm":
         lambda c, w, h, a: wrl_me54bs13(c),
     "gnssbike:u-blox_MAX-F10S_9.7x10.1mm": wrl_max_f10s,
+    "Button_Switch_SMD:SW_SPST_B3S-1000": wrl_tecla,
+    "Buzzer_Beeper:Buzzer_CUI_CPT-9019S-SMT": wrl_buzzer,
+    "Connector_USB:USB_C_Receptacle_Palconn_UTC16-G": wrl_usb_c,
 }
 
 
@@ -553,7 +647,7 @@ def _com_modelo() -> None:
         if nome in DESENHADOS:
             DESENHADOS[nome](pasta / (base + ".wrl"), w, h, alt)
         else:
-            wrl_caixa(pasta / (base + ".wrl"), w, h, alt)
+            wrl_caixa(pasta / (base + ".wrl"), w, h, alt, cor=cor_de(nome))
         modelo = (
             '\t(model "${KIPRJMOD}/3d/' + base + '.wrl"\n'
             '\t\t(offset (xyz 0 0 0))\n'

@@ -163,7 +163,7 @@ def main() -> int:
     # ---- the board has to fit the case ----
     # 04-pcb-e-caixa.md: case 62 x 104 mm outside, walls about 2 mm, so the
     # inside is about 58 x 100 mm.
-    dentro_caixa = (58.0, 100.0)
+    dentro_caixa = (53.0, 89.0)
     check(M.W <= dentro_caixa[0] and M.H <= dentro_caixa[1],
           f"a placa de {M.W:g} x {M.H:g} mm cabe na caixa "
           f"({dentro_caixa[0]:g} x {dentro_caixa[1]:g} mm por dentro): sobra "

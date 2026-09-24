@@ -26,6 +26,29 @@ vem marcado como **ficha** ou **desenho**.
 > divergência está escrita e medida. Quando os dois discordarem, quem manda
 > é o número medido no arquivo, não o retângulo desta tabela.
 
+> [!CAUTION]
+> **A placa encolheu para 50 × 86 mm em 2026-09-24, e esta página ainda não
+> foi recalculada.** O projeto em [`cad/`](cad/) é a fonte: 50 × 86 mm, caixa
+> de 57 × 93 por fora. A conta que justifica o tamanho é o **mínimo real**,
+> medido em [`cad/dry_run_pcb.py`](cad/dry_run_pcb.py):
+>
+> ```text
+> largura = 0,8 de borda + 7,9 do conector do display + 40,08 do painel
+>         + 0,8 de borda = 49,58 mm   ->  50
+> altura  = 8,0 da zona da antena GNSS + 61,8 do display (que comeca em
+>           y 5,1) + 7,4 das teclas + 8,93 do USB-C + 1,6 = 84,83 mm  ->  86
+> ```
+>
+> São **4.300 mm² contra 5.335, 19 % menos**, e a ocupação sobe de 27,5 %
+> para 34,1 %. **As tabelas de orçamento de área, de sobreposições e de
+> posicionamento abaixo ainda são as da placa de 55 × 97** e precisam ser
+> refeitas a partir dos retângulos novos, que estão em
+> [`cad/make_dxf.py`](cad/make_dxf.py) (`ZONES`). Enquanto isso, quando esta
+> página e o CAD discordarem, **quem vale é o CAD**.
+>
+> O desenho da caixa em [`tools/docs/case_drawing.py`](../tools/docs/case_drawing.py)
+> também ainda é o de 62 × 104 e tem de seguir.
+
 ## O contorno
 
 | Item | Medida | Origem |

@@ -90,25 +90,32 @@ BORDA_FIXA: dict[str, tuple[float, float, int]] = {
     # The mouth of a USB-C faces +Y in this footprint: the contacts leave at
     # the back, so the body sits on the far side of the pads. At 180 it was
     # pointing INTO the board, which no rule catches and no cable forgives.
-    "J101": (21.0, 91.66, 0),     # USB-C, bottom edge, mouth out
-    "SW601": (9.5, 80.5, 0),      # the three keys, in a row above it, kept
-    "SW602": (21.0, 80.5, 0),     # left of the antenna's 5 mm clear band
-    "SW603": (32.5, 80.5, 0),
+    "J101": (16.0, 80.66, 0),     # USB-C, bottom edge, mouth out
+    # 10.2 mm apart: the courtyard is 10.0 wide and two of them at 10.0
+    # touch, which the placer refuses and is right to refuse
+    "SW601": (6.6, 71.2, 0),      # the three keys, below the display and
+    "SW602": (16.8, 71.2, 0),     # left of the antenna's 5 mm clear band
+    "SW603": (27.0, 71.2, 0),
     # bottom right CORNER, which is the datasheet's "Best" (7.5, figure 1):
-    # antenna over the cut-out, off the board edge, and as far from the GNSS
-    # antenna as the board allows - 84.5 mm instead of 65.7
-    # x so that the courtyard ends exactly on the board edge: 55 - 17/2.
-    # The antenna band then runs from x 50.3 to the edge, over the notch.
-    "U201": (46.5, 85.0, 270),
-    "J401": (5.75, 34.5, 270),     # display flat cable, out to the left
-    "J402": (5.05, 23.0, 270),     # the light's cable, same side
+    # antenna over the notch, off the board edge, and as far from the GNSS
+    # antenna as this board allows. x so that the courtyard ends exactly on
+    # the edge: 50 - 17/2.
+    # y 74.5 and not 78: the module's castellated pads run along its two long
+    # edges, and the power pins on the lower one need a capacitor within
+    # 0.5 mm. Against the bottom edge there was no room at all for one - the
+    # 0603 bulk capacitor's courtyard ran past the 0.8 mm border margin, and
+    # it was pushed 11.2 mm away, behind everything else.
+    "U201": (41.5, 74.5, 270),
+    "J401": (5.0, 34.5, 270),     # display flat cable, out to the left
+    "J402": (4.3, 23.0, 270),     # the light's cable, same side
     # on the back face the footprint is mirrored, so the angle that sends
     # the cable to the left is 270, not 90
-    "J102": (4.05, 62.0, 270),     # battery connector, back face, cable left
-    "U505": (2.5, 89.0, 0),       # ambient light, under its window
-    "D601": (51.5, 10.5, 0),      # RGB LED, under its light pipe
-    "U301": (27.5, 13.8, 0),      # GNSS receiver, just below the antenna zone
+    "J102": (4.0, 55.0, 270),     # battery connector, back face, cable left
+    "U505": (2.0, 79.0, 0),       # ambient light, under its window
+    "D601": (46.5, 10.2, 0),      # RGB LED, under its light pipe
+    "U301": (25.0, 13.8, 0),      # GNSS receiver, just below the antenna zone
 }
+
 
 # Which chip each capacitor decouples, from 05-materiais.md. The netlist
 # cannot say it: a decoupling capacitor sits between a rail and ground, and
@@ -470,7 +477,14 @@ def colocar() -> tuple[dict[str, tuple[float, float, int, bool]], list[str]]:
         put C101 ahead of C112 for no reason at all.
         """
         if ref not in DECOPLA or not ref.startswith("C"):
-            return (1, 0.0, ref)
+            return (2, 0.0, ref)
+        # The radio module's own decoupling picks first, whatever its value:
+        # its datasheet asks for 0.5 mm from the pin, which is the tightest
+        # number on this board, and the module sits in a corner where the
+        # room runs out. Sorting only by capacitance let a 4.7 uF that had to
+        # be within 5 mm land 11.2 mm away, behind parts with no such rule.
+        if DECOPLA[ref] == "U201":
+            return (0, 0.0, ref)
         v = P.PARTS[ref].value.lower().replace(",", ".")
         mult = {"p": 1e-12, "n": 1e-9, "u": 1e-6, "µ": 1e-6}
         f = 1.0
@@ -482,7 +496,7 @@ def colocar() -> tuple[dict[str, tuple[float, float, int, bool]], list[str]]:
             num = float(v.split()[0])
         except (ValueError, IndexError):
             num = 1.0
-        return (0, num * f, ref)
+        return (1, num * f, ref)
 
     # first pass: the parts that hug an anchor, before the other
     # chips take the ring around it
