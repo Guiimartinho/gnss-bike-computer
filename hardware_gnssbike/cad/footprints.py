@@ -123,6 +123,57 @@ def _uid(*p):
     return f"{h[0:8]}-{h[8:12]}-4{h[13:16]}-8{h[17:20]}-{h[20:32]}"
 
 
+# Body height of each generated footprint, in mm, from its datasheet. It is
+# what turns the board's 3D view from a bare set of pads into something you
+# can look at, and it is also the number the case has to clear.
+CORPO: dict[str, tuple[float, float, float]] = {
+    # nome do footprint -> largura, altura em planta, altura do corpo (mm)
+    "gnssbike:MinewSemi_ME54BS13_16.5x12mm": (12.00, 16.50, 2.40),
+    "gnssbike:u-blox_MAX-F10S_9.7x10.1mm": (9.70, 10.10, 2.40),
+    "gnssbike:MAX17262_WLP-9_1.4x1.4mm_P0.4mm": (1.40, 1.40, 0.50),
+    "gnssbike:BMP585_LGA-8_3.25x3.25mm": (3.25, 3.25, 1.96),
+    "gnssbike:MMC5633_WLP-4_0.85x0.85mm": (0.85, 0.85, 0.40),
+    "gnssbike:OPT3001_USON-6_2x2mm_P0.65mm": (2.00, 2.00, 0.65),
+    "gnssbike:ESD761_X1SON-2_1x0.6mm": (1.00, 0.60, 0.45),
+    "gnssbike:TPD4E05U06_USON-10_1x2.5mm_P0.5mm": (1.00, 2.50, 0.55),
+    "gnssbike:TXU0204_WQFN-14_3x2.5mm_P0.5mm": (3.00, 2.50, 0.80),
+    "gnssbike:LED_RGB_APTF1616_1.6x1.6mm": (1.60, 1.60, 0.70),
+}
+
+
+# KiCad reads a VRML model in units of a tenth of an inch, not in
+# millimetres, and multiplies by this to place it. Checked, not assumed:
+# R_0402_1005Metric.wrl, a part 1.0 x 0.5 mm, has its corners at +-0.197 and
+# +-0.098, which is 1.0/2.54 and 0.5/2.54. Written in millimetres with a
+# scale of 1, every one of these boxes came out 2.54 times too big in the 3D
+# viewer - a 16.5 mm module drawn 41.9 mm long, over most of the board.
+VRML_POR_MM = 1.0 / 25.4 * 10.0
+
+
+def wrl_caixa(caminho, w: float, h: float, alt: float, cor=(0.13, 0.13, 0.14)):
+    """A plain box in VRML, so KiCad's 3D viewer has a body to show.
+
+    KiCad's GLB and STEP exports read only STEP models, so this box shows in
+    the 3D viewer and not in an exported GLB; the project's own renderer draws
+    the same box from the footprint, which is why both exist.
+    """
+    e = VRML_POR_MM
+    hw, hh, alt = w / 2.0 * e, h / 2.0 * e, alt * e
+    pts = [(-hw, -hh, 0), (hw, -hh, 0), (hw, hh, 0), (-hw, hh, 0),
+           (-hw, -hh, alt), (hw, -hh, alt), (hw, hh, alt), (-hw, hh, alt)]
+    faces = [(0, 3, 2, 1), (4, 5, 6, 7), (0, 1, 5, 4),
+             (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7)]
+    caminho.write_text(
+        "#VRML V2.0 utf8\n# caixa do encapsulamento, nao o modelo do fabricante\n"
+        "Shape {\n  appearance Appearance { material Material { diffuseColor "
+        f"{cor[0]} {cor[1]} {cor[2]} }} }}\n"
+        "  geometry IndexedFaceSet {\n    coord Coordinate { point [\n"
+        + ",\n".join(f"      {x:.4f} {y:.4f} {z:.4f}" for x, y, z in pts)
+        + " ] }\n    coordIndex [\n"
+        + ",\n".join("      " + " ".join(str(i) for i in f) + " -1" for f in faces)
+        + " ]\n  }\n}\n", encoding="utf-8", newline="\n")
+
+
 def _corpo(nome, w, h, pads, descr):
     """Wrap pads in a footprint with a courtyard and a fab outline."""
     hw, hh = w / 2.0, h / 2.0
@@ -235,6 +286,35 @@ def _gerar():
 
 _gerar()
 
+
+def _com_modelo() -> None:
+    """Give every generated footprint a body, and reference it.
+
+    The box is the package outline of CORPO, raised to the height of the part.
+    It goes into 3d/ as VRML, which is what KiCad's 3D viewer reads; the
+    project's own renderer draws the same box from the same table, because
+    KiCad's GLB and STEP exports read only STEP models.
+    """
+    import pathlib as _pl
+
+    pasta = _pl.Path(__file__).resolve().parent / "3d"
+    pasta.mkdir(exist_ok=True)
+    for nome, (w, h, alt) in CORPO.items():
+        if nome not in GERADOS:
+            continue
+        base = nome.split(":", 1)[1]
+        wrl_caixa(pasta / (base + ".wrl"), w, h, alt)
+        modelo = (
+            '\t(model "${KIPRJMOD}/3d/' + base + '.wrl"\n'
+            '\t\t(offset (xyz 0 0 0))\n'
+            '\t\t(scale (xyz 1 1 1))\n'
+            '\t\t(rotate (xyz 0 0 0))\n'
+            '\t)\n')
+        texto = GERADOS[nome]
+        GERADOS[nome] = texto[:texto.rindex(")")] + modelo + ")\n"
+
+
+
 # the generated ones, assigned
 _fp("U102", "gnssbike:MAX17262_WLP-9_1.4x1.4mm_P0.4mm", "GERADO", "")
 _fp("U504", "gnssbike:MMC5633_WLP-4_0.85x0.85mm", "GERADO", "")
@@ -304,6 +384,9 @@ def me54bs13() -> str:
 GERADOS["gnssbike:MinewSemi_ME54BS13_16.5x12mm"] = me54bs13()
 _fp("U201", "gnssbike:MinewSemi_ME54BS13_16.5x12mm", "GERADO",
     "modulo de radio; a Minew nao publica land pattern")
+
+# every generated footprint gets its body last, once they all exist
+_com_modelo()
 
 
 def resumo() -> str:

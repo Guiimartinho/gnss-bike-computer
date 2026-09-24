@@ -208,6 +208,54 @@ def render(tris: np.ndarray, cols: np.ndarray, largura: int, altura: int,
     return Image.fromarray(img.astype(np.uint8))
 
 
+def caixas_das_pecas() -> tuple[np.ndarray, np.ndarray]:
+    """Bodies for the parts whose footprint was generated here.
+
+    KiCad's GLB carries only the STEP models of the library footprints, so the
+    ten parts drawn in footprints.py - the radio module, the GNSS receiver,
+    the level translator, the sensors - would appear as bare pads. Their
+    package outline and height are in footprints.CORPO, and the box is built
+    here at the position, rotation and face the board gives them.
+    """
+    sys.path.insert(0, str(HERE))
+    import footprints as FPS
+    import fp_load
+    import make_pcb as MP
+
+    arv = fp_load.parse((HERE / "gnssbike.kicad_pcb").read_text(encoding="utf-8"))
+    tris: list[np.ndarray] = []
+    cols: list[np.ndarray] = []
+    for f in fp_load.kids(arv, "footprint"):
+        nome = f[1]
+        if nome not in FPS.CORPO:
+            continue
+        w, h, alt = FPS.CORPO[nome]
+        at = fp_load.kid(f, "at")
+        x, y = float(at[1]), float(at[2])
+        ang = math.radians(float(at[3])) if len(at) > 3 else 0.0
+        atras = fp_load.kid(f, "layer")[1] == "B.Cu"
+        z0 = -0.8 if atras else 0.0      # the board is 0.8 mm thick
+        z1 = z0 - alt if atras else alt
+        ca, sa = math.cos(ang), math.sin(ang)
+        cantos = []
+        for dx, dy in ((-w / 2, -h / 2), (w / 2, -h / 2), (w / 2, h / 2), (-w / 2, h / 2)):
+            cantos.append((x + dx * ca + dy * sa, y - dx * sa + dy * ca))
+        base = [(px, py, z0) for px, py in cantos]
+        topo = [(px, py, z1) for px, py in cantos]
+        faces = [(base[0], base[3], base[2]), (base[0], base[2], base[1]),
+                 (topo[0], topo[1], topo[2]), (topo[0], topo[2], topo[3])]
+        for k in range(4):
+            a, b = k, (k + 1) % 4
+            faces.append((base[a], base[b], topo[b]))
+            faces.append((base[a], topo[b], topo[a]))
+        for t in faces:
+            tris.append(np.array(t, dtype=np.float64))
+            cols.append(np.array([0.13, 0.13, 0.14]))
+    if not tris:
+        return np.zeros((0, 3, 3)), np.zeros((0, 3))
+    return np.array(tris), np.array(cols)
+
+
 def main() -> int:
     glb = HERE / "gnssbike.glb"
     if not glb.exists():
@@ -215,7 +263,16 @@ def main() -> int:
         return 1
     j, bina = ler_glb(glb)
     tris, cols = triangulos(j, bina)
-    print(f"{len(tris)} triangulos, {len(j.get('meshes', []))} malhas")
+    extra_t, extra_c = caixas_das_pecas()
+    if len(extra_t):
+        # the boxes are in millimetres with y growing downward, as the board
+        # file has them; the GLB is in metres with y already up
+        extra_t = np.stack([extra_t[..., 0], -extra_t[..., 1], extra_t[..., 2]],
+                           axis=-1) / 1000.0
+        tris = np.concatenate([tris, extra_t])
+        cols = np.concatenate([cols, extra_c])
+    print(f"{len(tris)} triangulos, {len(j.get('meshes', []))} malhas, "
+          f"{len(extra_t) // 12} corpos desenhados aqui")
 
     for nome, az, el, w, h in (("gnssbike-3d-frente.png", 0.0, 90.0, 1100, 1800),
                                ("gnssbike-3d-angulo.png", 28.0, 38.0, 1600, 1300),
