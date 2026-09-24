@@ -24,6 +24,7 @@ import sys
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
+import footprints as FPS  # noqa: E402
 import fp_load  # noqa: E402
 import make_dxf as M  # noqa: E402
 import make_pcb as MP  # noqa: E402
@@ -115,6 +116,36 @@ CORRENTE = {
     "SW_DCDC": (0.3, "no de chaveamento do AEM10900"),
     "SW_DCDC_L": (0.3, "idem, lado do indutor"),
 }
+
+# The height of the packages that come out of KiCad's library, which the
+# board file does not carry. These are the usual maximum for the case size,
+# not a reading of the part's own drawing, and they say so: a number from a
+# drawing lives in footprints.PACOTE and wins over anything here.
+ALTURA_PADRAO = (
+    ("_0402_", 0.55), ("_0603_", 0.95), ("_0805_", 1.00), ("_1008_", 1.20),
+    ("_1206_", 0.75), ("SOIC-8", 2.00), ("LGA-14", 0.80),
+    ("B3S-1000", 3.40), ("USB_C_Receptacle", 3.26), ("JST_GH", 4.25),
+    ("FH12-10S", 0.90), ("1734839", 1.20), ("Buzzer", 1.70),
+    ("TestPoint", 0.00), ("MountingHole", 0.00), ("Tag-Connect", 0.00),
+    ("ContatoMola", 0.00),
+)
+
+
+def altura_do_footprint(nome: str):
+    """(height, where the number comes from) or None when nobody knows."""
+    import footprints as _F
+
+    m = _F.altura_de(nome)
+    if m:
+        return m
+    if nome in _F.CORPO:
+        return (_F.CORPO[nome][2], "medida do encapsulamento em footprints.CORPO")
+    for chave, h in ALTURA_PADRAO:
+        if chave in nome:
+            return (h, f"altura corrente de um {chave.strip('_')}, NAO lida da "
+                       "ficha da peca")
+    return None
+
 
 CHAVEADOS = ["L101", "L102", "L103", "U101", "U103"]
 PI_GNSS = ["L301", "C301", "C302"]
@@ -624,6 +655,45 @@ def main() -> int:
         ok.append(f"ME3: os {len(_FP.PACOTE)} encapsulamentos com cota de "
                   "ficha cabem no footprint desenhado para eles e batem com "
                   "o contorno")
+
+    # -- ME2: cabe sob o display e sob a bateria? ------------------------
+    # 04-pcb-e-caixa.md gives two ceilings: 2.6 mm on the front, under the
+    # display, and 1.2 mm on the back, under the battery. A part taller than
+    # the shadow it stands in does not fit, and no DRC will ever say so -
+    # which is the whole reason the heights had to come from the datasheets.
+    TETOS = (("SOMBRA_DISPLAY_JDI_MAX_2-6MM", 2.6, False),
+             ("SOMBRA_BATERIA_MAX_1-2MM", 1.2, True))
+    altos = []
+    sem_altura = []
+    for ref, pe in sorted(pecas.items()):
+        nome_fp = FPS.FP[ref][0] if ref in FPS.FP else None
+        if nome_fp is None:
+            continue
+        medida = altura_do_footprint(nome_fp)
+        if medida is None:
+            sem_altura.append(ref)
+            continue
+        h, _fonte = medida
+        for znome, teto, atras in TETOS:
+            try:
+                z = zona(znome)
+            except KeyError:
+                continue
+            if pe["atras"] != atras:
+                continue
+            if dist_caixas(pe["caixa"], z) >= 0:
+                continue                      # not under this shadow
+            if h > teto + 1e-9:
+                altos.append((ref, h, teto, znome))
+    if altos:
+        falhou("ME2", f"{len(altos)} pecas mais altas que o teto da sombra em "
+               "que estao: " +
+               ", ".join(f"{r} {h:.2f} contra {t:.1f} mm"
+                         for r, h, t, _z in altos[:6]))
+    else:
+        ok.append(f"ME2: nenhuma peca passa do teto da sombra em que esta "
+                  f"(2,6 mm sob o display, 1,2 mm sob a bateria); "
+                  f"{len(sem_altura)} pecas sem altura conhecida")
 
     # -- resultado -------------------------------------------------------------
     for linha in ok:

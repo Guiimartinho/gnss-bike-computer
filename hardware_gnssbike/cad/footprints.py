@@ -324,12 +324,26 @@ ALTURA: dict[str, tuple[float, str]] = {
         "conector FPC horizontal de passo 0,5 - CONFERIR: a peca ainda nao "
         "esta escolhida (06#j402)"),
     # the flat ones, all well under the 2,6 mm the display leaves
-    "Package_TO_SOT_SMD:SOT-523": (0.60, "altura normal do SOT-523"),
-    "Package_SON:Texas_X2SON-4_1x1mm_P0.65mm": (0.40, "altura normal do X2SON"),
-    "Package_DFN_QFN:QFN-28-1EP_4x4mm_P0.4mm_EP2.3x2.3mm": (0.90,
-        "altura normal de um QFN"),
-    "Package_SO:SOIC-8_5.23x5.23mm_P1.27mm": (2.00, "altura normal do SOIC-8"),
+    # Still without a dimensioned drawing in hand. PACOTE overrides every one
+    # of these the moment its own datasheet is read, and altura_de() below is
+    # what enforces that, so a number here can never quietly outlive the real
+    # one: the QFN said 0.90 when its datasheet says 0.80.
+    "Package_SO:SOIC-8_5.23x5.23mm_P1.27mm": (2.00, "altura normal do SOIC-8 "
+        "de 200 mil - CONFERIR no desenho da Macronix"),
 }
+
+
+def altura_de(nome: str) -> tuple[float, str] | None:
+    """The height of a package: the datasheet's if there is one.
+
+    PACOTE holds what a mechanical drawing says and ALTURA what is merely
+    usual for the family. When both have an entry the drawing wins, and it
+    has to: those two disagreed by 0.10 mm on the harvester's QFN and by
+    0.15 on the ESD array, and the number that was being used was the guess.
+    """
+    if nome in PACOTE:
+        return (PACOTE[nome][2], PACOTE[nome][8])
+    return ALTURA.get(nome)
 # No body at all, and that is correct: a test point is a pad and a mounting
 # hole is a hole.
 SEM_CORPO = {"TestPoint:TestPoint_Pad_D1.0mm",
@@ -449,9 +463,10 @@ def trocar_modelo(nome: str, corpo: str) -> str:
     if nome in SEM_CORPO:
         return sem_bloco(corpo)
     tam = fab_do_footprint(nome)
-    if tam is None or nome not in ALTURA:
+    medida = altura_de(nome)
+    if tam is None or medida is None:
         return sem_bloco(corpo)
-    alt, _fonte = ALTURA[nome]
+    alt, _fonte = medida
     base = nome.split(":", 1)[1]
     pasta = _pl.Path(__file__).resolve().parent / "3d"
     pasta.mkdir(exist_ok=True)
@@ -663,6 +678,17 @@ PACOTE: dict[str, tuple] = {
     "gnssbike:TPD4E05U06_USON-10_1x2.5mm_P0.5mm":
         (1.00, 2.50, 0.40, 0.03, None, 0.20, 0.36, 0.50,
          "TI, desenho do DQA0010A: 2,6/2,4 x 1,1/0,9, altura 0,45/0,35"),
+    "gnssbike:BMP585_LGA-8_3.25x3.25mm":
+        (3.25, 3.25, 1.86, 0.00, None, 0.30, 0.35, 0.80,
+         "Bosch BST-BMP585-DS003-02, tabela 3: contorno 3,25 x 3,25 tipico "
+         "(3,2 a 3,3), ALTURA 1,86 tipica, 1,76 a 1,96"),
+    "gnssbike:MMC5633_WLP-4_0.85x0.85mm":
+        (0.85, 0.85, 0.40, 0.00, None, 0.25, 0.25, 0.40,
+         "MEMSIC MMC5633NJL, desenho do encapsulamento: 0,85 +-0,03 quadrado, "
+         "altura 0,40 +-0,03, passo de esfera 0,40"),
+    "gnssbike:LED_RGB_APTF1616_1.6x1.6mm":
+        (1.60, 1.60, 0.70, 0.00, None, 0.35, 0.40, 0.80,
+         "Kingbright APTF1616, desenho: 1,6 x 1,6 x 0,7"),
     "Package_TO_SOT_SMD:SOT-523":
         (1.60, 0.80, 0.75, 0.05, None, 0.22, 0.33, 0.50,
          "Diodes DS31783 Rev.8, SOT523: D 1,60, E1 0,80, A2 0,75, A1 0,05, "
