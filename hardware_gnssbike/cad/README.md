@@ -21,7 +21,8 @@ roteadas**, em KiCad 8, gerados a partir dos documentos de
 | `gnssbike.kicad_pcb` | a placa |
 | `gnssbike.kicad_dru` | as duas regras locais de folga |
 | `gnssbike-esquematico.pdf` | as 7 páginas do esquemático |
-| `gnssbike-pcb.pdf`, `gnssbike-2d.svg` | a placa em 2D, as quatro camadas de cobre juntas |
+| `gnssbike-pcb.pdf` | a placa em 2D, **uma página por camada de cobre** e uma quinta com as quatro juntas |
+| `gnssbike-2d.svg` | as quatro camadas numa folha só, para olhar rápido |
 | `gnssbike-3d-frente.png`, `-tras.png`, `-angulo.png` | a placa em 3D |
 | `gnssbike-3d-montagem.png` | a pilha aberta: display em cima, placa, célula embaixo |
 
@@ -117,8 +118,15 @@ python hardware_gnssbike/cad/make_dxf.py     # contorno e zonas em DXF
 "D:/KiCAD/bin/kicad-cli.exe" pcb export glb --output hardware_gnssbike/cad/gnssbike.glb     --include-tracks --include-zones --subst-models hardware_gnssbike/cad/gnssbike.kicad_pcb
 python hardware_gnssbike/cad/make_3d.py      # as quatro vistas 3D em PNG
 "D:/KiCAD/bin/kicad-cli.exe" pcb export svg --output hardware_gnssbike/cad/gnssbike-2d.svg     --layers "F.Cu,In1.Cu,In2.Cu,B.Cu,F.SilkS,Edge.Cuts,F.Fab"     --page-size-mode 2 --exclude-drawing-sheet hardware_gnssbike/cad/gnssbike.kicad_pcb
-"D:/KiCAD/bin/kicad-cli.exe" pcb export pdf --output hardware_gnssbike/cad/gnssbike-pcb.pdf     --layers "F.Cu,In1.Cu,In2.Cu,B.Cu,F.SilkS,Edge.Cuts,F.Fab" hardware_gnssbike/cad/gnssbike.kicad_pcb
+python hardware_gnssbike/cad/make_2d.py      # o PDF, uma pagina por camada
 ```
+
+O `make_2d.py` existe por causa do preenchimento. As quatro camadas numa
+folha só eram legíveis enquanto as malhas estavam vazias; cheias, o despejo é
+área sólida e **cobre as trilhas de baixo**, e a folha passa a mostrar o
+contorno do cobre e quase nada mais. Quem lê uma placa lê **uma camada de
+cada vez**, e é o que ele gera: quatro páginas com uma camada cada sobre o
+contorno e a serigrafia, mais a quinta de conjunto.
 
 ### Por que o 3D não sai do KiCad sozinho
 
