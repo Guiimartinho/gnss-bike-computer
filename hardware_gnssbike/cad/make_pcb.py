@@ -77,8 +77,40 @@ JUNTO: dict[str, str] = {
     "Q601": "D601", "Q602": "D601", "Q603": "D601",
     "J201": "U201", "TP201": "U201", "TP202": "U201", "TP203": "U201",
 }
-# The back face: what 04-pcb-e-caixa.md puts on the battery side.
-ATRAS = {"U502", "J102", "RT101"}
+# The back face. Nothing about the case decides this: these are the parts
+# that do not have to be reached from the front and that free the front face
+# for the ones that do.
+ATRAS = {"U502", "J102", "RT101", "LS601"}
+# LS601 is on the back because of arithmetic, not taste: it is 10,5 x 9,5 mm,
+# the largest part on the board after the two modules, and on the front the
+# only band left between the key row and the module is 9,25 mm tall. Pushed
+# out of it, the spiral parked it 0,84 mm from the TPS7A02 and took the ring
+# that regulator's decoupling needed, which AL1 then reported as two
+# capacitors 5,5 and 6,6 mm from a pin that wants 2. The back face was
+# carrying three parts.
+
+
+def passantes() -> set[str]:
+    """Refs whose pads pierce the board, so they take room on both faces."""
+    saida = set()
+    for ref, (nome, _o, _n) in FPS.FP.items():
+        try:
+            texto = fp_load.carregar(nome)[0]
+        except FileNotFoundError:
+            continue
+        arv = fp_load.parse(texto)
+        for pad in fp_load.kids(arv, "pad"):
+            camadas = fp_load.kid(pad, "layers")
+            if len(pad) > 2 and pad[2] != "smd":
+                saida.add(ref)
+                break
+            if camadas and any(str(c).startswith("*") for c in camadas[1:]):
+                saida.add(ref)
+                break
+    return saida
+
+
+PASSANTE = passantes()
 
 # Parts whose position AND rotation the case decides, not the placer: x, y,
 # angle. These are not the numbers of 04-pcb-e-caixa.md, and the difference is
@@ -96,55 +128,83 @@ ATRAS = {"U502", "J102", "RT101"}
 #   GNSS       the zone starts at y 2, inside the antenna keep-out that runs
 #              to y 8. 04 already counted that overlap as 90 mm2 and left it
 #              open; here the receiver sits below the keep-out, at y 8.5.
+# Every one of these is measured from an EDGE of the board, never from the
+# absolute coordinate it used to carry: they were written for a 55 x 97
+# outline and every one of them was wrong the moment the outline changed.
+# W and H come from make_dxf, which derives them from the rules.
+_W, _H = M.W, M.H
+
 BORDA_FIXA: dict[str, tuple[float, float, int]] = {
     # The mouth of a USB-C faces +Y in this footprint: the contacts leave at
     # the back, so the body sits on the far side of the pads. At 180 it was
     # pointing INTO the board, which no rule catches and no cable forgives.
-    "J101": (18.0, 91.66, 0),     # USB-C, bottom edge, mouth out
-    # 10.2 mm apart: the courtyard is 10.0 wide and two of them at 10.0
-    # touch, which the placer refuses and is right to refuse
-    "SW601": (7.0, 80.5, 0),      # the three keys, below the display and
-    "SW602": (17.5, 80.5, 0),     # left of the antenna's 5 mm clear band
-    "SW603": (28.0, 80.5, 0),
+    # It takes the LEFT of the bottom edge; the module takes the right, and
+    # the two are the only pair that fits along it.
+    "J101": (6.2, _H - 5.34, 0),
+    # The three keys in a row at 10.2 mm of pitch: the courtyard is 10.0 wide
+    # and two of them at 10.0 touch, which the placer refuses and is right to
+    # refuse. The row is NOT on the bottom edge - on a board this narrow the
+    # module's 17.0 mm and the keys' 30.6 mm cannot share it, and the 5 mm
+    # that 7.4 asks around the module's antenna eats into it besides. It sits
+    # above the module instead, where neither applies.
+    "SW601": (6.2, _H - 32.0, 0),
+    "SW602": (16.4, _H - 32.0, 0),
+    "SW603": (26.6, _H - 32.0, 0),
     # bottom right CORNER, which is the datasheet's "Best" (7.5, figure 1):
     # antenna over the notch, off the board edge, and as far from the GNSS
-    # antenna as the board allows. x so that the courtyard ends exactly on
-    # the edge: 55 - 17/2. y leaves 5.75 mm below the module, because the
-    # power pins on its lower castellated edge need a capacitor within
-    # 0.5 mm and a 0603 courtyard does not fit against the border margin.
-    "U201": (46.5, 84.5, 270),
-    "J401": (5.0, 35.5, 270),     # display flat cable, out to the left
-    "J402": (4.3, 24.0, 270),     # the light's cable, same side
+    # receiver as the board allows - which is the 50 mm of 7.2, and the rule
+    # that decides this board's long side. x so that the courtyard ends
+    # exactly on the edge: W - 17/2. y leaves 5.75 mm below the module,
+    # because the power pins on its lower castellated edge need a capacitor
+    # within 0.5 mm and a 0603 courtyard does not fit against the margin.
+    "U201": (_W - 8.5, _H - 12.5, 270),
+    "J401": (5.1, 26.5, 270),        # display flat cable, out to the left
+    # 36, not 38: at 38 its courtyard reached the M2 hole's keep-out,
+    # which sits at (3,2; H/2) on the same edge
+    "J402": (5.1, 37.0, 270),        # the light's cable, same side
     # on the back face the footprint is mirrored, so the angle that sends
-    # the cable to the left is 270, not 90
-    "J102": (4.0, 60.0, 270),     # battery connector, back face, cable left
-    # The light sensor moved out of the bottom left corner. Its datasheet
-    # asks for every nearby component to be at least twice its own height
-    # away, because of secondary optical reflections, and the 5 mm tactile
-    # key was 4.55 mm from it against the 10 mm that rule gives. Up here the
-    # nearest part of known height is the GNSS module, 2.4 mm tall and
-    # 16.8 mm away. The case window follows the sensor.
-    "U505": (2.5, 12.0, 0),       # ambient light, under its window
-    "D601": (51.0, 10.2, 0),      # RGB LED, under its light pipe
-    "U301": (27.5, 13.8, 0),      # GNSS receiver, just below the antenna zone
-    # Where the antenna in the case wall lands: just under its keep-out, a
-    # few millimetres from the pi network, which is what "linha de 50 ohm,
-    # poucos mm" in 04-pcb-e-caixa.md asks for.
-    "J302": (14.0, 10.0, 0),
-    # The three groups of solar modules, down the left edge in the bands the
-    # display and battery connectors leave free. They carry the harvester's
-    # SRC node, which is high impedance and low voltage, so they sit as close
-    # to the harvester's band as the edge allows.
-    # In the free bands of the two edges, computed rather than guessed: the
-    # left edge is taken by the light sensor, the two flat cables, the M2
-    # hole, the battery connector and a key, which leaves y 66 to 77. The
-    # other two go on the right edge, clear of the 5 mm band around the
-    # radio antenna, which starts at y 70. All three stay within about
-    # 15 mm of the harvester: SRC is a high impedance node coming off a
-    # solar cell and a long run of it picks up everything.
-    "J103": (2.5, 71.4, 90),
-    "J104": (52.5, 58.0, 90),
-    "J105": (52.5, 66.0, 90),
+    # the cable to the left is 270, not 90. It costs the front nothing: the
+    # two faces have their own placement area since this run.
+    "J102": (4.0, 62.0, 270),        # battery connector, back face
+    # The light sensor's datasheet asks for every nearby component to be at
+    # least twice its own height away, because of secondary optical
+    # reflections. The case window follows the sensor, not the other way.
+    # On the RIGHT edge: the left of the top band is the receiver's, and
+    # the receiver has to be hard in that corner for the 50 mm rule.
+    "U505": (_W - 2.0, 16.5, 0),     # ambient light, under its window
+    "D601": (_W - 2.5, 10.5, 0),     # RGB LED, under its light pipe
+    # The receiver goes hard into the top LEFT corner, and that is the 50 mm
+    # rule again: with it centred, its courtyard overlapped the module's in x
+    # and the distance collapsed to the vertical gap alone.
+    # 180 degrees, and it is not cosmetic: at 0 the RF_IN pin came out on the
+    # LEFT side, which here is the board edge 1.2 mm away, so the antenna
+    # feed and its pi network had nowhere to go and ended up 10.5 mm from the
+    # pin that 4.4 wants them "as short as possible" from. Turned round, the
+    # pin faces into the board, where the network fits in line.
+    "U301": (8.5, 14.2, 180),
+    # Where the antenna in the case wall lands: under its keep-out and a few
+    # millimetres from the pi network, which is what "linha de 50 ohm, poucos
+    # mm" in 04-pcb-e-caixa.md asks for. To the right of the receiver, so the
+    # pi network sits between the two.
+    "J302": (19.5, 10.0, 0),
+    # The pi network, IN LINE between the antenna contact and the receiver's
+    # RF_IN pin, and fixed here rather than left to the netlist placer -
+    # which put it 10.5 mm away, on a rule that asks for "as short as
+    # possible". The order is the netlist's, not a guess: J302 FEED and
+    # C301 sit on RF_ANT, L301 is the series element, and C302 and the pin
+    # sit on RF_IN. So antenna, shunt, series, shunt, pin, laid along the
+    # 8.06 mm from the contact's pad at (15,0; 10,5) to the pin at
+    # (11,0; 17,5). MAX-F10S IM 4.4.
+    "C301": (15.4, 12.6, 0),
+    "L301": (14.6, 14.8, 90),
+    "C302": (14.8, 16.4, 0),
+    # The three groups of solar modules, on the edges, in the bands the
+    # connectors leave free. They carry the harvester's SRC node, which is
+    # high impedance and low voltage, so they sit as close to the harvester's
+    # band as the edge allows: a long run of SRC picks up everything.
+    "J103": (_W - 2.5, 30.0, 90),
+    "J104": (_W - 2.5, 38.0, 90),
+    "J105": (_W - 2.5, 46.0, 90),
 }
 
 
@@ -293,6 +353,7 @@ def redes() -> tuple[dict[str, int], dict[tuple[str, str], str]]:
 def livre(x: float, y: float, bx: tuple[float, float, float, float],
           postos: list[tuple[float, float, float, float]],
           ref: str = "", borda: float | None = None) -> bool:
+    """See por(): `postos` is already the list of the face being placed on."""
     """Is the courtyard, placed at (x, y), inside the board and free?
 
     The box comes relative to the footprint origin, not centred on it: a
@@ -407,13 +468,29 @@ def colocar() -> tuple[dict[str, tuple[float, float, int, bool]], list[str]]:
     lugar: dict[str, tuple[float, float, int, bool]] = {}
     fx, fy = M.FUROS_DOC[0]
     raio = M.M2_DRILL_UNVERIFIED / 2 + 0.6
-    postos: list[tuple[float, float, float, float]] = [
-        (fx - raio, fy - raio, fx + raio, fy + raio)]
+    # One list per face, not one for the board. A part on the back does not
+    # take room from a part on the front, and pretending it does is how a
+    # small board runs out of space that it has: the battery connector, the
+    # barometer and the thermistor were blocking the front face where they
+    # are not. What IS in both lists is what goes through the board - the
+    # mounting hole and its keep-out - because that really does take the room
+    # on both faces.
+    furo = (fx - raio, fy - raio, fx + raio, fy + raio)
+    postos_face: dict[bool, list[tuple[float, float, float, float]]] = {
+        False: [furo], True: [furo]}
     falhas: list[str] = []
 
     def por(ref: str, cx: float, cy: float, ang: int = 0,
             preso: bool = False) -> None:
         bx = caixa(ref, ang)
+        atras = ref in ATRAS
+        # a part whose pads pierce the board has to clear BOTH faces, and it
+        # has to do so when IT is placed, not only afterwards: the Tag-Connect
+        # is placed late, by connectivity, and landed on top of the buzzer -
+        # which had gone to the back precisely because the front had no room.
+        postos = postos_face[atras]
+        if ref in PASSANTE:
+            postos = postos + postos_face[not atras]
         if preso:
             # a fixed position has to be legal on its own: overlapping here
             # silently is how two connectors end up on top of each other.
@@ -429,7 +506,11 @@ def colocar() -> tuple[dict[str, tuple[float, float, int, bool]], list[str]]:
             falhas.append(f"{ref}: nao coube perto de ({cx:.1f}; {cy:.1f})")
             return
         lugar[ref] = (p[0], p[1], ang, ref in ATRAS)
-        postos.append((p[0] + bx[0], p[1] + bx[1], p[0] + bx[2], p[1] + bx[3]))
+        caixa_posta = (p[0] + bx[0], p[1] + bx[1], p[0] + bx[2], p[1] + bx[3])
+        postos_face[atras].append(caixa_posta)
+        if ref in PASSANTE:
+            # its pads pierce the board, so it takes the room on both faces
+            postos_face[not atras].append(caixa_posta)
 
     # ---- 1. the parts whose orientation the case decides ----
     for ref, (cx, cy, ang) in BORDA_FIXA.items():
@@ -533,6 +614,9 @@ def colocar() -> tuple[dict[str, tuple[float, float, int, bool]], list[str]]:
         espelha = -1.0 if ref in ATRAS else 1.0
         melhor_pos, melhor_d = None, float("inf")
         caixas = {a: caixa(ref, a) for a in (0, 90)}
+        postos = postos_face[ref in ATRAS]
+        if ref in PASSANTE:
+            postos = postos + postos_face[ref not in ATRAS]
         raio = PASSO
         while raio <= 12.0:
             # a pad can only be `fora` closer than the part's own centre, so

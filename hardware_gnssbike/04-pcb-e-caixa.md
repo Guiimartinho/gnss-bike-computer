@@ -17,7 +17,7 @@ vem marcado como **ficha** ou **desenho**.
 > **Não existe placa física e nada foi fabricado nem medido.** Não há
 > gerber, não há pilha de camadas de fabricante e ninguém encostou uma ponta
 > de prova em nada. O que **passou a existir** desde 2026-09-23 é o projeto
-> em KiCad, em [`cad/`](cad/): as 112 peças posicionadas, o plano de terra e
+> em KiCad, em [`cad/`](cad/): as 116 peças posicionadas, os planos de terra e
 > parte das trilhas, com a verificação de regras do KiCad e o
 > [dry-run das regras das fichas](09-dry-run-da-pcb.md).
 >
@@ -27,41 +27,66 @@ vem marcado como **ficha** ou **desenho**.
 > é o número medido no arquivo, não o retângulo desta tabela.
 
 > [!CAUTION]
-> **A placa encolheu para 50 × 86 mm em 2026-09-24, e esta página ainda não
-> foi recalculada.** O projeto em [`cad/`](cad/) é a fonte: 50 × 86 mm, caixa
-> de 57 × 93 por fora. A conta que justifica o tamanho é o **mínimo real**,
-> medido em [`cad/dry_run_pcb.py`](cad/dry_run_pcb.py):
+> **A placa é 34 × 90 mm desde 2026-09-24, e as tabelas de orçamento de área,
+> de sobreposições e de posicionamento abaixo ainda são as de 55 × 97.** Elas
+> precisam ser refeitas a partir dos retângulos novos, que estão em
+> [`cad/make_dxf.py`](cad/make_dxf.py) (`ZONES`) e agora são **derivados de
+> `W` e `H`**, não escritos um a um. Enquanto isso, quando esta página e o CAD
+> discordarem, **quem vale é o CAD**.
 >
-> ```text
-> largura = 0,8 de borda + 7,9 do conector do display + 40,08 do painel
->         + 0,8 de borda = 49,58 mm   ->  50
-> altura  = 8,0 da zona da antena GNSS + 61,8 do display (que comeca em
->           y 5,1) + 7,4 das teclas + 8,93 do USB-C + 1,6 = 84,83 mm  ->  86
-> ```
->
-> São **4.300 mm² contra 5.335, 19 % menos**, e a ocupação sobe de 27,5 %
-> para 34,1 %. **As tabelas de orçamento de área, de sobreposições e de
-> posicionamento abaixo ainda são as da placa de 55 × 97** e precisam ser
-> refeitas a partir dos retângulos novos, que estão em
-> [`cad/make_dxf.py`](cad/make_dxf.py) (`ZONES`). Enquanto isso, quando esta
-> página e o CAD discordarem, **quem vale é o CAD**.
+> Uma tentativa anterior de 50 × 86 mm partia da largura do display e da
+> altura da caixa. Estava errada pela raiz: **a placa não se mede pela
+> caixa.** O tamanho de agora sai das regras das fichas, e a conta está em
+> [De onde saem os 34 × 90](#de-onde-saem-os-34--90).
 >
 > O desenho da caixa em [`tools/docs/case_drawing.py`](../tools/docs/case_drawing.py)
-> também ainda é o de 62 × 104 e tem de seguir.
+> continua sendo o de 62 × 104, e **isso não é pendência da placa**: a caixa
+> tem o tamanho que o display, a bateria e a mão pedem, e a placa encolher não
+> muda nenhum dos três.
 
 ## O contorno
 
+> [!IMPORTANT]
+> **A placa não é dimensionada pela caixa, e a caixa não é dimensionada pela
+> placa.** As duas são independentes: o tamanho da placa sai do **circuito**
+> — peças, roteamento e as distâncias que as fichas impõem — e o da caixa sai
+> do display, da bateria e da ergonomia. Uma placa menor não encolhe a caixa;
+> ela apenas ocupa menos espaço dentro dela. Esta página já derivou uma da
+> outra e estava errada.
+
 | Item | Medida | Origem |
 |---|---|---|
+| PCB | **34 × 90 mm**, espessura de 0,8 mm | derivado das regras em [`cad/make_dxf.py`](cad/make_dxf.py) (`W`, `H`) |
+| Raio de canto da placa | **3 mm no desenho, 4 mm em [14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso)** | as duas fontes discordam, ver abaixo |
 | Caixa | 62 × 104 × 19 mm, mais 3 mm do engate de quarto de volta | [`case_drawing.py`](../tools/docs/case_drawing.py) (`W, H, T`, `MOUNT`) |
 | Raio de canto da caixa | 7 mm | idem (`R`) |
-| PCB | **55 × 97 mm**, espessura de 0,8 mm | desenho (`rect(3.5, 3.5, W-7, H-7)`) e [14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso) |
-| Raio de canto da placa | **3 mm no desenho, 4 mm em [14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso)** | as duas fontes discordam, ver abaixo |
-| Recuo da placa em relação à caixa | 3,5 mm em cada lado | **conta**: (62 − 55) ÷ 2 = 3,5 e (104 − 97) ÷ 2 = 3,5 |
-| Caixa da V3, para comparar | cerca de 60 × 85 mm | legenda do desenho |
 | Placa da V3, para comparar | 52,35 × 77,47 mm | [13](../docs/13-placa-nova.md#o-que-cabe-numa-caixa-pequena) |
 
-A placa nova tem **31,6 % mais área** que a da V3 (**conta**: 5.335 ÷ 4.055,6).
+### De onde saem os 34 × 90
+
+Uma regra domina: a **7.2** da ficha do ME54BS13 pede **50 mm entre dois
+módulos de rádio** na mesma placa, e esta tem dois — o próprio ME54BS13 e o
+MAX-F10S. Com o módulo deitado num canto (contorno de 17,0 × 13,5) e o
+receptor no oposto (10,4 × 10,6, abaixo dos 8 mm da zona da antena), os 50 mm
+entre os dois contornos fixam o lado longo. Varrendo cada milímetro inteiro
+que ainda cumpre a regra **e** ainda cabe a fila de três teclas na largura
+(3 × 10,2 mm mais 0,8 de margem de cada lado):
+
+| Contorno | Área | Módulos a |
+|---|---|---|
+| 32 × 89 | 2.848 mm² | 50,8 mm |
+| 33 × 89 | 2.937 mm² | 50,9 mm |
+| **34 × 90** | **3.060 mm²** | **51,9 mm** |
+| 44 × 86 | 3.784 mm² | 50,2 mm, com as teclas ainda na borda de baixo |
+
+Ficou **34 × 90**. Os 2 mm além dos 88 que a regra sozinha permitiria não são
+folga: a 88 o receptor tinha de encostar na borda esquerda para alcançar os
+50 mm, e aí os pinos de 1V8 dele, que saem desse lado, ficavam com 1,2 mm de
+placa para pôr um capacitor de desacoplamento que a ficha quer a 2 mm.
+
+São **3.060 mm² contra os 5.335 mm² dos 55 × 97 que estavam escritos à mão —
+43 % menos placa** — e a ocupação dos contornos das peças sobe de 28 % para
+48 %.
 
 > [!IMPORTANT]
 > **O raio de canto da placa não bate entre as duas fontes.** O desenho da
@@ -75,9 +100,10 @@ A placa nova tem **31,6 % mais área** que a da V3 (**conta**: 5.335 ÷ 4.055,6)
 
 **Sistema de coordenadas** desta página, o mesmo de [14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso):
 origem no canto de cima à esquerda da **placa**, vista pela frente, x para a
-direita (0 a 55 mm) e y para baixo (0 a 97 mm). O desenho da caixa usa
-coordenadas da **caixa**; a conversão é `x_placa = x_caixa − 3,5` e
-`y_placa = y_caixa − 3,5`.
+direita (0 a 34 mm) e y para baixo (0 a 90 mm). **Não há mais conversão para
+as coordenadas da caixa**: com a placa dimensionada pelo circuito e a caixa
+pelo que ela guarda, onde uma fica dentro da outra é decisão do arranjo
+mecânico, que não existe.
 
 > [!IMPORTANT]
 > **A folga entre a placa e a caixa não bate com o texto de [14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso).**
@@ -357,7 +383,7 @@ e à base (energia, botões e USB); o módulo fica **a cavalo entre as duas
 
 ```mermaid
 flowchart TB
-    subgraph PCB["PCB 55 × 97 mm · vista pela frente · origem no canto de cima à esquerda"]
+    subgraph PCB["PCB 34 × 90 mm · vista pela frente · origem no canto de cima à esquerda"]
         direction TB
         subgraph Y1["y 0 a 20 · borda de cima"]
             direction LR
@@ -455,16 +481,22 @@ posicionador carrega a restrição (`LONGE_DO_MODULO` em `cad/make_pcb.py`) e
 a regra `RF9` de [`cad/dry_run_pcb.py`](cad/dry_run_pcb.py) mede
 ([09](09-dry-run-da-pcb.md)). Sem a restrição, o `L103` fica a **6,8 mm**.
 
-> [!CAUTION]
-> **A linha dos 25 mm do display não é cumprida e não pode ser.** O display
-> mede 40,08 × 61,8 mm numa placa de 55 × 97, e o módulo fica no canto de
-> baixo à direita: a sombra do display chega a **11,3 mm** dele, contra os
-> 25 mm que a ficha pede. Não existe posição na placa que resolva isso — só
-> caberia se o display encolhesse ou a placa crescesse. A própria ficha dá a
-> saída no mesmo parágrafo (*"Isolation using different PCB layers and
-> shielding covers is recommended"*), e ela custa uma blindagem ou uma
-> camada. **A consequência no alcance só sai de bancada.** O `RF9` falha de
-> propósito enquanto isso estiver assim, para não virar esquecimento.
+> [!IMPORTANT]
+> **A linha dos 25 mm do display deixou de ser questão da placa e virou
+> questão do arranjo mecânico.** Enquanto a placa tinha 55 × 97 mm, o display
+> de 40,08 × 61,8 ficava por cima dela e a sua sombra chegava a **11,3 mm** do
+> módulo, contra os 25 mm da tabela — sem posição na placa que resolvesse.
+> Com a placa em **34 × 90**, o display é **mais largo do que ela**: ele não
+> fica mais sobre a placa, e o que o `RF9` mede agora é o que de fato está na
+> placa, os dois cabos planos — o pior deles, o `J402`, a **31,3 mm** do
+> módulo, acima dos 25.
+>
+> Isso **não declara o problema resolvido**: declara que ele mudou de lugar.
+> Quanto o display fica do módulo passa a depender de onde a caixa põe cada
+> um, e nenhum documento fixa isso ainda. A saída que a própria ficha dá no
+> mesmo parágrafo — *"Isolation using different PCB layers and shielding
+> covers is recommended"* — continua valendo se a distância não sair.
+> **A consequência no alcance só sai de bancada.**
 
 A bolsa da bateria, atrás, termina em x 45,5, a **4 mm** da zona proibida
 (**conta**: 49,5 − 45,5), e isso continua em aberto.

@@ -151,7 +151,7 @@ A tela decidida está na primeira linha; as quatro marcadas como **plano B** fic
 | Função | Peça | DigiKey | Estoque | US$ 1 / 10 | Por placa | Compra | Situação |
 |---|---|---|---|---|---|---|---|
 | **Tela** | **JDI LPM027M128C** (2,7", 400 × 240, 8 cores, 3,0 V, **com luz integrada**) | — | — | R$ 776 no [anúncio escolhido](https://pt.aliexpress.com/item/1005011938384752.html), cerca de US$ 144 | 1 | 3 a 5 amostras | **decidida em 2026-09-23**; **sem canal autorizado e sem garantia**: revendedor apenas. Anúncios confundem o B e o C — conferir a peça que chegar ([15](15-avaliacao-componentes.md#a-luz-da-tela-procurada-em-2026-09-23)) |
-| Conector da tela | Hirose FH28-10S-0.5SH(05) | H125752CT-ND | 6.136 | 1,91 / 1,622 | 1 | 6 | aprovada; serve à Sharp e ao JDI; se a FPC for dobrada, um de contato duplo (Hirose FH34SRJ-10S-0.5SH(50)) |
+| Conector da tela | Hirose FH28-10S-0.5SH(05) | H125752CT-ND | 6.136 | 1,91 / 1,622 | 1 | 6 | aprovada; serve à Sharp e ao JDI; se a FPC for dobrada, um de contato duplo (Hirose FH34SRJ-10S-0.5SH(50)). **O footprint no CAD ainda é da série FH12** — 8,10 de largura contra os 9,90 desta |
 | Chave da luz | Diodes DMG1012T-7 | DMG1012T-7DICT-ND | 150.305 | 1,17 / 0,733 | 1 | ver [Interface](#interface) | aprovada; 0,5 Ω a 2,5 V de porta |
 | **Conector da luz do painel** | **a definir**: FPC de **5 vias**, passo de 0,5 mm, tipo ZIF | — | — | — | 1 | 6 | **falta escolher**. A ficha do LPM027M128C dá duas interfaces, 10 vias de sinal e 5 só para a luz ([esquemático](../hardware_gnssbike/06-conectores-e-pontos-de-teste.md#j402--luz-do-lpm027m128c)); o Molex de 4 vias abaixo **não serve** |
 | Tela, **plano B** | Sharp LS027B7DH01A | 425-2908-ND | 3.180 | 29,29 / 23,61 | 0 | — | aprovada; monocromática, 400 × 240, 5 V; fora do pedido enquanto o JDI for a tela |
@@ -170,7 +170,7 @@ A tela decidida está na primeira linha; as quatro marcadas como **plano B** fic
 
 | Função | Peça | DigiKey | Estoque | US$ 1 / 10 | Por placa | Compra | Situação |
 |---|---|---|---|---|---|---|---|
-| Receptáculo USB-C IPX8 | Molex 2036150003 | 900-2036150003CT-ND | 10.237 | 3,83 / 3,26 | 1 | 6 | aprovada; placa de 0,8 mm |
+| Receptáculo USB-C IPX8 | Molex 2036150003 | 900-2036150003CT-ND | 10.237 | 3,83 / 3,26 | 1 | 6 | aprovada; placa de 0,8 mm. **O footprint no CAD ainda é de outra peça** — 8,94 × 7,32 contra os 9,99 × 8,58 desta ([`cad/README`](../hardware_gnssbike/cad/README.md#três-footprints-eram-de-outra-peça)) |
 | TVS do VBUS | TI ESD761DPYR | 296-ESD761DPYRCT-ND | 22.339 | 0,46 / 0,28 | 1 | 10 | aprovada |
 | ESD de D+, D−, CC1 e CC2 | TI TPD4E05U06DQAR | 296-35765-1-ND | 213.253 | 0,82 / 0,509 | 1 | 6 | aprovada |
 | Alternativa ao receptáculo | Amphenol 12402484E512A | 664-12402484E512ACT-ND | 5.926 | 2,13 / 1,81 | — | — | falta o desenho |
@@ -181,7 +181,7 @@ A tela decidida está na primeira linha; as quatro marcadas como **plano B** fic
 |---|---|---|---|---|---|---|---|
 | LED RGB | Kingbright APTF1616SEEZGKQBKC | 754-1977-1-ND | 91.149 | 0,81 / 0,56 | 1 | 6 | aprovada; anodo comum, 1,6 × 1,6 mm |
 | Chaves do LED RGB e da luz | Diodes DMG1012T-7 | DMG1012T-7DICT-ND | 150.305 | 1,17 / 0,733 | 4 | 25 | aprovada |
-| Buzzer | Same Sky CPT-1117-83-SMT-TR | 102-CPT-1117-83-SMT-CT-ND | 18.796 | 1,59 / 1,243 | 1 | 6 | aprovada; 83 dB a 10 cm com 5 Vpp; dois pinos em contrafase dão 6 Vpp |
+| Buzzer | Same Sky CPT-1117-83-SMT-TR | 102-CPT-1117-83-SMT-CT-ND | 18.796 | 1,59 / 1,243 | 1 | 6 | aprovada; 83 dB a 10 cm com 5 Vpp; dois pinos em contrafase dão 6 Vpp. É **retangular de 11,0 × 9,0 × 1,7** com duas abas: o footprint no CAD era de um redondo de 9 mm e foi refeito |
 | Botões | Omron B3S-1002P | SW837CT-ND | 43.245 | 0,99 / 0,84 | 3 | 18 | aprovada; IP67, 6 × 6 × 4,3 mm; alternativa E-Switch TL3780AF240QG (EG5393CT-ND, 8.221, US$ 0,30), IP67 e 0,6 mm de altura |
 
 ## Passivos

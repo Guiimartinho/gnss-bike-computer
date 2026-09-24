@@ -3,10 +3,10 @@
 
 This does not open a CAD tool and it does not prove that any importer accepts
 the files. What it proves is that what was written is the geometry the
-documents describe: the outline is closed and measures 55 x 97 mm, the corner
-arcs meet the straight edges, the four M2 holes sit where the case drawing puts
-them, every zone lies inside the board, and each rectangle marked as a conflict
-really is the intersection of the two zones it names.
+documents describe: the outline is closed and measures what make_dxf derives
+from the rules, the corner arcs meet the straight edges, the mounting hole sits
+where it is declared, every zone lies inside the board, and each rectangle
+marked as a conflict really is the intersection of the two zones it names.
 
 Run: python hardware_gnssbike/cad/check_dxf.py     (exit 0 = everything agrees)
 """
@@ -150,23 +150,17 @@ def check_zones() -> None:
     def inter(a: tuple, b: tuple) -> tuple:
         return (max(a[0], b[0]), max(a[1], b[1]), min(a[2], b[2]), min(a[3], b[3]))
 
-    pares = [
-        ("CONFLITO_GNSS_NA_ZONA_DA_ANTENA", "ZONA_GNSS_MAX-F10S", "KEEPOUT_ANTENA_GNSS", 90.0),
-        ("CONFLITO_LED_NA_ZONA_DA_ANTENA", "ZONA_LED_RGB", "KEEPOUT_ANTENA_GNSS", 9.0),
-        ("CONFLITO_BOTAO_NA_ZONA_DO_MODULO", "ZONA_BOTOES",
-         "KEEPOUT_ANTENA_MODULO", 5.0),
-        ("CONFLITO_MODULO_NA_SOMBRA_DA_BATERIA", "ZONA_MODULO_ME54BS13",
-         "SOMBRA_BATERIA_MAX_1-2MM", 41.25),
-    ]
-    cdict = {n: r for n, r, _c, _s in M.CONFLITOS}
-    for cname, a, b, area_doc in pares:
-        want = inter(zdict[a], zdict[b])
-        got = cdict[cname]
-        area = (want[2] - want[0]) * (want[3] - want[1])
-        check(all(abs(w - g) < TOL for w, g in zip(want, got)),
-              f"{cname} = {a} x {b} = {want}")
-        check(abs(area - area_doc) < 1e-9,
-              f"{cname}: {area:g} mm2, o documento diz {area_doc:g} mm2")
+    # The conflict rectangles were the intersections that the 55 x 97
+    # floorplan carried, and three of the four were the display's or the
+    # battery's shadow fighting a part - shadows that left the board
+    # floorplan when the board stopped being sized by the case. The list is
+    # empty now, and this checks that it really is empty rather than
+    # silently skipping: a conflict that comes back has to be declared.
+    if M.CONFLITOS:
+        raise SystemExit(
+            "make_dxf.CONFLITOS deixou de estar vazia e este teste nao sabe "
+            "o que esperar de " + ", ".join(n for n, *_r in M.CONFLITOS))
+    check(True, "nenhum conflito de zona declarado (0)")
 
 
 def main() -> int:

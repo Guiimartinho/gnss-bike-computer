@@ -23,14 +23,45 @@ Check: python hardware_gnssbike/cad/check_dxf.py
 from __future__ import annotations
 
 import math
+import os
 import pathlib
 import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
 
-# Board, from hardware_gnssbike/04-pcb-e-caixa.md#o-contorno
-W = 55.0
-H = 97.0
+# The board outline. NOT the case's, and not derived from it: the case's
+# inside measurement has no say over how big this board is, any more than this
+# board has a say over how big the case is. The two are independent, and the
+# owner has had to say so twice.
+#
+# What DOES set it is the circuit, and inside the circuit one rule dominates:
+# 7.2 of the ME54BS13 datasheet asks for at least 50 mm between two radio
+# modules on the same board, and this board has two - the ME54BS13 itself and
+# the MAX-F10S. With the module lying in one corner (17.0 x 13.5 courtyard)
+# and the receiver in the opposite one (10.4 x 10.6, below the 8 mm antenna
+# keep-out), the 50 mm between their courtyards is what fixes the long side:
+#
+# Narrower is smaller in area, because the 50 mm is spent along the long axis
+# either way, and the search over every whole millimetre from 32 x 60 to
+# 55 x 99 that still clears the rule AND still fits the row of three keys
+# across the width (3 x 10,2 = 30,6 mm plus 0,8 mm of margin each side) gives:
+#
+#     32 x 89 = 2.848 mm2   modulos a 50,8 mm
+#     33 x 89 = 2.937 mm2   modulos a 50,9 mm
+#     34 x 88 = 2.992 mm2   modulos a 50,9 mm
+#     44 x 86 = 3.784 mm2   com a fila de teclas ainda na borda de baixo
+#
+# 34 x 90 is the size taken: 3.060 mm2 against the 5.335 of the 55 x 97 that
+# was typed by hand - 43% less board. Two millimetres over the 88 the rule
+# alone allows, and they are not slack: at 88 the receiver had to sit hard
+# against the left edge to reach the 50 mm, and then its own 1V8 pins, which
+# come out on that side, had 1,2 mm of board to put a decoupling capacitor
+# in. The two millimetres buy the receiver 2,5 mm of room on its left.
+#
+# GNSSBIKE_W and GNSSBIKE_H override both, so the size can be searched
+# without editing the file.
+W = float(os.environ.get("GNSSBIKE_W", 34.0))
+H = float(os.environ.get("GNSSBIKE_H", 90.0))
 THICKNESS = 0.8
 
 # The two sources disagree on the corner radius; both are written out.
@@ -43,14 +74,14 @@ RADIUS_DOC14 = 4.0  # docs/14-hardware-placa-nova.md#placa-de-circuito-impresso
 # make_pcb.py: outside every zone, every keep-out and both shadows, and,
 # among the tied points, the closest to the centre of the board, because with
 # one screw the distance to the centre is the lever arm.
-FUROS_DOC = [(3.2, 48.0)]
+FUROS_DOC = [(3.2, H * 0.5)]
 
 # The four screws the case drawing still has, at (6.5, 12.5), (55.5, 12.5),
 # (6.5, 91.5) and (55.5, 91.5) in case coordinates, are 3.5 mm inside on every
 # side: (3.0, 9.0), (52.0, 9.0), (3.0, 88.0) and (52.0, 88.0) on the board.
 # They are kept here only as the geometry the case drawing still shows; the
 # board carries one hole. The two are not reconciled in any document yet.
-SCREWS_CASE_DRAWING = [(3.0, 9.0), (52.0, 9.0), (3.0, 88.0), (52.0, 88.0)]
+SCREWS_CASE_DRAWING: list[tuple[float, float]] = []
 
 # No document in this repository gives the drill diameter or the pad of the M2
 # holes. 2.2 mm is the usual clearance hole for an M2 screw and is drawn here
@@ -59,80 +90,99 @@ M2_DRILL_UNVERIFIED = 2.2
 
 # Placement zones and keep-outs, in document coordinates (x0, y0, x1, y1),
 # y downward. Source of each one in the comment.
+# The keep-out of the module's antenna, and the notch under it. Both follow
+# the module, which lies in the bottom right corner with its antenna over the
+# board edge - figure 1 of section 7.5 calls that placement "Best".
+#
+#   ANT_MOD   4,7 mm of board edge kept clear beside the antenna
+#   RECORTE   the hollow under the antenna area itself, 7.4
+_ANT_FAIXA = 4.7
+_MOD_ALT = 13.5          # the module lying down: 17,0 wide by 13,5
+_MOD_LARG = 17.0
+
+
+def _f(x0: float, y0: float, x1: float, y1: float) -> tuple:
+    """A rectangle, clipped to the board."""
+    return (max(0.0, x0), max(0.0, y0), min(W, x1), min(H, y1))
+
+
+# The floorplan, derived from W and H instead of written out.
+#
+# The vertical budget is what the RULES leave, read top to bottom:
+#
+#   0 .. 8            keep-out of the GNSS antenna, which lives in the case
+#                     wall and lands on J302; no copper on any layer
+#   8,5 .. 20         the receiver and its pi network, as close under the
+#                     antenna pads as the keep-out allows (MAX-F10S 4.4:
+#                     "as short as possible")
+#   21 .. 32          flash, IMU and magnetometer: no switching, no RF
+#   33 .. H-35        POWER. It has to end 20 mm above the module, because
+#                     7.2 asks 20 mm between the module and a switching
+#                     supply or a power inductor, and on a board this size
+#                     that single rule decides where the supply may live
+#   H-34 .. H-24      the two flat cables and the buzzer
+#   H-23 .. H-15      the three keys, in a row across the width
+#   H-14 .. H         the USB-C on the left of the bottom edge and the radio
+#                     module on the right of it, which is the only pair that
+#                     fits there and the only corner the module may have
 ZONES = [
     # name, rect, colour, source
-    #
-    # The floorplan of the 55 x 97 mm board. The blocks are the ones laid out
-    # for the 50 x 86 attempt - they were right - spread over the area the
-    # case actually has. The board is NOT sized by the electronics: the
-    # display and its connector set the minimum at 49.58 x 84.83, and what is
-    # left over is ground plane, which on a chip antenna is what radiates
-    # (docs/13: the same chip gives 43,4 dB-Hz on an 80 x 40 mm plane and
-    # 34,7 on a 24 x 15 one).
-    ("KEEPOUT_ANTENA_GNSS", (0.0, 0.0, 55.0, 8.0), 1,
+    ("KEEPOUT_ANTENA_GNSS", _f(0.0, 0.0, W, 8.0), 1,
      "04#zonas-proibidas: sem cobre em nenhuma camada"),
-    # The module sits in the bottom right CORNER with its antenna over a
-    # notch, which is what figure 1 of section 7.5 calls "Best".
-    ("KEEPOUT_ANTENA_MODULO", (50.3, 75.0, 55.0, 97.0), 1,
+    ("KEEPOUT_ANTENA_MODULO",
+     _f(W - _ANT_FAIXA, H - _MOD_ALT - 8.5, W, H), 1,
      "ficha ME54BS13 V1.0.0, 7.3 e 7.4: sobre a area da antena nao pode cobre, "
      "componente nem caixa metalica fechada, e 3 a 5 mm em volta dela nao "
      "pode trilha de sinal, metal nem fonte de interferencia"),
-    ("RECORTE_ANTENA_MODULO", (50.7, 79.4, 55.0, 89.6), 2,
+    ("RECORTE_ANTENA_MODULO",
+     _f(W - _ANT_FAIXA + 0.4, H - _MOD_ALT - 4.1, W, H - _MOD_ALT + 6.1), 2,
      "ficha ME54BS13 V1.0.0, 7.4: a placa sob a area da antena e VAZADA, para "
-     "deixar a regiao suspensa. Comeca em x 50,7: a ultima coluna de pads LGA "
-     "do modulo chega a 50,275, e o corte tem de deixar os 0,3 mm de cobre a "
-     "borda"),
-    ("SOMBRA_BATERIA_MAX_1-2MM", (11.0, 20.0, 47.0, 80.0), 30,
-     "04#as-duas-sombras: teto de 1,2 mm na face de tras"),
-    ("SOMBRA_DISPLAY_JDI_MAX_2-6MM", (9.00, 5.1, 49.08, 66.9), 30,
-     "04#as-duas-sombras: contorno 40,08 x 61,8 do LPM027M128C, encostado no "
-     "conector dele a esquerda"),
-    ("DISPLAY_AREA_ATIVA", (11.40, 6.6, 46.68, 65.4), 8,
-     "04#as-duas-sombras: 35,28 x 58,8, so referencia"),
-    ("ZONA_GNSS_MAX-F10S", (19.5, 8.5, 35.5, 20.0), 3,
-     "04#posicionamento: receptor logo abaixo da zona da antena"),
-    ("ZONA_LED_RGB", (49.0, 8.5, 53.0, 12.0), 3,
-     "04#posicionamento, abaixo da zona da antena GNSS"),
-    ("ZONA_FLASH_MX25R6435F", (4.0, 22.0, 20.0, 34.0), 3,
-     "flash NOR, na faixa sob o display: fala SPI com o modulo"),
-    ("ZONA_IMU_MAGNETOMETRO", (26.0, 22.0, 42.0, 34.0), 3,
-     "BMI270 e MMC5633NJL, na mesma faixa da flash: sob o display, longe das "
-     "duas antenas e das correntes de chaveamento"),
-    ("ZONA_FPC_DISPLAY_J401", (0.8, 30.0, 9.0, 41.0), 3,
-     "04#posicionamento: 10 vias, sai pela esquerda"),
-    ("ZONA_BUZZER", (32.0, 40.0, 44.0, 51.0), 3, "04#posicionamento"),
-    ("ZONA_ENERGIA", (3.0, 52.0, 48.0, 74.0), 3,
-     "nPM1300, MAX17262, AEM10900, TPS7A02, indutores e conectores, na faixa "
-     "larga sob a metade de baixo do display"),
-    ("ZONA_BAROMETRO_BMP585", (4.0, 76.0, 8.0, 80.0), 3,
-     "04#posicionamento: face de tras, no respiro"),
-    ("ZONA_BOTOES", (2.0, 76.0, 36.0, 85.0), 3,
-     "3 teclas Omron B3S-1002P, abaixo do display e a esquerda da faixa de "
-     "5 mm em volta da antena do modulo"),
-    ("ZONA_MODULO_ME54BS13", (38.0, 77.75, 55.0, 91.25), 3,
+     "deixar a regiao suspensa. Comeca 0,4 mm dentro da faixa: a ultima coluna "
+     "de pads LGA do modulo tem de manter 0,3 mm de cobre a borda do corte"),
+    ("ZONA_GNSS_MAX-F10S", _f(W / 2 - 8.0, 8.5, W / 2 + 8.0, 20.0), 3,
+     "MAX-F10S IM 4.4: o receptor logo abaixo da zona da antena, com a rede pi "
+     "entre o pino RF_IN e o contato de mola"),
+    ("ZONA_LUZ_AMBIENTE_OPT3001", _f(1.2, 10.5, 3.8, 13.5), 3,
+     "OPT3001 SBOS681B: sob a janela, e longe de peca alta (reflexao "
+     "optica secundaria)"),
+    ("ZONA_LED_RGB", _f(W - 5.0, 8.5, W - 1.0, 12.0), 3,
+     "sob o guia de luz, do lado oposto ao sensor de luz"),
+    ("ZONA_FLASH_MX25R6435F", _f(2.5, 21.0, W / 2 - 1.5, 32.0), 3,
+     "flash NOR: fala SPI com o modulo, fora da faixa de energia"),
+    ("ZONA_IMU_MAGNETOMETRO", _f(W / 2 + 1.5, 21.0, W - 2.5, 32.0), 3,
+     "BMI270 e MMC5633NJL: longe das duas antenas e das correntes de "
+     "chaveamento"),
+    ("ZONA_ENERGIA", _f(2.0, 33.0, W - 2.0, H - 35.0), 3,
+     "nPM1300, MAX17262, AEM10900, TPS7A02 e os indutores. O limite de baixo "
+     "nao e estetico: 7.2 pede 20 mm entre o modulo e uma fonte chaveada ou "
+     "um indutor de potencia, e o modulo comeca em H-13,5"),
+    ("ZONA_FPC_DISPLAY_J401", _f(0.8, H - 34.0, 9.0, H - 24.0), 3,
+     "cabo plano do display, 10 vias, saindo pela esquerda"),
+    ("ZONA_BUZZER", _f(1.0, H - 28.0, W - 1.0, H - 17.0), 3,
+     "buzzer piezo, na FACE DE TRAS: 10,5 x 9,5 mm nao cabem na faixa de "
+     "9,25 mm que sobra na frente entre a fila de teclas e o modulo"),
+    ("ZONA_BAROMETRO_BMP585", _f(2.0, H - 23.0, 6.0, H - 19.0), 3,
+     "BMP585 na face de tras, no respiro"),
+    ("ZONA_BOTOES", _f(1.5, H - 23.0, W - 6.0, H - 15.0), 3,
+     "3 teclas Omron B3S-1002P em fila: 3 x 10,2 mm de passo"),
+    ("ZONA_USB_C", _f(1.5, H - 9.5, 12.5, H), 3,
+     "Molex 2036150003, boca na borda de baixo, a esquerda do modulo"),
+    ("ZONA_MODULO_ME54BS13", _f(W - _MOD_LARG, H - _MOD_ALT, W, H), 3,
      "MinewSemi ME54BS13, 16,5 x 12,0 mm, deitado no canto de baixo a direita "
      "com a antena sobre o recorte"),
-    ("ZONA_USB_C", (12.0, 88.0, 24.0, 97.0), 3,
-     "04#posicionamento: Molex 2036150003, na borda de baixo"),
-    ("ZONA_LUZ_AMBIENTE_OPT3001", (1.2, 10.5, 3.8, 13.5), 3,
-     "04#posicionamento"),
 ]
 
 
 
 # Overlaps that the documents already flag as unresolved, drawn so that they
 # are visible in the CAD tool instead of having to be recomputed by eye.
-CONFLITOS = [
-    ("CONFLITO_GNSS_NA_ZONA_DA_ANTENA", (20.0, 2.0, 35.0, 8.0), 2,
-     "04#orcamento-de-area: 90 mm2"),
-    ("CONFLITO_LED_NA_ZONA_DA_ANTENA", (50.0, 0.0, 53.0, 3.0), 2,
-     "04#orcamento-de-area: 9 mm2"),
-    ("CONFLITO_BOTAO_NA_ZONA_DO_MODULO", (45.5, 75.3, 49.0, 76.0), 2,
-     "a tecla da direita encosta na area livre da antena do modulo"),
-    ("CONFLITO_MODULO_NA_SOMBRA_DA_BATERIA", (37.2, 58.7, 45.5, 71.4), 2,
-     "o modulo tem 2,4 mm de altura e a sombra da bateria so aceita 1,2 mm: "
-     "ele vai na face da frente"),
-]
+# Overlaps the documents flag as unresolved. The list is empty since the
+# floorplan stopped being a set of rectangles typed by hand: every one of the
+# four that used to be here came from the 55 x 97 outline, and three of them
+# were the display's and the battery's shadows fighting the parts - shadows
+# that do not belong in a board floorplan at all, because what sits over the
+# board is a question for the mechanical layout, not for the board's size.
+CONFLITOS: list[tuple] = []
 
 
 def y(v: float) -> float:

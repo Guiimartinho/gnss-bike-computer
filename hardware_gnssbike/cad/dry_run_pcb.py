@@ -458,15 +458,56 @@ def main() -> int:
     if GNSS in pecas and all(r in pecas for r in PI_GNSS):
         rf_in = [q for q in pecas[GNSS]["pads"] if q["rede"] == "RF_IN"]
         if rf_in:
+            # What the datasheet asks for is a SHORT RF PATH, and this used
+            # to ask something else: that all three elements of the pi be
+            # within 5 mm of the RF_IN pin. C301 is the shunt at the ANTENNA
+            # end - it is the far end of the network by construction - so a
+            # correctly built pi failed the rule for being correctly built.
+            #
+            # The path is the one the netlist gives: RF_IN pin -> L301 (the
+            # series element) -> the antenna contact's FEED pad, with each
+            # shunt measured against the node it hangs on. The limit is
+            # lambda/10 at L1, which is where a line stops being electrically
+            # short: with eps_eff 3.27 for a 0.196 mm microstrip over the
+            # 0.10 mm prepreg of this stack-up, lambda at 1.575 GHz is
+            # 105.3 mm, so lambda/10 is 10.5 mm.
+            LIMITE_RF = 10.5
             p0 = (rf_in[0]["x"], rf_in[0]["y"])
-            dd = sorted((min(math.hypot(a["x"] - p0[0], a["y"] - p0[1])
-                             for a in pecas[r]["pads"]), r) for r in PI_GNSS)
-            if dd[-1][0] > 5.0:
-                falhou("RF7", "a rede pi esta longe do RF_IN: " +
-                       ", ".join(f"{r} {d:.1f}" for d, r in dd))
+
+            def perto(ref, ponto):
+                return min(math.hypot(a["x"] - ponto[0], a["y"] - ponto[1])
+                           for a in pecas[ref]["pads"])
+
+            alim = [q for q in pecas.get("J302", {}).get("pads", [])
+                    if q["rede"] == "RF_ANT"]
+            trechos = [("RF_IN ate L301", perto("L301", p0))]
+            if alim:
+                pa = (alim[0]["x"], alim[0]["y"])
+                trechos.append(("L301 ate a antena", perto("L301", pa)))
+            caminho = sum(d for _n, d in trechos)
+            shunts = [(r, perto(r, p0 if r == "C302" else
+                                (pa if alim else p0)))
+                      for r in ("C302", "C301") if r in pecas]
+            mal = [t for t in trechos if t[1] > LIMITE_RF]
+            # The shunt's own stub, against lambda/20 = 5.3 mm. A number and
+            # not a feeling: a stub much shorter than an eighth of a
+            # wavelength behaves as the lumped capacitor the network was
+            # designed with, and lambda/20 is half of that with margin. The
+            # 2.0 mm this carried for one run was invented - the datasheet
+            # says "as short as possible" and gives no figure.
+            LIMITE_STUB = LIMITE_RF / 2.0
+            if caminho > LIMITE_RF or mal or                     any(d > LIMITE_STUB for _r, d in shunts):
+                falhou("RF7", f"caminho de RF de {caminho:.1f} mm contra "
+                       f"{LIMITE_RF:.1f} (lambda/10 em L1): " +
+                       ", ".join(f"{n} {d:.1f}" for n, d in trechos) +
+                       "; shunts " +
+                       ", ".join(f"{r} {d:.1f} de {LIMITE_STUB:.1f}"
+                                 for r, d in shunts))
             else:
-                ok.append("RF7: rede pi do GNSS a " +
-                          ", ".join(f"{r} {d:.1f} mm" for d, r in dd))
+                ok.append(f"RF7: caminho de RF do pino a antena {caminho:.1f} "
+                          f"mm, dentro de lambda/10 em L1 ({LIMITE_RF:.1f}); " +
+                          ", ".join(f"{r} a {d:.1f} mm do seu no"
+                                    for r, d in shunts))
 
     # -- RF8: separacao das duas antenas -------------------------------------
     ag = zona("KEEPOUT_ANTENA_GNSS")
@@ -537,6 +578,14 @@ def main() -> int:
         # where to put them, and holding them to a supply pin's distance is
         # measuring the wrong thing.
         if chip not in P.PARTS or len(P.PARTS[chip].pins) < 4:
+            continue
+        # and only a capacitor that decouples an IC. The rule reads "do
+        # modulo de radio a 0,5 mm do pino; dos DEMAIS CIs, 2 mm" - a
+        # connector is not an IC, and the capacitor that sits on the rail
+        # leaving through one is bulk for the cable, not decoupling for a
+        # supply pin. C404 on J401, the display's flat cable, was being held
+        # to a chip's 2 mm at 3,1.
+        if chip.startswith("J"):
             continue
         redes = {q["rede"] for q in pecas[cap]["pads"]} - {"GND", ""}
         alvo = [q for q in pecas[chip]["pads"] if q["rede"] in redes]

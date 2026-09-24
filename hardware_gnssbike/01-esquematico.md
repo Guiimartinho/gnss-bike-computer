@@ -166,7 +166,7 @@ do nRF54LM20A tem um periférico só, e `uart30` e `i2c30` são o mesmo
 bloco.
 
 **A depuração é sem conector.** O footprint Tag-Connect TC2030-NL só tem
-furos e pads; o cabo se encosta com um clipe. Numa placa de 55 × 97 mm
+furos e pads; o cabo se encosta com um clipe. Numa placa de 34 × 90 mm
 dentro de uma caixa vedada, um conector de dez vias seria volume gasto
 para sempre por uma coisa que se usa no protótipo.
 

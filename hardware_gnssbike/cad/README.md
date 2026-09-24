@@ -54,9 +54,10 @@ tamanho: o capacitor de desacoplamento cai ao lado do CI que ele desacopla.
 
 | Item | Valor |
 |---|---|
-| Contorno | **55 × 97 mm**, canto de 3 mm, 0,8 mm de espessura |
+| Contorno | **34 × 90 mm**, canto de 3 mm, 0,8 mm de espessura — **derivado das regras**, não escrito à mão |
 | Camadas | **4**: `F.Cu`, `In1.Cu` (terra), `In2.Cu` (alimentação), `B.Cu` |
-| Cabe na caixa | sim: a caixa tem cerca de 58 × 100 mm por dentro, sobra **1,5 mm de cada lado** |
+| Por que esse tamanho | a 7.2 do ME54BS13 pede **50 mm entre dois módulos de rádio**, e esta placa tem dois. Varrendo cada milímetro que cumpre isso e ainda cabe a fila de teclas, 34 × 90 é o menor contorno com folga — **3.060 mm² contra os 5.335 do 55 × 97, 43 % menos** |
+| Relação com a caixa | **nenhuma.** A placa sai do circuito; a caixa sai do display, da bateria e da mão. Encolher uma não encolhe a outra |
 | Peças na placa | **116**, com rotação; 3 na face de trás |
 | Fora da placa | 8 (o painel, a antena e os seis módulos solares moram na caixa e chegam por contato de mola) |
 | Redes | **100** |
@@ -67,26 +68,28 @@ tamanho: o capacitor de desacoplamento cai ao lado do CI que ele desacopla.
 
 ### O que decide a posição de cada peça
 
-1. **A caixa**, para quem sai por ela: o USB-C com a boca para fora na borda
-   de baixo, o cabo do display saindo pela esquerda, o módulo de rádio
-   deitado com a antena olhando para fora da borda direita, as três teclas em
-   fila, o sensor de luz sob a janela, o LED RGB sob o guia de luz.
-2. **A zona** de [`04-pcb-e-caixa.md`](../04-pcb-e-caixa.md), para quem tem uma.
+1. **A borda**, para quem tem de alcançá-la: o USB-C com a boca para fora, os
+   dois cabos planos saindo pela esquerda, os contatos de mola nas laterais e
+   o módulo de rádio deitado no canto de baixo à direita, com a antena sobre o
+   recorte — que é o arranjo que a figura 1 da seção 7.5 da ficha dele chama
+   de "Best". Nada disso é a caixa mandando no tamanho da placa: é o circuito
+   dizendo de que lado cada coisa sai.
+2. **A zona** de [`04-pcb-e-caixa.md`](../04-pcb-e-caixa.md), para quem tem
+   uma. As zonas são **derivadas de `W` e `H`**, não retângulos fixos.
 3. **A ligação**, para todo o resto: cada peça vai ao centro de gravidade das
    peças a que se liga.
 4. **A rotação**: peça de dois terminais deita ao longo da linha entre as duas
    peças que ela junta, para a trilha sair reta.
 
-### Três lugares onde a placa real diverge do documento
+### O que a regra dos 50 mm impôs ao arranjo
 
-O documento escreveu a tabela de zonas antes de existir footprint. Três
-retângulos dele não cabem a peça real, e a placa segue a peça:
+Com 34 mm de largura, três decisões deixaram de ser gosto:
 
-| Onde | O documento | A peça |
-|---|---|---|
-| **USB-C** | zona de 9 × 3 mm | o receptáculo tem cerca de **9 × 10 mm**: o corpo entra na placa, não fica na borda. As teclas subiram para y 80,5 |
-| **Módulo de rádio** | 10 × 16,2 mm, do Fanstel | o MinewSemi **ME54BS13 é 12 × 16,5 mm** e a ficha pede **4 mm livres** em volta do lado de RF, virado para fora. Ele deita com a antena na borda direita |
-| **GNSS** | zona começa em y 2 | a área livre da antena vai até y 8. O documento já contava essa sobreposição como 90 mm² e a deixava em aberto; aqui o receptor fica **abaixo**, em y 8,5 |
+| O que | Por quê |
+|---|---|
+| A fila de teclas **não** fica na borda de baixo | o módulo ocupa 17,0 mm dela e a fila pede 30,6; e os 5 mm que a 7.4 pede em volta da antena comem mais. A fila subiu para acima do módulo |
+| O buzzer vai na **face de trás** | 10,5 × 9,5 mm não cabem na faixa de 9,25 mm que sobra na frente entre as teclas e o módulo. Empurrado, ele parava a 0,84 mm do TPS7A02 e tomava o anel que o desacoplamento dele precisa |
+| O receptor GNSS fica a **180°** | a 0 o pino `RF_IN` saía do lado da borda, a 1,2 mm dela, e a rede π não tinha para onde ir — ficava a 10,5 mm de um pino que a 4.4 quer "as short as possible". Virado, o pino olha para dentro e a rede cabe em linha |
 
 ## Verificação
 
@@ -152,14 +155,15 @@ uma vez cada; **todo pad leva a rede da lista de nós** e nenhuma ligação fico
 sem pad; nenhum contorno sobre outro; nada passa da borda; nada dentro das
 áreas de antena; a placa cabe na caixa; os três planos de terra existem.
 
-**Regras das fichas** ([09](../09-dry-run-da-pcb.md)) — **15 cumpridas, 2
-violadas, 5 que só bancada ou fabricante decidem**. As duas violadas estão
-escritas porque são escolhas, não descuido:
+**Regras das fichas** ([09](../09-dry-run-da-pcb.md)) — **17 cumpridas, 0
+violadas, 5 que só bancada ou fabricante decidem**. As duas que falhavam na
+placa de 55 × 97 caíram sozinhas quando a placa passou a ser dimensionada
+pelo circuito:
 
-| Regra | O que dá | O que a ficha pede | Por quê |
-|---|---|---|---|
-| `RF9` | display a **11,3 mm** do módulo de rádio | 25 mm | não cabe: display de 40,08 × 61,8 numa placa de 55 × 97. A saída da própria ficha é blindagem ou camada |
-| `AL1` | `C114` a **3,3 mm** do `U104` | 2 mm | preço de repor os 20 mm entre o módulo e o que chaveia, que é regra de RF e ganha |
+| Regra | Na placa de 55 × 97 | Na de 34 × 90 |
+|---|---|---|
+| `RF9`, os 25 mm do display | falhava: a sombra do display chegava a **11,3 mm** do módulo | **passa**: o display é mais largo que a placa e não fica mais sobre ela; o pior agora é o cabo plano `J402`, a 31,3 mm |
+| `AL1`, desacoplamento | falhava: `C114` a 3,3 mm do `U104` contra 2 | **passa**: o buzzer saiu de cima do regulador e o anel dele ficou livre |
 
 ### As duas regras locais de folga
 
@@ -175,6 +179,33 @@ segue **0,127 mm** de folga e **0,2 mm** de furo a cobre, que é o que uma
 fábrica de quatro camadas faz sem custo extra. **Nenhuma fábrica foi
 consultada** — e a pilha de camadas, a largura de 50 Ω e a de 90 Ω
 diferencial esperam a mesma resposta.
+
+## Três footprints eram de outra peça
+
+A conferência `ME3` compara o **corpo que a ficha de cada peça cota** com o
+contorno do footprint desenhado para ela. Ao ganhar as cotas dos conectores,
+ela pegou três casos em que o land pattern na placa é de uma peça **diferente
+da que está na lista de compras** — e um land pattern errado não é detalhe:
+a peça não solda.
+
+| Peça da lista | Footprint que estava em uso | O que a ficha diz | Diferença |
+|---|---|---|---|
+| **Same Sky CPT-1117-83-SMT** (buzzer) | `Buzzer_CUI_CPT-9019S-SMT`, **redondo de 9 mm** | corpo **retangular de 11,0 × 9,0 × 1,7**, preso por duas abas de 2,0 × 0,2 mm, uma em cada ponta e em lados opostos, com furo de 0,8; padrão de solda de **duas ilhas de 2,5 × 2,5 a 10,5 mm** | **corrigido**: footprint desenhado aqui |
+| **Molex 2036150003** (USB-C IPX8) | `USB_C_Receptacle_Palconn_UTC16-G` | corpo **9,99 × 8,58 × 4,21** | o footprint desenha **8,94 × 7,32**: falta **1,05 × 1,26 mm**. **Em aberto** |
+| **Hirose FH28-10S-0.5SH(05)** (FPC do display) | `Hirose_FH12-10S-0.5SH`, outra série | corpo **9,90 × 5,70 × 2,55** | o footprint desenha **8,10** de largura: falta **1,80 mm**. **Em aberto** |
+
+> [!CAUTION]
+> **Os dois em aberto não foram consertados de propósito.** Reconstruir um
+> land pattern de USB-C ou de conector FPC a partir de um desenho
+> **renderizado** é exatamente o tipo de palpite que essa conferência existe
+> para pegar, e errar o padrão de solda de um USB-C mata a placa. Nem a
+> Molex 2036150003 nem a Hirose FH28 existem na biblioteca do KiCad 8. O que
+> resolve é o arquivo de land pattern do fabricante, ou ler o desenho com
+> confiança maior do que uma imagem dá. Enquanto isso, o `ME3` **falha**, e é
+> para falhar.
+
+A altura do USB-C também estava errada e foi corrigida: **4,21 mm** acima da
+superfície de montagem, não os 3,26 que estavam escritos como "conferir".
 
 ## Footprints
 

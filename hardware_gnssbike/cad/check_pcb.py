@@ -131,9 +131,16 @@ def main() -> int:
     tam = {r: (cx[r][2] - cx[r][0], cx[r][3] - cx[r][1]) for r in lugar}
     sobre = []
     itens = sorted(lugar.items())
-    for i, (ra, (ax, ay, _ang, _b)) in enumerate(itens):
+    # Two courtyards only fight if they are on the SAME face - or if one of
+    # them pierces the board, in which case it takes the room on both. Before
+    # this, a part on the back counted as overlapping a part on the front,
+    # which is not a defect and hid the one that is: the Tag-Connect's
+    # non-plated holes landing under the buzzer.
+    for i, (ra, (ax, ay, _ang, fa)) in enumerate(itens):
         a0, a1 = (ax + cx[ra][0], ay + cx[ra][1]), (ax + cx[ra][2], ay + cx[ra][3])
-        for rb, (bx, by, _ang2, _b2) in itens[i + 1:]:
+        for rb, (bx, by, _ang2, fb) in itens[i + 1:]:
+            if fa != fb and ra not in MP.PASSANTE and rb not in MP.PASSANTE:
+                continue
             b0, b1 = (bx + cx[rb][0], by + cx[rb][1]), (bx + cx[rb][2], by + cx[rb][3])
             if a1[0] > b0[0] and b1[0] > a0[0] and                     a1[1] > b0[1] and b1[1] > a0[1]:
                 sobre.append((ra, rb))

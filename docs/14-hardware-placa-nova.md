@@ -287,7 +287,7 @@ Duas regras de pino do nRF54LM20A (ficha 4539_001 v1.0) mandam no mapa:
 
 ## Placa de circuito impresso
 
-- **Contorno:** 55 × 97 mm, cantos com raio de 4 mm, dentro da caixa de 62 × 104 mm (paredes de cerca de 2 mm e folga de 0,5 mm). Origem no canto de cima à esquerda, com a placa vista pela frente.
+- **Contorno:** **34 × 90 mm**, cantos com raio de 4 mm. O tamanho sai do **circuito**, não da caixa: quem manda é a 7.2 da ficha do ME54BS13, que pede 50 mm entre os dois módulos de rádio desta placa. A conta está em [`hardware_gnssbike/04-pcb-e-caixa.md`](../hardware_gnssbike/04-pcb-e-caixa.md#de-onde-saem-os-34--90). A caixa de 62 × 104 mm segue tendo o tamanho que o display, a bateria e a mão pedem, e a placa cabe nela com folga de sobra. Origem no canto de cima à esquerda, com a placa vista pela frente.
 - **Espessura e camadas:** 0,8 mm, 4 camadas, controle de impedância; o desenho do receptáculo USB-C da Molex recomenda 0,8 mm.
 
 | Camada | Uso |

@@ -106,8 +106,10 @@ _fp(["SW601", "SW602", "SW603"], "Button_Switch_SMD:SW_SPST_B3S-1000", "EXATO",
     "Omron B3S; o footprint junta os terminais 1-2 num pad e 3-4 no outro")
 _fp(["D103", "D104"], "LED_SMD:LED_0603_1608Metric", "ENCAPSULAMENTO",
     "Kingbright APT1608SURCK, 1,6 x 0,8 mm")
-_fp("LS601", "Buzzer_Beeper:Buzzer_CUI_CPT-9019S-SMT", "ENCAPSULAMENTO",
-    "buzzer piezo SMD; o CPT-1117-83-SMT da lista nao esta na KiCad")
+_fp("LS601", "gnssbike:Buzzer_CPT-1117-83-SMT_11x9mm", "GERADO",
+    "buzzer piezo SMD: o CPT-1117-83-SMT da lista nao esta na KiCad, e o "
+    "CPT-9019S que estava no lugar dele e REDONDO de 9 mm contra os "
+    "11,0 x 9,0 retangulares da peca comprada")
 
 
 # ------------------------------------------------------- footprints gerados
@@ -139,7 +141,9 @@ CORPO: dict[str, tuple[float, float, float]] = {
     # nome do footprint -> largura, altura em planta, altura do corpo (mm)
     "gnssbike:MinewSemi_ME54BS13_16.5x12mm": (12.00, 16.50, 2.40),
     "gnssbike:u-blox_MAX-F10S_9.7x10.1mm": (9.70, 10.10, 2.40),
-    "gnssbike:MAX17262_WLP-9_1.4x1.4mm_P0.4mm": (1.40, 1.40, 0.50),
+    # 1,448 x 1,468 x 0,64, do desenho 21-100168 Rev A. O nome do
+    # footprint ainda diz 1.4x1.4: e o nome, nao a cota.
+    "gnssbike:MAX17262_WLP-9_1.4x1.4mm_P0.4mm": (1.448, 1.468, 0.64),
     "gnssbike:BMP585_LGA-8_3.25x3.25mm": (3.25, 3.25, 1.96),
     "gnssbike:MMC5633_WLP-4_0.85x0.85mm": (0.85, 0.85, 0.40),
     "gnssbike:OPT3001_USON-6_2x2mm_P0.65mm": (2.00, 2.00, 0.65),
@@ -151,6 +155,8 @@ CORPO: dict[str, tuple[float, float, float]] = {
     # contato_mola() draws, so 5.0 mm across the pair. The 1.5 mm of leaf is
     # ALTURA's, and ALTURA says there where it does NOT come from.
     "gnssbike:ContatoMola_2x2mm_P3mm": (5.00, 2.00, 1.50),
+    # Same Sky CPT-1117-83-SMT: 11,0 x 9,0 x 1,7, do desenho da pagina 2
+    "gnssbike:Buzzer_CPT-1117-83-SMT_11x9mm": (11.00, 9.00, 1.70),
 }
 
 
@@ -322,8 +328,7 @@ ALTURA: dict[str, tuple[float, str]] = {
     "Connector_USB:USB_C_Receptacle_Palconn_UTC16-G": (3.26, "altura corrente "
         "de um receptaculo USB-C de montagem em superficie - CONFERIR na "
         "ficha do Molex 2036150003, que e a peca da lista de compras"),
-    "Buzzer_Beeper:Buzzer_CUI_CPT-9019S-SMT": (1.70, "CUI CPT-1117-83-SMT, "
-        "ficha: 11,0 x 9,0 x 1,7 mm - a peca da lista de compras"),
+
     "Connector_FFC-FPC:TE_0-1734839-5_1x05-1MP_P0.5mm_Horizontal": (1.20,
         "conector FPC horizontal de passo 0,5 - CONFERIR: a peca ainda nao "
         "esta escolhida (06#j402)"),
@@ -480,6 +485,15 @@ def trocar_modelo(nome: str, corpo: str) -> str:
     if tam is None or medida is None:
         return sem_bloco(corpo)
     alt, _fonte = medida
+    # The BODY is the datasheet's, whenever the datasheet has been read. The
+    # F.Fab outline is what someone drew for the land pattern, and where the
+    # two disagree it is the drawing that is right - the Molex receptacle is
+    # 9.99 x 8.58 and the footprint in use draws 8.94 x 7.32, so taking the
+    # footprint's size would have drawn the part a millimetre small in both
+    # directions and hidden, in the 3D view, exactly the mismatch that ME3
+    # reports in the 2D one.
+    if nome in PACOTE:
+        tam = (PACOTE[nome][0], PACOTE[nome][1])
     base = nome.split(":", 1)[1]
     pasta = _pl.Path(__file__).resolve().parent / "3d"
     pasta.mkdir(exist_ok=True)
@@ -632,12 +646,37 @@ def wrl_tecla(caminho, w: float, h: float, alt: float) -> None:
 
 
 def wrl_buzzer(caminho, w: float, h: float, alt: float) -> None:
-    """A piezo buzzer is a can with a hole, not a cube."""
+    """Same Sky CPT-1117-83-SMT: a black rectangle with two tabs, not a can.
+
+    Drawn round, it was the wrong shape twice over - the part on the
+    shopping list is 11,0 x 9,0 x 1,7 mm of black LCP, and what holds it to
+    the board is two flat tinned brass tabs, 2,0 mm wide by 0,2 thick, one
+    at each end and on OPPOSITE sides of the axis, each with a 0,8 mm hole,
+    taking it to 15,0 mm end to end. The sound comes out of seven holes on
+    the top face. Every number is from the mechanical drawing on page 2 of
+    the datasheet.
+    """
+    PRETO = (0.07, 0.07, 0.08)           # LCP preto
+    LATAO = (0.80, 0.78, 0.72)           # latao estanhado
+    partes = [_bloco(-w / 2, -h / 2, 0.0, w / 2, h / 2, alt, PRETO)]
+    # as duas abas, em lados opostos do eixo, levando o total a 15,0 mm
+    for lado in (-1, 1):
+        x0 = lado * w / 2
+        x1 = lado * (w / 2 + 2.0)
+        y = lado * (h / 2 - 1.0)
+        partes.append(_bloco(min(x0, x1), y - 1.0, 0.0,
+                             max(x0, x1), y + 1.0, 0.2, LATAO))
+        partes.append(_cilindro((x0 + x1) / 2, y, 0.0, 0.21, 0.4,
+                                (0.55, 0.54, 0.50), 10))
+    # os sete furos de som
+    for bx, by in ((0.0, 0.0), (-2.2, 0.0), (2.2, 0.0), (-1.1, 1.9),
+                   (1.1, 1.9), (-1.1, -1.9), (1.1, -1.9)):
+        partes.append(_cilindro(bx, by, alt - 0.05, alt + 0.01, 0.35,
+                                (0.30, 0.30, 0.31), 12))
     caminho.write_text(
         "#VRML V2.0 utf8" + NL +
-        "# buzzer piezo SMD: lata redonda com o furo de som no topo" + NL +
-        _cilindro(0.0, 0.0, 0.0, alt, min(w, h) / 2, (0.09, 0.09, 0.10)) +
-        _cilindro(0.0, 0.0, alt, alt + 0.02, 0.6, (0.35, 0.35, 0.36)),
+        "# Same Sky CPT-1117-83-SMT: 11,0 x 9,0 x 1,7 preto, duas abas de "
+        "latao e sete furos de som" + NL + "".join(partes),
         encoding="utf-8", newline=NL)
 
 
@@ -768,13 +807,50 @@ def wrl_mola(caminho, w: float, h: float, alt: float) -> None:
 
 
 def wrl_usb_c(caminho, w: float, h: float, alt: float) -> None:
-    """A USB-C receptacle: a stainless shell with the black tongue inside."""
+    """Molex 2036150003: steel shell, black sealing flange, Type-C mouth.
+
+    Every number from the Product Customer Drawing (PSD 000 rev A,
+    2022-04-14), sheet 1: 9,99 +-0,12 across the sealing flange by 8,58
+    deep, 4,21 +-0,12 above the mounting surface, the main shell 3,56 tall
+    and standing 0,20 off the board, the mouth 8,34 +0,06/-0,02 by
+    2,56 +-0,04. The corrugated front flange is a silica rubber sealing
+    ring 1,15 mm thick, black, and it is what makes the part IPX8 - drawing
+    the receptacle as one steel box throws away the only feature that
+    explains why this connector was chosen.
+
+    Colours from the bill of materials on sheet 2: shells in stainless
+    steel, housing in black glass filled nylon, the seal in black silica
+    rubber.
+    """
+    ACO = (0.76, 0.77, 0.79)             # aco inoxidavel
+    VEDACAO = (0.10, 0.10, 0.11)         # borracha de silica preta
+    NYLON = (0.08, 0.08, 0.09)           # nylon com fibra de vidro, preto
+    a1 = 0.20                            # a carcaca fica 0,20 mm da placa
+    corpo_alt = 3.56
+    selo = 1.15
+    boca_w, boca_h = 8.34, 2.56
+    partes = [
+        # a carcaca principal, recuada do selo
+        _bloco(-w / 2 + 0.3, -h / 2, a1, w / 2 - 0.3, h / 2 - selo,
+               a1 + corpo_alt, ACO),
+        # o anel de vedacao, na frente, mais largo e mais alto: e ele que da
+        # os 9,99 de largura e os 4,21 de altura
+        _bloco(-w / 2, h / 2 - selo, 0.0, w / 2, h / 2, alt, VEDACAO),
+    ]
+    # a boca, aberta atraves do selo
+    partes.append(_bloco(-boca_w / 2, h / 2 - selo - 0.2,
+                         a1 + (corpo_alt - boca_h) / 2,
+                         boca_w / 2, h / 2 + 0.01,
+                         a1 + (corpo_alt + boca_h) / 2, NYLON))
+    # a lingueta, dentro da boca
+    partes.append(_bloco(-boca_w / 2 + 0.6, h / 2 - selo - 2.6,
+                         a1 + corpo_alt / 2 - 0.35,
+                         boca_w / 2 - 0.6, h / 2 - selo + 0.01,
+                         a1 + corpo_alt / 2 + 0.35, NYLON))
     caminho.write_text(
         "#VRML V2.0 utf8" + NL +
-        "# receptaculo USB-C: carcaca de aco com a lingueta preta" + NL +
-        _bloco(-w / 2, -h / 2, 0.0, w / 2, h / 2, alt, (0.78, 0.79, 0.80)) +
-        _bloco(-w / 2 + 1.4, h / 2 - 1.2, alt * 0.35, w / 2 - 1.4, h / 2 - 0.1,
-               alt * 0.65, (0.10, 0.10, 0.11)),
+        "# Molex 2036150003: carcaca de aco, anel de vedacao preto e boca "
+        "Type-C de 8,34 x 2,56" + NL + "".join(partes),
         encoding="utf-8", newline=NL)
 
 
@@ -783,7 +859,7 @@ DESENHADOS = {
         lambda c, w, h, a: wrl_me54bs13(c),
     "gnssbike:u-blox_MAX-F10S_9.7x10.1mm": wrl_max_f10s,
     "Button_Switch_SMD:SW_SPST_B3S-1000": wrl_tecla,
-    "Buzzer_Beeper:Buzzer_CUI_CPT-9019S-SMT": wrl_buzzer,
+    "gnssbike:Buzzer_CPT-1117-83-SMT_11x9mm": wrl_buzzer,
     "Connector_USB:USB_C_Receptacle_Palconn_UTC16-G": wrl_usb_c,
     "gnssbike:ContatoMola_2x2mm_P3mm": wrl_mola,
     "gnssbike:LED_RGB_APTF1616_1.6x1.6mm": wrl_led_rgb,
@@ -833,6 +909,70 @@ PACOTE: dict[str, tuple] = {
     "gnssbike:LED_RGB_APTF1616_1.6x1.6mm":
         (1.60, 1.60, 0.70, 0.00, None, 0.35, 0.40, 0.80,
          "Kingbright APTF1616, desenho: 1,6 x 1,6 x 0,7"),
+    "Package_DFN_QFN:QFN-32-1EP_5x5mm_P0.5mm_EP3.45x3.45mm":
+        (5.00, 5.00, 0.90, 0.035, (3.50, 3.50), 0.25, 0.40, 0.50,
+         "Nordic nPM1300 Product Specification v1.1 (4490_483, 2024-06-16), "
+         "pagina 154, figura 52 e tabela 37: D e E 5,0 nominais, A 0,8/0,85/"
+         "0,9, A1 0/0,035/0,05, D2 e E2 3,4/3,5/3,6, b 0,2/0,25/0,3, "
+         "L 0,3/0,4/0,45, e 0,5. A2 so nominal 0,815; A3 nao consta"),
+    "gnssbike:MAX17262_WLP-9_1.4x1.4mm_P0.4mm":
+        (1.448, 1.468, 0.64, 0.19, None, 0.27, 0.27, 0.40,
+         "Maxim, desenho de encapsulamento 21-100168 Rev A (W91G1+2), "
+         "COMMON DIMENSIONS: D 1,448 +-0,025 e E 1,468 +-0,025 medidos pelas "
+         "linhas de centro entre os cortes, A 0,64 +-0,05, A1 (altura da "
+         "esfera) 0,19 +-0,03, esfera 0,27 +-0,03 de diametro, e 0,40 BASIC, "
+         "matriz 3x3 cheia (DEPOPULATED BUMPS: NONE), D1 e E1 0,80 BASIC"),
+    "gnssbike:ESD761_X1SON-2_1x0.6mm":
+        (1.00, 0.60, 0.45, 0.025, None, 0.25, 0.50, 0.65,
+         "TI SLVSH10C (Rev C, 2025-11-09), pagina 21, PACKAGE OUTLINE "
+         "DPY0002A X1SON, desenho 4224561/C 07/2024: A 0,9 a 1,1, B 0,5 a "
+         "0,7, C maximo 0,45 (nominal nao consta), standoff 0 a 0,05, "
+         "terminais 0,2 a 0,3 por 0,45 a 0,55, passo 0,65 basico"),
+    "gnssbike:Buzzer_CPT-1117-83-SMT_11x9mm":
+        (11.00, 9.00, 1.70, 0.00, None, 2.50, 2.50, 10.50,
+         "Same Sky (ex-CUI) CPT-1117-83-SMT-TR, ficha de 2024-11-09, pagina 1 "
+         "(SPECIFICATIONS: 11,0 x 9,0 x 1,7 mm, material LCP preto) e pagina 2 "
+         "(MECHANICAL DRAWING): corpo RETANGULAR de 11,0 x 9,0 x 1,7, 15,0 de "
+         "ponta a ponta com as duas abas metalicas de 2,0 de largura por 0,2 "
+         "de espessura, cada uma com furo de 0,8, e sete furos de som no topo. "
+         "Terminais de latao estanhado. o footprint desta peca e desenhado "
+         "aqui, porque o da biblioteca e do CPT-9019S, que e REDONDO de 9 mm"),
+    "Connector_JST:JST_GH_SM06B-GHS-TB_1x06-1MP_P1.25mm_Horizontal":
+        (10.75, 4.05, 4.25, 0.10, None, 0.50, 0.80, 1.25,
+         "JST, catalogo da serie GH (eGH.pdf), pagina 3, bloco Header, linha "
+         "SM06B-GHS-TB: B 10,75 de largura total, A 6,25 entre os pinos "
+         "extremos (5 x 1,25), corpo de 4,05 de profundidade, altura 4,25, "
+         "folga corpo-placa 0,1, rabichos SMT saindo 0,8 pela face de tras. "
+         "Corpo de PA natural (marfim), contatos e reforcos de liga de cobre "
+         "estanhada"),
+    "Connector_USB:USB_C_Receptacle_Palconn_UTC16-G":
+        (9.99, 8.58, 4.21, 0.20, None, 0.30, 0.90, 0.50,
+         "Molex 2036150003 Product Customer Drawing (PSD 000 rev A, "
+         "2022-04-14), folha 1: 9,99 +-0,12 na flange de vedacao por 8,58 de "
+         "profundidade, 4,21 +-0,12 acima da superficie de montagem, carcaca "
+         "principal 3,56 elevada 0,20 da placa, boca Type-C de 8,34 x 2,56, "
+         "16 rabichos SMT a 0,5 mais 2 pernas passantes. Carcacas de aco "
+         "inoxidavel, alojamento de nylon com fibra de vidro PRETO, anel de "
+         "vedacao de borracha de silica PRETA de 1,15 de espessura (o IPX8). "
+         "CUIDADO: o footprint em uso e do Palconn UTC16-G, nao deste"),
+    "Connector_FFC-FPC:Hirose_FH12-10S-0.5SH_1x10-1MP_P0.50mm_Horizontal":
+        (9.90, 5.70, 2.55, 0.00, None, 0.30, 0.70, 0.50,
+         "Hirose, catalogo da serie FH28 (2019.9 quarta edicao), pagina 3, "
+         "linha FH28-10S-0.5SH, HRS 586-1861-4: B 9,9 de largura total, corpo "
+         "de 5,7 de profundidade (6,5 com os rabichos), altura 2,55 fechado e "
+         "5,4 de referencia com o atuador aberto, A 4,5 entre os contatos "
+         "extremos, C 5,57 de abertura para o FPC. Atuador flip-lock traseiro "
+         "que abre 116 graus, contato por BAIXO, aceita FPC de 0,3. Isolador "
+         "de LCP CINZA, atuador de LCP PRETO (pagina 2, Materials/Finish). "
+         "CUIDADO: o footprint em uso e da serie FH12, nao da FH28"),
+    "LED_SMD:LED_0603_1608Metric":
+        (1.60, 0.80, 0.75, 0.00, None, 0.30, 0.30, 1.00,
+         "Kingbright APT1608SURCK, spec DSAD0926 rev V.22A (2023-04-08), "
+         "pagina 1, PACKAGE DIMENSIONS: 1,6 x 0,8 x 0,75, base de 0,25 e a "
+         "resina em tronco trapezoidal de 1,2 na base para 1,1 no topo, topo "
+         "chato, terminais de 0,3 em cada ponta subindo pelas laterais. "
+         "Lente Water Clear (transparente, nao difusa); a COR DO CORPO nao "
+         "consta na ficha"),
     "Package_SO:SOIC-8_5.23x5.23mm_P1.27mm":
         (5.23, 5.28, 2.16, 0.15, None, 0.41, 0.65, 1.27,
          "Macronix MX25R6435F v1.6, pagina 79, 19 PACKAGE INFORMATION, "
@@ -1006,6 +1146,10 @@ def _com_modelo() -> None:
     for nome, (w, h, alt) in CORPO.items():
         if nome not in GERADOS:
             continue
+        # PACOTE wins here too: CORPO is the outline this file drew the
+        # footprint from, PACOTE is what the mechanical drawing cotes.
+        if nome in PACOTE:
+            w, h, alt = PACOTE[nome][0], PACOTE[nome][1], PACOTE[nome][2]
         CORPO_TODOS[nome] = (w, h, alt)
         base = nome.split(":", 1)[1]
         est = estilo_de(nome)
@@ -1111,6 +1255,25 @@ def contato_mola() -> str:
                   "contato de mola de 2 vias, sem pasta de solda")
 
 
+def buzzer_cpt1117() -> str:
+    """Same Sky CPT-1117-83-SMT, do desenho mecanico da propria ficha.
+
+    The footprint in use was `Buzzer_CUI_CPT-9019S-SMT`, which is a ROUND
+    9 mm part. The one on the shopping list is 11,0 x 9,0 x 1,7 mm and
+    RECTANGULAR, and it is soldered by two flat metal tabs, one at each end
+    and on opposite sides of the axis, 2,0 mm wide and 0,2 mm thick, each
+    with a 0,8 mm hole. The land pattern the datasheet recommends is two
+    2,5 x 2,5 mm pads 10,5 mm apart, centre to centre - the body itself
+    rests on nothing. Drawn here because that is not the same shape as a
+    9 mm circle and no amount of courtyard makes it one.
+    """
+    pads = [_pad("1", -5.25, 0.0, 2.5, 2.5, forma="rect"),
+            _pad("2", 5.25, 0.0, 2.5, 2.5, forma="rect")]
+    return _corpo("gnssbike:Buzzer_CPT-1117-83-SMT_11x9mm", 11.0, 9.0, pads,
+                  "buzzer piezo SMD 11,0 x 9,0 x 1,7, duas abas a 10,5 mm")
+
+
+GERADOS["gnssbike:Buzzer_CPT-1117-83-SMT_11x9mm"] = buzzer_cpt1117()
 GERADOS["gnssbike:ContatoMola_2x2mm_P3mm"] = contato_mola()
 _fp("U201", "gnssbike:MinewSemi_ME54BS13_16.5x12mm", "GERADO",
     "modulo de radio; a Minew nao publica land pattern")

@@ -54,7 +54,7 @@ flowchart LR
 
 ![Proposta do aparelho: frente, lateral direita, traseira e arranjo interno](docs/img/placa-nova-caixa.svg)
 
-Conceito em escala, a partir da caixa da V3: 62 × 104 × 19 mm, PCB de 55 × 97 mm em 4 camadas, 6 módulos solares na frente inclinada e nos chanfros laterais. A escolha de cada componente, com os números dos datasheets, está em [docs/15-avaliacao-componentes.md](docs/15-avaliacao-componentes.md); a lista de compras, validada peça a peça, em [docs/19-lista-de-compras.md](docs/19-lista-de-compras.md).
+Conceito em escala, a partir da caixa da V3: 62 × 104 × 19 mm; a PCB, dimensionada pelo circuito e **não** pela caixa, tem 34 × 90 mm em 4 camadas, 6 módulos solares na frente inclinada e nos chanfros laterais. A escolha de cada componente, com os números dos datasheets, está em [docs/15-avaliacao-componentes.md](docs/15-avaliacao-componentes.md); a lista de compras, validada peça a peça, em [docs/19-lista-de-compras.md](docs/19-lista-de-compras.md).
 
 ```mermaid
 flowchart LR

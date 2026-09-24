@@ -71,7 +71,7 @@ trilhas de uma colocação que pode já ter mudado.
 | RF4 | a placa **vazada** sob a área da antena, deixando-a suspensa | ficha ME54BS13 V1.0.0, **7.4** |
 | RF5 | **5 mm** entre o receptor GNSS e qualquer componente de RF | u-blox MAX-F10S Integration Manual UBXDOC-963802114-12892, **4.4** |
 | RF6 | terra sob o módulo GNSS na primeira e na segunda camada, sem trilha de sinal cruzando por baixo nessas duas | u-blox MAX-F10S IM, **4.4** |
-| RF7 | a rede π do GNSS junto ao `RF_IN`, com a trilha mais curta possível | u-blox MAX-F10S IM, **4.4** |
+| RF7 | o **caminho de RF** do pino `RF_IN` até o contato da antena, passando pela rede π, dentro de **λ/10 em L1 (10,5 mm)**; cada shunt a menos de **λ/20 (5,3 mm)** do nó em que pendura | u-blox MAX-F10S IM, **4.4** ("as short as possible"); o limite é λ/10 e λ/20, calculados abaixo |
 | RF8 | as duas antenas o mais longe possível uma da outra | u-blox MAX-F10S IM, **4.4** |
 | RF9 | a **tabela de isolação** do módulo: **20 mm** de fonte chaveada, indutor de potência ou transformador; 20 mm de USB 3.0/HDMI/DDR/SDIO rápido; 15 mm de clock rápido de MCU ou PHY Ethernet; **25 mm** de display, câmera ou cabo FPC com fiação | ficha ME54BS13 V1.0.0, **7.2**, `Interference Isolation Rule` |
 | RF10 | **50 mm** entre dois módulos de rádio na mesma placa | ficha ME54BS13 V1.0.0, **7.2**, `Multiple Modules on the Same PCB` |
@@ -82,7 +82,7 @@ trilhas de uma colocação que pode já ter mudado.
 | AL5 | **footprint de filtro π reservado** junto ao pino de alimentação do módulo de rádio, por ele vir de fonte chaveada | ficha ME54BS13 V1.0.0, **7.2** |
 | GN1 | uma via de terra junto de **cada** pad de terra do módulo, e todo pad de terra de superfície ligado ao terra | ficha ME54BS13 V1.0.0, **7.2** |
 | GN2 | costura de vias de terra na borda a cada 5 mm no máximo | λ/10 a 2,44 GHz em FR-4 são 6,1 mm |
-| ME1 | a placa cabe na caixa com folga | [04](04-pcb-e-caixa.md) |
+| ME1 | a placa **cabe** dentro da caixa. Não é o que define o tamanho dela — placa e caixa são independentes —, é só a conferência de que uma entra na outra | [04](04-pcb-e-caixa.md) |
 | ME2 | altura dos componentes dentro da sombra da bateria e do display | [04](04-pcb-e-caixa.md#as-duas-sombras-display-e-bateria) |
 
 > [!CAUTION]
@@ -117,6 +117,29 @@ trilhas de uma colocação que pode já ter mudado.
 > Os PDF estão em [`datasheets/`](datasheets/), que o `.gitignore` mantém fora
 > deste repositório público; o que é versionado são as citações.
 
+### De onde saem os 10,5 mm do RF7
+
+A ficha não dá número: escreve "as short as possible". Um número tem de sair
+de física, e o que decide é quando a linha deixa de ser eletricamente curta.
+
+```text
+microstrip de 0,196 mm sobre 0,10 mm de FR-4 (a pilha assimetrica desta placa)
+eps_eff = (4,3+1)/2 + (4,3-1)/2 x (1 + 12 x 0,10/0,196)^-0,5 = 3,27
+lambda em L1 (1,575 GHz) = c / (f x raiz(eps_eff)) = 105,3 mm
+lambda/10 = 10,5 mm   -> o caminho inteiro, do pino ao contato da antena
+lambda/20 =  5,3 mm   -> o toco de cada shunt, que tem de se comportar como
+                         o capacitor concentrado com que a rede foi calculada
+```
+
+> [!WARNING]
+> **Este teste já cobrou a coisa errada.** Ele exigia que os **três**
+> elementos da rede π estivessem a menos de 5 mm do pino `RF_IN`. O `C301` é
+> o shunt do lado da **antena** — é o fim da rede por construção —, de modo
+> que uma rede π montada corretamente falhava por estar correta. E o limite
+> de 2 mm que os shunts chegaram a carregar era **invenção**: a ficha não dá
+> figura nenhuma. Agora o que se mede é o caminho, e o número vem da conta
+> acima.
+
 ### Por que RF3 não é uma zona proibida
 
 Uma zona proibida do KiCad proíbe **cobre**. A regra 7.4 da ficha do módulo
@@ -147,81 +170,63 @@ lado de cada número — sem ela a largura seria um chute.
 
 ## Resultado da posição
 
-Medido em 2026-09-24, na placa de **50 × 86 mm** e 112 peças, com 498 segmentos e 207 vias:
+Medido em 2026-09-24, na placa de **34 × 90 mm** com 116 peças, 744 segmentos
+e 256 vias:
 
 | Id | Medida | Situação |
 |---|---|---|
 | RF1 | a área da antena (**4,46 × 12,50 mm**) está livre de componente | cumprida |
-| RF3 | a peça alheia mais próxima da área da antena é o `R107`, a **5,7 mm** | cumprida |
-| RF6 | nenhuma trilha de sinal passa por baixo do receptor GNSS na face da frente; ali o plano de terra é contínuo | cumprida, imposta no roteador |
+| RF3 | a peça alheia mais próxima da área da antena é o `JP102`, a **5,6 mm**; o desacoplamento do próprio módulo fica mais perto de propósito (`C201` a 1,4 e `C210` a 3,4) | cumprida |
 | RF4 | a placa **é vazada** sob a área da antena | cumprida |
-| RF5 | o componente de RF alheio mais próximo do receptor GNSS está a **49,2 mm** | cumprida |
-| RF7 | rede π do GNSS: `C302` a 1,6 mm, `L301` a 1,8 mm, `C301` a 3,2 mm do `RF_IN` | cumprida |
-| RF8 | as duas antenas estão a **74,1 mm** de centro a centro, 2,4 quartos de onda de 2,44 GHz | cumprida |
-| AL1 | 1 de 25 capacitores além do limite: `C111` a 2,0 mm de `U101`, contra 2 mm | **marginal** |
-| AL2 | 2 segmentos do `VBAT` a 0,20 mm contra os 0,22 que a IPC-2221 pede para 0,8 A | **a rever** |
-| GN1 | os 95 pads de terra estão ligados; **70 (74 %)** por via própria ao plano interno | cumprida |
-| GN2 | **72 vias** de costura na borda, maior vão **3,5 mm** contra o limite de 5 | cumprida |
-| ME1 | a placa de **50 × 86** deixa 1,5 mm de cada lado na cavidade de 53 × 89 | cumprida |
+| RF5 | o componente de RF alheio mais próximo do receptor está a **51,9 mm** | cumprida |
+| RF6 | nenhuma trilha de sinal passa por baixo do receptor na face da frente | cumprida, imposta no roteador |
+| RF7 | caminho de RF do pino à antena de **8,2 mm**, dentro de λ/10 em L1 (10,5); `C302` a 1,7 e `C301` a 3,4 mm do seu nó | cumprida |
+| RF8 | as duas antenas estão a **75,0 mm** de centro a centro, 2,4 quartos de onda de 2,44 GHz | cumprida |
+| RF9 | chaveamento: `U101` a **24,1** de 20 mm. Display e cabo plano: `J402` a **31,3** de 25 mm | cumprida |
+| RF10 | os dois módulos de rádio a **51,9 mm**, acima dos 50 da ficha | cumprida |
+| AL1 | 24 capacitores dentro do limite; o pior de alta frequência a **1,72 mm** e o pior de reserva a **3,30** | cumprida |
+| AL2 | nenhum trecho de alimentação abaixo da largura da IPC-2221 | cumprida |
+| AL6 | nenhuma via sobre os 5 pads térmicos | cumprida |
+| GN1 | os **99** pads de terra de superfície estão ligados; **71 (72 %)** por via própria ao plano interno | cumprida |
+| GN2 | **72 vias** de costura na borda, maior vão **3,0 mm** contra o limite de 5 | cumprida |
+| ME1 | a placa de **34 × 90** cabe na cavidade com sobra | cumprida |
+| ME2 | nenhuma peça passa do teto da sombra em que está; **0 peças sem altura conhecida** | cumprida |
+| OP1 | nenhuma peça a menos de duas alturas do sensor de luz | cumprida |
+| **ME3** | **3 encapsulamentos em que a ficha e o footprint discordam** | **violada de propósito** |
 
-### A planta nova, e por que ela mudou
-
-O módulo de rádio saiu da borda direita, no meio da placa, para o **canto de
-baixo à direita**, que é o arranjo que a figura 1 da seção 7.5 da ficha chama
-de **"Best"**: antena na quina, sobre o vazio. O que isso comprou:
-
-| Medida | Antes | Depois |
-|---|---|---|
-| Separação entre as duas antenas | 65,7 mm (2,1 λ/4) | **84,9 mm (2,8 λ/4)** |
-| Peça alheia mais próxima da antena do rádio | **0,8 mm** | **5,7 mm** |
-| Placa vazada sob a antena | não | **sim** |
-| Faixa mais vazia da placa (ocupação) | 6,0 % em y 40–48 | **13,3 % em y 48–56** |
-| Faixa mais cheia | 63,2 % | 64,8 % |
-
-A memória, os sensores e o buzzer subiram para a faixa sob o display, que
-estava quase vazia e onde o teto de 2,6 mm os acomoda sem apertar nada; a
-energia ganhou a faixa larga que o módulo desocupou; as teclas encolheram
-para a esquerda para sair dos 5 mm em volta da antena.
-
-> [!NOTE]
-> **A área total não mudou**, e não podia: são 1.467 mm² de contorno de peça
-> numa placa de 5.335, ou 27,5 %. O tamanho da placa não é decidido pela
-> eletrônica e sim pelo **display**, de 40,08 × 61,80 mm, e pelo conector
-> dele. O que mudou foi a **distribuição**.
-
-### Os corpos 3D
-
-Das 113 peças, **85 usam o modelo STEP da própria biblioteca do KiCad**. Das
-28 restantes, 5 não têm corpo (o furo, os três pontos de teste e os pads do
-Tag-Connect), 1 veio do repositório aberto de modelos do KiCad (o QFN-28 do
-AEM10900) e **22 são desenhadas aqui** a partir do contorno do próprio
-footprint e de uma altura com fonte declarada. Os dois módulos são desenhados
-com substrato e blindagem separados, porque neles a forma diz alguma coisa:
-no ME54BS13 dá para ver que os **4,46 mm da antena** ficam fora da lata.
-Detalhe em [`cad/3d/LEIAME.md`](cad/3d/LEIAME.md).
-
-**Nem a MinewSemi nem a u-blox publicam STEP**; o SnapEDA e o
-ComponentSearchEngine respondem 403 a requisição automática. Quem tiver o
-arquivo põe em `cad/3d/real/` com o nome do footprint, e ele vence a caixa
-desenhada sem mais nada a mudar.
+> [!CAUTION]
+> **O `ME3` falha porque dois land patterns são de outra peça.** O
+> `USB_C_Receptacle_Palconn_UTC16-G` desenha 8,94 × 7,32 contra os **9,99 ×
+> 8,58** do Molex 2036150003 da lista de compras, e o `Hirose_FH12-10S-0.5SH`
+> desenha 8,10 de largura contra os **9,90** do FH28-10S-0.5SH. O terceiro, o
+> buzzer, **foi corrigido**: o footprint em uso era do CPT-9019S, redondo de
+> 9 mm, no lugar do CPT-1117-83-SMT retangular de 11,0 × 9,0 × 1,7.
+>
+> Os dois que sobraram não foram consertados de propósito. Reconstruir land
+> pattern de USB-C a partir de desenho **renderizado** é o palpite que esta
+> conferência existe para pegar, e nenhuma das duas peças está na biblioteca
+> do KiCad 8. O que resolve é o arquivo do fabricante.
 
 ## Resultado do roteamento
 
 > [!IMPORTANT]
-> **O roteamento está pela metade, e isso é o que o número diz.** O
-> roteador fechou **117 ligações**; o KiCad ainda conta **261 sem trilha**,
-> das quais a maior parte é de terra e some no primeiro preenchimento de
-> zona. O que está desenhado passa em todas as regras; o que falta, falta.
+> **O roteamento está pela metade, e isso é o que o número diz.** O roteador
+> fechou **121 ligações** e o KiCad ainda conta **105 sem trilha**, agora com
+> as malhas preenchidas — ou seja, esse 105 é real, não é o artefato de
+> zona vazia que a versão anterior deste documento reportava como 261. O que
+> está desenhado passa em todas as regras; o que falta, falta.
 
 | Medida | Valor |
 |---|---|
 | Camadas de roteamento | **3**: `F.Cu`, `In2.Cu` e `B.Cu`; `In1.Cu` é plano de terra |
-| Segmentos | 498 |
-| Vias | 207, sendo **60** de pad de terra ao plano interno, **54** de costura na borda e o resto de troca de camada |
-| Ligações de sinal e alimentação fechadas | **114 ligações**, de 498 segmentos |
+| Segmentos | **744** |
+| Vias | **256**, sendo 71 de pad de terra ao plano interno, 72 de costura na borda e o resto de troca de camada |
+| Ligações fechadas | **121** |
+| Ligações sem trilha | **105** |
 | Redes deixadas de fora de propósito | `RF_IN` e `RF_ANT` |
 | **Erros de regra de projeto do KiCad** | **0** |
 | Conferência geométrica independente | **0** pares perto demais |
+| Traçado | tronco ortogonal com chanfro de 45° nos cantos |
 
 ### Por que `RF_IN` e `RF_ANT` não são roteadas
 
