@@ -25,6 +25,7 @@ roteadas**, em KiCad 8, gerados a partir dos documentos de
 | `gnssbike-2d.svg` | as quatro camadas numa folha só, para olhar rápido |
 | `gnssbike-3d-frente.png`, `-tras.png`, `-angulo.png` | a placa em 3D |
 | `gnssbike-3d-montagem.png` | a pilha aberta: display em cima, placa, célula embaixo |
+| `gnssbike-montagem.pdf` | **o desenho de montagem**: cada peça com o seu designador, frente e verso |
 
 ## O esquemático
 
@@ -246,6 +247,26 @@ outro rótulo, de preferência fora do contorno de outra peça.
 | Altura do texto | 0,7 mm, traço 0,1 | **0,8 mm, traço 0,15** (mínimo de fábrica) |
 | Pares sobrepostos | **37** | **0**, medidos no export do KiCad |
 | Referências visíveis | 128, uma delas `REF**` | **127** (o `REF**` do furo foi escondido) |
+
+### O desenho de montagem não sai de camada nenhuma do KiCad
+
+Nem a serigrafia nem o `F.Fab` dão um desenho de montagem legível desta placa,
+e as duas razões são diferentes.
+
+A **serigrafia** é serigrafia: obedece à fabricação, 0,6 mm de texto, e 127
+designadores numa placa de 34 × 90 mm a 48 % de ocupação não cabem em volta
+das peças sem cair um sobre o outro ou se afastar tanto da peça que deixam de
+nomear alguma coisa.
+
+O **`F.Fab`** carrega o que cada footprint da biblioteca resolveu pôr lá, no
+tamanho que o autor daquele footprint escolheu, mais o valor — então imprime
+`TP110` a 1,0 mm ao lado de `100 nF` a 0,5 e os dois por cima do contorno.
+
+Desenho de montagem não é camada de cobre. É desenho, e pode fazer a única
+coisa que a serigrafia não pode: pôr o rótulo onde se lê e traçar uma **linha
+de chamada** até a peça. É o que o [`montagem.py`](montagem.py) faz — rótulo
+dentro do contorno quando cabe, e fora com ponto e linha quando não cabe.
+Das 127 peças, **92 usam chamada**.
 
 ### Por que a conferência é feita no export, e não aqui
 

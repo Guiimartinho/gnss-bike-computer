@@ -100,7 +100,9 @@ import parts as _P  # noqa: E402
 
 _fp([t[0] for t in _P.TESTE] + ["TP201", "TP202", "TP203"],
     "TestPoint:TestPoint_Pad_D1.0mm", "EXATO", "")
-_fp(["J302", "J103", "J104", "J105"], "gnssbike:ContatoMola_2x2mm_P3mm",
+_fp("J302", "Connector_Coaxial:U.FL_Hirose_U.FL-R-SMT-1_Vertical", "EXATO",
+    "conector da antena GNSS: 50 ohm coaxial, no lugar do contato de mola")
+_fp(["J103", "J104", "J105"], "gnssbike:ContatoMola_2x2mm_P3mm",
     "GERADO",
     "dois pads de 2,0 x 2,0 mm a 3,0 mm de passo, sem pasta: a mola encosta, nao se solda")
 

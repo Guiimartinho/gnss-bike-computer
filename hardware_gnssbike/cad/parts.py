@@ -328,13 +328,25 @@ add("U302", "TI TXU0204BQAR", [
 
 add("E301", "TE L000670-01", [(1, "FEED", "passive", R), (2, "GND", "passive", B)],
     confirmed=False, note="antena linear L1/L5 na borda de cima")
-add("J302", "contato de mola, 2 vias", [
+# The GNSS antenna arrives on a u.FL, not on a spring contact. The line it
+# feeds is the L1 + L5 path of the MAX-F10S, and 4.4 of the integration
+# manual asks for 50 ohm on ALL of it: a pair of gold pads that a leaf
+# spring presses on has no defined impedance at 1,2 and 1,6 GHz, no defined
+# return path and a contact resistance that changes with how the case was
+# closed. A u.FL is a 50 ohm coaxial transition, it is what every GNSS
+# module reference design uses for an external element, and it lets the
+# antenna be a cable assembly instead of a mechanical fit.
+#
+# It costs the board a 2,6 x 2,6 mm part and it costs the case a cable
+# instead of a contact - which is a mechanical decision, and it is written
+# here because nothing else records it.
+add("J302", "Hirose U.FL-R-SMT-1", [
     (1, "FEED", "passive", R), (2, "GND", "passive", B),
 ], confirmed=False,
-    note="onde a antena da parede da caixa encosta na placa. 04:271 decidiu "
-         "contatos de mola e 04:661 registrava que a area deles nao estava "
-         "dimensionada; sao dois pads de 2,0 x 2,0 mm a 3,0 mm de passo, "
-         "sem pasta. CONFERIR a mola escolhida antes de fabricar")
+    note="conector coaxial u.FL da antena GNSS L1+L5. Substitui o contato de "
+         "mola que 04:271 tinha decidido: mola nao tem impedancia definida, "
+         "e a 4.4 do manual do MAX-F10S pede 50 ohm em TODO o caminho de RF. "
+         "CONFERIR o cabo e o conector da outra ponta antes de fabricar")
 passive("FB301", "600 R @100 MHz", "ferrite do 1V8 junto do receptor")
 passive("C301", "2,2 pF", "paralelo da rede em pi, valor de partida")
 passive("C302", "2,2 pF", "paralelo da rede em pi, valor de partida")

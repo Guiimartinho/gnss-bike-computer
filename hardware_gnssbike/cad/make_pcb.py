@@ -192,7 +192,7 @@ BORDA_FIXA: dict[str, tuple[float, float, int]] = {
     # millimetres from the pi network, which is what "linha de 50 ohm, poucos
     # mm" in 04-pcb-e-caixa.md asks for. To the right of the receiver, so the
     # pi network sits between the two.
-    "J302": (19.5, 10.0, 0),
+    "J302": (19.5, 11.2, 0),
     # The pi network, IN LINE between the antenna contact and the receiver's
     # RF_IN pin, and fixed here rather than left to the netlist placer -
     # which put it 10.5 mm away, on a rule that asks for "as short as
@@ -510,9 +510,11 @@ def rotulos(lugar: dict) -> dict[str, tuple[float, float, int]]:
     """
     postas: list[tuple] = []
     corpos = []
+    ordem_corpos = []
     for ref, (x, y, ang, _a) in lugar.items():
         bx = caixa(ref, ang)
         corpos.append((x + bx[0], y + bx[1], x + bx[2], y + bx[3]))
+        ordem_corpos.append(ref)
     saida: dict[str, tuple[float, float, int]] = {}
     # biggest parts first: they have the most room around them and the most
     # to lose from a label landing in the middle of a fine pitch package
@@ -528,31 +530,46 @@ def rotulos(lugar: dict) -> dict[str, tuple[float, float, int]]:
         if rot:
             meia_w, meia_h = meia_h, meia_w
         melhor = None
-        for passo in (0.0, 0.3, 0.7, 1.2, 1.8, 2.6, 3.6):
-            for dx, dy in ((0.0, bx[1] - meia_h - 0.25 - passo),
-                           (0.0, bx[3] + meia_h + 0.25 + passo),
-                           (bx[2] + meia_w + 0.3 + passo, 0.0),
-                           (bx[0] - meia_w - 0.3 - passo, 0.0),
-                           (bx[2] + meia_w + 0.3 + passo,
-                            bx[1] - meia_h - 0.25 - passo),
-                           (bx[0] - meia_w - 0.3 - passo,
-                            bx[1] - meia_h - 0.25 - passo),
-                           (bx[2] + meia_w + 0.3 + passo,
-                            bx[3] + meia_h + 0.25 + passo),
-                           (bx[0] - meia_w - 0.3 - passo,
-                            bx[3] + meia_h + 0.25 + passo)):
+        # PROXIMIDADE primeiro, e so depois qualquer outra coisa.
+        #
+        # A versao anterior preferia um lugar livre do contorno de QUALQUER
+        # peca a um lugar perto da propria. Numa placa a 48% de ocupacao isso
+        # empurra o rotulo para milimetros de distancia, e o resultado e uma
+        # nuvem de designadores em que nenhum aponta para nada - que e
+        # exatamente o que se via no desenho de montagem. Um rotulo sobre o
+        # contorno da PROPRIA peca continua dizendo qual peca e; um rotulo a
+        # 4 mm dela nao diz.
+        #
+        # Entao: candidatos do mais perto para o mais longe, e o primeiro que
+        # nao cai sobre OUTRO rotulo ganha. Cair sobre contorno so desempata
+        # entre candidatos da mesma distancia.
+        for passo in (0.0, 0.25, 0.5, 0.8, 1.2, 1.7, 2.3):
+            anel = []
+            for dx, dy in ((0.0, bx[1] - meia_h - 0.2 - passo),
+                           (0.0, bx[3] + meia_h + 0.2 + passo),
+                           (bx[2] + meia_w + 0.25 + passo, 0.0),
+                           (bx[0] - meia_w - 0.25 - passo, 0.0),
+                           (bx[2] + meia_w + 0.25 + passo,
+                            bx[1] - meia_h - 0.2 - passo),
+                           (bx[0] - meia_w - 0.25 - passo,
+                            bx[1] - meia_h - 0.2 - passo),
+                           (bx[2] + meia_w + 0.25 + passo,
+                            bx[3] + meia_h + 0.2 + passo),
+                           (bx[0] - meia_w - 0.25 - passo,
+                            bx[3] + meia_h + 0.2 + passo)):
                 cx_, cy_ = x + dx, y + dy
                 if not (0.3 < cx_ < M.W - 0.3 and 0.3 < cy_ < M.H - 0.3):
                     continue
                 t = _caixa_texto(ref, cx_, cy_, rot)
                 if any(_cruza(t, q) for q in postas):
                     continue
-                livre_de_peca = not any(_cruza(t, c) for c in corpos)
-                if melhor is None or (livre_de_peca and not melhor[2]):
-                    melhor = ((dx, dy), t, livre_de_peca)
-                if livre_de_peca:
-                    break
-            if melhor is not None and melhor[2]:
+                # quantos contornos ALHEIOS ele pisa: so para desempatar
+                alheios = sum(1 for r2, c in zip(ordem_corpos, corpos)
+                              if r2 != ref and _cruza(t, c))
+                anel.append((alheios, (dx, dy), t))
+            if anel:
+                anel.sort(key=lambda q: q[0])
+                melhor = (anel[0][1], anel[0][2], anel[0][0] == 0)
                 break
         if melhor is None:
             # nothing anywhere: leave it on the part and say so by putting it
