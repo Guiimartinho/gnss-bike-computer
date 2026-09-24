@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import pathlib
+import re
 import subprocess
 import sys
 
@@ -205,6 +206,47 @@ def main() -> int:
              if next((p[2] for p in fp_load.kids(f, "property")
                       if p[1] == "Reference"), "") == "REF**"]
     check(len(furos) == 1, f"um furo de fixacao ({len(furos)})")
+
+    # --- a serigrafia, medida no que o KiCad DESENHA ---------------------
+    # Not in what this project believes it drew. make_pcb has a model of how
+    # wide a label is, and that model was 30% too narrow: it reported zero
+    # collisions while the exported silkscreen had 35 pairs of reference
+    # designators printed on top of each other. The only trustworthy source
+    # is the export, where every label carries its own textLength and its
+    # own font size.
+    import tempfile
+
+    sobrepostos: list[tuple[str, str]] = []
+    n_textos = 0
+    with tempfile.TemporaryDirectory() as tmp:
+        for camada in ("F.SilkS", "B.SilkS"):
+            fora = pathlib.Path(tmp) / (camada.replace(".", "_") + ".svg")
+            r = subprocess.run(
+                [str(KICAD), "pcb", "export", "svg", "--output", str(fora),
+                 "--layers", camada, "--exclude-drawing-sheet", str(PCB)],
+                capture_output=True, text=True)
+            if r.returncode != 0 or not fora.exists():
+                continue
+            texto = fora.read_text(encoding="utf-8")
+            itens = []
+            for m in re.finditer(
+                    r'<text x="([-\d.]+)" y="([-\d.]+)"[^>]*?'
+                    r'textLength="([-\d.]+)" font-size="([-\d.]+)"[^>]*>'
+                    r'([^<]*)</text>', texto, re.S):
+                # the SVG font-size is the em box, 4/3 of the glyph height
+                itens.append((m.group(5), float(m.group(1)), float(m.group(2)),
+                              float(m.group(3)), float(m.group(4)) * 0.75))
+            n_textos += len(itens)
+            for i, a in enumerate(itens):
+                for b in itens[i + 1:]:
+                    if abs(a[1] - b[1]) < (a[3] + b[3]) / 2 and \
+                            abs(a[2] - b[2]) < (a[4] + b[4]) / 2:
+                        sobrepostos.append((a[0], b[0]))
+    check(not sobrepostos,
+          f"nenhuma referencia de serigrafia sobre outra ({len(sobrepostos)} "
+          f"de {n_textos} textos nas duas faces)")
+    for a, b in sobrepostos[:6]:
+        print(f"      {a} e {b}")
 
     print()
     print(f"  {len(na_placa)} pecas na placa, {len(FPS.FORA_DA_PLACA)} fora dela, "

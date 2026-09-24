@@ -459,7 +459,13 @@ def tam(ref: str, ang: int) -> tuple[float, float]:
 # identifies nothing.
 TEXTO_ALT = 0.8
 TEXTO_TRACO = 0.15
-TEXTO_LARG = 0.75          # width of a character as a fraction of its height
+# Width of a character as a fraction of the text height. 1.06, measured in
+# KiCad's own SVG export and not guessed: "C101" at 0.8 mm comes out with
+# textLength 3.38, which is 0.845 per character. At the 0.75 this carried,
+# every label was modelled 30% narrower than it prints, this file reported
+# zero collisions and the exported silkscreen had 35 pairs on top of each
+# other.
+TEXTO_LARG = 1.06
 TEXTO_FOLGA = 0.12         # between two labels
 
 
@@ -1246,11 +1252,25 @@ def main() -> int:
         corpo = com_redes(corpo, ref, por_pad, numeros)
         px, py = P_(x, y)
         camada = "B.Cu" if atras else "F.Cu"
+        # rotulos() picks the offset in the BOARD's frame, and KiCad turns a
+        # footprint property by the footprint's own angle before drawing it.
+        # Written straight through, a label placed "above" a part rotated 90
+        # degrees came out beside it: measured in the exported silkscreen,
+        # 38 pairs still overlapped while this file believed there were none.
+        # So the world offset is turned back into the footprint's frame,
+        # with the same transform pad_global() uses, and mirrored on the back
+        # face for the same reason the pads are.
+        _r = math.radians(ang)
+        _dx, _dy = desloca[ref]
+        _rot = (_dx * math.cos(_r) - _dy * math.sin(_r),
+                _dx * math.sin(_r) + _dy * math.cos(_r))
+        if atras:
+            _rot = (-_rot[0], _rot[1])
         cab = (f'\t(footprint "{nome_fp}"\n\t\t(layer "{camada}")\n'
                f'\t\t(at {px:.4f} {py:.4f} {ang})\n'
                f'\t\t(uuid "{uid("fp", ref)}")\n'
                f'\t\t(property "Reference" "{ref}"\n'
-               f'\t\t\t(at {desloca[ref][0]:.4f} {desloca[ref][1]:.4f} 0)\n'
+               f'\t\t\t(at {_rot[0]:.4f} {_rot[1]:.4f} 0)\n'
                f'\t\t\t(layer "{"B" if atras else "F"}.SilkS")\n'
                f'\t\t\t(uuid "{uid("fpref", ref)}")\n'
                f'\t\t\t(effects (font (size {TEXTO_ALT} {TEXTO_ALT}) '

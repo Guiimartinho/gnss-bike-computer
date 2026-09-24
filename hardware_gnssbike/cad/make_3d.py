@@ -208,6 +208,85 @@ def render(tris: np.ndarray, cols: np.ndarray, largura: int, altura: int,
     return Image.fromarray(img.astype(np.uint8))
 
 
+# Where the board's two faces actually are in the GLB, measured and not
+# assumed: kicad-cli puts the substrate from z 0 to 0.820 and the 35 um of
+# copper on top of it, so the front surface a part stands on is 0.855 and the
+# back one is -0.035. Everything here used 0 and -0.8, which sank every front
+# part 0.855 mm INTO the board and put the silkscreen inside it, where the
+# copper pour hid it: in the 3D view not one reference designator was visible
+# anywhere the pour reached, which is almost everywhere.
+FRENTE_Z = 0.855
+VERSO_Z = -0.035
+
+KICAD_CLI = pathlib.Path(r"D:\KiCAD\bin\kicad-cli.exe")
+SILK_TRACO = 0.15          # a largura do traco da serigrafia, em mm
+SILK_COR = (0.92, 0.92, 0.89)
+
+
+def serigrafia() -> tuple[np.ndarray, np.ndarray]:
+    """The silkscreen of both faces, as flat geometry on the board.
+
+    kicad-cli's GLB export has no silkscreen option, so a 3D view of this
+    board showed a bare green rectangle with parts on it and not one
+    reference designator - which is the one thing silkscreen exists for.
+
+    The SVG export does carry it, and carries it as the simplest possible
+    thing: 6.484 `<path d="M x y L x y"/>`, one per stroke, glyphs included.
+    No font is needed and nothing is approximated. Exported over the FULL
+    page, the SVG's millimetres are the board file's own coordinates, so the
+    segments drop straight into the same frame the part bodies use.
+    """
+    import re
+    import subprocess
+    import tempfile
+
+    if not KICAD_CLI.exists():
+        return np.zeros((0, 3, 3)), np.zeros((0, 3))
+    tris: list[list] = []
+    with tempfile.TemporaryDirectory() as tmp:
+        for camada, z in (("F.SilkS", FRENTE_Z + 0.005),
+                          ("B.SilkS", VERSO_Z - 0.005)):
+            fora = pathlib.Path(tmp) / (camada.replace(".", "_") + ".svg")
+            r = subprocess.run(
+                [str(KICAD_CLI), "pcb", "export", "svg", "--output", str(fora),
+                 "--layers", camada, "--exclude-drawing-sheet",
+                 str(HERE / "gnssbike.kicad_pcb")],
+                capture_output=True, text=True)
+            if r.returncode != 0 or not fora.exists():
+                continue
+            texto = fora.read_text(encoding="utf-8")
+            h = SILK_TRACO / 2.0
+            for m in re.finditer(r'<path d="M([-\d.]+) ([-\d.]+)\s*'
+                                 r'L([-\d.]+) ([-\d.]+)', texto):
+                x0, y0, x1, y1 = (float(m.group(i)) for i in (1, 2, 3, 4))
+                dx, dy = x1 - x0, y1 - y0
+                comp = math.hypot(dx, dy)
+                if comp < 1e-9:
+                    dx, dy, comp = 1.0, 0.0, 1.0
+                # a quad of SILK_TRACO wide along the segment
+                nx, ny = -dy / comp * h, dx / comp * h
+                a = (x0 + nx, y0 + ny, z)
+                b = (x1 + nx, y1 + ny, z)
+                c = (x1 - nx, y1 - ny, z)
+                d = (x0 - nx, y0 - ny, z)
+                tris.append([a, b, c])
+                tris.append([a, c, d])
+            for m in re.finditer(r'<circle cx="([-\d.]+)" cy="([-\d.]+)" '
+                                 r'r="([-\d.]+)"', texto):
+                cx, cy, rr = (float(m.group(i)) for i in (1, 2, 3))
+                n = 10
+                for i in range(n):
+                    a1 = 2 * math.pi * i / n
+                    a2 = 2 * math.pi * (i + 1) / n
+                    tris.append([(cx, cy, z),
+                                 (cx + rr * math.cos(a1), cy + rr * math.sin(a1), z),
+                                 (cx + rr * math.cos(a2), cy + rr * math.sin(a2), z)])
+    if not tris:
+        return np.zeros((0, 3, 3)), np.zeros((0, 3))
+    t = np.array(tris, dtype=np.float64)
+    return t, np.array([SILK_COR] * len(t))
+
+
 def ler_wrl(caminho: pathlib.Path) -> list[tuple[np.ndarray, tuple]]:
     """The shapes of one of our own VRML bodies, in millimetres.
 
@@ -303,10 +382,10 @@ def pecas_da_caixa(afastar: float = 0.0) -> tuple[np.ndarray, np.ndarray]:
     cols: list[np.ndarray] = []
     for _nome, x0, y0, x1, y1, vao, esp, atras, cor, _fonte in MONTAGEM:
         if atras:
-            z1 = -0.8 - vao - afastar
+            z1 = VERSO_Z - vao - afastar
             z0 = z1 - esp
         else:
-            z0 = vao + afastar
+            z0 = FRENTE_Z + vao + afastar
             z1 = z0 + esp
         cantos = ((x0, y0), (x1, y0), (x1, y1), (x0, y1))
         base = [(px, py, z0) for px, py in cantos]
@@ -375,7 +454,8 @@ def caixas_das_pecas() -> tuple[np.ndarray, np.ndarray]:
             vy, vz = v[..., 1], v[..., 2]
             return np.stack([x + vx * ca + vy * sa,
                              y - vx * sa + vy * ca,
-                             (-0.8 - vz) if atras else vz], axis=-1)
+                             (VERSO_Z - vz) if atras else (FRENTE_Z + vz)],
+                            axis=-1)
 
         arq = pasta3d / (nome.split(":", 1)[1] + ".wrl")
         formas = ler_wrl(arq) if arq.exists() else []
@@ -413,6 +493,10 @@ def main() -> int:
     tris, cols = triangulos(j, bina)
     extra_t, extra_c = caixas_das_pecas()
     n_corpos = len(extra_t)
+    silk_t, silk_c = serigrafia()
+    if len(silk_t):
+        extra_t = np.concatenate([extra_t, silk_t])
+        extra_c = np.concatenate([extra_c, silk_c])
     if len(extra_t):
         # the boxes are in millimetres with y growing downward, as the board
         # file has them; the GLB is in metres with y already up
@@ -421,7 +505,8 @@ def main() -> int:
         tris = np.concatenate([tris, extra_t])
         cols = np.concatenate([cols, extra_c])
     print(f"{len(tris)} triangulos, {len(j.get('meshes', []))} malhas, "
-          f"{n_corpos} corpos desenhados aqui")
+          f"{n_corpos} corpos e {len(silk_t)} tracos de serigrafia "
+          "desenhados aqui")
 
     for nome, az, el, w, h in (("gnssbike-3d-frente.png", 0.0, 90.0, 1100, 1800),
                                ("gnssbike-3d-angulo.png", 28.0, 38.0, 1600, 1300),

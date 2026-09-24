@@ -29,18 +29,32 @@ PCB = HERE / "gnssbike.kicad_pcb"
 # are on the back - the buzzer, the battery connector, the barometer and the
 # thermistor - and on the back page they were unnamed.
 COBRE = (
-    ("F.Cu", "F.SilkS", "1 - F.Cu: frente"),
-    ("In1.Cu", "F.SilkS", "2 - In1.Cu: plano de terra"),
-    ("In2.Cu", "F.SilkS", "3 - In2.Cu: roteamento interno"),
-    ("B.Cu", "B.SilkS", "4 - B.Cu: verso"),
+    ("F.Cu", "", "1 - F.Cu: frente"),
+    ("In1.Cu", "", "2 - In1.Cu: plano de terra"),
+    ("In2.Cu", "", "3 - In2.Cu: roteamento interno"),
+    ("B.Cu", "", "4 - B.Cu: verso"),
 )
-CONTEXTO = "Edge.Cuts,F.Fab"
+# The silkscreen gets pages of its own, and it has to: KiCad draws it in a
+# pale cream that is unreadable over the red of a filled copper pour, which
+# is exactly what these pages are. On white, with only the outline under it,
+# it is the assembly drawing - the sheet a person uses to find R602 on a
+# board - and that is the only thing silkscreen is for.
+# Silkscreen ALONE, and in black. F.Fab carries the library footprint's own
+# copy of every reference plus the value, so with it the page prints each
+# designator twice, once large and once small, over each other. And KiCad's
+# silkscreen cream on white paper is barely darker than the paper.
+MONTAGEM = (
+    ("F.SilkS", "5 - montagem da frente: serigrafia"),
+    ("B.SilkS", "6 - montagem do verso: serigrafia"),
+)
+CONTEXTO = "Edge.Cuts"
 
 
-def exporta(saida: pathlib.Path, camadas: str) -> None:
+def exporta(saida: pathlib.Path, camadas: str, pb: bool = False) -> None:
     r = subprocess.run(
         [str(KICAD), "pcb", "export", "pdf", "--output", str(saida),
-         "--layers", camadas, str(PCB)],
+         "--layers", camadas]
+        + (["--black-and-white"] if pb else []) + [str(PCB)],
         capture_output=True, text=True)
     if r.returncode != 0 or not saida.exists():
         raise SystemExit(f"kicad-cli falhou em {camadas}: {r.stderr.strip()}")
@@ -63,12 +77,16 @@ def main() -> int:
     paginas = []
     for camada, silk, rotulo in COBRE:
         p = tmp / (camada.replace(".", "_") + ".pdf")
-        exporta(p, camada + "," + silk + "," + CONTEXTO)
+        exporta(p, camada + ("," + silk if silk else "") + "," + CONTEXTO)
+        paginas.append((p, rotulo))
+    for i, (camadas, rotulo) in enumerate(MONTAGEM):
+        p = tmp / ("montagem%d.pdf" % i)
+        exporta(p, camadas + "," + CONTEXTO, pb=True)
         paginas.append((p, rotulo))
     todas = tmp / "todas.pdf"
     exporta(todas, ",".join(c for c, _s, _r in COBRE) +
             ",F.SilkS,B.SilkS," + CONTEXTO)
-    paginas.append((todas, "5 - as quatro camadas juntas"))
+    paginas.append((todas, "7 - as quatro camadas juntas"))
 
     for p, rotulo in paginas:
         d = fitz.open(p)

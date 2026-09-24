@@ -217,8 +217,23 @@ outro rótulo, de preferência fora do contorno de outra peça.
 | Medida | Antes | Agora |
 |---|---|---|
 | Altura do texto | 0,7 mm, traço 0,1 | **0,8 mm, traço 0,15** (mínimo de fábrica) |
-| Pares sobrepostos | **37** | **0** |
+| Pares sobrepostos | **37** | **0**, medidos no export do KiCad |
 | Referências visíveis | 128, uma delas `REF**` | **127** (o `REF**` do furo foi escondido) |
+
+### Por que a conferência é feita no export, e não aqui
+
+O `make_pcb.py` tem um modelo de quanto espaço um rótulo ocupa, e ele estava
+**30 % estreito**: 0,75 do tamanho do texto por caractere, contra os **1,06**
+que o `textLength` do próprio KiCad mede. Com isso ele reportava **zero**
+sobreposições enquanto a serigrafia exportada tinha **35 pares** um sobre o
+outro. Havia um segundo erro por trás: o deslocamento era escolhido no
+referencial da **placa**, e o KiCad gira uma propriedade de footprint pelo
+ângulo do próprio footprint — um rótulo posto "acima" de uma peça girada 90°
+saía ao lado dela.
+
+Por isso o `check_pcb.py` **exporta as duas camadas de serigrafia em SVG** e
+conta as sobreposições nos retângulos que o KiCad escreve, com o `textLength`
+e o tamanho de fonte de cada texto. Modelo interno não confere modelo interno.
 
 ## Três footprints eram de outra peça
 
