@@ -127,6 +127,24 @@ BORDA_FIXA: dict[str, tuple[float, float, int]] = {
     "U505": (2.5, 12.0, 0),       # ambient light, under its window
     "D601": (51.0, 10.2, 0),      # RGB LED, under its light pipe
     "U301": (27.5, 13.8, 0),      # GNSS receiver, just below the antenna zone
+    # Where the antenna in the case wall lands: just under its keep-out, a
+    # few millimetres from the pi network, which is what "linha de 50 ohm,
+    # poucos mm" in 04-pcb-e-caixa.md asks for.
+    "J302": (14.0, 10.0, 0),
+    # The three groups of solar modules, down the left edge in the bands the
+    # display and battery connectors leave free. They carry the harvester's
+    # SRC node, which is high impedance and low voltage, so they sit as close
+    # to the harvester's band as the edge allows.
+    # In the free bands of the two edges, computed rather than guessed: the
+    # left edge is taken by the light sensor, the two flat cables, the M2
+    # hole, the battery connector and a key, which leaves y 66 to 77. The
+    # other two go on the right edge, clear of the 5 mm band around the
+    # radio antenna, which starts at y 70. All three stay within about
+    # 15 mm of the harvester: SRC is a high impedance node coming off a
+    # solar cell and a long run of it picks up everything.
+    "J103": (2.5, 71.4, 90),
+    "J104": (52.5, 58.0, 90),
+    "J105": (52.5, 66.0, 90),
 }
 
 

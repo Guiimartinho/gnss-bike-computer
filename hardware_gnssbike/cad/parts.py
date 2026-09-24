@@ -264,6 +264,17 @@ for n in ("TP201", "TP202", "TP203"):
 for n, v in (("C201", "100 nF"), ("C210", "4,7 uF")):
     passive(n, v)
 
+# Onde os tres grupos de modulos solares encostam na placa. Eles estao na
+# caixa - dois na face inclinada e dois em cada chanfro - e 04:388 os liga
+# "em 3 grupos, mola ou FPC". Sem estes pads a rede SRC nao saia do
+# colhedor: os seis modulos ficavam sem destino.
+for _n in ("J103", "J104", "J105"):
+    add(_n, "contato de mola, 2 vias", [
+        (1, "P", "passive", R), (2, "N", "passive", B),
+    ], confirmed=False,
+        note="um grupo de dois modulos KXOB25-05X3F; dois pads de 2,0 x 2,0 mm "
+             "a 3,0 mm de passo, sem pasta. CONFERIR a mola antes de fabricar")
+
 # ---------------------------------------------------------------- folha 3
 # MAX-F10S data sheet UBXDOC-963802114-12732 R03, table 10, page 9.
 add("U301", "u-blox MAX-F10S", [
@@ -296,6 +307,13 @@ add("U302", "TI TXU0204BQAR", [
 
 add("E301", "TE L000670-01", [(1, "FEED", "passive", R), (2, "GND", "passive", B)],
     confirmed=False, note="antena linear L1/L5 na borda de cima")
+add("J302", "contato de mola, 2 vias", [
+    (1, "FEED", "passive", R), (2, "GND", "passive", B),
+], confirmed=False,
+    note="onde a antena da parede da caixa encosta na placa. 04:271 decidiu "
+         "contatos de mola e 04:661 registrava que a area deles nao estava "
+         "dimensionada; sao dois pads de 2,0 x 2,0 mm a 3,0 mm de passo, "
+         "sem pasta. CONFERIR a mola escolhida antes de fabricar")
 passive("FB301", "600 R @100 MHz", "ferrite do 1V8 junto do receptor")
 passive("C301", "2,2 pF", "paralelo da rede em pi, valor de partida")
 passive("C302", "2,2 pF", "paralelo da rede em pi, valor de partida")

@@ -97,6 +97,9 @@ _fp("J402", "Connector_FFC-FPC:TE_0-1734839-5_1x05-1MP_P0.5mm_Horizontal",
     "5 vias, passo 0,5 mm. A peca e o Molex 503480-0500, que a JDI nomeia no "
     "desenho de contorno; a KiCad nao tem essa serie")
 _fp(["TP201", "TP202", "TP203"], "TestPoint:TestPoint_Pad_D1.0mm", "EXATO", "")
+_fp(["J302", "J103", "J104", "J105"], "gnssbike:ContatoMola_2x2mm_P3mm",
+    "GERADO",
+    "dois pads de 2,0 x 2,0 mm a 3,0 mm de passo, sem pasta: a mola encosta, nao se solda")
 
 # ---------------------------------------------------------------- interface
 _fp(["SW601", "SW602", "SW603"], "Button_Switch_SMD:SW_SPST_B3S-1000", "EXATO",
@@ -452,8 +455,11 @@ def trocar_modelo(nome: str, corpo: str) -> str:
     base = nome.split(":", 1)[1]
     pasta = _pl.Path(__file__).resolve().parent / "3d"
     pasta.mkdir(exist_ok=True)
+    est = estilo_de(nome)
     if nome in DESENHADOS:
         DESENHADOS[nome](pasta / (base + ".wrl"), tam[0], tam[1], alt)
+    elif est:
+        wrl_ci(pasta / (base + ".wrl"), tam[0], tam[1], alt, est)
     else:
         wrl_caixa(pasta / (base + ".wrl"), tam[0], tam[1], alt, cor=cor_de(nome))
     CORPO_TODOS[nome] = (tam[0], tam[1], alt)
@@ -628,6 +634,93 @@ DESENHADOS = {
 }
 
 
+def wrl_ci(caminho, w: float, h: float, alt: float, estilo: str) -> None:
+    """A moulded package with the shape its family actually has.
+
+    A board where every part is the same black cuboid tells you nothing. What
+    distinguishes these packages at a glance is where the metal is: a QFN
+    shows its exposed pad and a ring of lead flags underneath, a SOIC has
+    gull-wing leads standing out on two sides, a SOT has three of them, and a
+    wafer-level package is bare silicon with a grid of solder balls. All of
+    it is drawn from the same outline the footprint already carries, so
+    nothing here is invented dimension - only which part of it is metal.
+    """
+    METAL = (0.72, 0.73, 0.75)
+    EPOXI = (0.09, 0.09, 0.10)
+    SILICIO = (0.24, 0.21, 0.28)
+    partes = []
+
+    if estilo == "wlp":
+        # bare die, with the ball grid under it
+        partes.append(_bloco(-w / 2, -h / 2, 0.12, w / 2, h / 2, alt, SILICIO))
+        passo = 0.4
+        nx = max(1, int(w / passo))
+        ny = max(1, int(h / passo))
+        for i in range(nx):
+            for j in range(ny):
+                bx = -w / 2 + passo / 2 + i * passo
+                by = -h / 2 + passo / 2 + j * passo
+                partes.append(_cilindro(bx, by, 0.0, 0.14, 0.11, METAL, 8))
+    elif estilo == "soic":
+        # body raised on its leads, with the gull wings on two sides
+        corpo_alt = alt - 0.15
+        partes.append(_bloco(-w / 2 + 0.9, -h / 2, 0.15, w / 2 - 0.9, h / 2,
+                             corpo_alt, EPOXI))
+        n = max(2, int(h / 1.27))
+        for i in range(n):
+            by = -h / 2 + h * (i + 0.5) / n
+            for lado in (-1, 1):
+                x0 = lado * (w / 2 - 0.9)
+                x1 = lado * (w / 2)
+                partes.append(_bloco(min(x0, x1), by - 0.2, 0.0,
+                                     max(x0, x1), by + 0.2, 0.15, METAL))
+    elif estilo == "sot":
+        corpo_alt = alt - 0.1
+        partes.append(_bloco(-w / 2, -h / 2 + 0.25, 0.10, w / 2, h / 2 - 0.25,
+                             corpo_alt, EPOXI))
+        for bx, by in ((-w / 4, -h / 2 + 0.12), (w / 4, -h / 2 + 0.12),
+                       (0.0, h / 2 - 0.12)):
+            partes.append(_bloco(bx - 0.18, by - 0.15, 0.0,
+                                 bx + 0.18, by + 0.15, 0.10, METAL))
+    else:
+        # qfn, dfn, son, lga: a moulded body with metal underneath
+        partes.append(_bloco(-w / 2, -h / 2, 0.0, w / 2, h / 2, alt, EPOXI))
+        ep = min(w, h) * 0.45
+        partes.append(_bloco(-ep / 2, -ep / 2, -0.01, ep / 2, ep / 2, 0.02,
+                             METAL))
+        # the ring of lead flags, so the pitch is visible
+        passo = 0.5
+        n = max(2, int((w - 0.6) / passo))
+        for i in range(n):
+            bx = -w / 2 + 0.3 + (w - 0.6) * (i + 0.5) / n
+            for by in (-h / 2 + 0.15, h / 2 - 0.15):
+                partes.append(_bloco(bx - 0.12, by - 0.12, -0.01,
+                                     bx + 0.12, by + 0.12, 0.02, METAL))
+
+    # pin 1, as the dot the real package carries
+    partes.append(_cilindro(-w / 2 + 0.35, -h / 2 + 0.35, alt, alt + 0.02,
+                            min(0.22, w / 8), (0.45, 0.45, 0.47), 10))
+    caminho.write_text(
+        "#VRML V2.0 utf8" + NL +
+        f"# encapsulamento {estilo}, {w:.2f} x {h:.2f} x {alt:.2f} mm" + NL +
+        "".join(partes), encoding="utf-8", newline=NL)
+
+
+ESTILO = (
+    ("QFN", "qfn"), ("DFN", "qfn"), ("SON", "qfn"), ("LGA", "qfn"),
+    ("SOIC", "soic"), ("SO-", "soic"),
+    ("SOT", "sot"),
+    ("WLP", "wlp"), ("WLCSP", "wlp"),
+)
+
+
+def estilo_de(nome: str) -> str | None:
+    for chave, est in ESTILO:
+        if chave.lower() in nome.lower():
+            return est
+    return None
+
+
 def _com_modelo() -> None:
     """Give every generated footprint a body, and reference it.
 
@@ -645,8 +738,11 @@ def _com_modelo() -> None:
             continue
         CORPO_TODOS[nome] = (w, h, alt)
         base = nome.split(":", 1)[1]
+        est = estilo_de(nome)
         if nome in DESENHADOS:
             DESENHADOS[nome](pasta / (base + ".wrl"), w, h, alt)
+        elif est:
+            wrl_ci(pasta / (base + ".wrl"), w, h, alt, est)
         else:
             wrl_caixa(pasta / (base + ".wrl"), w, h, alt, cor=cor_de(nome))
         modelo = (
@@ -727,6 +823,25 @@ def me54bs13() -> str:
 
 
 GERADOS["gnssbike:MinewSemi_ME54BS13_16.5x12mm"] = me54bs13()
+
+
+def contato_mola() -> str:
+    """Two gold pads a spring presses on. No paste: nothing is soldered.
+
+    This is how the antenna in the case wall and the three groups of solar
+    modules reach the board. 2.0 x 2.0 mm gives a spring plenty of landing
+    area even with the tolerance of a moulded case, and 3.0 mm of pitch
+    keeps the two contacts apart by more than a spring can wander.
+    """
+    pads = [_pad("1", -1.5, 0.0, 2.0, 2.0, forma="rect",
+                 camadas='"F.Cu" "F.Mask"'),
+            _pad("2", 1.5, 0.0, 2.0, 2.0, forma="rect",
+                 camadas='"F.Cu" "F.Mask"')]
+    return _corpo("gnssbike:ContatoMola_2x2mm_P3mm", 5.6, 2.6, pads,
+                  "contato de mola de 2 vias, sem pasta de solda")
+
+
+GERADOS["gnssbike:ContatoMola_2x2mm_P3mm"] = contato_mola()
 _fp("U201", "gnssbike:MinewSemi_ME54BS13_16.5x12mm", "GERADO",
     "modulo de radio; a Minew nao publica land pattern")
 
