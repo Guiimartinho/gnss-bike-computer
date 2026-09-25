@@ -100,6 +100,10 @@ FOLGA_USB = 0.21            # 0.2 of the USB class, plus the grid
 # 0.25 mm of mask, which is the usual minimum.
 FOLGA_MASCARA = 0.35
 BORDA_COBRE = 0.3           # copper to board edge
+# O que um ponto da grade precisa guardar ate a borda: o isolamento de
+# cobre MAIS metade da via, porque o roteador poe uma via em qualquer
+# ponto onde troca de camada.
+MARGEM_BORDA = 0.3 + 0.45 / 2
 # Three routing layers, not two. In1.Cu is the ground plane and stays one:
 # it is what the return current follows and what the GNSS antenna radiates
 # against, and cutting it up to gain routing space would cost more than it
@@ -316,23 +320,36 @@ class Grade:
         return (ix * PASSO, iy * PASSO)
 
     def dentro(self, ix: int, iy: int) -> bool:
+        """Can a track or a via CENTRE sit here?
+
+        The margin is not BORDA_COBRE. BORDA_COBRE is what the DRC asks
+        between COPPER and the board outline, and what sits on a grid point
+        is a centre line: a via of 0,45 mm centred 0,3 mm from the edge
+        leaves copper at 0,075, and the DRC says so. The router also drops a
+        via wherever it changes layer, so every grid point has to hold the
+        widest thing that can land on it, which is the via and not the
+        track. That costs 0,225 mm of routable area all round, and it is the
+        difference between a board that passes the DRC and one that does
+        not - two errors of exactly this kind, a GND track at 0,100 mm and a
+        stitching via at 0,075 mm, are what put this comment here.
+        """
         x, y = self.pos(ix, iy)
-        if x < BORDA_COBRE or y < BORDA_COBRE or \
-                x > M.W - BORDA_COBRE or y > M.H - BORDA_COBRE:
+        if x < MARGEM_BORDA or y < MARGEM_BORDA or \
+                x > M.W - MARGEM_BORDA or y > M.H - MARGEM_BORDA:
             return False
         # the notch under the module's antenna is not board: copper there is
         # copper hanging in the air, and the DRC calls it what it is
         for nome, (rx0, ry0, rx1, ry1), _c, _s in M.ZONES:
             if nome != "RECORTE_ANTENA_MODULO":
                 continue
-            if rx0 - BORDA_COBRE < x < rx1 + BORDA_COBRE and \
-                    ry0 - BORDA_COBRE < y < ry1 + BORDA_COBRE:
+            if rx0 - MARGEM_BORDA < x < rx1 + MARGEM_BORDA and \
+                    ry0 - MARGEM_BORDA < y < ry1 + MARGEM_BORDA:
                 return False
         r = M.RADIUS_DRAWING
         for cx, cy in ((r, r), (M.W - r, r), (r, M.H - r), (M.W - r, M.H - r)):
             fora_x = x < r if cx < M.W / 2 else x > M.W - r
             fora_y = y < r if cy < M.H / 2 else y > M.H - r
-            if fora_x and fora_y and math.hypot(x - cx, y - cy) > r - BORDA_COBRE:
+            if fora_x and fora_y and math.hypot(x - cx, y - cy) > r - MARGEM_BORDA:
                 return False
         return True
 
