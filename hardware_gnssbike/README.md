@@ -252,6 +252,7 @@ esquemático não está pronto para virar layout**.
 - [ ] **Pilha de camadas do fabricante** — sem ela não há largura de trilha, nem 50 Ω da antena, nem 90 Ω do USB ([02](02-calculos.md#corrente-por-trilho-e-largura-de-trilha)).
 - [ ] **Atribuição das quatro vias do conector do filme de luz** — só no plano B: o número de vias é 4, mas **qual contato leva o quê não está em arquivo nenhum do projeto**; sai do desenho 12369-01_T4 da Azumo ([06](06-conectores-e-pontos-de-teste.md#no-plano-b-o-filme-e-o-conector-de-4-vias)).
 - [ ] **Pinagem do conector da bateria, com o fabricante do pack** ([06](06-conectores-e-pontos-de-teste.md)).
+- [ ] **Ordem das quatro vias do chicote do painel** — a tabela de [J103](06-conectores-e-pontos-de-teste.md#j103--painel-solar) segue a ordem dos pinos do footprint; confirmar o contato 1 na marca da carcaça `ZHR-4` antes de crimpar.
 
 ## Verificação
 

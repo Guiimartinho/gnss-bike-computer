@@ -117,6 +117,10 @@ Plano B, se o BM20C atrasar: MinewSemi ME54BS13-1Y20TI (6024-ME54BS13-1Y20TITR-N
 | LDO do backup do GNSS | TI TPS7A0218PDQNR | 296-TPS7A0218PDQNRCT-ND | 5.793 | 0,84 / 0,601 | 1 | 6 | aprovada |
 | NTC do AEM10900 | TDK NTCG103JF103FT1 | 445-2550-1-ND | 1.668.979 | 0,11 / 0,075 | 1 | 10 | aprovada; na face de trás, sob a célula |
 | Painéis solares | ANYSOLAR KXOB25-05X3F-TR | KXOB25-05X3FCT-ND | 5.038 | 3,23 / 2,64 | 6 | 36 | aprovada |
+| Conector do painel | JST S4B-ZR-SM4A-TF | — | — | — | 1 | 6 | **a conferir na LCSC**; ZH de 1,5 mm, 4 vias, SMD lateral ([J103](../hardware_gnssbike/06-conectores-e-pontos-de-teste.md#j103--painel-solar)) |
+| Carcaça do cabo do painel | JST ZHR-4 | — | — | — | 1 | 6 | **faltava na lista**; a contraparte do `J103` |
+| Terminais do cabo do painel | JST SZH-002T-P0.5 | — | — | — | 4 | 50 | **faltava na lista**; AWG 32 a 28, crimpagem com o alicate da JST |
+| Fio do chicote do painel | AWG 28 flexível, siliconado, 4 cores | — | — | — | ~1 m | 10 m | **faltava na lista**; 110 mA no arranjo inteiro, 37 mA por face |
 | LED de carga | Kingbright APT1608SURCK | 754-1123-1-ND | 1.084.493 | 0,21 / 0,144 | 1 | 10 | aprovada; 1,82 V a 5 mA, no LED1 do nPM1300 |
 | Conector da bateria | JST SM06B-GHS-TB | 455-1568-1-ND | 34.778 | 0,49 / 0,42 | 1 | 6 | aprovada |
 | Carcaça do cabo | JST GHR-06V-S | 455-1596-ND | 67.681 | 0,16 / 0,136 | 1 | 6 | aprovada |

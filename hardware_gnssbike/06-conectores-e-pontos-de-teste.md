@@ -218,6 +218,114 @@ bastam** — aí o conector muda para oito vias e este documento junto.
 > obrigatório ([15](../docs/15-avaliacao-componentes.md#bateria)) —, mas
 > muda o que se espera na bancada.
 
+## J103 · Painel solar
+
+**JST S4B-ZR-SM4A-TF** na placa e **ZHR-4** no cabo, com terminais
+SZH-002T-P0.5. Série ZH, passo de 1,5 mm, 4 vias, SMD lateral, com trava.
+
+> [!IMPORTANT]
+> **Os seis módulos não são soldados na placa, e não há um conector por
+> módulo.** Eles ficam nas paredes da caixa, virados para o sol — dois na
+> face inclinada e dois em cada chanfro —, enquanto a placa fica dentro,
+> atrás do display. Entre os dois há **um chicote**, e ele entra na placa
+> por **um único conector de 4 vias**. Quem junta os módulos é o chicote,
+> não a placa.
+
+### Pinagem
+
+| Contato | Sinal | O que chega nele |
+|---|---|---|
+| 1 | `PV_A` | o **positivo** dos dois módulos da **face inclinada** (`PV101`, `PV102`), já unidos no chicote |
+| 2 | `PV_B` | o **positivo** dos dois módulos do **chanfro esquerdo** (`PV103`, `PV104`), já unidos |
+| 3 | `PV_C` | o **positivo** dos dois módulos do **chanfro direito** (`PV105`, `PV106`), já unidos |
+| 4 | `GND` | o **negativo dos seis**, todos unidos num fio só |
+
+### Por que quatro vias e não doze
+
+Os seis módulos ficam **em paralelo**, e isso não é escolha de arranjo: é
+obrigação. Cada KXOB25-05X3F já tem 3 células em série e abre em **2,07 V**,
+e o MPPT do colhedor rastreia de 0,12 a **2,73 V**. Dois módulos em série
+dariam 4,14 V, 1,4 V acima do teto
+([04](04-pcb-e-caixa.md#como-os-painéis-chegam-à-placa)).
+
+Em paralelo, os seis negativos são **o mesmo nó elétrico**. Levar seis fios
+de terra até a placa seria repetir o mesmo nó seis vezes: mais crimpagem,
+mais conector, e um corpo de 6 vias que tem 13,5 mm e faria sombra no sensor
+de luz ambiente, que pede o dobro da própria altura livre em volta.
+
+Os positivos poderiam ser um só pela mesma lógica, mas são **três**, um por
+face, de propósito: na placa cada um passa por um resistor de 0 Ω
+(`R113`, `R114`, `R115`) antes de se juntarem. Abrindo um deles, mede-se
+**uma face sozinha no sol**. Com um fio só, os seis dariam um número só e
+nunca se saberia qual face está rendendo.
+
+### Como montar o chicote
+
+São **12 pontos de solda nos módulos** e **4 terminais crimpados** no
+conector.
+
+```mermaid
+flowchart LR
+    subgraph FACE["face inclinada"]
+        P1["PV101<br/>+ −"]
+        P2["PV102<br/>+ −"]
+    end
+    subgraph ESQ["chanfro esquerdo"]
+        P3["PV103<br/>+ −"]
+        P4["PV104<br/>+ −"]
+    end
+    subgraph DIR["chanfro direito"]
+        P5["PV105<br/>+ −"]
+        P6["PV106<br/>+ −"]
+    end
+    P1 -->|"+"| A(("emenda A"))
+    P2 -->|"+"| A
+    P3 -->|"+"| B(("emenda B"))
+    P4 -->|"+"| B
+    P5 -->|"+"| C(("emenda C"))
+    P6 -->|"+"| C
+    P1 -->|"−"| G(("emenda de terra<br/>os seis negativos"))
+    P2 -->|"−"| G
+    P3 -->|"−"| G
+    P4 -->|"−"| G
+    P5 -->|"−"| G
+    P6 -->|"−"| G
+    A --> V1["contato 1 · PV_A"]
+    B --> V2["contato 2 · PV_B"]
+    C --> V3["contato 3 · PV_C"]
+    G --> V4["contato 4 · GND"]
+```
+
+Passo a passo:
+
+1. **Solde um par de fios em cada módulo**, no `+` e no `−` da serigrafia do
+   verso. A ficha do KXOB25-05X3F **não numera os terminais**: ela só marca
+   `+` e `−` no desenho do verso, e é essa marca que vale.
+2. **Una os dois positivos de cada face** numa emenda, e leve um fio dessa
+   emenda ao conector. São três emendas, uma por face.
+3. **Una os seis negativos** numa emenda só, e leve um fio dela ao contato 4.
+4. **Crimpe os quatro fios** nos terminais SZH-002T-P0.5 e encaixe na
+   carcaça ZHR-4, na ordem da tabela acima.
+
+**Fio:** a corrente máxima do arranjo inteiro é **110 mA**, e a de uma face
+é 37 mA. O terminal SZH-002T-P0.5 aceita de **AWG 32 a 28**; AWG 28 é o que
+usar, com folga de sobra em corrente e a flexibilidade que um fio dentro de
+caixa precisa.
+
+> [!WARNING]
+> **Confira a polaridade com um multímetro antes de plugar, com os módulos
+> no sol.** O conector certo já impede plugar a bateria aqui — a célula usa
+> um **JST GH de 1,25 mm** e os dois não entram um no outro, de propósito
+> ([J102](#j102--bateria)) —, mas **fio invertido no crimp é erro de
+> bancada, não de projeto**. O `D105` na entrada é o grampo que existe para
+> esse caso, e **a peça dele ainda não foi escolhida**: até escolher, a
+> proteção é o multímetro.
+
+> [!NOTE]
+> **A ordem das quatro vias no chicote ainda não foi conferida contra um
+> conector real.** A tabela acima é a ordem dos pinos do footprint; confirme
+> o contato 1 na marca da carcaça antes de crimpar.
+
 ## J201 · Depuração SWD
 
 **Footprint Tag-Connect TC2030-NL**: só furos e pads, **nenhuma peça
