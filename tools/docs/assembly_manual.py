@@ -33,7 +33,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[2]
 OUT = (pathlib.Path(sys.argv[1]) if len(sys.argv) > 1
        else ROOT / "docs" / "img" / "manual-de-montagem.svg")
 
-CANVAS_W, CANVAS_H = 2480, 3700
+CANVAS_W, CANVAS_H = 2480, 4560
 FONT = "Inter, 'Segoe UI', Roboto, Arial, sans-serif"
 
 CAIXA_W, CAIXA_H, CAIXA_T = 62.0, 104.0, 19.0
@@ -275,10 +275,135 @@ pv6.text(3.8, 45.0, "carcaça do cabo da bateria", 15, C["fraco"], "middle")
 pv6.text(3.8, 56.0, "fio AWG 28, cerca de 1 m", 16, C["texto"], "middle", 700)
 pv6.text(3.8, 61.0, "parafuso M2 · 1 peça", 16, C["texto"], "middle", 700)
 
+# =================================================== o aparelho montado
+MX, MY, MW, MH = 40, 780, 2400, 820
+moldura(MX, MY, MW, MH, 0, "O aparelho montado",
+        "a caixa com a placa dentro e os seis módulos nas paredes · "
+        "dois cortes, para ver os 19 mm de espessura")
+
+# --- vista de frente, com a placa por transparencia
+SM = 5.2
+mv = View(MX + 250, MY + 140, SM)
+desenha_caixa(mv, 0, 0)
+mv.rect(10.96, 12.0, TELA_W, TELA_H, 1.0, fill="#ffffff", fill_opacity=0.55,
+        stroke="#8f959d", stroke_width=0.4)
+mv.text(31.0, 40.0, "display", 16, "#7d838b", "middle")
+# a placa, por dentro: 34 x 90 centrada na cavidade de 58 x 100
+PX0, PY0 = (CAIXA_W - PCB_W) / 2, (CAIXA_H - PCB_H) / 2
+mv.rect(PX0, PY0, PCB_W, PCB_H, 2.5, fill=C["placa"], fill_opacity=0.5,
+        stroke=C["placa_borda"], stroke_width=0.5, stroke_dasharray="1.6 1.2")
+for ref, (cx, cy, _a, face, rot) in CONEC.items():
+    mv.rect(PX0 + cx - 2.4, PY0 + cy - 3.2, 4.8, 6.4, 0.4, fill="#f3e9c9",
+            stroke="#8d887c", stroke_width=0.3)
+# os rotulos ficam FORA da caixa, com linha de chamada: dentro eles caem
+# em cima dos modulos dos chanfros
+for ref, lado, ly in (("J401 display", -1, 18.0), ("J402 luz", -1, 28.5),
+                      ("J102 bateria (verso)", -1, 53.5),
+                      ("J103 painel", +1, 23.5), ("J101 USB-C", +1, 77.2)):
+    cx, cy = CONEC[ref.split(" ")[0]][:2]
+    ax, ay = PX0 + cx, PY0 + cy
+    bx = -3.0 if lado < 0 else CAIXA_W + 3.0
+    mv.poly([(ax, ay), (bx, ly)], fill="none", stroke="#7d848c", stroke_width=0.22)
+    mv.circle(ax, ay, 0.6, fill="#5b6068")
+    mv.text(bx + (-1.4 if lado < 0 else 1.4), ly + 1.2, ref, 15, "#2b2b2b",
+            "end" if lado < 0 else "start", 700)
+mv.text(CAIXA_W / 2, CAIXA_H + 11.0, "a placa por transparência, 34 × 90", 16,
+        C["fraco"], "middle")
+mv.text(CAIXA_W / 2, CAIXA_H + 16.0, "centrada na cavidade de 58 × 100", 16,
+        C["fraco"], "middle")
+mv.poly([(-4.0, 52.0), (66.0, 52.0)], fill="none", stroke=C["alerta"],
+        stroke_width=0.3, stroke_dasharray="2 1.5")
+mv.text(-5.0, 53.4, "A", 17, C["alerta"], "end", 700)
+mv.text(67.0, 53.4, "A", 17, C["alerta"], "start", 700)
+mv.poly([(20.0, -4.0), (20.0, 106.0)], fill="none", stroke=C["alerta"],
+        stroke_width=0.3, stroke_dasharray="2 1.5")
+mv.text(20.0, -5.4, "B", 17, C["alerta"], "middle", 700)
+mv.text(20.0, 109.5, "B", 17, C["alerta"], "middle", 700)
+
+# --- corte A-A: pela largura, mostra os chanfros com os modulos e a placa
+SS = 8.4
+av = View(MX + 700, MY + 175, SS)
+av.text(0, -8.0, "Corte A-A · pela largura", 19, C["titulo"], "start", 700)
+av.text(0, -3.0, "os dois chanfros de 45°, com um módulo em cada", 15, C["fraco"])
+# o contorno da secao: retangulo de 62 x 19 com os dois cantos da frente cortados
+av.poly([(6.2, 0), (55.8, 0), (62, 6.2), (62, 19), (0, 19), (0, 6.2), (6.2, 0)],
+        fill=C["caixa"], stroke=C["caixa_borda"], stroke_width=0.35)
+for x1, y1, x2, y2 in ((0.0, 6.2, 6.2, 0.0), (55.8, 0.0, 62.0, 6.2)):
+    av.poly([(x1, y1), (x2, y2)], fill="none", stroke=C["caixa_borda"],
+            stroke_width=0.45)
+# os modulos, deitados no chanfro (8 mm de largura na face de 45°)
+av.poly([(0.55, 6.75), (5.65, 1.65)], fill="none", stroke=C["modulo"],
+        stroke_width=1.6, stroke_linecap="round")
+av.poly([(56.35, 1.65), (61.45, 6.75)], fill="none", stroke=C["modulo"],
+        stroke_width=1.6, stroke_linecap="round")
+av.text(3.0, 10.6, "PV104", 15, C["fio_p"], "middle", 700)
+av.text(59.0, 10.6, "PV106", 15, C["fio_p"], "middle", 700)
+# display, placa e bateria, pela espessura
+av.rect(10.96, 1.2, TELA_W, 1.0, 0.2, fill=C["tela"], stroke="#8f959d",
+        stroke_width=0.25)
+av.rect(14.0, 7.0, PCB_W, PCB_T, 0.15, fill=C["placa"], stroke=C["placa_borda"],
+        stroke_width=0.25)
+av.rect(13.0, 10.0, BAT_W, BAT_T, 0.4, fill=C["bateria"], stroke="#6f7a86",
+        stroke_width=0.25)
+av.text(63.5, 2.4, "display", 16, C["texto"], "start", 700)
+av.text(63.5, 8.2, "placa · 0,8", 16, C["texto"], "start", 700)
+av.text(63.5, 14.4, "célula · 7", 16, C["texto"], "start", 700)
+av.text(31.0, 5.6, "2,6 mm de teto", 14, C["fraco"], "middle")
+av.text(31.0, 9.4, "1,2 mm de teto", 14, C["fraco"], "middle")
+cota_v(av, -2.6, 0, 19, "19")
+cota_h(av, 21.5, 0, 62, "62")
+
+# --- corte B-B: pelo comprimento, mostra a frente inclinada e a pilha
+bv2 = View(MX + 700, MY + 480, SS)
+bv2.text(0, -8.0, "Corte B-B · pelo comprimento", 19, C["titulo"], "start", 700)
+bv2.text(0, -3.0, "a frente inclinada com dois módulos, e a pilha inteira", 15,
+         C["fraco"])
+bv2.poly([(0, 0), (74.0, 0), (89.0, 7.2), (104.0, 7.2), (104.0, 19), (0, 19),
+          (0, 0)], fill=C["caixa"], stroke=C["caixa_borda"], stroke_width=0.35)
+bv2.poly([(74.0, 0), (89.0, 7.2)], fill="none", stroke=C["caixa_borda"],
+         stroke_width=0.45)
+bv2.poly([(75.4, 0.65), (86.8, 6.1)], fill="none", stroke=C["modulo"],
+         stroke_width=1.6, stroke_linecap="round")
+bv2.text(81.0, -2.2, "PV101", 15, C["fio_p"], "middle", 700)
+bv2.rect(12.0, 1.2, TELA_H, 1.0, 0.2, fill=C["tela"], stroke="#8f959d",
+         stroke_width=0.25)
+bv2.rect(7.0, 7.0, PCB_H, PCB_T, 0.15, fill=C["placa"], stroke=C["placa_borda"],
+         stroke_width=0.25)
+bv2.rect(22.0, 10.0, BAT_H, BAT_T, 0.4, fill=C["bateria"], stroke="#6f7a86",
+         stroke_width=0.25)
+bv2.text(42.0, 0.2, "display · 61,8 de comprimento", 15, C["texto"], "middle", 700)
+bv2.text(45.0, 6.2, "placa · 90", 15, C["texto"], "middle", 700)
+bv2.text(52.0, 14.2, "célula · 60", 15, "#f2f5f7", "middle", 700)
+bv2.poly([(92.7, 7.4), (92.7, 17.0)], fill="none", stroke=C["fio_p"],
+         stroke_width=0.4)
+bv2.text(92.7, 19.6, "USB-C", 15, C["fio_p"], "middle", 700)
+cota_h(bv2, 21.5, 0, 104, "104")
+
+rotulo(MX + 1660, MY + 150, "O que este corte mostra", 20, C["titulo"], weight=700)
+for i, s in enumerate((
+        "Os seis módulos ficam nas PAREDES, não na placa: dois",
+        "na frente inclinada e um em cada ponta dos dois chanfros",
+        "de 45°. É por isso que eles chegam por chicote, e por",
+        "isso que há três faces em vez de uma.",
+        "",
+        "A placa fica no meio da espessura, com o display à frente",
+        "e a célula atrás. Daí saem os dois tetos de altura que a",
+        "conferência ME2 mede: 2,6 mm do lado do display e",
+        "1,2 mm do lado da bateria.",
+        "",
+        "!O que NÃO está definido em arquivo nenhum: a espessura",
+        "!das paredes, a espessura do display, a altura em que a",
+        "!placa é presa dentro da caixa e onde ficam os parafusos.",
+        "!Os dois cortes põem cada peça na sua largura e na sua",
+        "!ordem, que é o que se sabe hoje.")):
+    cor = C["alerta"] if s.startswith("!") else C["texto"]
+    peso = 700 if s.startswith("!") else 400
+    rotulo(MX + 1660, MY + 190 + i * 26, s.lstrip("!"), 16, cor, weight=peso)
+
 # ========================================================== os oito passos
 PASSO_W, PASSO_H = 1180, 680
 COL = (40, 1260)
-LIN = (790, 1500, 2210, 2920)
+LIN = (1640, 2350, 3060, 3770)
 
 
 def passo(n, col, lin, titulo, sub):
