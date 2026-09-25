@@ -85,6 +85,7 @@ trilhas de uma colocação que pode já ter mudado.
 | GN2 | costura de vias de terra na borda a cada 5 mm no máximo | λ/10 a 2,44 GHz em FR-4 são 6,1 mm |
 | ME1 | a placa **cabe** dentro da caixa. Não é o que define o tamanho dela — placa e caixa são independentes —, é só a conferência de que uma entra na outra | [04](04-pcb-e-caixa.md) |
 | ME2 | altura dos componentes dentro da sombra da bateria e do display | [04](04-pcb-e-caixa.md#as-duas-sombras-display-e-bateria) |
+| ME4 | a **boca** de um conector de borda aponta para fora da placa, a no máximo 1 mm dela | medida por raio no STEP do fabricante; ninguém encaixa um cabo num conector virado para dentro |
 
 > [!CAUTION]
 > **Este documento já errou duas vezes sobre a mesma ficha, nos dois
@@ -171,42 +172,66 @@ lado de cada número — sem ela a largura seria um chute.
 
 ## Resultado da posição
 
-Medido em 2026-09-24, na placa de **34 × 90 mm** com 116 peças, 744 segmentos
-e 256 vias:
+Medido em 2026-09-25, na placa de **34 × 90 mm** com 145 peças, 966 segmentos
+e 450 vias:
 
 | Id | Medida | Situação |
 |---|---|---|
 | RF1 | a área da antena (**4,46 × 12,50 mm**) está livre de componente | cumprida |
 | RF3 | a peça alheia mais próxima da área da antena é o `JP102`, a **5,6 mm**; o desacoplamento do próprio módulo fica mais perto de propósito (`C201` a 1,4 e `C210` a 3,4) | cumprida |
 | RF4 | a placa **é vazada** sob a área da antena | cumprida |
-| RF5 | o componente de RF alheio mais próximo do receptor está a **51,9 mm** | cumprida |
-| RF6 | nenhuma trilha de sinal passa por baixo do receptor na face da frente | cumprida, imposta no roteador |
-| RF7 | caminho de RF do pino à antena de **8,2 mm**, dentro de λ/10 em L1 (10,5); `C302` a 1,7 e `C301` a 3,4 mm do seu nó | cumprida |
-| RF8 | as duas antenas estão a **75,0 mm** de centro a centro, 2,4 quartos de onda de 2,44 GHz | cumprida |
-| RF9 | chaveamento: `U101` a **24,1** de 20 mm. Display e cabo plano: `J402` a **31,3** de 25 mm | cumprida |
-| RF10 | os dois módulos de rádio a **51,9 mm**, acima dos 50 da ficha | cumprida |
-| AL1 | 24 capacitores dentro do limite; o pior de alta frequência a **1,72 mm** e o pior de reserva a **3,30** | cumprida |
-| AL2 | nenhum trecho de alimentação abaixo da largura da IPC-2221 | cumprida |
+| RF5 | o componente de RF alheio mais próximo do receptor é o `E301`, a **6,4 mm** | cumprida |
+| RF7 | caminho de RF do pino à antena de **8,1 mm**, dentro de λ/10 em L1 (10,5); `C302` a 2,5 e `C301` a 3,2 mm do seu nó | cumprida |
+| RF8 | as duas antenas estão a **74,3 mm** de centro a centro, 2,4 quartos de onda de 2,44 GHz | cumprida |
+| RF9 | chaveamento: `U101` a **24,1** de 20 mm. Display e cabo plano: `J402` a **33,3** de 25 mm | cumprida |
+| RF10 | os dois módulos de rádio a **50,8 mm**, acima dos 50 da ficha | cumprida |
+| AL1 | 24 capacitores dentro do limite; o pior de alta frequência a **1,76 mm** e o pior de reserva a **3,30** | cumprida |
+| AL2 | nenhum trecho de alimentação abaixo da largura da IPC-2221; 3 estreitamentos curtos junto a pad, que a norma não cobra | cumprida |
+| AL5 | filtro π do módulo montado como `C105`+`C106`+`C107`+`C108` \| `JP102` \| `C201`+`C210`, com o elemento em série a **3,9 mm** do pino de alimentação | cumprida |
 | AL6 | nenhuma via sobre os 5 pads térmicos | cumprida |
-| GN1 | os **99** pads de terra de superfície estão ligados; **71 (72 %)** por via própria ao plano interno | cumprida |
-| GN2 | **72 vias** de costura na borda, maior vão **3,0 mm** contra o limite de 5 | cumprida |
-| ME1 | a placa de **34 × 90** cabe na cavidade com sobra | cumprida |
-| ME2 | nenhuma peça passa do teto da sombra em que está; **0 peças sem altura conhecida** | cumprida |
-| OP1 | nenhuma peça a menos de duas alturas do sensor de luz | cumprida |
-| **ME3** | **3 encapsulamentos em que a ficha e o footprint discordam** | **violada de propósito** |
+| GN1 | os **108** pads de terra de superfície estão ligados; **89 (82 %)** por via própria ao plano interno, os outros 19 pelo plano da própria face | cumprida |
+| GN2 | **133 vias** de costura na borda, maior vão **2,7 mm** contra o limite de 5 | cumprida |
+| ME1 | a placa de **34 × 90** deixa 12,0 mm de cada lado e 5,0 mm em cima e embaixo | cumprida |
+| ME2 | nenhuma peça passa do teto da sombra em que está; **3 peças sem altura conhecida** | cumprida |
+| ME3 | os **18** encapsulamentos com cota de ficha cabem no footprint desenhado para eles e batem com o contorno | cumprida |
+| ME4 | a boca do `J101` aponta **para fora**, a **0,64 mm** da borda, com 3,30 mm de cavidade | cumprida |
+| OP1 | nenhuma peça de altura conhecida a menos de duas alturas do sensor de luz | cumprida |
+| **US1** | **o par `USB_DP`/`USB_DM` não está roteado** | **violada** |
+
 
 > [!CAUTION]
-> **O `ME3` falha porque dois land patterns são de outra peça.** O
-> `USB_C_Receptacle_Palconn_UTC16-G` desenha 8,94 × 7,32 contra os **9,99 ×
-> 8,58** do Molex 2036150003 da lista de compras, e o `Hirose_FH12-10S-0.5SH`
-> desenha 8,10 de largura contra os **9,90** do FH28-10S-0.5SH. O terceiro, o
-> buzzer, **foi corrigido**: o footprint em uso era do CPT-9019S, redondo de
-> 9 mm, no lugar do CPT-1117-83-SMT retangular de 11,0 × 9,0 × 1,7.
+> **O `ME3` passou a cumprir, e o que o destravou foi o arquivo do
+> fabricante.** Ele falhava em dois land patterns que eram de outra peça: o
+> `USB_C_Receptacle_Palconn_UTC16-G` desenhava 8,94 × 7,32 contra os 9,99 ×
+> 8,58 do conector da lista, e o `Hirose_FH12-10S-0.5SH` desenhava 8,10 de
+> largura contra os 9,90 do FH28-10S-0.5SH. Reconstruir land pattern de
+> USB-C a partir de desenho **renderizado** é exatamente o palpite que esta
+> conferência existe para pegar; o que resolveu foi trocar as peças por
+> outras que o fabricante publica em STEP — o HRO TYPE-C-31-M-12 e o
+> HC-FPC-05-10-5RLTAG —, e passar a desenhá-las com esse modelo.
 >
-> Os dois que sobraram não foram consertados de propósito. Reconstruir land
-> pattern de USB-C a partir de desenho **renderizado** é o palpite que esta
-> conferência existe para pegar, e nenhuma das duas peças está na biblioteca
-> do KiCad 8. O que resolve é o arquivo do fabricante.
+> **O `US1` continua violado de propósito.** O par diferencial precisa de
+> acabamento à mão, com a largura e o afastamento que dão 90 Ω nesta pilha;
+> o roteador automático não o fecha.
+
+> [!WARNING]
+> **A regra `ME4` nasceu de um defeito que ficou um dia inteiro na placa, e
+> que verificação nenhuma daqui pegava.** O `J101` esteve a 180°, com a boca
+> do USB-C apontando **10,04 mm para dentro** da placa. As ilhas de um
+> receptáculo USB-C são quase simétricas em y, então o 2D aceita os dois
+> sentidos e o DRC não tem opinião; a única coisa assimétrica é o corpo, e o
+> corpo que havia no desenho 3D era um paralelepípedo liso, sem boca nenhuma
+> para conferir. Quem viu foi o dono, duas vezes — e na primeira a correção
+> saiu para o lado errado, porque a rotação foi deduzida de cabeça em vez de
+> medida.
+>
+> A `ME4` não deduz. Ela lança um raio ao longo do eixo do conector, na meia
+> altura da cavidade, contra o STEP do fabricante: do lado da boca o raio
+> entra na parede externa e só reencontra material 3,30 mm adiante, que é o
+> vão onde o plugue entra; do lado de trás bate em material logo na entrada.
+> A ponta desse vão que coincide com o extremo do corpo é a boca. A regra foi
+> conferida contra o defeito que existe para pegar: com o `J101` de volta a
+> 180° ela acusa a boca virada para dentro e a rodada falha.
 
 ## Resultado do roteamento
 
