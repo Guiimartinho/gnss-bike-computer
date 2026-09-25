@@ -141,11 +141,24 @@ PASSANTE = passantes()
 _W, _H = M.W, M.H
 
 BORDA_FIXA: dict[str, tuple[float, float, int]] = {
-    # The mouth of a USB-C faces +Y in this footprint: the contacts leave at
-    # the back, so the body sits on the far side of the pads. At 180 it was
-    # pointing INTO the board, which no rule catches and no cable forgives.
-    # It takes the LEFT of the bottom edge; the module takes the right, and
-    # the two are the only pair that fits along it.
+    # A boca do USB-C aponta para +Y no referencial deste footprint, e o
+    # angulo aqui e 0 por causa disso. A peca fica na ESQUERDA da borda de
+    # baixo; o modulo fica na direita, e os dois sao o unico par que cabe
+    # ali.
+    #
+    # Como se sabe de que lado e a boca, sem adivinhar: um raio lancado ao
+    # longo de Y pelo eixo do conector, na meia altura da blindagem, atravessa
+    # o STEP do fabricante. Do lado da boca ele entra na parede externa e so
+    # volta a encontrar material 3,3 mm adiante - a cavidade onde o plugue
+    # entra. Do lado de tras ele bate em plastico macico logo na entrada.
+    # Medido assim, a cavidade abre em y +4,70 local; com a peca a 0 na borda
+    # de baixo (y cresce para a borda), a boca cai a 0,64 mm dela.
+    #
+    # Isto esteve 180 graus errado durante o dia 2026-09-25, e a culpa foi de
+    # uma conta feita de cabeca: as ilhas sao quase simetricas em y, entao o
+    # 2D aceita os dois sentidos, e o corpo unico que havia no desenho era um
+    # paralelepipedo liso - sem boca nenhuma para conferir. O dono disse duas
+    # vezes que a boca apontava para dentro e estava certo nas duas.
     "J101": (6.2, _H - 5.34, 0),
     # The three keys in a row at 10.2 mm of pitch: the courtyard is 10.0 wide
     # and two of them at 10.0 touch, which the placer refuses and is right to
