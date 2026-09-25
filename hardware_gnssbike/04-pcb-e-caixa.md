@@ -285,6 +285,32 @@ de baixo ou na borda, fora da sombra da bateria.
 > sai de ficha, não de peça medida. Não medido: a altura real do módulo e a
 > do pack de bateria comprado.
 
+### A ordem de montagem
+
+![Manual de montagem: as peças em escala e os oito passos, do chicote solar ao fechamento do aparelho](../docs/img/manual-de-montagem.svg)
+
+O manual sai de [`tools/docs/assembly_manual.py`](../tools/docs/assembly_manual.py)
+e **todas as peças estão em escala**: a caixa de 62 × 104, a placa de 34 × 90,
+o display de 40,08 × 61,8, a célula de 36 × 60, os módulos de 23 × 8 e cada
+conector na posição que ocupa no arquivo da placa. Quando um conector se move
+no CAD, a folha se move junto.
+
+A ordem não é arbitrária. Três coisas a decidem:
+
+1. **O chicote solar vem primeiro** porque é o único trabalho de bancada
+   demorado, e porque a polaridade dele se confere com os módulos no sol,
+   fora da caixa.
+2. **Os dois cabos do display entram com a placa ainda fora da cavidade.**
+   O `J401` e o `J402` ficam na borda esquerda, a 5,1 mm dela, e a trava de
+   um FPC de 0,5 mm não se alcança com a placa assentada.
+3. **A bateria liga antes de a placa entrar**, porque o `J102` fica no
+   **verso**. Depois de assentada, esse conector está contra o fundo da
+   caixa.
+
+Três coisas que o manual diz que **não estão definidas em arquivo nenhum**:
+como o módulo solar é preso à parede, como o painel é preso à frente e onde
+ficam os parafusos da caixa.
+
 ### Como os painéis chegam à placa
 
 Os seis módulos ficam na caixa e a placa fica dentro dela, então entre os dois
