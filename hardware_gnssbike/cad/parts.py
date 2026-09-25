@@ -172,12 +172,33 @@ add("U102", "MAX17262REWL", [
 # Pinagem da tabela 5 da ficha Rev. A (D14145-0-5/17(A)), paginas 8 e 9. O
 # pad exposto NAO tem numero na ficha e a nota 1 da figura 3 manda liga-lo ao
 # AGND.
+# CORRIGIDO em 2026-09-25, e era o segundo erro de placa do dia.
+#
+# Uma primeira leitura desta ficha trocou SEIS pinos, em duas permutacoes de
+# tres: 2/4/6 (SETHYST, SETSD, TERM) e 7/9/10 (MPPT, VIN, AGND). O erro so
+# apareceu porque o simbolo `Battery_Management:ADP5091` da biblioteca do
+# KiCad discordava, e a conferencia por NUMERO passava - os numeros batem, os
+# sinais e que nao.
+#
+# A ficha decidiu: Tabela 5, paginas 8 e 9 da Rev. A (D14145-0-5/17(A)), com
+# a Figura 3 confirmando lado por lado. O KiCad esta certo nos 24. Tres
+# leituras independentes fecharam: a tabela remontada pela geometria das
+# colunas, a autoconsistencia de cada descricao (a do pino 2 cita "the SETSD
+# pin", a do 6 cita "between SETPG and SETHYST") e a Figura 3.
+#
+# O que iria para o cobre se ficasse como estava: o divisor de MPPT ligado ao
+# pino 7, que e o AGND - curto-circuitado ao terra analogico -, o colhedor com
+# o indutor de 22 uH e o capacitor de 10 uF no pino 9, que e o MPPT, e o terra
+# no pino 10, que e a entrada.
+#
+# CUIDADO com a Rev. PrA preliminar: a Tabela 5 dela troca 14 e 17, e
+# contradiz a propria Figura 2. Nao serve para nada.
 add("U103", "ADP5091ACPZ-2", [
-    (1, "REF", "passive", L), (2, "SETHYST", "input", L),
-    (3, "SETBK", "input", L), (4, "SETSD", "input", L),
-    (5, "SETPG", "input", L), (6, "TERM", "input", L),
-    (7, "MPPT", "input", B), (8, "CBP", "passive", B),
-    (9, "VIN", "power_in", B), (10, "AGND", "power_in", B),
+    (1, "REF", "passive", L), (2, "SETSD", "input", L),
+    (3, "SETBK", "input", L), (4, "TERM", "input", L),
+    (5, "SETPG", "input", L), (6, "SETHYST", "input", L),
+    (7, "AGND", "power_in", B), (8, "CBP", "passive", B),
+    (9, "MPPT", "input", B), (10, "VIN", "power_in", B),
     (11, "LLD", "output", B), (12, "PGND", "power_in", B),
     (13, "SW", "passive", R), (14, "REG_OUT", "power_out", R),
     (15, "REG_FB", "input", R), (16, "SYS", "power_out", R),
@@ -187,7 +208,11 @@ add("U103", "ADP5091ACPZ-2", [
     (23, "REG_D1", "input", T), (24, "REG_D0", "input", T),
     # O pad exposto e o pad 25 no footprint do KiCad, e a nota 1 da figura 3
     # da ficha manda liga-lo ao AGND.
-    (25, "EPAD", "power_in", B),
+    # A ficha NAO da numero ao pad exposto - a linha dele na
+    # Tabela 5 tem a coluna vazia -, e manda liga-lo ao AGND.
+    # O 25 e convencao de CAD: e como o footprint do KiCad o
+    # numera, e o simbolo o chama AGND, empilhado no pino 7.
+    (25, "AGND2", "power_in", B),
 ], confirmed=True, lcsc="C579259",
     note="colhedor solar com MPPT, LFCSP-24 de 4 x 4 mm. Sem I2C e sem NTC: "
          "tudo por resistor. O pad exposto vai ao AGND (nota 1 da figura 3)")

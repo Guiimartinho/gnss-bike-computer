@@ -284,7 +284,7 @@ net("GND",
     # loop between two mains-powered boxes, and this one runs off a cell.
     ("J101", "SHELL"),
     ("D101", "GND"), ("D102", "GND1"), ("D102", "GND2"),
-    ("U101", "AVSS"), ("U101", "PVSS1"), ("U101", "PVSS2"), ("U102", "GND"), ("U103", "AGND"), ("U103", "PGND"), ("U103", "EPAD"),
+    ("U101", "AVSS"), ("U101", "PVSS1"), ("U101", "PVSS2"), ("U102", "GND"), ("U103", "AGND"), ("U103", "PGND"), ("U103", "AGND2"),
     ("U103", "SETBK"), ("U103", "REG_D0"), ("U103", "REG_D1"),
     ("R116", "2"), ("R119", "2"), ("R121", "2"),
     ("R122", "2"), ("R123", "2"), ("C119", "2"), ("C120", "2"),

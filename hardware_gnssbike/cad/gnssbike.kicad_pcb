@@ -948,7 +948,7 @@
 		(at 43.5000 73.0000 0)
 		(uuid "12e57028-0e05-4446-8fdd-a6473e84cc31")
 		(property "Reference" "C102"
-			(at 3.0020 0.0000 0)
+			(at -3.0020 -1.2300 0)
 			(layer "F.SilkS")
 			(uuid "64718431-cf89-4c13-895b-8f5cb042f8fc")
 			(effects (font (size 0.6 0.6) (thickness 0.12)))
@@ -2890,7 +2890,7 @@
 		(at 41.5000 75.0000 0)
 		(uuid "597eb08e-9188-4075-8642-5234d36c6a38")
 		(property "Reference" "C114"
-			(at 2.4320 1.1000 0)
+			(at -2.4320 0.0000 0)
 			(layer "F.SilkS")
 			(uuid "381250a3-9a2c-4429-8879-a65544788bd3")
 			(effects (font (size 0.6 0.6) (thickness 0.12)))
@@ -3211,10 +3211,10 @@
 	)
 	(footprint "Capacitor_SMD:C_0402_1005Metric"
 		(layer "F.Cu")
-		(at 55.0000 69.0000 0)
+		(at 47.5000 64.0000 90)
 		(uuid "c3d01bde-40b2-4463-8edb-efd27c54a1ac")
 		(property "Reference" "C116"
-			(at 2.4320 0.0000 0)
+			(at -2.3820 0.0000 90)
 			(layer "F.SilkS")
 			(uuid "f82664ac-e1d1-42c3-841d-bc2537a4aec9")
 			(effects (font (size 0.6 0.6) (thickness 0.12)))
@@ -3344,7 +3344,7 @@
 		)
 	)
 	(pad "1" smd roundrect
-		(at -0.48 0)
+		(at -0.48 0 90)
 		(size 0.56 0.62)
 		(layers "F.Cu" "F.Paste" "F.Mask")
 		(roundrect_rratio 0.25)
@@ -3352,7 +3352,7 @@
 	)
 	(pad "2" smd roundrect
 		(net 35 "GND")
-		(at 0.48 0)
+		(at 0.48 0 90)
 		(size 0.56 0.62)
 		(layers "F.Cu" "F.Paste" "F.Mask")
 		(roundrect_rratio 0.25)
@@ -3537,7 +3537,7 @@
 		(at 39.5000 75.5000 90)
 		(uuid "1310fbf6-f515-43b0-8c44-e4c43d672c3e")
 		(property "Reference" "C118"
-			(at 0.0000 1.1500 90)
+			(at -2.3820 1.1500 90)
 			(layer "F.SilkS")
 			(uuid "c05d4101-aca4-425f-8960-89c3e8ee97b3")
 			(effects (font (size 0.6 0.6) (thickness 0.12)))
@@ -3696,10 +3696,10 @@
 	)
 	(footprint "Resistor_SMD:R_0402_1005Metric"
 		(layer "F.Cu")
-		(at 47.5000 64.0000 90)
+		(at 55.0000 69.0000 0)
 		(uuid "e0e6a412-5e8b-432f-83b6-50e67746f925")
 		(property "Reference" "C119"
-			(at -2.4020 0.0000 90)
+			(at 2.4520 1.1000 0)
 			(layer "F.SilkS")
 			(uuid "b553d580-612b-4d3f-87fe-c8db95a45c8d")
 			(effects (font (size 0.6 0.6) (thickness 0.12)))
@@ -3830,7 +3830,7 @@
 	)
 	(pad "1" smd roundrect
 		(net 21 "CBP")
-		(at -0.51 0 90)
+		(at -0.51 0)
 		(size 0.54 0.64)
 		(layers "F.Cu" "F.Paste" "F.Mask")
 		(roundrect_rratio 0.25)
@@ -3838,7 +3838,7 @@
 	)
 	(pad "2" smd roundrect
 		(net 35 "GND")
-		(at 0.51 0 90)
+		(at 0.51 0)
 		(size 0.54 0.64)
 		(layers "F.Cu" "F.Paste" "F.Mask")
 		(roundrect_rratio 0.25)
@@ -7156,10 +7156,10 @@
 	)
 	(footprint "Diode_SMD:D_SOD-523"
 		(layer "F.Cu")
-		(at 48.5000 76.5000 0)
+		(at 43.5000 79.0000 0)
 		(uuid "babebfb5-d417-4d37-8c9f-bd9a265445fa")
 		(property "Reference" "D105"
-			(at 2.7720 -1.2000 0)
+			(at 2.7720 1.2000 0)
 			(layer "F.SilkS")
 			(uuid "289f6258-055c-4048-8e15-29f340154ae7")
 			(effects (font (size 0.6 0.6) (thickness 0.12)))
@@ -10353,10 +10353,10 @@
 	)
 	(footprint "Resistor_SMD:R_0402_1005Metric"
 		(layer "F.Cu")
-		(at 50.0000 74.0000 0)
+		(at 50.0000 74.5000 0)
 		(uuid "b1b70c22-78a4-4194-8b2f-4595cc2c9c8e")
 		(property "Reference" "JP105"
-			(at -2.7700 0.0000 0)
+			(at 0.0000 1.1000 0)
 			(layer "F.SilkS")
 			(uuid "14a110bc-5445-49db-822c-ea9e0ac84126")
 			(effects (font (size 0.6 0.6) (thickness 0.12)))
@@ -11229,7 +11229,7 @@
 		(at 52.0000 70.0000 0)
 		(uuid "45630317-77dc-4b52-8d4d-c9cf65747c68")
 		(property "Reference" "L103"
-			(at 3.4720 0.0000 0)
+			(at 3.4720 1.8500 0)
 			(layer "F.SilkS")
 			(uuid "b5a61eaa-c0aa-46e2-822c-4d89daf4f9c9")
 			(effects (font (size 0.6 0.6) (thickness 0.12)))
@@ -12823,7 +12823,7 @@
 		(at 49.5000 62.0000 0)
 		(uuid "19d41bb8-96fb-4dce-8356-b2a4f931f43d")
 		(property "Reference" "R105"
-			(at 0.0000 1.1000 0)
+			(at 0.0000 -1.1000 0)
 			(layer "F.SilkS")
 			(uuid "6c0bd1b9-9206-44f8-8a72-4785c80a5891")
 			(effects (font (size 0.6 0.6) (thickness 0.12)))
@@ -12985,7 +12985,7 @@
 		(at 37.0000 72.5000 0)
 		(uuid "5e55173c-a407-43ca-814d-7ffc77e6d3fb")
 		(property "Reference" "R106"
-			(at -2.4520 0.0000 0)
+			(at 2.4520 0.0000 0)
 			(layer "F.SilkS")
 			(uuid "ded0ee94-bae8-432a-8866-1f1c463a2a08")
 			(effects (font (size 0.6 0.6) (thickness 0.12)))
@@ -13791,10 +13791,10 @@
 	)
 	(footprint "Resistor_SMD:R_0402_1005Metric"
 		(layer "F.Cu")
-		(at 43.5000 79.0000 0)
+		(at 49.5000 76.0000 0)
 		(uuid "4360fa11-9acc-4ce1-8dff-cac02541594c")
 		(property "Reference" "R111"
-			(at -2.4520 0.0000 0)
+			(at -2.7020 0.0000 0)
 			(layer "F.SilkS")
 			(uuid "c94ca425-383c-49ef-8c6a-e87f758a71dd")
 			(effects (font (size 0.6 0.6) (thickness 0.12)))
@@ -14118,7 +14118,7 @@
 		(at 49.5000 59.5000 0)
 		(uuid "946a780e-18a6-49f5-8b84-2b7054e498a5")
 		(property "Reference" "R113"
-			(at 0.0000 1.1000 0)
+			(at -2.4520 -1.1000 0)
 			(layer "F.SilkS")
 			(uuid "e923e391-1b86-4741-868a-ef7269635731")
 			(effects (font (size 0.6 0.6) (thickness 0.12)))
@@ -14280,7 +14280,7 @@
 		(at 49.5000 58.0000 0)
 		(uuid "34010892-762b-4599-8fa5-f1d6184f0aad")
 		(property "Reference" "R114"
-			(at -2.4520 0.0000 0)
+			(at -2.4520 -1.1000 0)
 			(layer "F.SilkS")
 			(uuid "4b797dd7-8bf4-4ca3-8a3a-42aff631dd6a")
 			(effects (font (size 0.6 0.6) (thickness 0.12)))
@@ -14442,7 +14442,7 @@
 		(at 49.5000 56.5000 0)
 		(uuid "5056526a-4301-44ab-88f0-4230ff842ded")
 		(property "Reference" "R115"
-			(at -2.4520 0.0000 0)
+			(at -2.4520 -1.1000 0)
 			(layer "F.SilkS")
 			(uuid "d8b76688-6d6a-4c36-86a1-b37a3d7ec251")
 			(effects (font (size 0.6 0.6) (thickness 0.12)))
@@ -14601,10 +14601,10 @@
 	)
 	(footprint "Resistor_SMD:R_0402_1005Metric"
 		(layer "F.Cu")
-		(at 51.0000 72.0000 0)
+		(at 51.0000 72.5000 90)
 		(uuid "4d0521e4-b459-41cf-8608-60d7ce2456c3")
 		(property "Reference" "R116"
-			(at 2.4520 1.1000 0)
+			(at -2.4020 1.1500 90)
 			(layer "F.SilkS")
 			(uuid "4fd2984f-abf7-48d0-8d91-924ef231f6c1")
 			(effects (font (size 0.6 0.6) (thickness 0.12)))
@@ -14735,7 +14735,7 @@
 	)
 	(pad "1" smd roundrect
 		(net 58 "MPPT")
-		(at -0.51 0)
+		(at -0.51 0 90)
 		(size 0.54 0.64)
 		(layers "F.Cu" "F.Paste" "F.Mask")
 		(roundrect_rratio 0.25)
@@ -14743,7 +14743,7 @@
 	)
 	(pad "2" smd roundrect
 		(net 35 "GND")
-		(at 0.51 0)
+		(at 0.51 0 90)
 		(size 0.54 0.64)
 		(layers "F.Cu" "F.Paste" "F.Mask")
 		(roundrect_rratio 0.25)
@@ -14763,10 +14763,10 @@
 	)
 	(footprint "Resistor_SMD:R_0402_1005Metric"
 		(layer "F.Cu")
-		(at 49.0000 72.5000 0)
+		(at 55.0000 70.5000 0)
 		(uuid "bbddf4c3-6647-4360-8789-7d32bbea4f33")
 		(property "Reference" "R117"
-			(at 0.0000 -1.1000 0)
+			(at -2.4520 0.0000 0)
 			(layer "F.SilkS")
 			(uuid "bcefe8d9-86c1-4fe4-81df-8f77bc4cb864")
 			(effects (font (size 0.6 0.6) (thickness 0.12)))
@@ -14928,7 +14928,7 @@
 		(at 47.5000 62.0000 90)
 		(uuid "6b636dce-7e3b-43fb-8f9f-e0cb552894b0")
 		(property "Reference" "R118"
-			(at 3.2020 1.9500 90)
+			(at -0.0000 -1.1500 90)
 			(layer "F.SilkS")
 			(uuid "11c8e16a-5b14-4b5d-8ba4-99ebcffefed7")
 			(effects (font (size 0.6 0.6) (thickness 0.12)))
@@ -15087,10 +15087,10 @@
 	)
 	(footprint "Resistor_SMD:R_0402_1005Metric"
 		(layer "F.Cu")
-		(at 53.0000 72.0000 0)
+		(at 47.5000 60.0000 90)
 		(uuid "f24f87c5-1a11-4f97-85c1-f534a12eccf6")
 		(property "Reference" "R119"
-			(at 2.4520 0.0000 0)
+			(at -2.4020 0.0000 90)
 			(layer "F.SilkS")
 			(uuid "3e2f2b7a-2823-49dd-8b40-87eb97281514")
 			(effects (font (size 0.6 0.6) (thickness 0.12)))
@@ -15221,7 +15221,7 @@
 	)
 	(pad "1" smd roundrect
 		(net 102 "TERM")
-		(at -0.51 0)
+		(at -0.51 0 90)
 		(size 0.54 0.64)
 		(layers "F.Cu" "F.Paste" "F.Mask")
 		(roundrect_rratio 0.25)
@@ -15229,7 +15229,7 @@
 	)
 	(pad "2" smd roundrect
 		(net 35 "GND")
-		(at 0.51 0)
+		(at 0.51 0 90)
 		(size 0.54 0.64)
 		(layers "F.Cu" "F.Paste" "F.Mask")
 		(roundrect_rratio 0.25)
@@ -15249,10 +15249,10 @@
 	)
 	(footprint "Resistor_SMD:R_0402_1005Metric"
 		(layer "F.Cu")
-		(at 47.5000 60.0000 90)
+		(at 46.0000 60.5000 90)
 		(uuid "73bf9014-a6c7-4fa3-8aae-ceb6da547fcd")
 		(property "Reference" "R120"
-			(at -2.4020 0.0000 90)
+			(at -2.4020 -1.1500 90)
 			(layer "F.SilkS")
 			(uuid "823872f4-84ce-4809-86b2-0925071d4bba")
 			(effects (font (size 0.6 0.6) (thickness 0.12)))
@@ -15411,10 +15411,10 @@
 	)
 	(footprint "Resistor_SMD:R_0402_1005Metric"
 		(layer "F.Cu")
-		(at 46.0000 60.5000 90)
+		(at 44.0000 60.5000 0)
 		(uuid "9436a632-7788-4c1c-8a39-0f287202a120")
 		(property "Reference" "R121"
-			(at -2.4020 -1.1500 90)
+			(at -2.4520 1.1000 0)
 			(layer "F.SilkS")
 			(uuid "6cde5234-e1dc-46a4-85c2-c0b513ae94e7")
 			(effects (font (size 0.6 0.6) (thickness 0.12)))
@@ -15545,7 +15545,7 @@
 	)
 	(pad "1" smd roundrect
 		(net 97 "SETSD")
-		(at -0.51 0 90)
+		(at -0.51 0)
 		(size 0.54 0.64)
 		(layers "F.Cu" "F.Paste" "F.Mask")
 		(roundrect_rratio 0.25)
@@ -15553,7 +15553,7 @@
 	)
 	(pad "2" smd roundrect
 		(net 35 "GND")
-		(at 0.51 0 90)
+		(at 0.51 0)
 		(size 0.54 0.64)
 		(layers "F.Cu" "F.Paste" "F.Mask")
 		(roundrect_rratio 0.25)
@@ -17034,7 +17034,7 @@
 		(at 45.0000 62.5000 90)
 		(uuid "2aa1be12-53e2-4294-85cf-5ab4754b56b0")
 		(property "Reference" "R503"
-			(at 0.0000 1.1500 90)
+			(at 2.4020 -0.0000 90)
 			(layer "F.SilkS")
 			(uuid "3e9cc558-a7cd-45e5-8988-c916be18e9e5")
 			(effects (font (size 0.6 0.6) (thickness 0.12)))
@@ -20191,7 +20191,7 @@
 	)
 	(footprint "TestPoint:TestPoint_Pad_D1.0mm"
 		(layer "F.Cu")
-		(at 48.0000 74.5000 0)
+		(at 48.0000 73.0000 0)
 		(uuid "ace2a950-2dd0-4035-8912-daca3d2189a7")
 		(property "Reference" "TP102"
 			(at 2.8400 0.0000 0)
@@ -20322,7 +20322,7 @@
 		(at 43.5000 77.0000 0)
 		(uuid "434492e8-7d9c-4c79-8ff7-94d6063e44da")
 		(property "Reference" "TP104"
-			(at 2.8400 1.5000 0)
+			(at 2.8400 0.0000 0)
 			(layer "F.SilkS")
 			(uuid "6a4e69b8-7829-45c9-808c-6243d7551874")
 			(effects (font (size 0.6 0.6) (thickness 0.12)))
@@ -20511,10 +20511,10 @@
 	)
 	(footprint "TestPoint:TestPoint_Pad_D1.0mm"
 		(layer "F.Cu")
-		(at 41.0000 77.5000 0)
+		(at 47.5000 75.5000 0)
 		(uuid "ba25d4b7-2073-49b3-8de1-3a6b8e90a985")
 		(property "Reference" "TP107"
-			(at -2.8400 0.0000 0)
+			(at 2.8400 1.5000 0)
 			(layer "F.SilkS")
 			(uuid "33ab2a24-1eec-4c7f-81d5-da1e95c5d6ab")
 			(effects (font (size 0.6 0.6) (thickness 0.12)))
@@ -20575,10 +20575,10 @@
 	)
 	(footprint "TestPoint:TestPoint_Pad_D1.0mm"
 		(layer "F.Cu")
-		(at 36.5000 62.5000 0)
+		(at 41.0000 77.5000 0)
 		(uuid "8135f2a9-5cb8-45a4-8fec-640397a291ae")
 		(property "Reference" "TP108"
-			(at 0.0000 -1.5000 0)
+			(at -2.8400 0.0000 0)
 			(layer "F.SilkS")
 			(uuid "f967d48f-a583-4798-8c95-b0933acbfe9c")
 			(effects (font (size 0.6 0.6) (thickness 0.12)))
@@ -20639,7 +20639,7 @@
 	)
 	(footprint "TestPoint:TestPoint_Pad_D1.0mm"
 		(layer "F.Cu")
-		(at 46.0000 77.0000 0)
+		(at 46.0000 78.0000 0)
 		(uuid "0352cea0-ab9b-4221-8be6-6ce39e12603b")
 		(property "Reference" "TP109"
 			(at 2.8400 0.0000 0)
@@ -20767,10 +20767,10 @@
 	)
 	(footprint "TestPoint:TestPoint_Pad_D1.0mm"
 		(layer "F.Cu")
-		(at 44.0000 60.5000 0)
+		(at 36.5000 62.5000 0)
 		(uuid "c3cacfc8-1497-46b8-8a35-2dd1aeb4e361")
 		(property "Reference" "TP112"
-			(at 2.8400 -1.5000 0)
+			(at 0.0000 -1.5000 0)
 			(layer "F.SilkS")
 			(uuid "7cb39875-1f16-48c5-839b-33a917d2e5b8")
 			(effects (font (size 0.6 0.6) (thickness 0.12)))
@@ -21577,7 +21577,7 @@
 		(at 39.0000 73.5000 0)
 		(uuid "f882043c-b74e-4b13-869a-a51ed6d839f4")
 		(property "Reference" "U102"
-			(at 0.0000 -1.4500 0)
+			(at 2.4720 0.0000 0)
 			(layer "F.SilkS")
 			(uuid "67b23ed7-8357-454f-88c6-125739f734e3")
 			(effects (font (size 0.6 0.6) (thickness 0.12)))
@@ -21930,6 +21930,7 @@
 		(uuid "906f850b-0bc2-4da0-a370-80a26210ac2d")
 	)
 	(pad "2" smd roundrect
+		(net 97 "SETSD")
 		(at -1.9375 -0.75)
 		(size 0.875 0.25)
 		(layers "F.Cu" "F.Paste" "F.Mask")
@@ -21945,7 +21946,7 @@
 		(uuid "abd71f49-fc4f-4740-8c75-66e144e8b006")
 	)
 	(pad "4" smd roundrect
-		(net 97 "SETSD")
+		(net 102 "TERM")
 		(at -1.9375 0.25)
 		(size 0.875 0.25)
 		(layers "F.Cu" "F.Paste" "F.Mask")
@@ -21960,7 +21961,6 @@
 		(uuid "48174594-4854-46a3-b4b6-d8b727ef0795")
 	)
 	(pad "6" smd roundrect
-		(net 102 "TERM")
 		(at -1.9375 1.25)
 		(size 0.875 0.25)
 		(layers "F.Cu" "F.Paste" "F.Mask")
@@ -21968,7 +21968,7 @@
 		(uuid "a7df7514-bd25-492e-81a8-4b55473a3a8a")
 	)
 	(pad "7" smd roundrect
-		(net 58 "MPPT")
+		(net 35 "GND")
 		(at -1.25 1.9375)
 		(size 0.25 0.875)
 		(layers "F.Cu" "F.Paste" "F.Mask")
@@ -21984,7 +21984,7 @@
 		(uuid "7e0777d5-8241-4b3f-b89a-cf77d8aa5ba8")
 	)
 	(pad "9" smd roundrect
-		(net 98 "SRC")
+		(net 58 "MPPT")
 		(at -0.25 1.9375)
 		(size 0.25 0.875)
 		(layers "F.Cu" "F.Paste" "F.Mask")
@@ -21992,7 +21992,7 @@
 		(uuid "1f5243e2-f330-4692-ba5c-b6d0f5e2f9db")
 	)
 	(pad "10" smd roundrect
-		(net 35 "GND")
+		(net 98 "SRC")
 		(at 0.25 1.9375)
 		(size 0.25 0.875)
 		(layers "F.Cu" "F.Paste" "F.Mask")
@@ -22134,7 +22134,7 @@
 		(at 43.5000 75.0000 0)
 		(uuid "0cda7927-83b4-4463-80b3-ed4379275033")
 		(property "Reference" "U104"
-			(at 0.0000 -1.2500 0)
+			(at 0.0000 1.2500 0)
 			(layer "F.SilkS")
 			(uuid "8115e451-0b86-4f46-8b18-00fda626294b")
 			(effects (font (size 0.6 0.6) (thickness 0.12)))

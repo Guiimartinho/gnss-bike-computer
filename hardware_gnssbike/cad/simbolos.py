@@ -32,6 +32,9 @@ ALIAS: dict[str, set[str]] = {
     # V_IO e VCC_IO sao o mesmo pino 7 do receptor: a ficha do MAX-F10S
     # escreve V_IO e a do MAX-M10S escreve VCC_IO. Foi conferido nas duas.
     "U301": {"7"},
+    # o pad exposto: a ficha nao o numera e manda liga-lo ao AGND; o
+    # KiCad o numera 25 e o chama AGND, empilhado no pino 7
+    "U103": {"25"},
 }
 
 
@@ -60,6 +63,7 @@ def _p(refs, simbolo: str) -> None:
 #
 # Uma das duas fontes esta errada, e isso vai para a placa: enquanto a ficha
 # nao responder, nem o simbolo entra nem a nossa pinagem e dada por boa.
+_p("U103", "Battery_Management:ADP5091")
 _p("U301", "RF_GPS:MAX-M10S")
 _p("J101", "Connector:USB_C_Receptacle_USB2.0_16P")
 
