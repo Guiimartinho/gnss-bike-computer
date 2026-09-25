@@ -332,6 +332,22 @@ class Part:
         px = [p[0] for p in ksym.pinos(b).values()] or [0.0]
         return (max(0.0, x0 - min(px)), max(0.0, max(px) - x1))
 
+    def etype_de(self, numero: str) -> str:
+        """O tipo eletrico que VAI para a folha, nao o que parts.py declara.
+
+        Quando a peca usa um simbolo da biblioteca do KiCad, quem manda e o
+        simbolo: e o tipo dele que o ERC le. Os quatro contatos de VBUS do
+        USB-C, por exemplo, sao `power_out` no nosso parts.py e `passive` no
+        simbolo do KiCad - e foi por isso que a regra das bandeiras de
+        alimentacao achou que o trilho tinha fonte quando nao tinha.
+        """
+        if self.kicad:
+            import ksym
+            t = ksym.tipos(self._k_bloco()).get(numero)
+            if t:
+                return t
+        return next(q.etype for q in self.pins if q.number == numero)
+
     def desloca_centro(self) -> tuple[float, float]:
         """Do ponto onde a peca esta ate o centro da caixa dela, na folha."""
         if not self.kicad:
@@ -726,6 +742,36 @@ class PowerPort:
         return (self.x, self.y)
 
     def lib_symbol(self) -> str:
+        if self.net == "PWR_FLAG":
+            # A bandeira de alimentacao, que nao carrega rede nenhuma: ela so
+            # DIZ que aquele no esta alimentado. Existe porque o ERC nao tem
+            # como saber que o 1V8_GNSS vem do 1V8 atraves de um ferrite -
+            # ele ve um trilho cujos pinos sao todos de entrada e chama de
+            # erro. O pino dela e `power_out`, e e isso que responde.
+            art = ('\t\t\t\t(polyline (pts (xy 0 0) (xy 0 1.27))'
+                   ' (stroke (width 0) (type default)) (fill (type none)))\n'
+                   '\t\t\t\t(polyline (pts (xy 0 1.27) (xy -1.016 1.905)'
+                   ' (xy 0 2.54) (xy 1.016 1.905) (xy 0 1.27))'
+                   ' (stroke (width 0) (type default)) (fill (type none)))')
+            return (f'\t\t(symbol "{self.sym_name}"\n\t\t\t(power)\n'
+                    '\t\t\t(pin_numbers hide)\n\t\t\t(pin_names (offset 0) hide)\n'
+                    '\t\t\t(exclude_from_sim no)\n\t\t\t(in_bom no)\n'
+                    '\t\t\t(on_board yes)\n'
+                    f'\t\t\t(property "Reference" "{self.ref}"\n\t\t\t\t(at 0 0 0)\n'
+                    '\t\t\t\t(effects (font (size 1.27 1.27)) (hide yes))\n\t\t\t)\n'
+                    '\t\t\t(property "Value" "PWR_FLAG"\n\t\t\t\t(at 0 3.81 0)\n'
+                    '\t\t\t\t(effects (font (size 1.27 1.27)) (justify bottom))\n\t\t\t)\n'
+                    '\t\t\t(property "Footprint" ""\n\t\t\t\t(at 0 0 0)\n'
+                    '\t\t\t\t(effects (font (size 1.27 1.27)) (hide yes))\n\t\t\t)\n'
+                    '\t\t\t(property "Datasheet" ""\n\t\t\t\t(at 0 0 0)\n'
+                    '\t\t\t\t(effects (font (size 1.27 1.27)) (hide yes))\n\t\t\t)\n'
+                    f'\t\t\t(symbol "PWR_FLAG_0_0"\n'
+                    '\t\t\t\t(pin power_out line\n\t\t\t\t\t(at 0 0 90)\n'
+                    '\t\t\t\t\t(length 0)\n'
+                    '\t\t\t\t\t(name "~" (effects (font (size 1.27 1.27))))\n'
+                    '\t\t\t\t\t(number "1" (effects (font (size 1.27 1.27))))\n'
+                    '\t\t\t\t)\n\t\t\t)\n'
+                    f'\t\t\t(symbol "PWR_FLAG_0_1"\n{art}\n\t\t\t)\n\t\t)')
         if self.ground:
             # the classic three bars, drawn below the connection point
             art = ('\t\t\t\t(polyline (pts (xy 0 0) (xy 0 -1.27))'
@@ -864,6 +910,12 @@ class Schematic:
         self.sheets: list[SheetSymbol] = []
         self.wires: list[tuple[tuple[float, float], tuple[float, float]]] = []
         self.junctions: list[tuple[float, float]] = []
+        # Pinos deixados abertos DE PROPOSITO. O ERC do KiCad chama um pino
+        # sem no de erro, e esta certo: quase sempre e um esquecimento. A
+        # bandeira de "sem conexao" e como se diz "eu sei, e de proposito" -
+        # sem ela os 34 casos reais deste projeto ficam indistinguiveis de um
+        # fio esquecido, e o ERC inteiro vira ruido que ninguem le.
+        self.no_connects: list[tuple[float, float]] = []
         self.texts: list[tuple[float, float, str, float]] = []
 
     @property
@@ -890,6 +942,10 @@ class Schematic:
             f'\t(wire\n\t\t(pts\n\t\t\t(xy {a[0]:.3f} {a[1]:.3f}) (xy {b[0]:.3f} {b[1]:.3f})\n\t\t)'
             f'\n\t\t(stroke (width 0) (type default))\n\t\t(uuid "{uid("w", a, b)}")\n\t)'
             for a, b in self.wires)
+        nc = "\n".join(
+            f'\t(no_connect\n\t\t(at {x:.3f} {y:.3f})'
+            f'\n\t\t(uuid "{uid("nc", x, y)}")\n\t)'
+            for x, y in self.no_connects)
         juncs = "\n".join(
             f'\t(junction\n\t\t(at {x:.3f} {y:.3f})\n\t\t(diameter 0)\n\t\t(color 0 0 0 0)'
             f'\n\t\t(uuid "{uid("j", x, y)}")\n\t)' for x, y in self.junctions)
@@ -911,7 +967,7 @@ class Schematic:
                     else f'\t(paper "User" {self.paper[0]} {self.paper[1]})\n')
                  + bloco +
                  f'\t(lib_symbols\n{libs}\n\t)']
-        for chunk in (folhas, wires, juncs, rotulos, texts, insts):
+        for chunk in (folhas, wires, nc, juncs, rotulos, texts, insts):
             if chunk:
                 parts.append(chunk)
         if self.root_uuid is None:

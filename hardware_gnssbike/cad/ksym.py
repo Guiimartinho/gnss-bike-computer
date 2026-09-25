@@ -152,6 +152,17 @@ def sem_propriedades(blk: str) -> str:
     return blk
 
 
+def tipos(blk: str) -> dict[str, str]:
+    """Numero do pino -> tipo eletrico, como o simbolo o declara."""
+    out: dict[str, str] = {}
+    for m in re.finditer(r'\(pin\s+(\w+)\s', blk):
+        p = _recorta(blk, m.start())
+        n = re.search(r'\(number\s+"([^"]+)"', p)
+        if n:
+            out[n.group(1)] = m.group(1)
+    return out
+
+
 def nomes(blk: str) -> dict[str, str]:
     """Numero do pino -> nome do pino."""
     out: dict[str, str] = {}

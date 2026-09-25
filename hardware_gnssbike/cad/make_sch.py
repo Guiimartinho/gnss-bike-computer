@@ -50,6 +50,9 @@ COL_GAP = 16.0
 ROW_GAP = 22.0
 LABEL_X = 12.0     # how far inside the left and right margins a label sits
 
+# folha -> redes que recebem PWR_FLAG nela. Preenchido em main().
+FLAGS_AQUI: dict[str, set[str]] = {}
+
 
 def escolher_papel(refs: list[str], n_labels: int) -> str:
     """The smallest standard sheet the drawing actually fits on.
@@ -353,6 +356,55 @@ def montar_folha(nome: str, arquivo: str, pagina: str, root_uuid: str,
             feito |= set(caminho)
 
     _fechar(sch, router)
+
+    # ---- as duas bandeiras que o ERC do KiCad cobra ----
+    #
+    # Sem elas o ERC acusa 52 erros que nao sao erros, e um relatorio com 52
+    # falsos positivos e um relatorio que ninguem le - foi por isso que este
+    # projeto passou meses sem nunca ter rodado o ERC.
+    #
+    # 1. Pino aberto DE PROPOSITO leva bandeira de "sem conexao". Sao os
+    #    NC do supressor, os GPIO que ninguem usa, o SDA e o SCL do receptor
+    #    (que fala por UART), o SWO do gravador. `nets.py` ja e a fonte da
+    #    verdade sobre o que esta aberto: um pino que nao aparece em rede
+    #    nenhuma esta aberto, e ponto.
+    # Uma rede de UM pino so nao liga nada: e um pino aberto com nome. O
+    # R111, que era o pull-up do IRQ do colhedor antigo, virou isso quando a
+    # peca mudou - e o ERC, com razao, chama de pino sem ligacao.
+    com_no = {(r, q.number) for rede, pinos_r in N.NETS.items()
+              if len(pinos_r) > 1
+              for r, p in pinos_r if S.sheet_of(r) == nome
+              for q in P.PARTS[r].pins if q.name == p or q.number == p}
+    for ref in refs:
+        peca = P.PARTS[ref]
+        folha_pinos = peca.pin_sheet()
+        # Pontos onde JA existe um pino ligado. Simbolo da biblioteca do
+        # KiCad empilha pinos - os quatro VBUS do USB-C num ponto so, o pad
+        # exposto do colhedor sobre o AGND -, e por um desses pontos a rede
+        # ja passa. Uma bandeira de "sem conexao" ali seria mentira, e o ERC
+        # a chama de `no_connect_connected`.
+        ligados = {folha_pinos[n] for n in folha_pinos if (ref, n) in com_no}
+        for num, xy in folha_pinos.items():
+            if (ref, num) not in com_no and xy not in ligados:
+                sch.no_connects.append(xy)
+                ligados.add(xy)      # um so por ponto, nunca dois empilhados
+
+    # 2. Trilho alimentado atraves de peca passiva nao tem fonte que o ERC
+    #    enxergue: o 1V8_GNSS vem do 1V8 por um ferrite, o SD3V0_FLASH vem
+    #    do SD3V0 por um jumper, o VIN do colhedor vem do painel. O PWR_FLAG
+    #    e o simbolo que existe para dizer "esta alimentado, eu respondo por
+    #    isso".
+    #
+    #    UMA por rede NO PROJETO INTEIRO. Duas bandeiras na mesma rede sao
+    #    duas saidas de alimentacao ligadas entre si, que e outro erro de
+    #    ERC - e uma rede que atravessa folhas ganharia uma em cada. Por isso
+    #    `precisa_de_flag` e calculado uma vez, fora daqui, e cada folha so
+    #    coloca as que lhe couberem.
+    for rede in sorted(FLAGS_AQUI.get(nome, ())):
+        px, py = ponto(*pinos_do_no(rede, nome)[0])
+        sch.powers.append(PowerPort("PWR_FLAG", px, py, ground=False,
+                                    ref=f"#FLG{len(sch.powers) + 1:03d}"))
+
     sch.text(MARGEM, MARGEM - 8.0,
              f"{nome} - {len(refs)} posicoes. NADA MONTADO NEM MEDIDO.", 2.5)
     return sch, falhas, len(refs)
@@ -473,6 +525,64 @@ def main() -> int:
             lado = 180 if (i % 2 == 0) else 0
             py = snap(b.y + 10.0 + (i // 2) * PASSO_PINO)
             b.pins.append((rede, py, lado, "bidirectional"))
+
+    # Quais redes precisam de PWR_FLAG, e em que folha cada uma recebe a sua.
+    #
+    # Precisa quem tem pino de ENTRADA de alimentacao e nenhum de saida em
+    # lugar nenhum do projeto: um trilho que chega por ferrite, por jumper ou
+    # de fora da placa. A folha escolhida e a primeira, em ordem, que tenha
+    # um pino daquela rede - assim a bandeira fica perto de onde a rede vive.
+    FLAGS_AQUI.clear()
+    # Duas redes que compartilham um PINO sao uma so para o KiCad. Acontece
+    # de proposito nos conectores que atravessam sinal - o do display leva o
+    # FPC_VSS de um lado e o GND do outro pelo mesmo contato -, e sem juntar
+    # antes de contar, cada lado ganharia a sua bandeira e as duas brigariam
+    # como duas saidas de alimentacao ligadas entre si.
+    grupo: dict[str, str] = {}
+
+    def _raiz(n: str) -> str:
+        while grupo.get(n, n) != n:
+            n = grupo[n]
+        return n
+
+    por_pino: dict[tuple[str, str], str] = {}
+    for rede, pinos_r in N.NETS.items():
+        grupo.setdefault(rede, rede)
+        for r, pi in pinos_r:
+            num = next(q.number for q in P.PARTS[r].pins
+                       if q.name == pi or q.number == pi)
+            outro = por_pino.setdefault((r, num), rede)
+            if _raiz(outro) != _raiz(rede):
+                grupo[_raiz(rede)] = _raiz(outro)
+
+    tipos_do_grupo: dict[str, list[str]] = {}
+    for rede, pinos_r in N.NETS.items():
+        g = _raiz(rede)
+        tipos_do_grupo.setdefault(g, []).extend(
+            P.PARTS[r].etype_de(
+                next(q.number for q in P.PARTS[r].pins
+                     if q.name == pi or q.number == pi)) for r, pi in pinos_r)
+
+    feitos: set[str] = set()
+    for rede, pinos_r in N.NETS.items():
+        g = _raiz(rede)
+        if g in feitos:
+            continue
+        tipos = tipos_do_grupo[g]
+        if "power_out" in tipos or "output" in tipos:
+            continue
+        # Um trilho SEMPRE tem entrada de alimentacao, mesmo quando todos os
+        # pinos de peca nele sao passivos: o proprio simbolo de alimentacao
+        # que o carrega e um pino `power_in`. Era o caso do VBAT_CELULA, que
+        # so toca o conector da bateria e um jumper, e do 1V8_BLOCO, entre o
+        # jumper e o ferrite.
+        if "power_in" not in tipos and rede not in S.TRILHOS:
+            continue
+        for folha_n, _a, _pg in S.FOLHAS:
+            if any(S.sheet_of(r) == folha_n for r, _pi in pinos_r):
+                FLAGS_AQUI.setdefault(folha_n, set()).add(rede)
+                feitos.add(g)
+                break
 
     todas: list[tuple[str, Schematic]] = []
     falhas: list[str] = []

@@ -1472,6 +1472,42 @@
 				)
 			)
 		)
+		(symbol "power:PWR_FLAG"
+			(power)
+			(pin_numbers hide)
+			(pin_names (offset 0) hide)
+			(exclude_from_sim no)
+			(in_bom no)
+			(on_board yes)
+			(property "Reference" "#FLG024"
+				(at 0 0 0)
+				(effects (font (size 1.27 1.27)) (hide yes))
+			)
+			(property "Value" "PWR_FLAG"
+				(at 0 3.81 0)
+				(effects (font (size 1.27 1.27)) (justify bottom))
+			)
+			(property "Footprint" ""
+				(at 0 0 0)
+				(effects (font (size 1.27 1.27)) (hide yes))
+			)
+			(property "Datasheet" ""
+				(at 0 0 0)
+				(effects (font (size 1.27 1.27)) (hide yes))
+			)
+			(symbol "PWR_FLAG_0_0"
+				(pin power_out line
+					(at 0 0 90)
+					(length 0)
+					(name "~" (effects (font (size 1.27 1.27))))
+					(number "1" (effects (font (size 1.27 1.27))))
+				)
+			)
+			(symbol "PWR_FLAG_0_1"
+				(polyline (pts (xy 0 0) (xy 0 1.27)) (stroke (width 0) (type default)) (fill (type none)))
+				(polyline (pts (xy 0 1.27) (xy -1.016 1.905) (xy 0 2.54) (xy 1.016 1.905) (xy 0 1.27)) (stroke (width 0) (type default)) (fill (type none)))
+			)
+		)
 	)
 	(wire
 		(pts
@@ -2123,6 +2159,34 @@
 		)
 		(stroke (width 0) (type default))
 		(uuid "25802936-e3d1-477c-82e3-79d34f138a18")
+	)
+	(no_connect
+		(at 62.230 44.450)
+		(uuid "146cf699-1449-459a-8ebb-fe0b27c325aa")
+	)
+	(no_connect
+		(at 52.070 31.750)
+		(uuid "43b259cf-e4ba-49bc-85aa-03c77c3911a6")
+	)
+	(no_connect
+		(at 31.750 46.990)
+		(uuid "efbc10fe-4677-40fc-8cef-c1a9452d5be6")
+	)
+	(no_connect
+		(at 31.750 49.530)
+		(uuid "26989e2d-e9e8-4121-8413-965ac7de85a9")
+	)
+	(no_connect
+		(at 31.750 57.150)
+		(uuid "60592bd2-876e-4a50-8b17-52e3b3fc8513")
+	)
+	(no_connect
+		(at 78.740 46.990)
+		(uuid "3a782c3b-8886-48e2-86f6-20fd1a81cecb")
+	)
+	(no_connect
+		(at 104.140 36.830)
+		(uuid "8041d822-1320-4cf3-8bcc-60fa1e3ceead")
 	)
 	(junction
 		(at 30.480 41.910)
@@ -3535,6 +3599,41 @@
 			(project "gnssbike"
 				(path "/9c874366-f223-4aef-8b18-3e2a2bab2b25/2876718e-81a5-441d-8f57-8355947cf79b"
 					(reference "#PWR023")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:PWR_FLAG")
+		(at 212.090 87.630 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(dnp no)
+		(uuid "ed8234e9-8862-42ae-8356-48720dcdfaaf")
+		(property "Reference" "#FLG024"
+			(at 212.09 87.63 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Value" "PWR_FLAG"
+			(at 212.090 83.820 0)
+			(effects (font (size 1.27 1.27)))
+		)
+		(property "Footprint" ""
+			(at 212.09 87.63 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Datasheet" ""
+			(at 212.09 87.63 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(pin "1" (uuid "6736c2b5-cdb2-48c5-8c6b-eaa7baea2cf4"))
+		(instances
+			(project "gnssbike"
+				(path "/9c874366-f223-4aef-8b18-3e2a2bab2b25/2876718e-81a5-441d-8f57-8355947cf79b"
+					(reference "#FLG024")
 					(unit 1)
 				)
 			)

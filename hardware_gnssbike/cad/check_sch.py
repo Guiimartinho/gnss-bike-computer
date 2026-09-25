@@ -42,9 +42,11 @@ fails: list[str] = []
 CURTOS: list[str] = []
 
 
-def check(ok: bool, what: str) -> None:
+def check(ok: bool, what: str, *detalhes: str) -> None:
     print(("  ok    " if ok else "  FALHA ") + what)
     if not ok:
+        for d in detalhes:
+            print("      " + d)
         fails.append(what)
 
 
@@ -139,10 +141,71 @@ def esperado_unificado() -> dict[str, frozenset]:
     return {k: frozenset(v) for k, v in juntos.items() if len(v) >= 2}
 
 
+# As unicas violacoes de ERC que este projeto aceita, uma a uma e com o
+# motivo. Qualquer outra faz a verificacao falhar.
+#
+# As quatro sao a mesma coisa: duas SAIDAS de alimentacao ligadas entre si. O
+# KiCad chama de erro por padrao porque, em circuito de sinal, duas saidas no
+# mesmo no e curto. Num caminho de energia nao e - e o desenho.
+ERC_ACEITO = {
+    # a ficha do ADP5091 manda, para saida fixa, ligar o REG_FB ao REG_OUT
+    ("pin_to_pin", "U103:14", "U103:15"),
+    # o no da celula: o medidor e o colhedor penduram os dois nele, que e o
+    # que significa ter dois carregadores na mesma bateria
+    ("pin_to_pin", "U102:B3", "U103:16"),
+    ("pin_to_pin", "U102:B3", "U103:17"),
+    # e a chave interna do colhedor, entre o BAT e o SYS dele
+    ("pin_to_pin", "U103:16", "U103:17"),
+}
+
+
+def _erc() -> None:
+    """O ERC do KiCad, que este projeto nunca tinha rodado.
+
+    Sao 52 erros que ninguem viu, entre eles um capacitor com os DOIS
+    terminais no ar. A verificacao propria daqui compara a nossa lista de
+    nos com a que o KiCad extrai - e boa nisso e cega para tudo o mais: pino
+    aberto, trilho sem fonte, duas saidas ligadas entre si.
+    """
+    import json
+    import subprocess
+    import tempfile
+
+    saida = pathlib.Path(tempfile.gettempdir()) / "gnssbike_erc.json"
+    r = subprocess.run(
+        [str(KICAD), "sch", "erc", "--severity-error", "--format", "json",
+         "-o", str(saida), str(RAIZ)],
+        capture_output=True, text=True)
+    if r.returncode not in (0, 5) or not saida.exists():
+        check(False, "o KiCad roda o ERC", r.stderr.strip()[:200])
+        return
+    check(True, "o KiCad roda o ERC")
+    d = json.loads(saida.read_text(encoding="utf-8"))
+    sobrou = []
+    for folha in d.get("sheets", []):
+        for v in folha.get("violations", []):
+            if v.get("severity") != "error":
+                continue
+            chave = tuple([v["type"]] + sorted(
+                "%s:%s" % (i.get("description", "").split()[1],
+                           i.get("description", "").split("Pino ")[1].split(" ")[0])
+                for i in v.get("items", [])
+                if i.get("description", "").startswith("Symbol ")
+                and "Pino " in i.get("description", "")))
+            if chave in ERC_ACEITO:
+                continue
+            sobrou.append("%s: %s" % (v["type"], "; ".join(
+                i.get("description", "")[:60] for i in v.get("items", [])[:2])))
+    check(not sobrou, f"o ERC do KiCad nao acusa erro novo ({len(ERC_ACEITO)} "
+          "aceitos, um a um, com o motivo)", *sobrou[:8])
+
+
 def main() -> int:
     print("gerando...")
     MK.main()
     print()
+
+    _erc()
 
     arquivos = [RAIZ] + [HERE / a for _n, a, _p in S.FOLHAS]
     arvores = {}

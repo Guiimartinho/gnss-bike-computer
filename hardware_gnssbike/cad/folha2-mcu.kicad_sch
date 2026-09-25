@@ -2247,6 +2247,14 @@
 		(stroke (width 0) (type default))
 		(uuid "96ccbcc0-5db8-41c6-8f73-3793a7cb8dee")
 	)
+	(no_connect
+		(at 62.230 46.990)
+		(uuid "a7096b38-b562-4e32-8133-a008465663cf")
+	)
+	(no_connect
+		(at 114.300 44.450)
+		(uuid "dddc4823-3a4a-42d8-83de-bec5d41f423d")
+	)
 	(junction
 		(at 115.570 43.180)
 		(diameter 0)

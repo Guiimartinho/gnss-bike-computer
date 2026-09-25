@@ -6962,6 +6962,42 @@
 				)
 			)
 		)
+		(symbol "power:PWR_FLAG"
+			(power)
+			(pin_numbers hide)
+			(pin_names (offset 0) hide)
+			(exclude_from_sim no)
+			(in_bom no)
+			(on_board yes)
+			(property "Reference" "#FLG134"
+				(at 0 0 0)
+				(effects (font (size 1.27 1.27)) (hide yes))
+			)
+			(property "Value" "PWR_FLAG"
+				(at 0 3.81 0)
+				(effects (font (size 1.27 1.27)) (justify bottom))
+			)
+			(property "Footprint" ""
+				(at 0 0 0)
+				(effects (font (size 1.27 1.27)) (hide yes))
+			)
+			(property "Datasheet" ""
+				(at 0 0 0)
+				(effects (font (size 1.27 1.27)) (hide yes))
+			)
+			(symbol "PWR_FLAG_0_0"
+				(pin power_out line
+					(at 0 0 90)
+					(length 0)
+					(name "~" (effects (font (size 1.27 1.27))))
+					(number "1" (effects (font (size 1.27 1.27))))
+				)
+			)
+			(symbol "PWR_FLAG_0_1"
+				(polyline (pts (xy 0 0) (xy 0 1.27)) (stroke (width 0) (type default)) (fill (type none)))
+				(polyline (pts (xy 0 1.27) (xy -1.016 1.905) (xy 0 2.54) (xy 1.016 1.905) (xy 0 1.27)) (stroke (width 0) (type default)) (fill (type none)))
+			)
+		)
 	)
 	(wire
 		(pts
@@ -9552,6 +9588,110 @@
 		)
 		(stroke (width 0) (type default))
 		(uuid "b0ff3d47-8cfc-4538-8746-798b4e417408")
+	)
+	(no_connect
+		(at 59.690 44.450)
+		(uuid "376975ff-5fa4-484d-809c-6feffa402a1e")
+	)
+	(no_connect
+		(at 59.690 46.990)
+		(uuid "10d5408a-854a-43c0-8e43-00c65d347f3d")
+	)
+	(no_connect
+		(at 59.690 49.530)
+		(uuid "79929f83-c2e3-4a9b-8e78-85ab36b32075")
+	)
+	(no_connect
+		(at 59.690 54.610)
+		(uuid "0ae1305d-1857-46b2-85ef-ad549a879435")
+	)
+	(no_connect
+		(at 59.690 67.310)
+		(uuid "f0fd05c6-6588-4f11-8f75-68c3083e21f8")
+	)
+	(no_connect
+		(at 101.600 64.770)
+		(uuid "cd3312df-d37d-453c-8d02-00059aae59df")
+	)
+	(no_connect
+		(at 101.600 67.310)
+		(uuid "3f9fe3db-c2f2-42e9-8a7a-588fa6a0116b")
+	)
+	(no_connect
+		(at 142.240 41.910)
+		(uuid "4e9c5c68-31a2-46a0-8773-cd4430d592a1")
+	)
+	(no_connect
+		(at 142.240 44.450)
+		(uuid "6780bce4-e19f-406f-8e53-d245b40a9539")
+	)
+	(no_connect
+		(at 142.240 46.990)
+		(uuid "6d063115-491e-463c-89b3-eb72d0658aed")
+	)
+	(no_connect
+		(at 142.240 49.530)
+		(uuid "0b566494-3c42-47bd-85e6-8655bf60919d")
+	)
+	(no_connect
+		(at 181.610 36.830)
+		(uuid "162839ae-ee80-4462-803a-6b2953d516ae")
+	)
+	(no_connect
+		(at 196.850 36.830)
+		(uuid "69192815-af49-4e5d-85bd-ac4bef429c2f")
+	)
+	(no_connect
+		(at 196.850 39.370)
+		(uuid "00d7d1b7-80c1-43af-881f-e94d291d2c8d")
+	)
+	(no_connect
+		(at 196.850 44.450)
+		(uuid "0d888e9d-1c80-4ee5-8d80-92d51e21afeb")
+	)
+	(no_connect
+		(at 127.000 132.080)
+		(uuid "c88606ee-9430-4c14-89a9-1b8b2ce21777")
+	)
+	(no_connect
+		(at 157.480 114.300)
+		(uuid "cd4f4129-e6a3-43cc-839e-31c8c165943d")
+	)
+	(no_connect
+		(at 144.780 96.520)
+		(uuid "27f233bf-7669-424a-8a3e-88f0b3d8ba4a")
+	)
+	(no_connect
+		(at 157.480 119.380)
+		(uuid "319a0caa-4edc-4642-86c2-2991b9274ed3")
+	)
+	(no_connect
+		(at 127.000 144.780)
+		(uuid "a6fefe6c-a600-4b36-8026-b73661fd2821")
+	)
+	(no_connect
+		(at 127.000 147.320)
+		(uuid "f1e6ad13-469c-44be-8207-4c27fb1a8db3")
+	)
+	(no_connect
+		(at 31.750 236.220)
+		(uuid "0e2910e1-59d1-4213-8cc4-2db1ef05786e")
+	)
+	(no_connect
+		(at 39.370 236.220)
+		(uuid "d70dfc7f-17c4-447f-8aa7-eac6f6351356")
+	)
+	(no_connect
+		(at 102.870 236.220)
+		(uuid "ebc9ef44-f961-4846-8805-975e4cbee102")
+	)
+	(no_connect
+		(at 339.090 236.220)
+		(uuid "6c00b7fc-6048-4be2-8669-069dd9d7f9b2")
+	)
+	(no_connect
+		(at 39.370 260.350)
+		(uuid "5dea7cc1-65d7-490a-8067-88b1f990ec94")
 	)
 	(junction
 		(at 185.420 63.500)
@@ -17835,6 +17975,321 @@
 			(project "gnssbike"
 				(path "/9c874366-f223-4aef-8b18-3e2a2bab2b25/491ca2c6-8961-44f5-87d8-1426bbeb605e"
 					(reference "#PWR133")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:PWR_FLAG")
+		(at 252.730 236.220 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(dnp no)
+		(uuid "ec5cdf03-cbd4-4953-898a-66fe0c3a9b91")
+		(property "Reference" "#FLG134"
+			(at 252.73 236.22 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Value" "PWR_FLAG"
+			(at 252.730 232.410 0)
+			(effects (font (size 1.27 1.27)))
+		)
+		(property "Footprint" ""
+			(at 252.73 236.22 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Datasheet" ""
+			(at 252.73 236.22 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(pin "1" (uuid "5c7190d2-90ac-4cfd-8118-34a826f28c24"))
+		(instances
+			(project "gnssbike"
+				(path "/9c874366-f223-4aef-8b18-3e2a2bab2b25/491ca2c6-8961-44f5-87d8-1426bbeb605e"
+					(reference "#FLG134")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:PWR_FLAG")
+		(at 228.600 236.220 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(dnp no)
+		(uuid "efdeea7b-af6c-4779-85b0-83e39e6e0ef4")
+		(property "Reference" "#FLG135"
+			(at 228.6 236.22 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Value" "PWR_FLAG"
+			(at 228.600 232.410 0)
+			(effects (font (size 1.27 1.27)))
+		)
+		(property "Footprint" ""
+			(at 228.6 236.22 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Datasheet" ""
+			(at 228.6 236.22 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(pin "1" (uuid "0a71face-3076-4dd8-889d-607f60a80be9"))
+		(instances
+			(project "gnssbike"
+				(path "/9c874366-f223-4aef-8b18-3e2a2bab2b25/491ca2c6-8961-44f5-87d8-1426bbeb605e"
+					(reference "#FLG135")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:PWR_FLAG")
+		(at 299.720 236.220 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(dnp no)
+		(uuid "c39d4945-df14-4244-8120-bb54973fe3e8")
+		(property "Reference" "#FLG136"
+			(at 299.72 236.22 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Value" "PWR_FLAG"
+			(at 299.720 232.410 0)
+			(effects (font (size 1.27 1.27)))
+		)
+		(property "Footprint" ""
+			(at 299.72 236.22 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Datasheet" ""
+			(at 299.72 236.22 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(pin "1" (uuid "43fb88d1-87e4-4bbe-8c31-8cc6e06a90b8"))
+		(instances
+			(project "gnssbike"
+				(path "/9c874366-f223-4aef-8b18-3e2a2bab2b25/491ca2c6-8961-44f5-87d8-1426bbeb605e"
+					(reference "#FLG136")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:PWR_FLAG")
+		(at 322.580 236.220 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(dnp no)
+		(uuid "a6e06876-ff56-4f0b-85fc-31b02c88e5c7")
+		(property "Reference" "#FLG137"
+			(at 322.58 236.22 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Value" "PWR_FLAG"
+			(at 322.580 232.410 0)
+			(effects (font (size 1.27 1.27)))
+		)
+		(property "Footprint" ""
+			(at 322.58 236.22 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Datasheet" ""
+			(at 322.58 236.22 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(pin "1" (uuid "f58570d8-aaba-49f9-8b17-f73ff7fb7a7b"))
+		(instances
+			(project "gnssbike"
+				(path "/9c874366-f223-4aef-8b18-3e2a2bab2b25/491ca2c6-8961-44f5-87d8-1426bbeb605e"
+					(reference "#FLG137")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:PWR_FLAG")
+		(at 139.700 96.520 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(dnp no)
+		(uuid "52988233-7b47-4a1d-8792-768667edaf0e")
+		(property "Reference" "#FLG138"
+			(at 139.7 96.52 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Value" "PWR_FLAG"
+			(at 139.700 92.710 0)
+			(effects (font (size 1.27 1.27)))
+		)
+		(property "Footprint" ""
+			(at 139.7 96.52 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Datasheet" ""
+			(at 139.7 96.52 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(pin "1" (uuid "da0b8ee7-c802-4987-8639-0ccfb590b86a"))
+		(instances
+			(project "gnssbike"
+				(path "/9c874366-f223-4aef-8b18-3e2a2bab2b25/491ca2c6-8961-44f5-87d8-1426bbeb605e"
+					(reference "#FLG138")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:PWR_FLAG")
+		(at 127.000 101.600 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(dnp no)
+		(uuid "6642ae10-d6f9-4a06-8f39-c9972a5459bd")
+		(property "Reference" "#FLG139"
+			(at 127.0 101.6 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Value" "PWR_FLAG"
+			(at 127.000 97.790 0)
+			(effects (font (size 1.27 1.27)))
+		)
+		(property "Footprint" ""
+			(at 127.0 101.6 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Datasheet" ""
+			(at 127.0 101.6 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(pin "1" (uuid "b42ba4cb-f54b-4bd7-8116-6ee2226572f1"))
+		(instances
+			(project "gnssbike"
+				(path "/9c874366-f223-4aef-8b18-3e2a2bab2b25/491ca2c6-8961-44f5-87d8-1426bbeb605e"
+					(reference "#FLG139")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:PWR_FLAG")
+		(at 204.470 236.220 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(dnp no)
+		(uuid "d53dfec0-1034-4020-87a5-368ac83d96ac")
+		(property "Reference" "#FLG140"
+			(at 204.47 236.22 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Value" "PWR_FLAG"
+			(at 204.470 232.410 0)
+			(effects (font (size 1.27 1.27)))
+		)
+		(property "Footprint" ""
+			(at 204.47 236.22 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Datasheet" ""
+			(at 204.47 236.22 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(pin "1" (uuid "68e0c095-9aad-4b3d-8767-14b9bf437d9e"))
+		(instances
+			(project "gnssbike"
+				(path "/9c874366-f223-4aef-8b18-3e2a2bab2b25/491ca2c6-8961-44f5-87d8-1426bbeb605e"
+					(reference "#FLG140")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:PWR_FLAG")
+		(at 196.850 34.290 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(dnp no)
+		(uuid "43607bed-7b0b-4ac2-8c5c-c7a8ab7a4a78")
+		(property "Reference" "#FLG141"
+			(at 196.85 34.29 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Value" "PWR_FLAG"
+			(at 196.850 30.480 0)
+			(effects (font (size 1.27 1.27)))
+		)
+		(property "Footprint" ""
+			(at 196.85 34.29 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Datasheet" ""
+			(at 196.85 34.29 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(pin "1" (uuid "a24f6412-d3b3-4050-8c72-616a73b02764"))
+		(instances
+			(project "gnssbike"
+				(path "/9c874366-f223-4aef-8b18-3e2a2bab2b25/491ca2c6-8961-44f5-87d8-1426bbeb605e"
+					(reference "#FLG141")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:PWR_FLAG")
+		(at 101.600 36.830 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(dnp no)
+		(uuid "75799725-bd87-41da-8504-ceead3457a8c")
+		(property "Reference" "#FLG142"
+			(at 101.6 36.83 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Value" "PWR_FLAG"
+			(at 101.600 33.020 0)
+			(effects (font (size 1.27 1.27)))
+		)
+		(property "Footprint" ""
+			(at 101.6 36.83 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Datasheet" ""
+			(at 101.6 36.83 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(pin "1" (uuid "07d43164-09d7-40cb-80ec-7a2818a49dec"))
+		(instances
+			(project "gnssbike"
+				(path "/9c874366-f223-4aef-8b18-3e2a2bab2b25/491ca2c6-8961-44f5-87d8-1426bbeb605e"
+					(reference "#FLG142")
 					(unit 1)
 				)
 			)
