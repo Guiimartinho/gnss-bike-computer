@@ -126,26 +126,37 @@ religa o sistema inteiro, e isso vem ligado de fábrica.
 
 ```mermaid
 flowchart TB
-    subgraph MOD["Fanstel BM20C"]
-        NRF["nRF54LM20A<br/>cristais de 32 MHz e 32,768 kHz<br/>antena de chip"]
+    subgraph MOD["MinewSemi ME54BS13"]
+        NRF["nRF54LM20A<br/>cristais integrados<br/>antena de PCB"]
     end
-    R3V0(("3V0")) -->|"VDD, 100 nF por pino"| MOD
-    VOUT(("VBUSOUT")) -->|"VBUS, pad H7"| MOD
-    USBD["USB-C D+ / D−"] ---|"par de 90 Ω"| MOD
-    TC["Tag-Connect TC2030-NL"] ---|"SWDIO J3, SWDCLK K3, reset G2"| MOD
+    R3V0(("3V0")) -->|"VDD, pad 19, 100 nF por pino"| MOD
+    VOUT(("VBUSOUT")) -->|"VBUS, pad 9"| MOD
+    USBD["USB-C D+ / D−"] ---|"par de 90 Ω, pads 8 e 7"| MOD
+    TC["Tag-Connect TC2030-NL"] ---|"SWDIO 5, SWDCLK 6, reset 4"| MOD
     TP["TP201 e TP202<br/>pads do console"] ---|"uart20 · P1.00, P1.31"| MOD
     MOD --- BUSES["spi00 · spi22 · uart21<br/>i2c23 · i2c30 · pwm20/21/22"]
 ```
 
 ### As decisões desta folha
 
-**A radiofrequência não é deste projeto.** O casamento, a antena e os dois
-cristais vêm dentro do módulo, certificado em FCC, ISED, Europa, Austrália
-e Nova Zelândia. O que a placa faz em volta dele é: desacoplar, respeitar
-a zona da antena e levar USB, SWD e console para fora. **É por isso que
-as diretrizes de projeto de radiofrequência do nRF54LM20 não são
-obrigatórias aqui** — e passariam a ser, todas, se o chip fosse direto na
-placa.
+**A radiofrequência não é deste projeto.** O casamento, a antena de PCB e
+os cristais vêm dentro do módulo. O que a placa faz em volta dele é:
+desacoplar, respeitar a zona da antena e levar USB, SWD e console para
+fora. **É por isso que as diretrizes de projeto de radiofrequência do
+nRF54LM20 não são obrigatórias aqui** — e passariam a ser, todas, se o chip
+fosse direto na placa.
+
+**O pad 2 fica aberto.** Ele é a saída para antena externa; o ME54BS13 já
+traz a antena de PCB num dos lados de 12 mm, e é ela que este projeto usa.
+Ligar os dois seria pôr dois caminhos no mesmo transmissor.
+
+> [!WARNING]
+> **A certificação do ME54BS13 não está confirmada.** O módulo que este
+> esquemático descrevia antes, o Fanstel BM20C, trazia FCC, ISED, TELEC e
+> conformidade europeia; da ficha do ME54BS13, a V0.5.0 **não traz nenhuma
+> certificação** e a V1.0.0 não foi lida quanto a isso. Enquanto ninguém
+> ler, o aparelho não pode ser tratado como pré-certificado
+> ([README](README.md#fichas-que-precisam-ser-lidas)).
 
 **O console sai em dois pads, não em conector.** O `uart20` em P1.00 e
 P1.31 vai a dois pontos de teste. Um ciclista nunca o vê; quem precisa
@@ -155,19 +166,25 @@ do nRF54LM20A tem um periférico só, e `uart30` e `i2c30` são o mesmo
 bloco.
 
 **A depuração é sem conector.** O footprint Tag-Connect TC2030-NL só tem
-furos e pads; o cabo se encosta com um clipe. Numa placa de 55 × 97 mm
+furos e pads; o cabo se encosta com um clipe. Numa placa de 34 × 90 mm
 dentro de uma caixa vedada, um conector de dez vias seria volume gasto
 para sempre por uma coisa que se usa no protótipo.
 
 ### Em aberto nesta folha
 
-- **O pad LGA de cada GPIO.** A ficha do módulo diz que ele expõe 64 dos
-  66 GPIO — todos menos P1.20 e P1.21, que ficam com o cristal —, e os 31
-  pinos deste esquemático estão fora desse par, de modo que **o mapa cabe**.
-  O de-para pino a pino não foi levantado, e o layout precisa dele.
-- **A tolerância do cristal de 32,768 kHz.** O ANT+ exige ±50 ppm e a
-  ficha do BM20C não informa. Pergunta à Fanstel, e medida do LFCLK contra
-  o 1 PPS do receptor no protótipo.
+- **O espelhamento do mapa de pads.** O de-para pino a pino **já existe**:
+  a ficha V1.0.0 (p. 6 a 9) dá os 80 pads — 20 castelados na borda,
+  numerados de 1 a 20, e uma matriz LGA de 60, de `A0` a `F9` —, e eles
+  estão transcritos em [`cad/parts.py`](cad/parts.py) (`PADS_ME54BS13`). O
+  módulo expõe 64 dos 66 GPIO do chip, todos menos P1.20 e P1.21, que ficam
+  com o cristal de 32,768 kHz, e os 31 pinos deste esquemático, mais os dois
+  reservados, saem todos fora desse par. O que falta é conferência: **a V1.0.0 e a V0.5.0
+  discordam de qual lado é qual**, e antes de fabricar alguém tem de ver num
+  módulo real que os `GND` `D0`, `E0` e `F0` ficam do lado do `VDD`
+  (pad 19).
+- **A tolerância do cristal de 32,768 kHz.** O ANT+ exige ±50 ppm e essa
+  tolerância **não está levantada para o ME54BS13**. Pergunta à MinewSemi, e
+  medida do LFCLK contra o 1 PPS do receptor no protótipo.
 
 ## Folha 3 · GNSS
 
@@ -318,17 +335,21 @@ volta a existir se alguém montar o plano B sem mexer no firmware.
 
 ### Em aberto nesta folha
 
-> [!CAUTION]
-> **Não se sabe por onde a luz do C se liga, e isso trava a folha 4.** O
-> FPC de 10 vias que as duas telas compartilham — `SCLK`, `SI`, `SCS`,
-> `EXTCOMIN`, `DISP`, `VDDA`, `VDD`, `EXTMODE`, `VSS`, `VSSA` — **não tem
-> par para o LED**, e o `J402` existia justamente porque a luz da Sharp
-> vinha num filme separado. O C tem de ter **ou um FPC com mais vias, ou um
-> rabicho próprio para a luz**, e **nenhum documento do projeto traz isso**:
-> a ficha que o projeto leu é a do **LPM027M128B**, que não tem luz. Sem
-> essa informação não dá para desenhar a folha 4 nem posicionar o conector
-> da luz no layout. **Alta prioridade, e antes do layout**: sai da ficha do
-> LPM027M128C ou de uma amostra na mão.
+> [!NOTE]
+> **A luz do C tem conector próprio, e ele apareceu em 2026-09-23.** A
+> ficha `3LPM027M128C specification ver.02`, pelas especificações que a
+> Switch Science publica, dá duas interfaces: o **FPC de 10 vias e passo
+> 0,5 mm** dos sinais, o mesmo do B, e um **FPC de 5 vias e passo 0,5 mm**
+> só para a luz. O `J402` passou a ser esse segundo conector
+> ([06](06-conectores-e-pontos-de-teste.md#j402--luz-do-lpm027m128c)).
+>
+> A mesma ficha confirma os dois números com que a
+> [conta do `R_BL`](02-calculos.md#luz-do-display) foi feita — **2,67 V de
+> tensão direta e 16 mA** —, de modo que os 39 Ω param de ser hipótese.
+>
+> **O que falta é menor:** qual das cinco vias é anodo, qual é catodo e
+> quais não se usam. Os dois PDF da JDI respondem 404 e o arquivo histórico
+> está bloqueado; sai da ficha em mãos ou de uma amostra.
 
 - **Sem canal autorizado e sem garantia.** O anúncio escolhido é de
   **R$ 776** no AliExpress

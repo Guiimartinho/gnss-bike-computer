@@ -22,7 +22,7 @@ entre o dedo do ciclista, o cabo do carregador e o silício.
 sequenceDiagram
     participant C as ciclista
     participant P as nPM1300
-    participant M as MCU (BM20C)
+    participant M as MCU (ME54BS13)
     participant G as MAX-F10S
     participant F as flash e luz
     Note over P: ship mode, cerca de 370 nA<br/>só o VBCKP do TPS7A02 continua
@@ -217,7 +217,7 @@ não deixa o ciclista sem saída.
 
 ```mermaid
 flowchart LR
-    TC["Tag-Connect pino 6<br/>MOD_RESET, pad G2"] --> NRST["nRESET do nRF54LM20A"]
+    TC["Tag-Connect pino 3<br/>MOD_RESET, pad G2"] --> NRST["nRESET do nRF54LM20A"]
     WDT["task_wdt estourou<br/>sys_reboot(COLD)"] --> NRST
     LP["tecla central por mais de 10 s<br/>LPRESETCONFIG do nPM1300"] --> RAILS["trilhos do PMIC"]
     RAILS --> NRST
@@ -229,7 +229,7 @@ flowchart LR
 
 | Fonte | O que ela derruba | O que o firmware vê | Conferido em |
 |---|---|---|---|
-| Reset do Tag-Connect (pino 6 → `MOD_RESET`, pad G2) | só o MCU; os trilhos continuam | `RESET_PIN` | [03](03-netlist.md#dedicados-do-módulo) e `crash_recovery.c:185` |
+| Reset do Tag-Connect (pino **3** → `MOD_RESET`, pad G2) | só o MCU; os trilhos continuam | `RESET_PIN` | [03](03-netlist.md#dedicados-do-módulo) e `crash_recovery.c:185` |
 | `sys_reboot(SYS_REBOOT_COLD)` do `task_wdt` | só o MCU | `RESET_SOFTWARE`, ou `RESET_WATCHDOG` se o WDT de hardware chegou antes | [`app_svc.c:55`](../zephyr_app/src/app/app_svc.c) |
 | Erro fatal do kernel | só o MCU | `RESET_SOFTWARE` ou `RESET_CPU_LOCKUP` | `crash_recovery.c:191-196` |
 | `LPRESETCONFIG` do nPM1300 (toque longo) | **os trilhos**, e com eles o MCU | a conferir: ver abaixo | ficha do nPM1300 |
@@ -285,7 +285,7 @@ Esta tabela é a conta do que existe e do que falta.
 | USB-C `D+`, `D−`, `CC1`, `CC2` | descarga pelo cabo | **TPD4E05U06**, 4 canais, 0,5 pF, ±12 kV por contato | existe ([03](03-netlist.md#nós-sem-ligação-ao-mcu)) |
 | As três teclas | descarga pelo dedo do ciclista | **100 Ω em série e 1 nF ao `GND`** em cada uma, desde 2026-09-23 | [abaixo](#as-teclas-que-até-2026-09-23-não-tinham-nada) |
 | Painel solar | sobretensão de entrada | a entrada `SRC` do AEM10900, sem componente externo | ficha do AEM10900 |
-| Antena GNSS e antena do rádio | descarga pelo ar e acoplamento entre elas | dentro dos módulos: o MAX-F10S tem SAW, LNA e SAW; o BM20C traz o casamento e a antena | [01](01-esquematico.md#folha-3--gnss) |
+| Antena GNSS e antena do rádio | descarga pelo ar e acoplamento entre elas | dentro dos módulos: o MAX-F10S tem SAW, LNA e SAW; o ME54BS13 traz o casamento e a antena de PCB | [01](01-esquematico.md#folha-3--gnss) |
 
 > [!CAUTION]
 > As antenas estão protegidas contra descarga, **não contra uma à outra**.

@@ -14,8 +14,12 @@ lê as tabelas desta página e as compara com o devicetree da placa em
 
 - **Nó**: o nome do sinal, em maiúsculas, como aparecerá no esquemático.
 - **Pino do MCU**: o pino do nRF54LM20A, exatamente como o devicetree o
-  declara. O **pad LGA do módulo BM20C ainda não foi levantado**: o
-  esquemático liga por nome de sinal e o layout precisará do de-para.
+  declara. O esquemático liga por **nome de sinal**; o de-para para o pad do
+  módulo MinewSemi ME54BS13 sai da ficha V1.0.0 (p. 6 a 9) e está
+  transcrito em [`cad/parts.py`](cad/parts.py) (`PADS_ME54BS13`, os 80
+  pads: 20 castelados numerados de 1 a 20 e uma matriz LGA de 60, de `A0` a
+  `F9`). **O espelhamento desse mapa ainda precisa ser conferido num módulo
+  real** ([01](01-esquematico.md#em-aberto-nesta-folha-1)).
 - **Tipo**: `alim` (alimentação), `dig` (digital), `ana` (analógico),
   `rf` (radiofrequência).
 - Toda referência de terra é **GND**, plano contínuo (ver
@@ -26,13 +30,13 @@ lê as tabelas desta página e as compara com o devicetree da placa em
 | Nó | Tensão | Sai de | Chega em | Tipo |
 |---|---|---|---|---|
 | `VBUS` | 4,0 a 5,5 V | conector USB-C, pinos A4, A9, B4, B9 | nPM1300 `VBUS`; TVS ESD761; C 10 µF/25 V | alim |
-| `VBUSOUT` | = `VBUS` | nPM1300 `VBUSOUT` | pad `VBUS` do BM20C (detecção e PHY do USB); topo do divisor `DIS_STO_CH`; C 1 µF | alim |
+| `VBUSOUT` | = `VBUS` | nPM1300 `VBUSOUT` | pad 9 (`VBUS`) do ME54BS13 (detecção e PHY do USB); topo do divisor `DIS_STO_CH`; C 1 µF | alim |
 | `VBAT` | 3,0 a 4,2 V | positivo da célula, pelo `BATT` do MAX17262 | `SYS` do MAX17262 (o sensor de 7 mΩ é **interno** ao CI, entre `BATT` e `SYS`); nPM1300 `VBAT`; AEM10900 `STO`; TPS7A02 `IN` | alim |
 | `VSYS` | `VBAT` ou `VBUS` | nPM1300 `VSYS` | entradas de `BUCK1`, `BUCK2` e `LDSW2`; anodos do LED RGB e do LED de carga | alim |
-| `3V0` | 3,0 V | nPM1300 `BUCK2` | BM20C `VDD`; BMP585, BMI270, MMC5633NJL e OPT3001; TXU0204 `VCCA`; AEM10900 `I2C_VDD`; buzzer; entrada da `LDSW1`; o `VDD`/`VDDA` do display pelo `JP401`; e o `IN` do REG710 **só no plano B** | alim |
+| `3V0` | 3,0 V | nPM1300 `BUCK2` | `VDD` do ME54BS13 (pad 19); BMP585, BMI270, MMC5633NJL e OPT3001; TXU0204 `VCCA`; AEM10900 `I2C_VDD`; buzzer; entrada da `LDSW1`; o `VDD`/`VDDA` do display pelo `JP401`; e o `IN` do REG710 **só no plano B** | alim |
 | `1V8` | 1,8 V | nPM1300 `BUCK1`, por filtro LC | MAX-F10S `VCC` e `V_IO`; TXU0204 `VCCB` | alim |
 | `SD3V0` | 3,0 V | nPM1300 `LDSW1`, do `3V0` | MX25R6435F `VCC` | alim |
-| `3V3BL` | 3,3 V | nPM1300 `LDSW2`, do `VSYS` | anodo do LED da luz, por `R_BL`; o catodo vai ao dreno do `Q401`. Com o JDI o LED está **dentro do painel**, e **por qual conector os dois fios chegam a ele é pendência aberta** ([01](01-esquematico.md#folha-4--display)) | alim |
+| `3V3BL` | 3,3 V | nPM1300 `LDSW2`, do `VSYS` | anodo da luz do painel, por `R_BL` de 39 Ω; o catodo volta ao dreno do `Q401`. Com o JDI o LED está **dentro do painel** e os dois fios chegam pelo **`J402`, um FPC próprio de 5 vias e passo 0,5 mm** ([06](06-conectores-e-pontos-de-teste.md#j402--luz-do-lpm027m128c)) | alim |
 | `VBCKP` | 1,8 V | TPS7A02, do `VBAT` | MAX-F10S `V_BCKP` | alim |
 | `5V0` | 5,0 V | REG710NA-5, do `3V0` | `VDD` e `VDDA` do display, pelo `JP401` — **não montado**: existe só no plano B, com a Sharp | alim |
 | `VINT` | interno | AEM10900 `VINT` | `R_MPP[2:0]`, `T_MPP[1:0]`, `STO_CFG[2]`, `STO_CFG[0]`, `KEEP_ALIVE` | alim |
@@ -192,14 +196,20 @@ no `I2C_VDD`).
 
 ### Dedicados do módulo
 
-| Nó | Pad do BM20C | Outro extremo | Tipo | Nota |
+Estes não são GPIO: são pads dedicados do módulo, e vão pelo número
+castelado da ficha ME54BS13 V1.0.0.
+
+| Nó | Pad do ME54BS13 | Outro extremo | Tipo | Nota |
 |---|---|---|---|---|
-| `USB_DM` | G6 | USB-C A7 e B7 | dig | par de 90 Ω diferencial |
-| `USB_DP` | G7 | USB-C A6 e B6 | dig | idem |
-| `MOD_VBUS` | H7 | `VBUSOUT` | alim | 4,4 a 5,5 V |
-| `SWDIO` | J3 | Tag-Connect pino 2 | dig | — |
-| `SWDCLK` | K3 | Tag-Connect pino 4 | dig | — |
-| `MOD_RESET` | G2 | Tag-Connect pino 6 | dig | — |
+| `USB_DM` | 7 | USB-C A7 e B7 | dig | par de 90 Ω diferencial |
+| `USB_DP` | 8 | USB-C A6 e B6 | dig | idem |
+| `MOD_VBUS` | 9 | `VBUSOUT` | alim | detecção e PHY do USB. **A faixa aceita neste pad não foi levantada na ficha do ME54BS13**; os 4,4 a 5,5 V que este documento trazia eram do BM20C |
+| `SWDIO` | 5 | Tag-Connect pino 2 | dig | — |
+| `SWDCLK` | 6 | Tag-Connect pino 4 | dig | — |
+| `MOD_RESET` | 4 | Tag-Connect pino **3** | dig | corrigido em 2026-09-25: a ficha `TC2030-CTX_1.pdf` põe o `nRESET` no contato 3, e o 6 é o `SWO` |
+| `3V0_MOD` | 19 | `JP102`, do `3V0` | alim | com o 100 nF e o 4,7 µF de volume ao lado |
+| — | 2 | **aberto** | rf | saída para antena externa; o módulo já traz a antena de PCB |
+| `GND` | 1, 3, 10, 11, 20, `D0`, `E0`, `F0` | plano | alim | oito pads de terra, cinco castelados e três da matriz |
 
 ## Nós sem ligação ao MCU
 
@@ -219,7 +229,7 @@ no `I2C_VDD`).
 | `ALRT` do MAX17262 | pull-up de 10 kΩ ao `3V0` | **nenhum pino do MCU** | dreno aberto; o firmware não usa o alerta, e o pull-up existe para o pino não flutuar ([14](../docs/14-hardware-placa-nova.md#ligações-fixas-dos-cis)) |
 | `IRQ` do AEM10900 | pull-up de 10 kΩ ao `3V0` | **nenhum pino do MCU** | idem |
 | `INT` do OPT3001 | pull-up de 10 kΩ ao `3V0` | **nenhum pino do MCU** | idem |
-| `JP102` a `JP106` | cada trilho de bloco | 0 Ω em série, um por bloco: BM20C, GNSS, display, sensores e armazenamento | para medir a corrente de **cada bloco** com o PPK2, e não só o total ([14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso)); o `JP101` da célula mede o conjunto |
+| `JP102` a `JP106` | cada trilho de bloco | 0 Ω em série, um por bloco: módulo de rádio, GNSS, display, sensores e armazenamento | para medir a corrente de **cada bloco** com o PPK2, e não só o total ([14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso)); o `JP101` da célula mede o conjunto |
 | `JP101` | `VBAT+` do `J102` | `BATT` do MAX17262 | jumper de 0 Ω, 1206, para abrir o caminho da célula e pôr o amperímetro; a resistência dele entra na tensão que o medidor lê, então ≤ 50 mΩ ([06](06-conectores-e-pontos-de-teste.md#jp101--jumper-de-medição-de-corrente)) |
 
 > [!CAUTION]
@@ -265,7 +275,7 @@ placa sem que nada avise. Um pino de configuração aberto do AEM10900
 | `BUZ_A`, `BUZ_B` | **330 Ω** em série | o piezo é carga capacitiva: sem resistor o pico da borda passa de 30 mA, e 330 Ω o põe em 9 mA sem tirar volume ([02](02-calculos.md#buzzer-piezo)) |
 | `KEY_L`, `KEY_C`, `KEY_R` | **100 Ω** em série e **1 nF** ao `GND` | as teclas saem para a caixa e não tinham proteção nenhuma; τ de 13 µs com o pull-up interno e só 23 mV de queda no nível baixo ([02](02-calculos.md#proteção-das-teclas)) |
 | Derivação da tecla central para o `SHPHLD` | sai **depois** dos 100 Ω, não do contato | é o que faz a rede proteger os dois ramos: contra o pull-up interno de 50 kΩ do PMIC, 100 Ω dão 11 mV de erro a 5,5 V e o 1 nF dá τ de 50 µs, inócuos para um botão e para o toque longo de 10 s |
-| `3V0`, junto do pino de alimentação do BM20C | **4,7 µF** | o rádio puxa 10,9 mA em rajada e o buck leva cerca de 10 µs para responder ([02](02-calculos.md#capacitor-de-volume-no-módulo)) |
+| `3V0`, junto do pino de alimentação do módulo (pad 19) | **4,7 µF** | o rádio puxa 10,9 mA em rajada e o buck leva cerca de 10 µs para responder ([02](02-calculos.md#capacitor-de-volume-no-módulo)) |
 | Pull-ups de `WP` e `HOLD` da flash | 47 kΩ ao **`SD3V0`** | ao `3V0` a flash se alimentaria pelos pinos com a `LDSW1` cortada |
 | Tag-Connect pino 1 (`VTref`) | `3V0` | sem ele a maioria das sondas recusa conectar |
 | Tag-Connect pino 5 | `GND` | — |

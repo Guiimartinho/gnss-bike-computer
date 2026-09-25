@@ -8,9 +8,12 @@ proibidas — está em [04](04-pcb-e-caixa.md); aqui é o **roteamento**.
 **Nesta página:** [Regras de projeto](#regras-de-projeto) · [Ordem de roteamento](#ordem-de-roteamento) · [Terra e retorno](#terra-e-caminhos-de-retorno) · [Os nós críticos](#os-nós-críticos-um-a-um) · [Térmica](#térmica-no-cobre) · [Fabricação](#fabricação) · [Subida da primeira placa](#subida-da-primeira-placa) · [O que o layout não decide](#o-que-o-layout-não-decide)
 
 > [!WARNING]
-> **Não existe layout.** Nenhuma trilha foi desenhada, nenhum arquivo de
-> CAD existe, nenhuma placa foi fabricada. Este documento é o projeto do
-> layout, não o layout.
+> **Nenhuma placa foi fabricada.** O layout, porém, deixou de ser só projeto
+> em 2026-09-23: o arquivo de CAD existe em [`cad/`](cad/), com as peças
+> posicionadas, o plano de terra e parte das trilhas. Este documento
+> continua sendo **as regras**; quem diz o que a placa é de fato são
+> [`cad/check_pcb.py`](cad/check_pcb.py), a verificação de regras do KiCad e
+> o [dry-run das regras das fichas](09-dry-run-da-pcb.md).
 
 ## Regras de projeto
 
@@ -22,7 +25,7 @@ existe.
 
 | Regra | Valor de partida | Onde aperta |
 |---|---|---|
-| Trilha e afastamento mínimos | 0,127 mm (5 mil) | sob o BM20C (LGA de passo fino) e sob o MAX17262 (WLP de 0,4 mm) |
+| Trilha e afastamento mínimos | 0,127 mm (5 mil) | sob o MAX17262 (WLP de 0,4 mm). **Não** sob o módulo: a matriz LGA do ME54BS13 é folgada, ilhas de 0,6 mm com passo de 1,5 × 1,2 mm (desenho mecânico da ficha V1.0.0) |
 | Via padrão | furo 0,2 mm, ilha 0,45 mm | em qualquer lugar |
 | Via na ilha (*via-in-pad*) | tampada e aplainada | **obrigatória** sob o MAX17262 e provavelmente sob o nPM1300 |
 | Anel anular mínimo | 0,125 mm | — |
@@ -82,7 +85,7 @@ USB.
 | Camada 3 | alimentação, com os trilhos largos como planos parciais |
 | Troca de camada de sinal rápido | **via de retorno de terra a menos de 1 mm** da via de sinal |
 | Costura de vias | ao longo de todo o contorno e em volta da zona da antena, a cada 3 a 5 mm |
-| Sob a antena GNSS e sob a área da antena do BM20C | **cobre nenhum em camada nenhuma** ([04](04-pcb-e-caixa.md#zonas-proibidas)) |
+| Sob a antena GNSS e sob a área da antena do ME54BS13 | **cobre nenhum em camada nenhuma** ([04](04-pcb-e-caixa.md#zonas-proibidas)) |
 
 ## Os nós críticos, um a um
 
@@ -118,6 +121,13 @@ corrente** no cobre, e a área desse laço é o que ele irradia.
 de terra na mesma face; o indutor fica o mais perto possível; o laço fecha
 em área mínima; e o nó de chaveamento (o lado do indutor que oscila) é
 **pequeno**, porque ele é a antena involuntária do circuito.
+
+**E os três ficam longe da antena do rádio.** A ficha do ME54BS13 (7.3)
+pede **20 mm** entre a antena do módulo e qualquer conversor chaveado ou
+indutor, e a geometria de hoje **não dá isso**: entre a zona de energia e a
+área livre da antena sobram cerca de 11,5 mm
+([04](04-pcb-e-caixa.md#zonas-proibidas)). Isso não é regra de cobre e
+**nenhum DRC a pega**: quem a cumpre é quem posiciona.
 
 > [!CAUTION]
 > **O `SWDCDC` do AEM10900 é a exceção que contradiz a regra geral.** Em
@@ -198,9 +208,11 @@ uma das duas alavancas para isso (a outra é baixar a corrente de carga):
 
 - **Duas passagens pelo forno, no máximo**, com o lado do módulo **por
   último** ([04](04-pcb-e-caixa.md#montagem)).
-- O BM20C tem ilhas LGA, não castelo: **estêncil e forno**, sem retrabalho
-  manual possível.
-- **Fiduciais**: três globais na placa e um par local junto do BM20C e do
+- O ME54BS13 é híbrido: **20 pads castelados na borda, numerados de 1 a 20,
+  mais 60 ilhas LGA por baixo**, de `A0` a `F9`. Os castelados se inspecionam
+  e, no limite, se retocam com ferro; as 60 ilhas do meio, não. Quem manda é
+  a matriz: **estêncil e forno**, sem retrabalho manual do que fica embaixo.
+- **Fiduciais**: três globais na placa e um par local junto do módulo e do
   MAX17262.
 - Os **16 pontos de teste** ([06](06-conectores-e-pontos-de-teste.md#pontos-de-teste))
   ficam acessíveis com a placa montada, na face oposta à da célula.
@@ -218,7 +230,7 @@ layout. **Nada disto foi feito.**
 | 1 | só o caminho de energia: nPM1300, MAX17262, passivos, `RVSET1` e `RVSET2` | **medir os dois `RVSET` com o multímetro**: um errado e o MCU nunca liga, ou queima |
 | 2 | — | fonte de bancada no lugar da célula, **com limite de corrente**; conferir `VSYS` |
 | 3 | — | `3V0` = 3,0 V e `1V8` = 1,8 V, e a **rampa do `1V8` no osciloscópio**: tem de ficar entre 25 e 35.000 µs/V ([07](07-sequencias-e-protecao.md#as-três-restrições-de-partida)) |
-| 4 | o módulo BM20C | console no `uart20`, e o aparelho tem de **partir** |
+| 4 | o módulo ME54BS13 | console no `uart20`, e o aparelho tem de **partir** |
 | 5 | o receptor GNSS | **só depois** de a rampa do passo 3 estar confirmada |
 | 6 | sensores e flash | barramentos, endereços, e a `LDSW1` de fato cortando |
 | 7 | display, teclas, buzzer, LED | — |
@@ -237,7 +249,8 @@ layout. **Nada disto foi feito.**
 | **Pilha do fabricante** — sem ela não há 50 Ω, nem 90 Ω, nem largura de trilha | o fabricante escolhido |
 | **Via tampada e aplainada** — sem ela o MAX17262 não é montável | idem |
 | **A antena não cabe na zona** — 10,75 mm contra 8 mm | decisão de mecânica, **bloqueia a borda de cima** |
-| **Pad LGA de cada GPIO do BM20C** — o esquemático liga por nome de sinal; o layout precisa do pad | ficha da Fanstel |
-| **Por onde a luz do JDI LPM027M128C se liga** — o FPC de 10 vias não tem par para LED | ficha do painel ou amostra |
+| **Espelhamento do mapa de pads do ME54BS13** — o de-para dos 80 pads já existe ([03](03-netlist.md#como-ler)), mas a ficha V1.0.0 e a V0.5.0 discordam de qual lado é qual | um módulo real na bancada, antes de fabricar |
+| **Ordem das cinco vias do conector da luz** — a ficha já diz que são **5 vias, passo 0,5 mm**, num conector à parte do de 10 vias dos sinais; falta qual é anodo e qual é catodo | ficha em mãos ou amostra |
+| **Peça do conector de 5 vias** do `J402` | escolha de componente |
 | **Orientação do divisor do `DIS_STO_CH`** | ficha do AEM10900 |
 | **Onde fica o NTC do JEITA na célula** | fabricante do pack |

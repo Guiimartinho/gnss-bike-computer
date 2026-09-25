@@ -1,0 +1,2 @@
+# os .wrl sao gerados por footprints.py a cada make_pcb.py
+*.wrl

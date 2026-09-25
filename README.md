@@ -54,24 +54,33 @@ flowchart LR
 
 ![Proposta do aparelho: frente, lateral direita, traseira e arranjo interno](docs/img/placa-nova-caixa.svg)
 
-Conceito em escala, a partir da caixa da V3: 62 × 104 × 19 mm, PCB de 55 × 97 mm em 4 camadas, 6 módulos solares na frente inclinada e nos chanfros laterais. A escolha de cada componente, com os números dos datasheets, está em [docs/15-avaliacao-componentes.md](docs/15-avaliacao-componentes.md); a lista de compras, validada peça a peça, em [docs/19-lista-de-compras.md](docs/19-lista-de-compras.md).
+Conceito em escala, a partir da caixa da V3: 62 × 104 × 19 mm; a PCB, dimensionada pelo circuito e **não** pela caixa, tem 34 × 90 mm em 4 camadas, 6 módulos solares na frente inclinada e nos chanfros laterais. A escolha de cada componente, com os números dos datasheets, está em [docs/15-avaliacao-componentes.md](docs/15-avaliacao-componentes.md); a lista de compras, validada peça a peça, em [docs/19-lista-de-compras.md](docs/19-lista-de-compras.md).
+
+![A placa em CAD, vista em ângulo: o USB-C na borda de cima, o módulo de rádio à esquerda e o receptor GNSS à direita](hardware_gnssbike/cad/gnssbike-3d-angulo.png)
+
+A placa existe como **arquivo de CAD**, gerado por programa: 144 peças, 112
+redes, 915 segmentos, 430 vias, **0 violações de regra de projeto e 0
+ligações sem trilha**, e 21 das 22 regras que as fichas dos componentes e a
+IPC-2221B impõem, medidas uma a uma. Nenhuma placa foi fabricada e nenhum
+componente passou por bancada. O esquemático, a placa e como se confere cada
+etapa estão em [hardware_gnssbike/](hardware_gnssbike/README.md).
 
 ```mermaid
 flowchart LR
-    MCU["Fanstel BM20C<br/>nRF54LM20A, BLE e ANT+"]
+    MCU["MinewSemi ME54BS13<br/>nRF54LM20A, BLE e ANT+"]
     GNSS2["u-blox MAX-F10S<br/>L1 + L5, 46,8 mW"] -->|UART| MCU
-    LCD2["JDI LPM027M128B de 8 cores<br/>ou Sharp LS027B7DH01A com luz"] ---|SPI| MCU
-    PWR["nPM1300, AEM10900, MAX17262<br/>USB-C e painel solar"] -.->|I2C| MCU
-    SENS2["BMP585, BMI270,<br/>MMC5633NJL, OPT3001"] -->|I2C| MCU
-    MEM["SD NAND"] ---|SPI| MCU
+    LCD2["JDI LPM027M128C de 8 cores,<br/>com luz frontal integrada"] ---|SPI| MCU
+    PWR["nPM1300, ADP5091, MAX17262<br/>USB-C e painel solar"] -.->|I2C| MCU
+    SENS2["BMP585, BMI270,<br/>MMC5603NJ, OPT3001"] -->|I2C| MCU
+    MEM["flash MX25R6435F<br/>8 MB, soldada"] ---|SPI| MCU
 ```
 
 | Bloco | Escolha | Por quê |
 |---|---|---|
-| Carga | nPM1300 no USB-C, AEM10900 no painel, MAX17262 na célula | o painel carrega com o aparelho desligado e corte térmico próprio; o USB bloqueia a carga solar no hardware |
+| Carga | nPM1300 no USB-C, ADP5091 no painel, MAX17262 na célula | o painel carrega com o aparelho desligado e corte térmico próprio; o USB bloqueia a carga solar no hardware |
 | GNSS | u-blox MAX-F10S, banda dupla L1 + L5, com o MAX-M10N-10B (só L1) no mesmo footprint | 1 m de CEP contra 1,5 m, e o código do L5 contra o multipercurso de prédio e mata. Custa autonomia: o aparelho gasta cerca de 58 mW e dura cerca de 115 h sem sol, e o painel devolve de 23 a 46 min por hora de sol em vez de cobrir o consumo. Com o M10N em LEAP seriam cerca de 21 mW e 310 h (estimativas) |
-| Tela | JDI LPM027M128B de 8 cores, sem luz própria (escolha do dono em 2026-09-19, no AliExpress); a Sharp LS027B7DH01A com luz frontal no mesmo conector, de reserva | o firmware atende as duas pelo mesmo driver, em retrato, com um tema para cada |
-| USB e armazenamento | USB-C IPX8 e SD NAND soldado | caixa sem tampas e sem cartão solto na vibração |
+| Tela | JDI LPM027M128C de 8 cores, **com luz frontal integrada** (escolha do dono em 2026-09-23, no lugar do par Sharp + filme); a Sharp LS027B7DH01A com filme no mesmo conector, de reserva | o firmware atende as duas pelo mesmo driver, em retrato, com um tema para cada |
+| USB e armazenamento | USB-C HRO TYPE-C-31-M-12 e flash MX25R6435F soldada | caixa sem tampas e sem cartão solto na vibração |
 
 ## Funcionalidades
 

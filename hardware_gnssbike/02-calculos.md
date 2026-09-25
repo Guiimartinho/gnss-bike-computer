@@ -16,8 +16,8 @@ depende de medida está dito como tal.
 
 | Carga | Pior caso | Origem |
 |---|---|---|
-| Rádio do BM20C a +8 dBm | 10,9 mA | ficha do nRF54LM20A, a 3,0 V |
-| CPU do BM20C (CoreMark da RRAM com cache) | 2,6 mA | ficha |
+| Rádio do módulo a +8 dBm | 10,9 mA | ficha do nRF54LM20A, a 3,0 V |
+| CPU do módulo (CoreMark da RRAM com cache) | 2,6 mA | ficha |
 | Sensores (quatro, lendo) | cerca de 1 mA | estimativa de [13](../docs/13-placa-nova.md#orçamento-de-energia) |
 | Buzzer piezo | cerca de 5 mA | estimativa |
 | Flash NOR apagando um setor, no modo de baixo consumo | 3,1 mA | ficha da MX25R6435F |
@@ -239,7 +239,7 @@ o B é a mesma tela sem ela. Com `V_DS` do MOSFET em cerca de 50 mV:
 R_BL = (3,3 − 2,67 − 0,05) / 16 mA = 0,58 / 0,016 = 36,3 Ω
 ```
 
-**Escolhido: 39 Ω**, o valor E24 acima (nunca o abaixo: um resistor menor
+**Escolhido: 39 Ω**, o valor E24 acima — e a ficha do C confirma os dois números de entrada. Vale registrar por que a luz vem do `3V3BL` e não do `3V0`: com 3,0 V o resistor cairia para **17,5 Ω** e a corrente ficaria refém da tolerância da tensão direta; os 300 mV a mais é que dão a margem (nunca o abaixo: um resistor menor
 passa mais corrente que a ficha permite). Confere:
 
 ```
@@ -251,17 +251,14 @@ P = 0,58 × 0,0149 = 8,6 mW     (0402 aguenta 63 mW)
 a troca da tela não mexeu em nenhum dos números dela. O `Q401`
 (DMG1012T-7) e o trilho `3V3BL` também continuam como estavam.
 
-> [!CAUTION]
-> **Falta saber por onde essa corrente chega ao painel.** O FPC de 10 vias
-> que as duas telas compartilham **não tem par para o LED**, e o conector do
-> filme (`J402`) existia para a luz separada da Sharp. O C tem de ter um FPC
-> com mais vias ou um rabicho próprio, e **nenhum documento do projeto
-> registra qual dos dois** — a ficha lida pelo projeto é a do
-> LPM027M128**B**, que não tem luz. Os 39 Ω, o `Q401` e o `3V3BL` estão
-> certos; o que falta é o caminho físico
-> ([01](01-esquematico.md#folha-4--display),
-> [06](06-conectores-e-pontos-de-teste.md#a-luz-do-lpm027m128c)). **Alta
-> prioridade, antes do layout.**
+> [!NOTE]
+> **O caminho físico apareceu em 2026-09-23.** A luz do C **não** passa
+> pelo FPC de 10 vias: ela tem um conector próprio, de **5 vias e passo
+> 0,5 mm**, segundo a ficha `3LPM027M128C specification ver.02`. O `J402`
+> passou a ser esse conector
+> ([06](06-conectores-e-pontos-de-teste.md#j402--luz-do-lpm027m128c)). O
+> que ainda falta é **qual das cinco vias é anodo e qual é catodo**: os
+> dois PDF da JDI respondem 404 e o arquivo histórico está bloqueado.
 
 ### Com a Sharp e o filme Azumo
 
@@ -589,7 +586,7 @@ de cada CI**, mais o volume que a ficha de cada peça pede.
 
 ## Capacitor de volume no módulo
 
-O `3V0` já tem os 100 nF por pino, e o BM20C é a carga com o transitório
+O `3V0` já tem os 100 nF por pino, e o ME54BS13 é a carga com o transitório
 mais rápido do trilho: o rádio puxa 10,9 mA em rajada a +8 dBm. O buck
 responde, mas não instantaneamente; entre a borda e a resposta dele quem
 segura a tensão é o capacitor local.
@@ -758,5 +755,5 @@ Dito aqui para não passar por esquecimento.
 | Comportamento térmico da caixa fechada | precisa do material e da geometria reais | no protótipo |
 | Brown-out do nRF54LM20A e `VSYSPOF` do nPM1300 | fichas não lidas nesta rodada ([07](07-sequencias-e-protecao.md)) | antes do primeiro protótipo |
 | Domínio de tensão dos pinos digitais do nPM1300 | nenhum documento do projeto registra ([pull-ups](#pull-ups-do-i²c)) | **antes do layout** |
-| Tolerância do cristal de 32,768 kHz do módulo | a ficha do BM20C não informa, e o ANT+ pede ±50 ppm | antes de confiar no ANT+ |
+| Tolerância do cristal de 32,768 kHz do módulo | não levantada para o ME54BS13, e o ANT+ pede ±50 ppm | antes de confiar no ANT+ |
 | Capacitância efetiva dos cerâmicos sob tensão | só o caso do `CSTO` foi considerado; um 10 µF de 25 V perde metade a 5 V | ao fechar o volume de cada trilho |

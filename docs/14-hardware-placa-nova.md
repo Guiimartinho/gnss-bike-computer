@@ -287,7 +287,7 @@ Duas regras de pino do nRF54LM20A (ficha 4539_001 v1.0) mandam no mapa:
 
 ## Placa de circuito impresso
 
-- **Contorno:** 55 × 97 mm, cantos com raio de 4 mm, dentro da caixa de 62 × 104 mm (paredes de cerca de 2 mm e folga de 0,5 mm). Origem no canto de cima à esquerda, com a placa vista pela frente.
+- **Contorno:** **34 × 90 mm**, cantos com raio de 4 mm. O tamanho sai do **circuito**, não da caixa: quem manda é a 7.2 da ficha do ME54BS13, que pede 50 mm entre os dois módulos de rádio desta placa. A conta está em [`hardware_gnssbike/04-pcb-e-caixa.md`](../hardware_gnssbike/04-pcb-e-caixa.md#de-onde-saem-os-34--90). A caixa de 62 × 104 mm segue tendo o tamanho que o display, a bateria e a mão pedem, e a placa cabe nela com folga de sobra. Origem no canto de cima à esquerda, com a placa vista pela frente.
 - **Espessura e camadas:** 0,8 mm, 4 camadas, controle de impedância; o desenho do receptáculo USB-C da Molex recomenda 0,8 mm.
 
 | Camada | Uso |
@@ -370,7 +370,7 @@ flowchart LR
 
 | Pendência | Como fechar |
 |---|---|
-| Cristal e lote do BM20C | a ficha Draft 0.99 já dá pinagem, USB e guia da antena; falta a tolerância do cristal de 32,768 kHz (pedir à Fanstel e medir o LFCLK contra o 1 PPS do GNSS) e o lote (nenhum em estoque na DigiKey, 1.000 previstos para 12/11/2026) |
+| **Tolerância do cristal de 32,768 kHz do ME54BS13** | O cristal **existe, dentro do módulo** — e é por isso que ele não aparece no esquemático nem na placa: os pinos P1.20 e P1.21 do nRF54LM20A, que são o LFXO, **não são expostos** pelo módulo, o que só faz sentido com um cristal ligado a eles lá dentro. O que falta é a **tolerância**: a ficha V1.0.0 do ME54BS13 **não menciona cristal uma única vez**, e o ANT+ exige no máximo **±50 ppm** (o RC interno do nRF54 é ±250 ppm e não serve). Fechar: pedir o número à MinewSemi, e medir o LFCLK contra o 1 PPS do GNSS no protótipo |
 | Módulo GNSS | caracterizar o MAX-F10S no protótipo (C/N0 por banda, `UBX-MON-SPAN`, consumo real) e fazer o A/B com o MAX-M10N-10B; medir o S21 entre as antenas antes de ligar o rádio na potência cheia, porque a ficha do F10S dá 0 dBm no RF_IN sem exceção fora da banda ([13](13-placa-nova.md#impacto-no-firmware)) |
 | Carga dupla | nPM1300 e AEM10900 na mesma célula, em bancada: bloqueio pelo VBUSOUT, fim de carga, medição, temperatura, corrente de pico do painel ([15](15-avaliacao-componentes.md#bancada-antes-do-layout)) |
 | Display | a lista compra a Sharp com a luz frontal; voltar à cor é decisão do dono ([19](19-lista-de-compras.md#antes-de-fechar-o-pedido)); confirmar com a Azumo o filme sobre a LS027B7DH01A; mudanças no driver |
