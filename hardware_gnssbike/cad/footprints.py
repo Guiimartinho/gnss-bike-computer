@@ -46,6 +46,8 @@ _fp(["R102", "R103", "R104", "R105", "R106", "R107", "R108", "R109", "R110",
      "R503", "R504", "R505", "R506", "R507", "R508", "R601", "R602", "R603",
      "R604", "R605", "R606", "R607", "R608", "R609", "R610", "R611",
      "R113", "R114", "R115", "C305", "C306",
+     "R116", "R117", "R118", "R119", "R120", "R121", "R122", "R123",
+     "C119", "C120", "C121",
      "JP102", "JP103", "JP104", "JP105", "JP106", "JP401"], R0402,
     "ENCAPSULAMENTO", "0402; a lista de compras usa a serie Panasonic ERJ-2")
 _fp("JP101", "Resistor_SMD:R_1206_3216Metric", "ENCAPSULAMENTO",
@@ -113,6 +115,15 @@ _fp("J103", "Connector_JST:JST_ZH_S4B-ZR-SM4A-TF_1x04-1MP_P1.50mm_Horizontal",
     "modulos e um terra comum. "
     "Passo diferente do GH de 1,25 da bateria de proposito, para os dois "
     "chicotes nao trocarem de lugar")
+_fp("U103", "Package_DFN_QFN:QFN-24-1EP_4x4mm_P0.5mm_EP2.15x2.15mm",
+    "ENCAPSULAMENTO",
+    "ADP5091 em LFCSP-24 de 4 x 4 mm, passo 0,5. A ADI NAO publica land "
+    "pattern na ficha - so o desenho do encapsulamento -, entao este e o "
+    "padrao IPC do KiCad para o mesmo encapsulamento. O pad termico de "
+    "2,15 e conservador contra o pad exposto de 2,30 nominal da peca "
+    "(2,16 a 2,44), o que deixa 0,075 mm de recuo de cada lado e afasta "
+    "o risco de ponte com os pads de sinal. A ficha exige K >= 0,20 mm "
+    "entre o terminal e o pad exposto, e este footprint da mais que isso")
 _fp("E301", "gnssbike:Antena_Unictron_H2UJ4U1H2Q0100_5x3mm", "GERADO",
     "antena de chip L1+L5 soldada na borda; land pattern do guia de "
     "layout da ficha rev. E")

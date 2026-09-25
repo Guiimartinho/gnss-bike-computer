@@ -819,7 +819,7 @@ def main() -> int:
     # Which pad of which part is a thermal pad. It is the one the datasheet
     # numbers last and connects to ground, and the two that matter here say
     # so by name.
-    TERMICOS = {("U104", "5"), ("U103", "29"), ("U101", "33"),
+    TERMICOS = {("U104", "5"), ("U103", "25"), ("U101", "33"),
                 ("U505", "7"), ("U302", "15")}
     sobre_termico = []
     for q in pads:

@@ -148,35 +148,90 @@ add("U102", "MAX17262REWL", [
     ("C3", "GND", "power_in", B),
 ], confirmed=True, lcsc="C5328777", note="medidor de carga; sensor de 7 mOhm INTERNO entre BATT e SYS")
 
-# AEM10900, DS-AEM10900-v1.6.0, figure 3 and table 2, QFN28 plus thermal pad.
-# There are no CSRC, CINT, CSTO or RDIV pins: a draft of this schematic
-# invented them. The capacitors hang off SRC, VINT and STO, and the 22 k is
-# the divider resistor between TH_REF and TH_MON, not a pin.
-add("U103", "AEM10900", [
-    (1, "GND1", "power_in", B), (2, "NC1", "no_connect", R),
-    (3, "BUFSRC", "passive", L), (4, "GND2", "power_in", B),
-    (5, "SW_DCDC", "passive", R), (6, "VINT", "power_out", R),
-    (7, "NC2", "no_connect", R), (8, "STO", "passive", R),
-    (9, "DIS_STO_CH", "input", L), (10, "I2C_VDD", "power_in", T),
-    (11, "IRQ", "output", R), (12, "SCL", "input", L),
-    (13, "SDA", "bidirectional", L), (14, "KEEP_ALIVE", "input", L),
-    (15, "R_MPP1", "input", L), (16, "T_MPP0", "input", L),
-    (17, "STO_CFG1", "input", L), (18, "VINT2", "power_out", R),
-    (19, "STO_CFG0", "input", L), (20, "R_MPP0", "input", L),
-    (21, "T_MPP1", "input", L), (22, "STO_CFG2", "input", L),
-    (23, "GND3", "power_in", B), (24, "R_MPP2", "input", L),
-    (25, "TH_MON", "input", L), (26, "TH_REF", "output", R),
-    (27, "ZMPP", "passive", R), (28, "SRC", "power_in", L),
-    (29, "GND_PAD", "power_in", B),
-], confirmed=True,
-    note="colhedor solar com MPPT; VINT sai em dois pinos, 6 e 18; o pad "
-         "termico e o pino 29 e e a ligacao principal de GND. Vai por "
-         "CONSIGNACAO na JLCPCB: a LINHA E-PEAS INTEIRA esta com estoque zero "
-         "na LCSC - AEM10300, 10330, 10900, 10920, 10941, 30330, 30940, "
-         "13920, 00300 e 00330. A DigiKey tambem nao vende: Mouser ou a "
-         "propria e-peas")
+# O colhedor solar passou do e-peas AEM10900 para o Analog ADP5091 em
+# 2026-09-24, e a razao foi disponibilidade: a LINHA E-PEAS INTEIRA esta com
+# estoque zero na LCSC - 31 referencias, todas em 0 - e a placa e montada na
+# JLCPCB. A DigiKey nunca vendeu a peca.
+#
+# O ADP5091ACPZ-2-R7 (C579259) faz o mesmo trabalho: boost com MPPT de 0,08 a
+# 3,3 V de entrada, partida a frio em 380 mV, carga de celula Li-ion 1S com
+# limiar programavel e corte de descarga programavel COM chave que abre de
+# verdade entre a bateria e o sistema. O sufixo -2 e o de 300 mA de pico do
+# indutor; o -1 e de 200/250 e ficaria em cima do nosso ponto.
+#
+# O QUE SE PERDE, e nao e pouco:
+#   - I2C. Nao ha barramento nenhum: tudo e resistor. O `status.solar_mw` da
+#     tela sai, ou passa a ser estimado pela corrente liquida que o MAX17262
+#     ja mede. O driver aem10900.c do firmware, 361 linhas, desaparece junto
+#     com o binding, os registradores e o no do devicetree.
+#   - O NTC. O AEM10900 tinha TH_MON e cortava a carga fora de 0 a 45 graus
+#     sozinho; este nao tem entrada de temperatura nenhuma. O corte volta por
+#     um comparador externo - ver U105 abaixo -, porque a caixa ao sol passa
+#     de 45 graus e carregar Li-ion acima disso e questao de seguranca.
+#
+# Pinagem da tabela 5 da ficha Rev. A (D14145-0-5/17(A)), paginas 8 e 9. O
+# pad exposto NAO tem numero na ficha e a nota 1 da figura 3 manda liga-lo ao
+# AGND.
+add("U103", "ADP5091ACPZ-2", [
+    (1, "REF", "passive", L), (2, "SETHYST", "input", L),
+    (3, "SETBK", "input", L), (4, "SETSD", "input", L),
+    (5, "SETPG", "input", L), (6, "TERM", "input", L),
+    (7, "MPPT", "input", B), (8, "CBP", "passive", B),
+    (9, "VIN", "power_in", B), (10, "AGND", "power_in", B),
+    (11, "LLD", "output", B), (12, "PGND", "power_in", B),
+    (13, "SW", "passive", R), (14, "REG_OUT", "power_out", R),
+    (15, "REG_FB", "input", R), (16, "SYS", "power_out", R),
+    (17, "BAT", "bidirectional", R), (18, "BACK_UP", "power_in", R),
+    (19, "PGOOD", "output", T), (20, "VID", "input", T),
+    (21, "MINOP", "input", T), (22, "DIS_SW", "input", T),
+    (23, "REG_D1", "input", T), (24, "REG_D0", "input", T),
+    # O pad exposto e o pad 25 no footprint do KiCad, e a nota 1 da figura 3
+    # da ficha manda liga-lo ao AGND.
+    (25, "EPAD", "power_in", B),
+], confirmed=True, lcsc="C579259",
+    note="colhedor solar com MPPT, LFCSP-24 de 4 x 4 mm. Sem I2C e sem NTC: "
+         "tudo por resistor. O pad exposto vai ao AGND (nota 1 da figura 3)")
 
-passive("L103", "4,7 uH", "indutor do SW_DCDC", lcsc="C88536")
+# DEFEITO ABERTO, aberto em 2026-09-24 com a troca do colhedor solar.
+#
+# O AEM10900 tinha o pino TH_MON e cortava a carga fora de 0 a 45 graus
+# sozinho, em hardware, sem firmware nenhum. O ADP5091 NAO TEM entrada de
+# temperatura, e a caixa ao sol passa de 45 graus - carregar uma celula
+# Li-ion acima disso e questao de seguranca, nao de rendimento.
+#
+# A saida obvia seria um comparador de nanoamperes (TLV7031, C2869832, 315 nA)
+# lendo o NTC RT101 e puxando o DIS_SW. NAO E TAO SIMPLES, e a conta que
+# derruba a ideia e esta:
+#
+#   O divisor do NTC fica LIGADO O TEMPO TODO. Com o RT101 de 10 k e um
+#   resistor de 22 k, a 4,2 V isso e 4,2 / 32 k = 131 uA CONTINUOS - mais do
+#   que o aparelho inteiro dormindo. O AEM10900 nao tinha esse problema
+#   porque ligava o divisor so no instante da medida.
+#
+# Alem disso o DIS_SW e ativo em ALTO e a saida do TLV7031 e dreno aberto,
+# que so puxa para baixo: ligar os dois direto faz o comparador frio segurar
+# o DIS_SW em zero e ANULAR o bloqueio pelo USB. Seria preciso um diodo de
+# OU e um divisor de referencia, mais duas ou tres pecas.
+#
+# CAMINHOS, para decidir com o dono e nao no meio de um commit:
+#   a) NTC de 100 k ou 470 k no lugar do de 10 k, o que baixa a fuga para
+#      13 ou 3 uA, com o custo de rever a curva e a precisao;
+#   b) alimentar o divisor por um pino que so fique de pe quando ha sol -
+#      por exemplo o PGOOD do proprio ADP5091 -, o que zera a fuga no escuro;
+#   c) aceitar que o corte fique com o nPM1300 e o firmware, registrando que
+#      uma placa travada carregaria a celula quente;
+#   d) chave analogica ou MOSFET ligando o divisor so periodicamente.
+#
+# Ate escolher, o caminho solar NAO TEM corte termico. Isto esta em
+# 09-dry-run-da-pcb.md e em 10-status-do-port.md.
+
+# O indutor do boost do ADP5091. A ficha e explicita: 22 uH +-20 % nominais,
+# porque o controle de pico interno foi dimensionado para esse valor, e
+# corrente de saturacao ao menos 30 % acima do pico esperado - com os 300 mA
+# de pico da variante -2, Isat >= 390 mA. O 4,7 uH que estava aqui era do
+# AEM10900 e NAO SERVE. O encapsulamento sobe de 2,5 x 2,0 para 3 x 3 mm.
+passive("L103", "22 uH", "indutor do boost do ADP5091, entre VIN e SW; "
+                       "Isat >= 390 mA. ESCOLHER a peca na LCSC")
 
 # TPS7A02 in DQN is an X2SON of four pins, 1.0 x 1.0 mm, not a SOT-563.
 add("U104", "TPS7A0218PDQN", [
@@ -202,7 +257,8 @@ add("J102", "JST SM06B-GHS-TB", [
     note="conector da celula, 6 vias, passo 1,25 mm; o catalogo da JST nao da "
          "funcao a contato nenhum, e quem decide e o fabricante do pack")
 
-passive("RT101", "10 k B3380", "NTC do TH_MON, na face de tras sob a celula", lcsc="C209959")
+passive("RT101", "10 k B3380", "NTC do corte termico, na face de tras sob a celula; agora "
+                                       "lido pelo comparador U105, nao por pino do colhedor", lcsc="C209959")
 # APT1608SURCK spec DSAD0926 rev V.22A: the cathode bar is on terminal 1, so
 # the ANODE IS TERMINAL 2. A draft of this schematic had it the other way.
 add("D103", "APT1608SURCK", [(1, "K", "passive", L), (2, "A", "passive", R)],
@@ -210,11 +266,65 @@ add("D103", "APT1608SURCK", [(1, "K", "passive", L), (2, "A", "passive", R)],
 add("D104", "APT1608SURCK", [(1, "K", "passive", L), (2, "A", "passive", R)],
     confirmed=True, note="LED de erro; anodo no terminal 2")
 
+
+# O divisor que faz o USB bloquear a carga solar em hardware. O levantamento
+# da ficha confirmou a perna de serie: 100 k de VBUSOUT ao DIS_SW e 1 M do
+# DIS_SW ao AGND da 4,09 V no pino com 4,5 V de VBUS, acima do limiar de 1 V.
+# Invertido daria 0,41 V e o USB NAO bloquearia - funcionaria ao contrario.
+# O 1 M para o terra nao e opcional: sem ele o pino flutua sem USB.
 passive("R102", "47 k", "VSET1: BUCK1 em 1,8 V")
 passive("R103", "150 k", "VSET2: BUCK2 em 3,0 V")
-passive("R104", "100 k", "divisor do DIS_STO_CH")
-passive("R105", "1 M", "divisor do DIS_STO_CH")
-passive("R106", "22 k", "RDIV do AEM10900")
+passive("R104", "100 k", "serie do DIS_SW, de VBUSOUT")
+passive("R105", "1 M", "do DIS_SW ao AGND; sem ele o pino flutua sem USB")
+
+# A rede de resistores do ADP5091. Todos os divisores somam mais de 6 MOhm,
+# que e o que a equacao 7 da ficha exige para nao comer corrente de repouso.
+#
+# MPPT (equacao 1): a razao e o resistor de BAIXO sobre o total, e inverter
+# poe o MPPT em 0,19 em vez de 0,81. 18 M embaixo e 4,3 M em cima dao 0,80717
+# contra o alvo de 0,807 (1,67 V de MPP sobre 2,07 V em aberto): 0,9 mV de
+# erro. Sao valores E24 e somam os mesmos 22,3 MOhm da figura 45 da ADI.
+passive("R116", "18 M", "ROC1 do MPPT, do pino MPPT ao AGND")
+passive("R117", "4,3 M", "ROC2 do MPPT, de VIN ao pino MPPT")
+
+# TERM (equacao 6): VBAT_TERM = 1,5 x VINT_REF x (1 + RTERM1/RTERM2), com
+# VINT_REF de 1,0 V, que e como a ADI monta a tabela 8 dela.
+#
+# 3,93 V NOMINAIS, E NAO 4,05, DE PROPOSITO. A referencia interna tem +-5,5 %
+# de espalhamento especificado (0,955 a 1,067 V) e ele vai INTEIRO para o
+# limiar: programando 4,05 nominais, o pior caso e 4,32 V, acima do limite de
+# 4,2 V da celula - e este comparador e o UNICO controle de terminacao do
+# caminho solar. Com 3,93 nominais o pior caso fica em 4,19 V.
+#
+# Nao e perda: o AEM10900 ja estava configurado para 3,90 V, o perfil Li-ion
+# long life, e o nPM1300 continua fazendo a carga fina pelo USB. Assim o
+# solar nunca decide o topo da celula.
+passive("R118", "4,32 M", "RTERM1, de BAT ao pino TERM")
+passive("R119", "2,67 M", "RTERM2, do pino TERM ao AGND")
+
+# SETSD (equacao 8): VSETSD = VINT_REF x (1 + RSD1/RSD2). 3,00 V nominais,
+# pior caso de 2,87 a 3,20 V - seguro nos dois extremos. Sao os valores da
+# linha de 3 V da tabela 8 da propria ADI. A histerese e INTERNA (115 kOhm
+# tipicos) e da cerca de 112 mV com estes divisores.
+passive("R120", "6,65 M", "RSD1, de BAT ao pino SETSD")
+passive("R121", "3,32 M", "RSD2, do pino SETSD ao AGND")
+
+# MINOP: R = V_MINOP / 2,00 uA. 402 k da 0,804 V, ou seja o boost para quando
+# a tensao em aberto do painel cai abaixo de 1,0 V - evita chaveamento inutil
+# no escuro. Flutuando, o pino poe o CI em modo sem sensoriamento; no AGND,
+# desabilita a funcao. Nenhum dos dois e o que queremos.
+passive("R122", "402 k", "MINOP: para o boost com o painel abaixo de 1,0 V")
+
+# VID define a tensao do regulador que NAO usamos. Flutuando ele daria 2,5 V;
+# um resistor deixa o pino em estado definido, que e o que importa aqui.
+passive("R123", "111 k", "VID: estado definido do regulador desabilitado")
+
+# O divisor de temperatura do comparador: o NTC RT101 e o R106 que ja
+# estavam na placa para o TH_MON do AEM10900. VALORES A CONFERIR contra o
+# limiar de 45 graus e a referencia do comparador.
+passive("R106", "22 k", "par do RT101 no divisor de temperatura; a peca "
+                        "que le esse divisor ainda nao existe - ver o "
+                        "defeito aberto do corte termico, acima")
 passive("R107", "4,7 k", "pull-up do PWR_SDA")
 passive("R108", "4,7 k", "pull-up do PWR_SCL")
 passive("R109", "10 k", "pull-up do PMIC_INT")
@@ -312,7 +422,17 @@ TESTE = (
     ("TP107", "SD3V0", "LDSW1, a flash; desligado tem de estar em 0 V"),
     ("TP108", "3V3BL", "LDSW2, a luz"),
     ("TP109", "VBCKP", "TPS7A02; continua de pe com o aparelho desligado"),
-    ("TP110", "VINT", "interno do AEM10900; ponto de LEITURA, nao de alimentacao"),
+    # Era o VINT, o trilho interno do AEM10900. O ADP5091 nao tem trilho
+    # interno em pino nenhum, e o no que mais importa medir no lugar dele e a
+    # entrada do painel: e ela que diz se o MPPT esta no ponto certo, porque
+    # em regime ela tem de ficar em 80,7 % da tensao em aberto.
+    #
+    # NAO ponha ponto de teste no MPPT nem no CBP: a pagina 24 da ficha pede
+    # que nao haja plano de terra perto deles e avisa que residuo de fluxo
+    # cria resistencia parasita que degrada o MPPT, porque o CBP tem de
+    # segurar a tensao por 16 s entre duas amostras.
+    ("TP110", "SRC", "entrada do painel; em regime fica em 80,7 % da tensao "
+                     "em aberto, que e onde o MPPT trabalha"),
     ("TP112", "GND", "referencia do bloco de energia, com via propria ao plano"),
 )
 
@@ -437,6 +557,12 @@ add("E301", "Unictron H2UJ4U1H2Q0100", [
 # e [9] do circuito da pagina 11 da ficha. Os valores sao os que a Unictron
 # recomenda, e a propria ficha avisa que eles centram a antena na placa de
 # avaliacao de 80 x 40 mm e VAO PRECISAR DE MUDANCA numa placa diferente.
+passive("C119", "10 nF", "CBP do ADP5091: X7R ou C0G de baixa fuga, e ele "
+                         "segura a tensao por 16 s entre amostras da Voc")
+passive("C120", "100 nF", "desacoplamento de alta frequencia do SYS, em "
+                          "paralelo com o C116; a ficha pede os DOIS")
+passive("C121", "4,7 uF", "REG_OUT do regulador desabilitado; footprint "
+                          "mantido, pode ficar NAO MONTADO")
 passive("C305", "2,7 pF", "sintonia do pino 1 da antena ao terra; valor de "
                           "partida da ficha, a ajustar na bancada")
 passive("C306", "6,8 pF", "sintonia do pino 2 da antena ao terra; valor de "

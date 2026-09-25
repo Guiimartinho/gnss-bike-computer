@@ -50,7 +50,14 @@ net("USB_DM", ("J101", "DM_A7"), ("J101", "DM_B7"), ("U201", "USB_DM"), ("D102",
 # sense sits INSIDE the chip, between BATT and SYS, so those are two nodes.
 net("VBAT_CELULA", ("J102", "1"), ("JP101", "1"))
 net("VBAT", ("JP101", "2"), ("U102", "BATT"), ("U102", "TH"))
+# O BAT e o SYS do colhedor entram aqui. O STO do AEM10900 NAO estava
+# ligado a lugar nenhum - defeito que so apareceu na troca de peca.
+# A chave interna do ADP5091 fica entre os dois e abre com a celula
+# abaixo de 3,0 V; SYS e de onde o proprio CI tira a corrente de
+# repouso, e BAT e o no de armazenamento.
 net("VBAT_SYS", ("U102", "SYS"), ("U101", "VBAT"), ("U104", "IN"),
+    ("U103", "BAT"), ("U103", "SYS"), ("R118", "1"), ("R120", "1"),
+    ("C120", "1"),
     ("U104", "EN"), ("C117", "1"), ("C102", "1"), ("C113", "1"))
 ABERTO["VBAT / VBAT_SYS"] = ("de que lado do sensor interno do MAX17262 ficam o BATT e o "
                              "SYS nao esta fechado; trocar os dois inverte o sinal da corrente")
@@ -65,7 +72,7 @@ net("1V8_GNSS", ("FB301", "2"), ("U301", "VCC"), ("U301", "V_IO"), ("C303", "1")
     ("C304", "1"))
 net("BUCK2_SW", ("U101", "SW2"), ("L102", "1"))
 net("3V0", ("L102", "2"), ("U101", "VOUT2"), ("U101", "LSIN1"),
-    ("U302", "VCCA"), ("U302", "OE"), ("U103", "I2C_VDD"),
+    ("U302", "VCCA"), ("U302", "OE"),
     ("C105", "1"), ("C106", "1"), ("C107", "1"), ("C108", "1"),
     ("JP102", "1"), ("JP104", "1"), ("JP105", "1"),
     ("R107", "1"), ("R108", "1"), ("R109", "1"), ("R110", "1"), ("R111", "1"),
@@ -83,9 +90,10 @@ net("SD3V0", ("U101", "LSOUT1"), ("JP106", "1"), ("R501", "1"), ("R502", "1"),
 net("SD3V0_FLASH", ("JP106", "2"), ("U501", "VCC"), ("C501", "1"))
 net("3V3BL", ("U101", "LSOUT2"), ("R401", "1"), ("C111", "1"))
 net("VBCKP", ("U104", "OUT"), ("U301", "V_BCKP"), ("C114", "1"))
-net("VINT", ("U103", "VINT"), ("U103", "VINT2"), ("C116", "1"), ("U103", "R_MPP0"), ("U103", "R_MPP1"), ("U103", "R_MPP2"),
-    ("U103", "T_MPP0"), ("U103", "T_MPP1"), ("U103", "STO_CFG0"), ("U103", "STO_CFG2"),
-    ("U103", "KEEP_ALIVE"))
+# O VINT do AEM10900 era o trilho interno que alimentava os pinos de
+# configuracao por strap - R_MPP, T_MPP, STO_CFG, KEEP_ALIVE. O ADP5091
+# nao tem nada disso: cada limiar sai de um divisor de resistores, e a
+# referencia interna nao sai em pino nenhum.
 # The six modules are wired in PARALLEL, and that is not a choice: each
 # KXOB25-05X3F already has 3 cells in series and opens at 2,07 V, while the
 # AEM10900 tracks from 0,12 to 2,73 V. Two in series would be 4,14 V, which
@@ -97,12 +105,52 @@ net("VINT", ("U103", "VINT"), ("U103", "VINT2"), ("C116", "1"), ("U103", "R_MPP0
 net("PV_A", ("J103", "PV_A"), ("R113", "1"), ("PV101", "P"), ("PV102", "P"))
 net("PV_B", ("J103", "PV_B"), ("R114", "1"), ("PV103", "P"), ("PV104", "P"))
 net("PV_C", ("J103", "PV_C"), ("R115", "1"), ("PV105", "P"), ("PV106", "P"))
-net("SRC", ("U103", "SRC"), ("C115", "1"), ("L103", "1"), ("D105", "IO"),
+# A entrada do boost. O indutor vai de VIN a SW, que e o que a descricao do
+# pino 13 da ficha manda; o capacitor de 10 uF fica entre VIN e PGND, o mais
+# perto possivel.
+net("SRC", ("U103", "VIN"), ("C115", "1"), ("L103", "1"), ("D105", "IO"),
+    ("R117", "1"),
     ("R113", "2"), ("R114", "2"), ("R115", "2"))
-net("SW_DCDC", ("U103", "SW_DCDC"), ("L103", "2"))
-net("TH_MON", ("U103", "TH_MON"), ("RT101", "1"), ("R106", "2"))
-net("TH_REF", ("U103", "TH_REF"), ("R106", "1"))
-net("DIS_STO_CH", ("U103", "DIS_STO_CH"), ("R104", "2"), ("R105", "1"))
+net("SW_DCDC", ("U103", "SW"), ("L103", "2"))
+
+# O regulador interno de 150 mA fica DESABILITADO: a placa ja tem o nPM1300
+# para isso, e com REG_D0 e REG_D1 em nivel baixo o consumo de repouso cai
+# para 510 nA tipicos, o menor dos quatro estados. O que a ficha manda fazer
+# com os pinos que sobram: REG_FB ligado ao REG_OUT (configuracao de saida
+# fixa - e o que impede o no de realimentacao de flutuar, que e o risco real
+# de oscilacao num regulador desligado), SETBK ao AGND, e o capacitor de
+# 4,7 uF no REG_OUT mantido no footprint, podendo ficar nao montado.
+#
+# LLD e BACK_UP ficam ABERTOS: o LLD e saida e o nivel alto dele e o proprio
+# REG_OUT, que com o regulador desligado e 0 V, entao ele nunca sobe; e as
+# chaves do BACK_UP ficam permanentemente abertas por causa do SETBK no AGND.
+net("REG_OUT", ("U103", "REG_OUT"), ("U103", "REG_FB"), ("C121", "1"))
+
+# O MPPT: a razao e o resistor de BAIXO sobre o total. R117 de VIN ao pino,
+# R116 do pino ao AGND, e o capacitor de 10 nF que segura a tensao por 16 s
+# entre duas amostras da tensao em aberto.
+net("MPPT", ("U103", "MPPT"), ("R116", "1"), ("R117", "2"))
+net("CBP", ("U103", "CBP"), ("C119", "1"))
+
+# Os dois limiares que o AEM10900 fazia por strap e por I2C, agora por
+# divisor. Os dois penduram no BAT, que e o no da celula.
+net("TERM", ("U103", "TERM"), ("R118", "2"), ("R119", "1"))
+net("SETSD", ("U103", "SETSD"), ("R120", "2"), ("R121", "1"))
+net("MINOP", ("U103", "MINOP"), ("R122", "1"))
+net("VID", ("U103", "VID"), ("R123", "1"))
+
+# O USB bloqueia a carga solar em hardware, sem pino do microcontrolador -
+# a mesma funcao do DIS_STO_CH do AEM10900, agora no DIS_SW. A saida do
+# comparador de temperatura entra em OU-cabeado no mesmo no: qualquer um dos
+# dois levanta o pino e o boost para.
+net("DIS_SW", ("U103", "DIS_SW"), ("R104", "2"), ("R105", "1"))
+
+# O corte termico que o AEM10900 fazia sozinho, agora por comparador. O
+# divisor do NTC e o mesmo RT101 e R106 que ja estavam na placa.
+# O divisor de temperatura continua na placa - o NTC RT101 e o R106 -, mas
+# NAO HA QUEM O LEIA: o ADP5091 nao tem entrada de temperatura. Defeito
+# aberto, com os caminhos possiveis descritos em parts.py.
+net("NTC_SOLAR", ("RT101", "1"), ("R106", "2"))
 ABERTO["DIS_STO_CH"] = ("qual dos dois resistores fica em serie nao esta em fonte "
                         "nenhuma; 100 k em serie da 5,0 V no pino e 1 M da 0,5 V")
 net("NTC_BAT", ("U101", "NTC"), ("J102", "4"))
@@ -116,12 +164,17 @@ net("REG_GAUGE", ("U102", "REG"), ("C118", "1"))
 net("LED_CHG", ("U101", "LED1"), ("D103", "K"))
 net("LED_ERR", ("U101", "LED0"), ("D104", "K"))
 net("ALRT", ("U102", "ALRT"), ("R110", "2"))
-net("IRQ_AEM", ("U103", "IRQ"), ("R111", "2"))
+# O ADP5091 nao tem pino de interrupcao: o R111 que fazia o pull-up do
+# IRQ do AEM10900 passa a ser o pull-up da saida em dreno aberto do
+# comparador de temperatura.
+# O ADP5091 nao tem pino de interrupcao. O R111, que fazia o pull-up do IRQ
+# do AEM10900, fica sem funcao ate o corte termico ser resolvido.
+net("IRQ_LIVRE", ("R111", "2"))
 
 # ------------------------------------------------------------ MCU e I2C
-net("PWR_SDA", ("U201", "P0.02"), ("U101", "SDA"), ("U102", "SDA"), ("U103", "SDA"),
+net("PWR_SDA", ("U201", "P0.02"), ("U101", "SDA"), ("U102", "SDA"),
     ("R107", "2"))
-net("PWR_SCL", ("U201", "P0.03"), ("U101", "SCL"), ("U102", "SCL"), ("U103", "SCL"),
+net("PWR_SCL", ("U201", "P0.03"), ("U101", "SCL"), ("U102", "SCL"),
     ("R108", "2"))
 net("PMIC_INT", ("U201", "P0.00"), ("U101", "GPIO3"), ("R109", "2"))
 net("SENS_SDA", ("U201", "P1.29"), ("U502", "SDX"), ("U503", "SDX"),
@@ -231,7 +284,11 @@ net("GND",
     # loop between two mains-powered boxes, and this one runs off a cell.
     ("J101", "SHELL"),
     ("D101", "GND"), ("D102", "GND1"), ("D102", "GND2"),
-    ("U101", "AVSS"), ("U101", "PVSS1"), ("U101", "PVSS2"), ("U102", "GND"), ("U103", "GND1"), ("U103", "GND2"), ("U103", "GND3"), ("U103", "GND_PAD"), ("U103", "STO_CFG1"),
+    ("U101", "AVSS"), ("U101", "PVSS1"), ("U101", "PVSS2"), ("U102", "GND"), ("U103", "AGND"), ("U103", "PGND"), ("U103", "EPAD"),
+    ("U103", "SETBK"), ("U103", "REG_D0"), ("U103", "REG_D1"),
+    ("R116", "2"), ("R119", "2"), ("R121", "2"),
+    ("R122", "2"), ("R123", "2"), ("C119", "2"), ("C120", "2"),
+    ("C121", "2"),
     ("U104", "GND"), ("U104", "PAD"), ("J102", "6"), ("RT101", "2"),
     ("U201", "GND"), ("U201", "GND3"), ("U201", "GND10"), ("U201", "GND11"),
     ("U201", "GND20"), ("U201", "GND_D0"), ("U201", "GND_E0"),
