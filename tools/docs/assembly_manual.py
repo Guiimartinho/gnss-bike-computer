@@ -12,7 +12,7 @@ from a file in this repository:
   * case 62 x 104 x 19 mm, corner radius 7          tools/docs/case_drawing.py
   * cavity 58 x 100 mm (rule ME1: the 34 x 90 board leaves 12 mm each side
     and 5 mm top and bottom)                        cad/dry_run_pcb.py
-  * board 34 x 90 x 0.8 mm, one M2 hole at (3.2; 45.0)      gnssbike.kicad_pcb
+  * board 34 x 90 x 0.8 mm, two M2 holes                     gnssbike.kicad_pcb
   * every connector's position and face                     gnssbike.kicad_pcb
   * display LPM027M128C, outline 40.08 x 61.8, active 35.28 x 58.8
                                                     hardware_gnssbike/04
@@ -43,7 +43,7 @@ TELA_W, TELA_H = 40.08, 61.8
 ATIVA_W, ATIVA_H = 35.28, 58.8
 BAT_W, BAT_H, BAT_T = 36.0, 60.0, 7.0
 MOD_W, MOD_H = 23.0, 8.0
-FURO = (3.2, 45.0)
+FUROS = ((3.2, 45.0), (4.0, 75.75))
 
 # ref -> (x, y, angulo, face, rotulo)
 CONEC = {
@@ -135,8 +135,9 @@ def desenha_placa(v, x, y, verso=False, destaque=()):
 
     v.rect(x, y, PCB_W, PCB_H, 2.5, fill=C["placa"], stroke=C["placa_borda"],
            stroke_width=0.4)
-    v.circle(x + mx(FURO[0]), y + FURO[1], 1.1, fill=C["campo"],
-             stroke=C["placa_borda"], stroke_width=0.3)
+    for fx, fy in FUROS:
+        v.circle(x + mx(fx), y + fy, 1.1, fill=C["campo"],
+                 stroke=C["placa_borda"], stroke_width=0.3)
     for ref, (cx, cy, _a, face, _r) in CONEC.items():
         se_ve = (face == "verso") if verso else (face == "frente")
         if not se_ve:
@@ -529,7 +530,7 @@ linhas(x + 60, y + 530, [
 
 # 7 -------------------------------------------------------- placa na caixa
 x, y = passo(7, 0, 3, "Assente a placa na cavidade",
-             "um parafuso M2, em (3,2; 45,0)")
+             "dois parafusos M2, em (3,2; 45,0) e (4,0; 75,75)")
 v = View(x + 320, y + 130, 3.6)
 desenha_caixa(v, 0, 0, com_modulos=False)
 v.rect(2.0, 2.0, CAV_W, CAV_H, 2.0, fill="none", stroke=C["fraco"],
@@ -543,7 +544,9 @@ linhas(x + 60, y + 530, [
     "de cada lado e 5 mm em cima e embaixo (regra ME1).",
     "A boca do USB-C fica a 0,64 mm da borda de baixo: ela",
     "precisa de furo na parede, alinhado.",
-    "!Onde ficam os parafusos da caixa não está definido.",
+    "Dois parafusos M2: um no meio e um ao lado do USB-C, que",
+    "é onde a força do cabo entra (02-calculos.md).",
+    "!Onde ficam os parafusos da CAIXA não está definido.",
 ])
 
 # 8 ------------------------------------------------------------- fechar

@@ -649,7 +649,6 @@ def colocar() -> tuple[dict[str, tuple[float, float, int, bool]], list[str]]:
         tam_bruto[ref] = fp_load.carregar(nome)[1]
 
     lugar: dict[str, tuple[float, float, int, bool]] = {}
-    fx, fy = M.FUROS_DOC[0]
     raio = M.M2_DRILL_UNVERIFIED / 2 + 0.6
     # One list per face, not one for the board. A part on the back does not
     # take room from a part on the front, and pretending it does is how a
@@ -658,9 +657,10 @@ def colocar() -> tuple[dict[str, tuple[float, float, int, bool]], list[str]]:
     # are not. What IS in both lists is what goes through the board - the
     # mounting hole and its keep-out - because that really does take the room
     # on both faces.
-    furo = (fx - raio, fy - raio, fx + raio, fy + raio)
+    furos = [(fx - raio, fy - raio, fx + raio, fy + raio)
+             for fx, fy in M.FUROS_DOC]
     postos_face: dict[bool, list[tuple[float, float, float, float]]] = {
-        False: [furo], True: [furo]}
+        False: list(furos), True: list(furos)}
     falhas: list[str] = []
 
     def por(ref: str, cx: float, cy: float, ang: int = 0,
@@ -1304,8 +1304,7 @@ def main() -> int:
         saida.append(plano_de_terra(numeros["GND"], ("F.Cu",), 0.3))
         saida.append(plano_de_terra(numeros["GND"], ("B.Cu",), 0.3))
 
-    # the single mounting hole
-    fx, fy = P_(*M.FUROS_DOC[0])
+    # the mounting holes
     furo = pathlib.Path(
         r"D:\KiCAD\share\kicad\footprints\MountingHole.pretty"
         r"\MountingHole_2.2mm_M2.kicad_mod").read_text(encoding="utf-8")
@@ -1316,9 +1315,12 @@ def main() -> int:
     corpo_furo = corpo_furo.replace(
         '(property "Reference" "REF**"',
         '(property "Reference" "REF**" (hide yes)', 1)
-    saida.append('\t(footprint "MountingHole:MountingHole_2.2mm_M2"\n'
-                 f'\t\t(at {fx:.4f} {fy:.4f})\n\t\t(uuid "{uid("furo")}")'
-                 + corpo_furo.replace("\n", "\n\t") + "\n\t)")
+    for i_furo, (dx_furo, dy_furo) in enumerate(M.FUROS_DOC):
+        fx, fy = P_(dx_furo, dy_furo)
+        saida.append('\t(footprint "MountingHole:MountingHole_2.2mm_M2"\n'
+                     f'\t\t(at {fx:.4f} {fy:.4f})\n'
+                     f'\t\t(uuid "{uid("furo%d" % i_furo)}")'
+                     + corpo_furo.replace("\n", "\n\t") + "\n\t)")
 
     # where each reference designator goes, decided once for the whole board
     desloca = rotulos(lugar)
@@ -1369,7 +1371,7 @@ def main() -> int:
         f"{M.THICKNESS:g} mm, 4 camadas",
         f"{len(lugar)} pecas colocadas, {len(FPS.FORA_DA_PLACA)} fora da placa "
         "(painel, antena e modulos solares vivem na caixa)",
-        f"furo M2 unico; empilhamento assimetrico {DIEL_RF:g} / "
+        f"{len(M.FUROS_DOC)} furos M2; empilhamento assimetrico {DIEL_RF:g} / "
         f"{DIEL_NUCLEO:.2f} / {DIEL_RF:g} mm, para os 50 ohm da linha de RF",
         "ROTEAMENTO PARCIAL; NADA FABRICADO, NADA MEDIDO",
     ]

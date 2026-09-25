@@ -68,13 +68,36 @@ THICKNESS = 0.8
 RADIUS_DRAWING = 3.0  # tools/docs/case_drawing.py:339, rect(3.5, 3.5, W-7, H-7, 3)
 RADIUS_DOC14 = 4.0  # docs/14-hardware-placa-nova.md#placa-de-circuito-impresso
 
-# Mounting hole, board coordinates. The owner decided on 2026-09-23 for a
-# SINGLE hole instead of the four of the case drawing, to leave area for parts
-# and tracks. The point is the freest on the board, computed by hole_spot() in
-# make_pcb.py: outside every zone, every keep-out and both shadows, and,
-# among the tied points, the closest to the centre of the board, because with
-# one screw the distance to the centre is the lever arm.
-FUROS_DOC = [(3.2, H * 0.5)]
+# Mounting holes, board coordinates. TWO of them, decided by the owner on
+# 2026-09-25 after the single hole was measured against the force that
+# actually reaches this board.
+#
+# The first, at (3.2; H/2), is the one that was already here: the freest
+# point on the board, outside every zone, keep-out and shadow.
+#
+# The second exists because one screw does not hold the board. Plugging a
+# USB-C in applies, at worst case of the standard, 20 N at 40.8 mm from that
+# screw - 816 N.mm - while an M2 in a printed plastic boss resists about
+# 40 N.mm by friction under its head (0.05 N.m of tightening, a 125 N
+# preload, mu 0.2 on a 1.6 mm bearing radius). Twenty times short. A gentle
+# 5 N insertion is still five times short, and pressing the centre key is
+# already 48 N.mm against those 40. With 12 mm of clearance to the cavity
+# wall on each side, the board does not bind on anything before it turns.
+#
+# So the second hole goes next to the USB-C receptacle, 10.2 mm from it.
+# The pair then takes the moment as a couple over the 30.8 mm between them -
+# 26.5 N of shear in each screw, which an M2 does not notice - instead of as
+# friction under one head, which it is not good at.
+#
+# It is on the LEFT, beside the USB, and not in the free corner on the right:
+# there the hole landed 3.2 mm from the radio module's antenna area, and 7.4
+# of the ME54BS13 datasheet wants 5 mm clear of metal all round it. The
+# rule RF3 of the dry-run caught that on the first try.
+#
+# The decision of 2026-09-23 was for a single hole "to leave area for parts
+# and tracks". That premise is gone: measured on the placed board, 7402
+# points accept an M2 hole, the freest with 5.2 mm of clear radius.
+FUROS_DOC = [(3.2, H * 0.5), (4.0, 75.75)]
 
 # The four screws the case drawing still has, at (6.5, 12.5), (55.5, 12.5),
 # (6.5, 91.5) and (55.5, 91.5) in case coordinates, are 3.5 mm inside on every

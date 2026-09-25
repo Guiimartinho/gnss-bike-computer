@@ -16,6 +16,7 @@
 <text x="230.2" y="767.2" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15" fill="#6b7178" text-anchor="middle" font-weight="400">1 peça</text>
 <rect x="440" y="280" width="142.8" height="378" rx="10.5" ry="10.5" fill="#2f6b3a" stroke="#1f4a28" stroke-width="0.4"/>
 <circle cx="453.44" cy="469" r="4.62" fill="#f5f6f8" stroke="#1f4a28" stroke-width="0.3"/>
+<circle cx="456.8" cy="598.15" r="4.62" fill="#f5f6f8" stroke="#1f4a28" stroke-width="0.3"/>
 <rect x="448.82" y="373.66" width="25.2" height="35.28" rx="2.1" ry="2.1" fill="#e9e4d7" stroke="#8d887c" stroke-width="0.3"/>
 <rect x="448.82" y="417.76" width="25.2" height="35.28" rx="2.1" ry="2.1" fill="#e9e4d7" stroke="#8d887c" stroke-width="0.3"/>
 <rect x="549.2" y="396.76" width="25.2" height="35.28" rx="2.1" ry="2.1" fill="#e9e4d7" stroke="#8d887c" stroke-width="0.3"/>
@@ -253,6 +254,7 @@
 <text x="1338" y="2426" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" fill="#6b7178" text-anchor="start" font-weight="400">J401 e J402, na borda esquerda da placa</text>
 <rect x="1640" y="2480" width="122.4" height="324" rx="9" ry="9" fill="#2f6b3a" stroke="#1f4a28" stroke-width="0.4"/>
 <circle cx="1651.52" cy="2642" r="3.96" fill="#f5f6f8" stroke="#1f4a28" stroke-width="0.3"/>
+<circle cx="1654.4" cy="2752.7" r="3.96" fill="#f5f6f8" stroke="#1f4a28" stroke-width="0.3"/>
 <rect x="1647.56" y="2560.28" width="21.6" height="30.24" rx="1.8" ry="1.8" fill="#ffd24d" stroke="#8d887c" stroke-width="0.3"/>
 <text x="1673.48" y="2579.72" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15" fill="#f6f9f6" text-anchor="start" font-weight="700">J401</text>
 <rect x="1647.56" y="2598.08" width="21.6" height="30.24" rx="1.8" ry="1.8" fill="#ffd24d" stroke="#8d887c" stroke-width="0.3"/>
@@ -279,6 +281,7 @@
 <text x="118" y="3136" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" fill="#6b7178" text-anchor="start" font-weight="400">J102 fica no VERSO da placa</text>
 <rect x="460" y="3190" width="122.4" height="324" rx="9" ry="9" fill="#2f6b3a" stroke="#1f4a28" stroke-width="0.4"/>
 <circle cx="570.88" cy="3352" r="3.96" fill="#f5f6f8" stroke="#1f4a28" stroke-width="0.3"/>
+<circle cx="568" cy="3462.7" r="3.96" fill="#f5f6f8" stroke="#1f4a28" stroke-width="0.3"/>
 <rect x="557.2" y="3398.08" width="21.6" height="30.24" rx="1.8" ry="1.8" fill="#ffd24d" stroke="#8d887c" stroke-width="0.3"/>
 <text x="583.12" y="3417.52" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15" fill="#f6f9f6" text-anchor="end" font-weight="700">J102</text>
 <rect x="499.6" y="3411.4" width="43.2" height="43.2" rx="21.6" ry="21.6" fill="#c9ced4" stroke="#9aa0a8" stroke-width="0.3"/>
@@ -296,6 +299,7 @@
 <text x="1338" y="3136" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" fill="#6b7178" text-anchor="start" font-weight="400">J103, na borda direita da placa</text>
 <rect x="1640" y="3190" width="122.4" height="324" rx="9" ry="9" fill="#2f6b3a" stroke="#1f4a28" stroke-width="0.4"/>
 <circle cx="1651.52" cy="3352" r="3.96" fill="#f5f6f8" stroke="#1f4a28" stroke-width="0.3"/>
+<circle cx="1654.4" cy="3462.7" r="3.96" fill="#f5f6f8" stroke="#1f4a28" stroke-width="0.3"/>
 <rect x="1647.56" y="3270.28" width="21.6" height="30.24" rx="1.8" ry="1.8" fill="#e9e4d7" stroke="#8d887c" stroke-width="0.3"/>
 <rect x="1647.56" y="3308.08" width="21.6" height="30.24" rx="1.8" ry="1.8" fill="#e9e4d7" stroke="#8d887c" stroke-width="0.3"/>
 <rect x="1733.6" y="3290.08" width="21.6" height="30.24" rx="1.8" ry="1.8" fill="#ffd24d" stroke="#8d887c" stroke-width="0.3"/>
@@ -316,7 +320,7 @@
 <circle cx="84" cy="3812" r="21" fill="#111111"/>
 <text x="84" y="3820" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="23" fill="#ffffff" text-anchor="middle" font-weight="700">7</text>
 <text x="118" y="3820" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="23" fill="#111111" text-anchor="start" font-weight="700">Assente a placa na cavidade</text>
-<text x="118" y="3846" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" fill="#6b7178" text-anchor="start" font-weight="400">um parafuso M2, em (3,2; 45,0)</text>
+<text x="118" y="3846" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" fill="#6b7178" text-anchor="start" font-weight="400">dois parafusos M2, em (3,2; 45,0) e (4,0; 75,75)</text>
 <rect x="360" y="3900" width="223.2" height="374.4" rx="25.2" ry="25.2" fill="#eceef1" stroke="#aab0b8" stroke-width="0.5"/>
 <rect x="362.16" y="3963" width="22.32" height="198" rx="10.08" ry="10.08" fill="#e0e3e8" stroke="#b6bcc4" stroke-width="0.35"/>
 <rect x="558.72" y="3963" width="22.32" height="198" rx="10.08" ry="10.08" fill="#e0e3e8" stroke="#b6bcc4" stroke-width="0.35"/>
@@ -324,6 +328,7 @@
 <rect x="367.2" y="3907.2" width="208.8" height="360" rx="7.2" ry="7.2" fill="none" stroke="#6b7178" stroke-width="0.3" stroke-dasharray="1.2 1.2"/>
 <rect x="410.4" y="3925.2" width="122.4" height="324" rx="9" ry="9" fill="#2f6b3a" stroke="#1f4a28" stroke-width="0.4"/>
 <circle cx="421.92" cy="4087.2" r="3.96" fill="#f5f6f8" stroke="#1f4a28" stroke-width="0.3"/>
+<circle cx="424.8" cy="4197.9" r="3.96" fill="#f5f6f8" stroke="#1f4a28" stroke-width="0.3"/>
 <rect x="417.96" y="4005.48" width="21.6" height="30.24" rx="1.8" ry="1.8" fill="#e9e4d7" stroke="#8d887c" stroke-width="0.3"/>
 <rect x="417.96" y="4043.28" width="21.6" height="30.24" rx="1.8" ry="1.8" fill="#e9e4d7" stroke="#8d887c" stroke-width="0.3"/>
 <rect x="504" y="4025.28" width="21.6" height="30.24" rx="1.8" ry="1.8" fill="#e9e4d7" stroke="#8d887c" stroke-width="0.3"/>
@@ -349,7 +354,9 @@
 <text x="100" y="4326" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="17" fill="#3a3f47" text-anchor="start" font-weight="400">de cada lado e 5 mm em cima e embaixo (regra ME1).</text>
 <text x="100" y="4352" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="17" fill="#3a3f47" text-anchor="start" font-weight="400">A boca do USB-C fica a 0,64 mm da borda de baixo: ela</text>
 <text x="100" y="4378" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="17" fill="#3a3f47" text-anchor="start" font-weight="400">precisa de furo na parede, alinhado.</text>
-<text x="100" y="4404" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="17" fill="#cc2b2b" text-anchor="start" font-weight="700">Onde ficam os parafusos da caixa não está definido.</text>
+<text x="100" y="4404" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="17" fill="#3a3f47" text-anchor="start" font-weight="400">Dois parafusos M2: um no meio e um ao lado do USB-C, que</text>
+<text x="100" y="4430" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="17" fill="#3a3f47" text-anchor="start" font-weight="400">é onde a força do cabo entra (02-calculos.md).</text>
+<text x="100" y="4456" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="17" fill="#cc2b2b" text-anchor="start" font-weight="700">Onde ficam os parafusos da CAIXA não está definido.</text>
 <rect x="1260" y="3770" width="1180" height="680" rx="14" fill="#f5f6f8" stroke="#d7dae0" stroke-width="1.5"/>
 <circle cx="1304" cy="3812" r="21" fill="#111111"/>
 <text x="1304" y="3820" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="23" fill="#ffffff" text-anchor="middle" font-weight="700">8</text>

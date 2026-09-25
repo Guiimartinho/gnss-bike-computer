@@ -741,6 +741,71 @@ total:              cerca de 100 µA, de 30.000 µA
 
 Folga de 300×. A luz **não** sai daqui: ela vem do `3V3BL`, pela `LDSW2`.
 
+## Quantos parafusos a placa precisa
+
+Feito em 2026-09-25, depois de a placa passar meses com **um** furo M2.
+A pergunta não é de gosto: é se o parafuso segura a placa quando alguém
+enfia o cabo.
+
+**A força.** A norma do USB Type-C dá a inserção do plugue no pior caso em
+**20 N**; uma inserção comum fica em torno de 5 N. A tecla `TS-1088R-02026`
+pede **2,6 N**.
+
+**O braço.** Com o furo único em (3,2; 45,0) da placa de 34 × 90:
+
+| Onde a força entra | Distância ao parafuso |
+|---|---|
+| boca do USB-C, em (6,2; 85,7) | **40,8 mm** |
+| tecla central | 18,5 mm |
+| tecla direita | 26,8 mm |
+| canto mais distante | 54,5 mm |
+
+**O momento, com um parafuso só.**
+
+```
+inserção pior caso   20,0 N × 40,8 mm = 816 N·mm
+inserção comum        5,0 N × 40,8 mm = 204 N·mm
+uma tecla             2,6 N × 18,5 mm =  48 N·mm
+```
+
+**O que o parafuso resiste.** Um M2 apertado num pilar de plástico impresso
+aguenta cerca de **0,05 N·m**; daí sai a pré-carga pela regra `T = K·d·F`
+com `K = 0,2`:
+
+```
+F  = 0,05 / (0,2 × 0,002 m)            = 125 N
+T_atrito = μ · F · r = 0,2 × 125 × 1,6 mm = 40 N·mm
+```
+
+**A conclusão.** 816 contra 40 são **vinte vezes**. Mesmo a inserção comum é
+cinco vezes, e uma tecla já empata. E a placa tem **12 mm de folga de cada
+lado** na cavidade: não há nada em que ela esbarre antes de girar. Com um
+parafuso só, a placa **gira**.
+
+**Dois parafusos.** Com o segundo em (4,0; 75,75), ao lado do USB-C, os dois
+ficam a **30,8 mm** um do outro e o momento vira binário:
+
+```
+F_por_parafuso = 816 N·mm / 30,8 mm = 26,5 N de cisalhamento
+```
+
+26,5 N num M2 é nada — a área de raiz de um M2 tem 2,07 mm² e o aço 4.8 dá
+420 MPa, ou seja **cerca de 870 N** de ruptura ao cisalhamento. O parafuso
+deixa de trabalhar por atrito, onde ele é ruim, e passa a trabalhar por
+cisalhamento, onde ele é bom.
+
+**Por que o segundo furo não foi para o canto livre da direita.** Ele coube
+lá com folga, mas caiu a **3,2 mm da área da antena** do módulo de rádio, e
+a seção 7.4 da ficha do ME54BS13 quer 5 mm livres de metal em volta dela. A
+regra `RF3` do [dry-run](09-dry-run-da-pcb.md) acusou na primeira rodada.
+
+> [!NOTE]
+> **O que isto não resolve.** Dois parafusos impedem a placa de girar, mas a
+> espessura das paredes, a altura em que a placa é presa e onde ficam os
+> parafusos **da caixa** continuam sem definição em arquivo nenhum deste
+> projeto. O cálculo acima é o requisito que o projeto mecânico tem de
+> cumprir, não a prova de que ele o cumpre.
+
 ## O que não foi calculado
 
 Dito aqui para não passar por esquecimento.
