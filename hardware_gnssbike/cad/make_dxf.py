@@ -145,7 +145,11 @@ ZONES = [
     ("ZONA_LUZ_AMBIENTE_OPT3001", _f(1.2, 10.5, 3.8, 13.5), 3,
      "OPT3001 SBOS681B: sob a janela, e longe de peca alta (reflexao "
      "optica secundaria)"),
-    ("ZONA_LED_RGB", _f(W - 5.0, 8.5, W - 1.0, 12.0), 3,
+    # Alargada em 2026-09-24: o LED RGB passou de 1,6 x 1,6 para
+    # 3,5 x 2,8 mm, porque o APTF1616 saiu de linha e o que sobrou tem
+    # 305 pecas. Com folga de contorno o corpo pede 5,2 x 3,3, e a zona
+    # de 4,0 x 3,5 que estava aqui nao o continha.
+    ("ZONA_LED_RGB", _f(W - 5.6, 8.1, W - 0.2, 11.8), 3,
      "sob o guia de luz, do lado oposto ao sensor de luz"),
     ("ZONA_FLASH_MX25R6435F", _f(2.5, 21.0, W / 2 - 1.5, 32.0), 3,
      "flash NOR: fala SPI com o modulo, fora da faixa de energia"),

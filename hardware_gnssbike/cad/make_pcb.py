@@ -178,7 +178,11 @@ BORDA_FIXA: dict[str, tuple[float, float, int]] = {
     # On the RIGHT edge: the left of the top band is the receiver's, and
     # the receiver has to be hard in that corner for the 50 mm rule.
     "U505": (_W - 2.0, 16.5, 0),     # ambient light, under its window
-    "D601": (_W - 2.5, 10.5, 0),     # RGB LED, under its light pipe
+    # y 9,75: o corpo cresceu de 1,6 x 1,6 para 3,5 x 2,8 e ficou a
+    # 3,25 mm do sensor de luz, que pede o dobro da altura do vizinho -
+    # 3,8 mm para os 1,9 deste LED. Descido para 3,85 mm de folga, com
+    # a borda de baixo em 8,10, logo acima do keepout da antena GNSS.
+    "D601": (_W - 2.9, 9.75, 0),     # RGB LED, under its light pipe
     # The receiver goes hard into the top LEFT corner, and that is the 50 mm
     # rule again: with it centred, its courtyard overlapped the module's in x
     # and the distance collapsed to the vertical gap alone.

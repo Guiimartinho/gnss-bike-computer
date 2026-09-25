@@ -543,12 +543,19 @@ add("U503", "Bosch BMI270", [
     note="IMU, 0x68 com o SDO no GND; CSB ao VDDIO para I2C; ASDX e ASCX ao "
          "VDDIO ou abertos, NUNCA ao GND")
 
-# MMC5633NJL Rev A: WLP of four balls, 0.85 x 0.85 mm. There is no LGA version
-# and no INT or address pin on this package.
-add("U504", "MMC5633NJL", [
+# MMC5603NJ Rev. B: WLP of four balls, 0,82 x 0,82 x 0,40 mm plus 0,14 of
+# ball, so 0,54 of total height. There is no LGA version and no INT or
+# address pin on this package.
+#
+# It replaces the MMC5633NJL, which does not exist at LCSC. Same family, same
+# 7-bit address 0x30, and the same 0x10 in register 0x39 - so the Zephyr
+# driver and the devicetree node do not change. What changes is the land
+# pattern (0,82 instead of 0,85, pad o0,23 instead of 0,20) and the
+# decoupling, which this data sheet puts at a MINIMUM of 2,2 uF.
+add("U504", "Memsic MMC5603NJ", [
     ("A1", "VSA", "power_in", B), ("A2", "SCL", "input", L),
     ("B1", "VDD", "power_in", T), ("B2", "SDA", "bidirectional", L),
-], confirmed=True,
+], confirmed=True, lcsc="C404328",
     note="magnetometro, 0x30; VSA e o terra; NAO varrer o barramento "
          "(0x7E poe a peca em I3C ate faltar energia)")
 
@@ -568,27 +575,52 @@ passive("R506", "33 R", "serie do NOR_SCK, junto do MCU")
 passive("R507", "33 R", "serie do NOR_MOSI, junto do MCU")
 passive("R508", "33 R", "serie do NOR_MISO, junto da flash")
 passive("C501", "22 uF")
-passive("C502", "4,7 uF", "VDD do MMC5633NJL, minimo de 2,2 uF")
+passive("C502", "4,7 uF", "VDD do MMC5603NJ; a ficha Rev. B, pagina 5, "
+                          "pede MINIMO de 2,2 uF junto do pino - nao sao "
+                          "os 100 nF de costume")
 passive("C503", "100 nF")
 
 # ---------------------------------------------------------------- folha 6
 for n in ("SW601", "SW602", "SW603"):
-    # four terminals on the part, two nodes on the board: 1 and 2 are joined
-    # inside, 3 and 4 too, and the KiCad footprint gives each pair one pad.
-    add(n, "Omron B3S-1002P", [
+    # DOIS terminais, nao quatro. A Omron B3S-1002P que estava aqui tinha
+    # quatro pinos em dois pares ligados por dentro; esta tem dois e pronto.
+    # O esquematico ja tratava a tecla como duas pontas, entao so o land
+    # pattern muda.
+    #
+    # O part number se decodifica no desenho: TS-1088 R = sem pino de
+    # posicionamento, 020 = 2,0 mm de altura, 26 = 260 gf.
+    add(n, "XunPu TS-1088R-02026", [
         (1, "1", "passive", L), (2, "2", "passive", R),
-    ], confirmed=True,
-        note="tecla tatil SPST-NO; 1 e 2 ligados entre si por dentro, 3 e 4 "
-             "tambem, e fechar une os dois pares. O sufixo P e fita, nao "
-             "terminal de terra: a versao com terra e a B3S-1102")
+    ], confirmed=True, lcsc="C455280",
+        note="tecla tatil SPST-NO, 3,90 x 3,00 x 2,00 mm, 260 gf, curso de "
+             "0,2 mm. O embolo de o1,80 sobe so 0,50 mm acima da tampa de "
+             "aco, contra os 0,7 da Omron que ela substitui: a mecanica do "
+             "embolo da caixa MUDA")
 
-add("LS601", "CPT-1117-83-SMT", [(1, "A", "passive", L), (2, "B", "passive", R)],
-    confirmed=False, note="buzzer piezo, acionado em contrafase")
+# Murata PKLCS1212E4001-R1, especificacao JGB40-1584B. Transdutor PASSIVO,
+# sem oscilador: quem gera a onda e o firmware, em contrafase pelos dois
+# transistores. A nota 12-4 da especificacao pede resistor de serie de 1 k a
+# 2 k ou diodo em paralelo, e PROIBE DC - os R607 e R608 de hoje precisam de
+# conferencia contra esse numero.
+#
+# O furo de som e uma FENDA LATERAL de 1,9 x 0,9 mm, com a aresta de baixo a
+# 0,30 mm da placa, e a face inferior tem um canal saindo pela parede oposta.
+# A caixa precisa de duto lateral, nao de furo na tampa.
+add("LS601", "Murata PKLCS1212E4001-R1",
+    [(1, "A", "passive", L), (2, "B", "passive", R)],
+    confirmed=True, lcsc="C113159",
+    note="buzzer piezo passivo, 12 x 12 x 3,0 mm, 84 dB a 4 kHz, acionado em "
+         "contrafase. Sem polaridade. Furo de som LATERAL, rente a placa")
 
-add("D601", "APTF1616SEEZGKQBKC", [
+add("D601", "TUOZHAN S4-3528RGBTA-A", [
     ("A", "ANODO", "passive", T), ("KR", "K_R", "passive", B),
     ("KG", "K_G", "passive", B), ("KB", "K_B", "passive", B),
-], confirmed=False, note="LED RGB de ANODO COMUM: o resistor fica do lado do catodo")
+], confirmed=True, lcsc="C2827321",
+    note="LED RGB de ANODO COMUM, 3,5 x 2,8 x 1,9 mm; o resistor fica do "
+         "lado do catodo. Pinos da ficha S35210052: 1 azul, 2 anodo, "
+         "3 verde, 4 vermelho, com o canto chanfrado junto ao vermelho. "
+         "MUITO mais brilhante que o APTF1616 que substitui (460 a 1000 mcd "
+         "no vermelho contra 15): RECALCULAR R601, R602 e R603. MSL4"),
 
 for n in ("Q601", "Q602", "Q603"):
     add(n, "DMG1012T-7", [

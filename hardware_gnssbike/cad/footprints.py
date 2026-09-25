@@ -117,14 +117,19 @@ _fp("D105", "Diode_SMD:D_SOD-523", "ENCAPSULAMENTO",
     "encapsulamento mais provavel de um TVS pequeno de fuga baixa")
 
 # ---------------------------------------------------------------- interface
-_fp(["SW601", "SW602", "SW603"], "Button_Switch_SMD:SW_SPST_B3S-1000", "EXATO",
-    "Omron B3S; o footprint junta os terminais 1-2 num pad e 3-4 no outro")
+_fp(["SW601", "SW602", "SW603"], "gnssbike:SW_TS-1088R_3.9x3mm", "GERADO",
+    "XunPu TS-1088R-02026, 2 terminais. Substitui a Omron B3S-1002P de "
+    "6,6 x 6 mm: 157.033 pecas contra 10.161, um quarto do preco, e libera "
+    "metade da area das tres teclas na borda. A forca sobe de 2,3 para "
+    "2,6 N, que e melhor com luva, mas o embolo sobe so 0,50 mm acima da "
+    "tampa contra os 0,7 da Omron - a mecanica do embolo da caixa muda")
 _fp(["D103", "D104"], "LED_SMD:LED_0603_1608Metric", "ENCAPSULAMENTO",
     "Kingbright APT1608SURCK, 1,6 x 0,8 mm")
-_fp("LS601", "gnssbike:Buzzer_CPT-1117-83-SMT_11x9mm", "GERADO",
-    "buzzer piezo SMD: o CPT-1117-83-SMT da lista nao esta na KiCad, e o "
-    "CPT-9019S que estava no lugar dele e REDONDO de 9 mm contra os "
-    "11,0 x 9,0 retangulares da peca comprada")
+_fp("LS601", "gnssbike:Buzzer_PKLCS1212E4001_12x12mm", "GERADO",
+    "Murata PKLCS1212E4001-R1. O CPT-1117-83-SMT que estava aqui tem UMA "
+    "peca em estoque; este tem 12.328 e mantem os 84 dB, que e o que "
+    "justifica ter buzzer numa bicicleta - os substitutos de 9 x 9 caem "
+    "para 65 a 70 dB. Custa 144 mm2 na face de tras e 3,0 mm de altura")
 
 
 # ------------------------------------------------------- footprints gerados
@@ -162,18 +167,24 @@ CORPO: dict[str, tuple[float, float, float]] = {
     # footprint ainda diz 1.4x1.4: e o nome, nao a cota.
     "gnssbike:MAX17262_WLP-9_1.4x1.4mm_P0.4mm": (1.448, 1.468, 0.64),
     "gnssbike:BMP585_LGA-8_3.25x3.25mm": (3.25, 3.25, 1.96),
-    "gnssbike:MMC5633_WLP-4_0.85x0.85mm": (0.85, 0.85, 0.40),
+    # 0,82 de corpo, 0,40 de dado mais 0,14 de bola = 0,54 de altura
+    # total. O "0,8 x 0,8 x 0,4" dos catalogos e arredondamento.
+    "gnssbike:MMC5603_WLP-4_0.82x0.82mm": (0.82, 0.82, 0.54),
+    # XunPu TS-1088R-02026: 3,90 x 3,00 x 2,00 do desenho rev A
+    "gnssbike:SW_TS-1088R_3.9x3mm": (3.90, 3.00, 2.00),
+    # Murata PKLCS1212E4001-R1: 12,0 x 12,0 x 3,0 max (JGB40-1584B)
+    "gnssbike:Buzzer_PKLCS1212E4001_12x12mm": (12.00, 12.00, 3.00),
+    # TUOZHAN S4-3528RGBTA-A: 3,5 x 2,8 x 1,9
+    "gnssbike:LED_RGB_3528_3.5x2.8mm": (3.50, 2.80, 1.90),
     "gnssbike:OPT3001_USON-6_2x2mm_P0.65mm": (2.00, 2.00, 0.65),
     "gnssbike:ESD761_X1SON-2_1x0.6mm": (1.00, 0.60, 0.45),
     "gnssbike:TPD4E05U06_USON-10_1x2.5mm_P0.5mm": (1.00, 2.50, 0.55),
     "gnssbike:TXU0204_WQFN-14_3x2.5mm_P0.5mm": (3.00, 2.50, 0.80),
-    "gnssbike:LED_RGB_APTF1616_1.6x1.6mm": (1.60, 1.60, 0.70),
     # the spring contacts: the two 2.0 x 2.0 pads at 3.0 mm of pitch that
     # contato_mola() draws, so 5.0 mm across the pair. The 1.5 mm of leaf is
     # ALTURA's, and ALTURA says there where it does NOT come from.
     "gnssbike:ContatoMola_2x2mm_P3mm": (5.00, 2.00, 1.50),
     # Same Sky CPT-1117-83-SMT: 11,0 x 9,0 x 1,7, do desenho da pagina 2
-    "gnssbike:Buzzer_CPT-1117-83-SMT_11x9mm": (11.00, 9.00, 1.70),
 }
 
 
@@ -282,6 +293,83 @@ def duas_bordas(nome, n_por_lado, pitch, pad_w, pad_h, span, corpo_w, corpo_h,
     return _corpo(nome, corpo_w, corpo_h, pads, descr)
 
 
+def tecla_ts1088(nome):
+    """XunPu TS-1088R-02026: DOIS terminais, nao quatro.
+
+    Desenho "TACT SWITCH / TS-1088R-XXX" rev A, vetorial, cotas lidas da
+    geometria. O part number se decodifica no proprio desenho: R = sem pino
+    de posicionamento, 020 = 2,0 mm de altura, 26 = 260 gf.
+
+    A Omron B3S-1002P que esta peca substitui tem quatro pinos - dois pares
+    ligados internamente - e este tem dois. O esquematico deste projeto ja
+    tratava a tecla como duas pontas, entao a troca nao mexe na netlist; o
+    land pattern, sim, e outro.
+
+      corpo            3,90 x 3,00 x 2,00
+      embolo           ø1,80, sobe 0,50 acima da tampa de aco
+      curso            0,2 +-0,1
+      pad              1,05 x 2,00, centro em +-2,225
+      vao externo      5,50   vao interno 3,40
+    """
+    pads = [_pad("1", -2.225, 0.0, 1.05, 2.00),
+            _pad("2", 2.225, 0.0, 1.05, 2.00)]
+    return _corpo(nome, 3.90, 3.00, pads,
+                  "XunPu TS-1088R-02026, 260 gf, 2 terminais; land pattern do "
+                  "desenho rev A")
+
+
+def buzzer_pklcs1212(nome):
+    """Murata PKLCS1212E4001-R1, especificacao JGB40-1584B de 2021-05-21.
+
+    12,0 x 12,0 x 3,0 max, tolerancia geral +-0,2. Transdutor PASSIVO: nao
+    tem oscilador, e a nota 12-4 da especificacao pede resistor de serie de
+    1 k a 2 k ou diodo em paralelo, e proibe DC.
+
+    O furo de som NAO fica em cima: e uma fenda de 1,9 x 0,9 numa parede
+    lateral, com a aresta de baixo a 0,30 mm do plano de assento, e a face
+    inferior tem um canal de 6,4 x 2,1 x 0,7 saindo pela parede oposta. A
+    caixa precisa de duto lateral, nao de furo na tampa.
+
+      pad         1,2 x 4,0, centro em +-5,6
+      vao externo 12,4   vao interno 10,0
+      eletrodo    4,0 de comprimento, sobe 1,2 pela parede
+    """
+    pads = [_pad("1", -5.6, 0.0, 1.2, 4.0),
+            _pad("2", 5.6, 0.0, 1.2, 4.0)]
+    return _corpo(nome, 12.0, 12.0, pads,
+                  "Murata PKLCS1212E4001-R1, 84 dB a 4 kHz, passivo; furo de "
+                  "som lateral de 1,9 x 0,9 rente a placa")
+
+
+def led_rgb_3528(nome):
+    """TUOZHAN S4-3528RGBTA-A, ficha S35210052 de 2021-02-21.
+
+    3,5 x 2,8 x 1,9, anodo comum. A pinagem sai do esquema interno impresso
+    no mesmo desenho, e o anodo fica na DIAGONAL do vermelho:
+
+      1  B   catodo azul      superior esquerdo
+      2  +   anodo comum      inferior esquerdo
+      3  G   catodo verde     superior direito
+      4  R   catodo vermelho  inferior direito, no canto chanfrado
+
+    Muito mais brilhante que o APTF1616 que substitui - 460 a 1000 mcd no
+    vermelho contra 15, 1300 a 2900 no verde contra 50 - entao os resistores
+    de serie precisam ser RECALCULADOS para nao ofuscar a noite.
+
+      pad 1,8 x 0,8, centros em (+-1,70; +-0,75); o pad avanca 0,85 para
+      fora do corpo de cada lado, como e proprio de LED
+    """
+    # Os nomes sao os do esquematico, nao os numeros da ficha: o pino 1 da
+    # ficha e o catodo azul, o 2 o anodo comum, o 3 o verde e o 4 o vermelho.
+    pads = [_pad("KB", -1.70, 0.75, 1.8, 0.8),
+            _pad("A", -1.70, -0.75, 1.8, 0.8),
+            _pad("KG", 1.70, 0.75, 1.8, 0.8),
+            _pad("KR", 1.70, -0.75, 1.8, 0.8)]
+    return _corpo(nome, 3.5, 2.8, pads,
+                  "TUOZHAN S4-3528RGBTA-A, anodo comum no pino 2; canto "
+                  "chanfrado junto ao pino 4 (vermelho). MSL4")
+
+
 GERADOS: dict[str, str] = {}
 
 
@@ -291,10 +379,27 @@ def _gerar():
         "gnssbike:MAX17262_WLP-9_1.4x1.4mm_P0.4mm", 3, 3, 0.4, 0.20, 1.4, 1.4,
         "MAX17262 WLP de 9 bolas; land pattern aproximado, "
         "a ficha recomendada nao foi lida")
-    # MMC5633NJL WLP-4: 0.85 x 0.85 mm, 2 x 2 balls.
-    GERADOS["gnssbike:MMC5633_WLP-4_0.85x0.85mm"] = wlp(
-        "gnssbike:MMC5633_WLP-4_0.85x0.85mm", 2, 2, 0.4, 0.20, 0.85, 0.85,
-        "MMC5633NJL WLP de 4 bolas; land pattern aproximado")
+    # MMC5603NJ WLP-4, ficha Rev. B de 2018-07-12, paginas 17 e 18. O
+    # MMC5633NJL que estava aqui nao existe na LCSC; este e da mesma
+    # familia, responde no MESMO 0x30 e devolve o MESMO 0x10 no registrador
+    # 0x39, entao o driver nao muda.
+    #
+    #   corpo   0,82 x 0,82 (NAO 0,85), dado de 0,40 mais 0,14 de bola
+    #   passo   0,40 em x e em y      bola  o0,22
+    #   pad     o0,23 - so 0,01 maior que a bola
+    #
+    # Mapa: A1 = VSA, A2 = SCL, B1 = VDD, B2 = SDA, com o ponto preto da
+    # face de cima marcando o A1. E o mesmo mapa do MMC5633NJL.
+    GERADOS["gnssbike:MMC5603_WLP-4_0.82x0.82mm"] = wlp(
+        "gnssbike:MMC5603_WLP-4_0.82x0.82mm", 2, 2, 0.4, 0.23, 0.82, 0.82,
+        "Memsic MMC5603NJ, WLP de 4 bolas; land pattern da pagina 18 da "
+        "ficha Rev. B")
+    GERADOS["gnssbike:SW_TS-1088R_3.9x3mm"] = tecla_ts1088(
+        "gnssbike:SW_TS-1088R_3.9x3mm")
+    GERADOS["gnssbike:Buzzer_PKLCS1212E4001_12x12mm"] = buzzer_pklcs1212(
+        "gnssbike:Buzzer_PKLCS1212E4001_12x12mm")
+    GERADOS["gnssbike:LED_RGB_3528_3.5x2.8mm"] = led_rgb_3528(
+        "gnssbike:LED_RGB_3528_3.5x2.8mm")
     # OPT3001 USON-6, 2.0 x 2.0 mm, 0.65 mm pitch.
     GERADOS["gnssbike:OPT3001_USON-6_2x2mm_P0.65mm"] = son(
         "gnssbike:OPT3001_USON-6_2x2mm_P0.65mm", 6, 0.65, 0.35, 0.28, 1.8,
@@ -370,8 +475,9 @@ _gerar()
 ALTURA: dict[str, tuple[float, str]] = {
     # the parts whose height decides whether the lid closes
     # lido no desenho cotado da ficha da Omron, pagina 2
-    "Button_Switch_SMD:SW_SPST_B3S-1000": (3.40, "Omron B3S-1002P, desenho "
-        "cotado da ficha: altura total 3,4 mm, embolo de 3,3 mm saindo 0,7"),
+    "gnssbike:SW_TS-1088R_3.9x3mm": (2.00, "XunPu TS-1088R-02026, desenho "
+        "rev A: altura total 2,00, tampa de aco ate 1,50, embolo de o1,80 "
+        "saindo 0,50 acima dela. Curso de 0,2 +-0,1"),
     "Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12": (3.26, "altura "
         "corrente de um receptaculo USB-C de montagem em superficie - "
         "CONFERIR na ficha do HRO TYPE-C-31-M-12 (LCSC C165948)"),
@@ -732,6 +838,119 @@ def wrl_buzzer(caminho, w: float, h: float, alt: float) -> None:
         encoding="utf-8", newline=NL)
 
 
+def wrl_buzzer_pklcs(caminho, w: float, h: float, alt: float) -> None:
+    """Murata PKLCS1212E4001-R1: 12 x 12 x 3,0, cinza-grafite, furo LATERAL.
+
+    Duas coisas que a especificacao JGB40-1584B corrige de uma vez:
+
+      - o furo de som NAO fica em cima. E uma fenda de (1,9) x (0,9) numa
+        parede lateral sem eletrodo, com a aresta de baixo a 0,30 mm do
+        plano de assento, e a face inferior tem um canal de (6,4) x (2,1) x
+        (0,7) saindo pela parede oposta. Quem desenha furos no topo desenha
+        outro buzzer, e a caixa acaba com um furo no lugar errado.
+      - a cor. A Murata nao declara cor nenhuma no documento; a foto do
+        produto mostra corpo cinza-grafite escuro FOSCO E UNIFORME, topo e
+        parede praticamente iguais, sem a face superior clara que os
+        buzzers de lata costumam ter. Os terminais sao DOURADOS.
+
+    Os eletrodos tem 4,0 mm de comprimento, sobem 1,2 mm pela parede e
+    avancam 1,0 mm sobre a face inferior.
+    """
+    GRAFITE = (0.42, 0.42, 0.46)          # medido na foto: RGB 107,108,118
+    PAREDE = (0.38, 0.38, 0.42)           # 98,97,107
+    DOURADO = (0.83, 0.71, 0.36)
+    VAO = (0.10, 0.10, 0.11)
+    partes = [_bloco(-w / 2, -h / 2, 0.0, w / 2, h / 2, alt, GRAFITE)]
+    # os dois eletrodos, 4,0 de comprimento centrados, subindo 1,2
+    for lado in (-1, 1):
+        x = lado * w / 2
+        partes.append(_bloco(min(x, x - lado * 0.08), -2.0, 0.0,
+                             max(x, x - lado * 0.08), 2.0, 1.2, DOURADO))
+        # o avanco de 1,0 sobre a face inferior
+        partes.append(_bloco(min(x, x - lado * 1.0), -2.0, 0.0,
+                             max(x, x - lado * 1.0), 2.0, 0.05, DOURADO))
+    # a fenda de som: parede SEM eletrodo, 1,9 x 0,9, a 0,30 da placa
+    partes.append(_bloco(-0.95, h / 2 - 0.09, 0.30, 0.95, h / 2 + 0.01,
+                         0.30 + 0.9, VAO))
+    # o canal da face inferior, na parede oposta
+    partes.append(_bloco(-3.2, -h / 2 - 0.01, 0.0, 3.2, -h / 2 + 2.1, 0.7,
+                         PAREDE))
+    caminho.write_text(
+        "#VRML V2.0 utf8" + NL +
+        "# Murata PKLCS1212E4001-R1: 12 x 12 x 3,0 cinza-grafite, fenda de "
+        "som lateral de 1,9 x 0,9 a 0,30 da placa, eletrodos dourados" + NL +
+        "".join(partes), encoding="utf-8", newline=NL)
+
+
+def wrl_tecla_ts1088(caminho, w: float, h: float, alt: float) -> None:
+    """XunPu TS-1088R-02026: corpo preto, tampa de aco nu, embolo preto.
+
+    Cotas do desenho rev A, cores da tabela de materiais do proprio desenho:
+    corpo e embolo em LCP preto, tampa em aco inoxidavel "limpo" (aco nu,
+    prateado brilhante) com quatro abas dobradas nos cantos, terminais em
+    bronze fosforoso prateado.
+
+      corpo 3,90 x 3,00, tampa ate 1,50, embolo o1,80 ate 2,00
+      ou seja: o botao sobe 0,50 mm acima da tampa, e nao 0,7 como a Omron
+    """
+    PRETO = (0.07, 0.07, 0.08)            # LCP preto
+    ACO = (0.78, 0.79, 0.81)              # aco inoxidavel nu
+    BRONZE = (0.72, 0.71, 0.66)           # bronze fosforoso estanhado
+    partes = [
+        _bloco(-w / 2, -h / 2, 0.0, w / 2, h / 2, 1.20, PRETO),
+        _bloco(-w / 2, -h / 2, 1.20, w / 2, h / 2, 1.50, ACO),
+        _cilindro(0.0, 0.0, 1.50, 2.00, 0.90, PRETO, 16),
+    ]
+    # os dois terminais, saindo 0,545 de cada lado, 1,30 de largura
+    for lado in (-1, 1):
+        x0 = lado * 1.952
+        x1 = lado * 2.497
+        partes.append(_bloco(min(x0, x1), -0.65, 0.0, max(x0, x1), 0.65,
+                             0.13, BRONZE))
+    caminho.write_text(
+        "#VRML V2.0 utf8" + NL +
+        "# XunPu TS-1088R-02026: 3,90 x 3,00 x 2,00, corpo e embolo pretos, "
+        "tampa de aco nu, embolo o1,80 subindo 0,50 acima da tampa" + NL +
+        "".join(partes), encoding="utf-8", newline=NL)
+
+
+def wrl_led_3528(caminho, w: float, h: float, alt: float) -> None:
+    """TUOZHAN S4-3528RGBTA-A: corpo branco, lente transparente incolor.
+
+    A ficha declara o encapsulante como 透明 "water clear" - transparente
+    INCOLOR, nao leitoso. A cor do corpo a ficha nao declara; a foto do
+    produto mostra resina BRANCA (parede RGB 217,212,227, fundo da cavidade
+    245,239,245), que e o PPA/PCT de praxe. Registrado como inferido da
+    foto, e nao da ficha.
+
+    A secao de baixo tem 1,05 mm de altura reta; os 0,85 de cima afunilam de
+    3,5 para 3,2 mm. A cavidade refletora mede 2,64 x 2,14, e o canto
+    chanfrado fica junto ao pino 4, o vermelho.
+    """
+    BRANCO = (0.86, 0.85, 0.88)
+    CAVIDADE = (0.96, 0.94, 0.96)
+    LENTE = (0.92, 0.94, 0.96)
+    ESTANHO = (0.74, 0.75, 0.77)
+    partes = [
+        _bloco(-w / 2, -h / 2, 0.0, w / 2, h / 2, 1.05, BRANCO),
+        _bloco(-1.6, -h / 2 + 0.15, 1.05, 1.6, h / 2 - 0.15, alt, BRANCO),
+        # a cavidade refletora, 2,64 x 2,14, cheia de resina transparente
+        _bloco(-1.32, -1.07, 0.9, 1.32, 1.07, alt, CAVIDADE),
+        _bloco(-1.30, -1.05, 1.0, 1.30, 1.05, alt - 0.02, LENTE),
+    ]
+    # os quatro terminais na face de baixo, 0,80 x 0,785
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            partes.append(_bloco(sx * 1.35 - 0.40, sy * 0.7075 - 0.3925, 0.0,
+                                 sx * 1.35 + 0.40, sy * 0.7075 + 0.3925,
+                                 0.06, ESTANHO))
+    caminho.write_text(
+        "#VRML V2.0 utf8" + NL +
+        "# TUOZHAN S4-3528RGBTA-A: 3,5 x 2,8 x 1,9, corpo branco, lente "
+        "transparente incolor, anodo comum no pino 2" + NL +
+        "".join(partes), encoding="utf-8", newline=NL)
+
+
 def wrl_fpc(caminho, w: float, h: float, alt: float) -> None:
     """An FPC connector: a pale housing with the dark latch across the back.
 
@@ -910,8 +1129,8 @@ DESENHADOS = {
     "gnssbike:MinewSemi_ME54BS13_16.5x12mm":
         lambda c, w, h, a: wrl_me54bs13(c),
     "gnssbike:u-blox_MAX_LCC-18_9.7x10.1mm": wrl_max_f10s,
-    "Button_Switch_SMD:SW_SPST_B3S-1000": wrl_tecla,
-    "gnssbike:Buzzer_CPT-1117-83-SMT_11x9mm": wrl_buzzer,
+    "gnssbike:SW_TS-1088R_3.9x3mm": wrl_tecla_ts1088,
+    "gnssbike:Buzzer_PKLCS1212E4001_12x12mm": wrl_buzzer_pklcs,
     # wrl_usb_c desenha o Molex 2036150003, que saiu da lista em
     # 2026-09-24 (309 unidades no mundo). O HRO TYPE-C-31-M-12 que
     # entrou no lugar ainda nao teve o desenho cotado lido, e desenhar
@@ -919,7 +1138,7 @@ DESENHADOS = {
     # sem entrada aqui, o 3D usa o contorno F.Fab do proprio footprint
     # do KiCad, que e o contorno do encapsulamento certo.
     "gnssbike:ContatoMola_2x2mm_P3mm": wrl_mola,
-    "gnssbike:LED_RGB_APTF1616_1.6x1.6mm": wrl_led_rgb,
+    "gnssbike:LED_RGB_3528_3.5x2.8mm": wrl_led_3528,
     # Only the TE one. The Hirose FH12 has a model in KiCad's own library and
     # trocar_modelo() keeps it, which is right: a maker's model beats a sketch.
     "Connector_FFC-FPC:TE_0-1734839-5_1x05-1MP_P0.5mm_Horizontal": wrl_fpc,
@@ -959,13 +1178,23 @@ PACOTE: dict[str, tuple] = {
         (3.25, 3.25, 1.86, 0.00, None, 0.30, 0.35, 0.80,
          "Bosch BST-BMP585-DS003-02, tabela 3: contorno 3,25 x 3,25 tipico "
          "(3,2 a 3,3), ALTURA 1,86 tipica, 1,76 a 1,96"),
-    "gnssbike:MMC5633_WLP-4_0.85x0.85mm":
-        (0.85, 0.85, 0.40, 0.00, None, 0.25, 0.25, 0.40,
-         "MEMSIC MMC5633NJL, desenho do encapsulamento: 0,85 +-0,03 quadrado, "
-         "altura 0,40 +-0,03, passo de esfera 0,40"),
-    "gnssbike:LED_RGB_APTF1616_1.6x1.6mm":
-        (1.60, 1.60, 0.70, 0.00, None, 0.35, 0.40, 0.80,
-         "Kingbright APTF1616, desenho: 1,6 x 1,6 x 0,7"),
+    "gnssbike:MMC5603_WLP-4_0.82x0.82mm":
+        (0.82, 0.82, 0.40, 0.14, None, 0.22, 0.22, 0.40,
+         "MEMSIC MMC5603NJ Rev. B (2018-07-12), pagina 17: corpo 0,82 +-0,03 "
+         "quadrado, dado de 0,40 +-0,03, esferas saindo 0,14 +-0,03 por "
+         "baixo - altura TOTAL 0,54, e nao os 0,40 que os catalogos citam. "
+         "Esfera o0,22 +-0,03, passo 0,40 em x e em y. Face de cima "
+         "cinza-escura quase preta com o ponto de A1; paredes serradas "
+         "cinza-claras. A cor nao esta na ficha: e medicao de foto"),
+    "gnssbike:LED_RGB_3528_3.5x2.8mm":
+        (3.50, 2.80, 1.90, 0.00, None, 0.80, 0.785, 1.50,
+         "TUOZHAN S4-3528RGBTA-A, ficha S35210052 (2021-02-21): 3,5 +-0,2 "
+         "por 2,8 +-0,2 por 1,9 de altura, resina do topo 3,2 +-0,2 "
+         "afunilando para 3,5 na base, seccao reta de baixo com 1,05, "
+         "cavidade refletora de 2,64 x 2,14, terminais de 0,80 x 0,785. "
+         "Lente 'water clear' TRANSPARENTE INCOLOR, declarada; corpo branco "
+         "inferido da foto, porque a ficha nao declara. Canto chanfrado "
+         "junto ao pino 4, o vermelho"),
     "Package_DFN_QFN:QFN-32-1EP_5x5mm_P0.5mm_EP3.45x3.45mm":
         (5.00, 5.00, 0.90, 0.035, (3.50, 3.50), 0.25, 0.40, 0.50,
          "Nordic nPM1300 Product Specification v1.1 (4490_483, 2024-06-16), "
@@ -985,15 +1214,20 @@ PACOTE: dict[str, tuple] = {
          "DPY0002A X1SON, desenho 4224561/C 07/2024: A 0,9 a 1,1, B 0,5 a "
          "0,7, C maximo 0,45 (nominal nao consta), standoff 0 a 0,05, "
          "terminais 0,2 a 0,3 por 0,45 a 0,55, passo 0,65 basico"),
-    "gnssbike:Buzzer_CPT-1117-83-SMT_11x9mm":
-        (11.00, 9.00, 1.70, 0.00, None, 2.50, 2.50, 10.50,
-         "Same Sky (ex-CUI) CPT-1117-83-SMT-TR, ficha de 2024-11-09, pagina 1 "
-         "(SPECIFICATIONS: 11,0 x 9,0 x 1,7 mm, material LCP preto) e pagina 2 "
-         "(MECHANICAL DRAWING): corpo RETANGULAR de 11,0 x 9,0 x 1,7, 15,0 de "
-         "ponta a ponta com as duas abas metalicas de 2,0 de largura por 0,2 "
-         "de espessura, cada uma com furo de 0,8, e sete furos de som no topo. "
-         "Terminais de latao estanhado. o footprint desta peca e desenhado "
-         "aqui, porque o da biblioteca e do CPT-9019S, que e REDONDO de 9 mm"),
+    "gnssbike:Buzzer_PKLCS1212E4001_12x12mm":
+        (12.00, 12.00, 3.00, 0.00, None, 1.20, 4.00, 11.20,
+         "Murata PKLCS1212E4001-R1, especificacao JGB40-1584B (2021-05-21), "
+         "item 9: corpo 12,0 x 12,0 +-0,2 por 3,0 de altura MAXIMA. "
+         "Eletrodos de 4,0 de comprimento centrados na aresta, subindo 1,2 "
+         "pela parede e avancando 1,0 sobre a face inferior; pads de 1,2 x "
+         "4,0 com vao externo 12,4 e interno 10,0. FURO DE SOM LATERAL: "
+         "fenda de (1,9) x (0,9) numa parede sem eletrodo, aresta de baixo a "
+         "0,30 do plano de assento, e canal de (6,4) x (2,1) x (0,7) na face "
+         "inferior saindo pela parede oposta - a caixa precisa de duto "
+         "lateral, nao de furo na tampa. Cinza-grafite escuro fosco e "
+         "uniforme, terminais DOURADOS; a Murata nao declara cor, e isto e "
+         "medicao de foto. Sem polaridade. Pede resistor de serie de 1 k a "
+         "2 k ou diodo em paralelo, e PROIBE DC (item 12-4)"),
     "Connector_JST:JST_GH_SM06B-GHS-TB_1x06-1MP_P1.25mm_Horizontal":
         (10.75, 4.05, 4.25, 0.10, None, 0.50, 0.80, 1.25,
          "JST, catalogo da serie GH (eGH.pdf), pagina 3, bloco Header, linha "
@@ -1226,14 +1460,19 @@ def _com_modelo() -> None:
 
 # the generated ones, assigned
 _fp("U102", "gnssbike:MAX17262_WLP-9_1.4x1.4mm_P0.4mm", "GERADO", "")
-_fp("U504", "gnssbike:MMC5633_WLP-4_0.85x0.85mm", "GERADO", "")
+_fp("U504", "gnssbike:MMC5603_WLP-4_0.82x0.82mm", "GERADO",
+    "Memsic MMC5603NJ: o MMC5633NJL nao existe na LCSC. Mesma familia, "
+    "mesmo 0x30, mesmo 0x10 no registrador 0x39 - o driver nao muda")
 _fp("U505", "gnssbike:OPT3001_USON-6_2x2mm_P0.65mm", "GERADO", "")
 _fp("D101", "gnssbike:ESD761_X1SON-2_1x0.6mm", "GERADO", "")
 _fp("D102", "gnssbike:TPD4E05U06_USON-10_1x2.5mm_P0.5mm", "GERADO", "")
 _fp("U502", "gnssbike:BMP585_LGA-8_3.25x3.25mm", "GERADO", "")
 _fp("U302", "gnssbike:TXU0204_WQFN-14_3x2.5mm_P0.5mm", "GERADO", "")
 _fp("U301", "gnssbike:u-blox_MAX_LCC-18_9.7x10.1mm", "GERADO", "")
-_fp("D601", "gnssbike:LED_RGB_APTF1616_1.6x1.6mm", "GERADO", "")
+_fp("D601", "gnssbike:LED_RGB_3528_3.5x2.8mm", "GERADO",
+    "TUOZHAN S4-3528RGBTA-A: o sufixo do APTF1616 do projeto nao existe "
+    "mais e o que existe tem 305 pecas. Este tem 2 milhoes, e anodo comum "
+    "como o projeto quer, e custa 1/20. RECALCULAR os resistores de serie")
 
 
 def me54bs13() -> str:
