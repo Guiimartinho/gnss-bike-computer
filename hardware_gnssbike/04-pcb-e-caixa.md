@@ -211,11 +211,22 @@ fecha com folga.**
 
 > [!NOTE]
 > Os 6 módulos solares de 23 × 8 mm **não consomem área de placa**: ficam na
-> face inclinada da caixa e nos dois chanfros de 45°, e chegam à placa por
-> pads de mola ou FPC em três grupos. A antena GNSS também não: é um
-> elemento na parede da caixa, com contatos de mola. **A área dos contatos e
-> dos conectores dos painéis não está dimensionada em lugar nenhum** e não
-> entra na soma acima — é um número que falta.
+> face inclinada da caixa e nos dois chanfros de 45°, virados para o sol,
+> enquanto a placa fica dentro, atrás do display. São três orientações
+> diferentes, e é isso que faz a colheita render com o guidão apontando para
+> qualquer lado — uma placa plana só tem uma orientação, então **soldar os
+> módulos na placa não é uma opção**.
+>
+> Eles chegam por **um conector de 4 vias na borda direita**, o `J103`, que
+> consome 10,5 mm dessa borda e 8 mm para dentro. Antes eram três pares de
+> pads de mola, e a área deles era o número que faltava aqui; agora está
+> medida e entra na soma. Ver [Como os painéis chegam à
+> placa](#como-os-painéis-chegam-à-placa).
+>
+> A antena GNSS continua sendo um elemento fora da placa quando se escolhe o
+> caminho do `J302` (u.FL); pelo `JP301` também dá para montar a antena de
+> chip soldada na borda de cima. **A área dos contatos da antena continua
+> sem dimensionar.**
 
 > [!IMPORTANT]
 > **O conector do filme de luz não tem zona nem área.**
@@ -273,6 +284,81 @@ de baixo ou na borda, fora da sombra da bateria.
 > 2,6 mm. Os 2,4 mm do módulo cabem, com **0,2 mm de folga** — e essa folga
 > sai de ficha, não de peça medida. Não medido: a altura real do módulo e a
 > do pack de bateria comprado.
+
+### Como os painéis chegam à placa
+
+Os seis módulos ficam na caixa e a placa fica dentro dela, então entre os dois
+há um chicote. Esta seção diz qual, com que configuração e por quê. Decidido
+em 2026-09-24; **nada montado nem medido**.
+
+**A configuração é obrigatória: os seis em paralelo.** Cada KXOB25-05X3F já
+tem 3 células em série e abre em 2,07 V, e o MPPT do colhedor rastreia de
+0,12 a 2,73 V. Dois módulos em série dariam 4,14 V — 1,4 V acima do teto.
+
+| Arranjo | Em aberto | A 1 sol | Cabe no colhedor? |
+|---|---|---|---|
+| **6 em paralelo** | **2,07 V** | 6 × 18,4 = **110 mA** | **sim** |
+| 2 em série, 3 ramos | 4,14 V | 55 mA | não, passa 1,4 V do teto |
+| 3 em série, 2 ramos | 6,21 V | 37 mA | não |
+
+O ponto de máxima potência fica em 80 % de 2,07 = **1,66 V**. Ao meio-dia o
+arranjo real entrega cerca de **88 mA**, porque as três faces não pegam sol de
+frente ao mesmo tempo; o pior caso teórico, sol normal aos seis, dá 110 mA.
+O limite de entrada com o indutor de 4,7 µH fica entre 95 e 123 mA, então
+**no pior caso o colhedor pode limitar** — ele sai do ponto de máxima
+potência e a placa colhe um pouco menos. Não quebra nada. Está na bancada.
+
+**O conector é o `J103`, JST ZH de 1,5 mm, 4 vias, SMD lateral, com trava.**
+Três vias para os grupos (frente, chanfro esquerdo, chanfro direito) e uma
+para o terra comum, que os três dividem.
+
+```mermaid
+flowchart LR
+    F["face inclinada<br/>PV101 · PV102"] --> J["J103<br/>ZH 1,5 mm, 4 vias"]
+    E["chanfro esquerdo<br/>PV103 · PV104"] --> J
+    D["chanfro direito<br/>PV105 · PV106"] --> J
+    J --> R["R113 · R114 · R115<br/>0 Ω, um por grupo"]
+    R --> C["C115<br/>22 µF"]
+    C --> L["L103"]
+    L --> U["colhedor"]
+```
+
+Quatro decisões dentro dessa, cada uma com o seu motivo:
+
+1. **Conector, não pad de mola.** Até 2026-09-24 eram três pares de pads de
+   2 × 2 mm que uma mola da caixa pressionaria. Três razões derrubaram isso:
+   a JLCPCB **não monta mola**; uma bicicleta vibra, e um contato pressionado
+   que abre e fecha na entrada de um conversor chaveado é um transitório
+   sujo; e o conector come **10,5 mm** da borda direita contra os 16 mm dos
+   três pares.
+2. **Família diferente da bateria, de propósito.** A célula entra num **JST
+   GH de 1,25 mm** de 6 vias. Se o painel usasse a mesma família, um dia
+   alguém pluga a bateria de 4,2 V na entrada do colhedor, que aguenta
+   **2,73 V**. Com **ZH de 1,5 mm** os dois não entram um no outro, e os
+   corpos têm tamanhos visivelmente diferentes. É proteção mecânica, de
+   graça. (O JST SH de 1,0 mm, que seria a escolha óbvia por ser menor, saiu
+   de linha: 3 peças na JLCPCB.)
+3. **Três 0 Ω, um por grupo.** Sem eles os seis módulos em paralelo dão um
+   número só e nunca se sabe qual face está rendendo. Com eles, abre-se um e
+   mede-se o grupo sozinho no sol. É o mesmo raciocínio do `JP301` da antena.
+4. **Quatro vias, não seis.** Os três grupos dividem o mesmo terra: três
+   pinos de GND seriam o mesmo nó repetido. Além disso o corpo de 6 vias tem
+   13,5 mm e fazia sombra no sensor de luz ambiente, que pede o dobro da
+   própria altura livre em volta (regra `OP1` do
+   [dry-run](09-dry-run-da-pcb.md)).
+
+**Regra de layout que sai disso:** o `C115` de 22 µF fica **entre o conector
+e o `L103`**, encostado no conector. O colhedor é um boost com o indutor em
+série na entrada, então quem segura a ondulação do chaveamento é o `C115`; se
+ele estiver do lado errado, o cabo que vem da caixa vira a antena de um
+conversor passando perto da antena do GNSS.
+
+**E um grampo, o `D105`.** O conector certo impede o engano de plugar a
+bateria no painel; o grampo impede o prejuízo quando o engano vier de outro
+lugar — fio invertido no crimp, painel trocado, fonte de bancada. **A peça
+ainda não foi escolhida**: falta conferir a corrente de fuga a 2,1 V, que
+entra direto no orçamento solar, e o máximo absoluto do pino de entrada na
+ficha do colhedor.
 
 ### O aperto que não fecha: a antena GNSS
 
@@ -411,7 +497,7 @@ flowchart TB
     end
     ANT["elemento linear L1 e L5<br/>na parede de cima da caixa,<br/>fora da placa, por contatos de mola"] -.->|"linha de 50 Ω, poucos mm"| A2
     Y1 --> Y2 --> Y3
-    PV["6 módulos solares 23 × 8 mm<br/>2 na face inclinada e 2 em cada chanfro,<br/>na caixa, fora da placa"] -.->|"3 grupos, mola ou FPC"| C2
+    PV["6 módulos solares 23 × 8 mm<br/>2 na face inclinada e 2 em cada chanfro,<br/>na caixa, fora da placa"] -.->|"3 grupos em paralelo,<br/>J103 de 4 vias"| C2
 ```
 
 O que o arranjo garante, e por quê:
@@ -719,7 +805,7 @@ montagem, que não existe.**
 | **Raio de canto da placa** | 3 mm no [desenho](../tools/docs/case_drawing.py) contra os 4 mm de [14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso); as duas fontes discordam e nenhuma foi confirmada | [O contorno](#o-contorno) |
 | **Face de cada peça e ordem do forno** | a conta põe o ME54BS13 na frente; o arquivo de montagem não existe | [Montagem](#montagem) |
 | **Plugue do USB-C na caixa** | a boca do conector fica 0,77 mm atrás da face externa; um plugue de capa grossa pode não entrar | [Zonas proibidas](#zonas-proibidas) |
-| **Contatos dos painéis e da antena** | a área dos pads de mola e dos conectores dos três grupos de painéis não está dimensionada em lugar nenhum | [Orçamento de área](#orçamento-de-área) |
+| **Contatos da antena** | a área dos contatos do elemento de antena na parede da caixa não está dimensionada. Os painéis **deixaram de ser pendência** em 2026-09-24: são um `J103` de 4 vias medido ([Como os painéis chegam à placa](#como-os-painéis-chegam-à-placa)) | [Orçamento de área](#orçamento-de-área) |
 | **Zona do conector do filme de luz** | [14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso) põe o Molex 5034800440 ao lado do FPC do display, mas não lhe dá retângulo, e a medida do corpo dele não está em nenhum documento daqui | [Orçamento de área](#orçamento-de-área) |
 | **Empenamento e calor** | 0,8 mm empena mais, e o carregador linear dissipa até 1,50 W dentro de uma caixa vedada | [02](02-calculos.md#calor-do-carregador) |
 | **Altura real das peças** | o empilhamento de [14](../docs/14-hardware-placa-nova.md#empilhamento-mecânico) fecha em 17,1 mm dentro de 19 mm, com 1,9 mm de folga, a partir de fichas e não de peças medidas | [14](../docs/14-hardware-placa-nova.md#empilhamento-mecânico) |
