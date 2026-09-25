@@ -1,0 +1,191 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2380" height="1320" viewBox="0 0 2380 1320">
+<rect width="2380" height="1320" fill="#ffffff"/>
+<text x="40" y="54" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="32" fill="#111" text-anchor="start" font-weight="700">Como ligar os seis módulos solares na placa</text>
+<text x="40" y="84" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="17" fill="#6b7178" text-anchor="start" font-weight="400">GNSS Bike Computer · placa gnssbike · conector J103 · desenho em escala, medidas em mm · nada montado nem medido</text>
+<rect x="40" y="112" width="500" height="1156" rx="14" fill="#f5f6f8" stroke="#d7dae0" stroke-width="1.5"/>
+<text x="62" y="148" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="24" fill="#111" text-anchor="start" font-weight="700">A · Onde fica cada módulo</text>
+<text x="62" y="172" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" fill="#6b7178" text-anchor="start" font-weight="400">a caixa vista de frente, 62 × 104 mm</text>
+<rect x="122.6" y="262" width="334.8" height="561.6" rx="37.8" ry="37.8" fill="#eceef1" stroke="#aab0b8" stroke-width="0.5"/>
+<rect x="125.84" y="356.5" width="33.48" height="297" rx="15.12" ry="15.12" fill="#e0e3e8" stroke="#b6bcc4" stroke-width="0.35"/>
+<rect x="420.68" y="356.5" width="33.48" height="297" rx="15.12" ry="15.12" fill="#e0e3e8" stroke="#b6bcc4" stroke-width="0.35"/>
+<rect x="171.2" y="326.8" width="237.6" height="324" rx="6.48" ry="6.48" fill="#d3d7dc" stroke="#aab0b8" stroke-width="0.35"/>
+<text x="290" y="494.2" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" fill="#868c94" text-anchor="middle" font-weight="400">display</text>
+<rect x="163.1" y="664.84" width="253.8" height="76.68" rx="8.64" ry="8.64" fill="#e0e3e8" stroke="#b6bcc4" stroke-width="0.35"/>
+<rect x="127.73" y="378.1" width="29.7" height="124.2" rx="2.7" ry="2.7" fill="#12161d" stroke="#e08020" stroke-width="0.8"/>
+<polyline points="124.49,440.2 95.6,440.2" fill="none" stroke="#e08020" stroke-width="0.35"/>
+<text x="90.2" y="447.76" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" fill="#e08020" text-anchor="end" font-weight="700">PV103</text>
+<rect x="127.73" y="507.7" width="29.7" height="124.2" rx="2.7" ry="2.7" fill="#12161d" stroke="#e08020" stroke-width="0.8"/>
+<polyline points="124.49,569.8 95.6,569.8" fill="none" stroke="#e08020" stroke-width="0.35"/>
+<text x="90.2" y="577.36" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" fill="#e08020" text-anchor="end" font-weight="700">PV104</text>
+<rect x="422.57" y="378.1" width="29.7" height="124.2" rx="2.7" ry="2.7" fill="#12161d" stroke="#9b3fa8" stroke-width="0.8"/>
+<polyline points="455.51,440.2 484.4,440.2" fill="none" stroke="#9b3fa8" stroke-width="0.35"/>
+<text x="489.8" y="447.76" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" fill="#9b3fa8" text-anchor="start" font-weight="700">PV105</text>
+<rect x="422.57" y="507.7" width="29.7" height="124.2" rx="2.7" ry="2.7" fill="#12161d" stroke="#9b3fa8" stroke-width="0.8"/>
+<polyline points="455.51,569.8 484.4,569.8" fill="none" stroke="#9b3fa8" stroke-width="0.35"/>
+<text x="489.8" y="577.36" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" fill="#9b3fa8" text-anchor="start" font-weight="700">PV106</text>
+<rect x="165.26" y="681.04" width="124.2" height="43.2" rx="2.7" ry="2.7" fill="#12161d" stroke="#cc2b2b" stroke-width="0.8"/>
+<text x="227.36" y="751.24" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" fill="#cc2b2b" text-anchor="middle" font-weight="700">PV101</text>
+<rect x="290.54" y="681.04" width="124.2" height="43.2" rx="2.7" ry="2.7" fill="#12161d" stroke="#cc2b2b" stroke-width="0.8"/>
+<text x="352.64" y="751.24" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" fill="#cc2b2b" text-anchor="middle" font-weight="700">PV102</text>
+<rect x="70" y="979" width="34" height="7" rx="3.5" fill="#cc2b2b"/>
+<text x="116" y="992" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="17" fill="#3a3f47" text-anchor="start" font-weight="400">frente inclinada → <tspan font-weight='700'>PV_A</tspan></text>
+<rect x="70" y="1013" width="34" height="7" rx="3.5" fill="#e08020"/>
+<text x="116" y="1026" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="17" fill="#3a3f47" text-anchor="start" font-weight="400">chanfro esquerdo → <tspan font-weight='700'>PV_B</tspan></text>
+<rect x="70" y="1047" width="34" height="7" rx="3.5" fill="#9b3fa8"/>
+<text x="116" y="1060" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="17" fill="#3a3f47" text-anchor="start" font-weight="400">chanfro direito → <tspan font-weight='700'>PV_C</tspan></text>
+<text x="70" y="1110" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" fill="#6b7178" text-anchor="start" font-weight="400">Três faces diferentes, e é isso que faz a colheita</text>
+<text x="70" y="1134" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" fill="#6b7178" text-anchor="start" font-weight="400">render com o guidão apontando para qualquer lado.</text>
+<text x="70" y="1172" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" fill="#3a3f47" text-anchor="start" font-weight="700">Os seis ficam EM PARALELO, e não é escolha:</text>
+<text x="70" y="1196" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" fill="#3a3f47" text-anchor="start" font-weight="400">cada módulo abre em 2,07 V e o MPPT do colhedor</text>
+<text x="70" y="1220" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" fill="#3a3f47" text-anchor="start" font-weight="400">rastreia até 2,73 V. Dois em série dariam 4,14 V.</text>
+<rect x="570" y="112" width="1130" height="1156" rx="14" fill="#f5f6f8" stroke="#d7dae0" stroke-width="1.5"/>
+<text x="592" y="148" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="24" fill="#111" text-anchor="start" font-weight="700">B · O chicote, desenrolado</text>
+<text x="592" y="172" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" fill="#6b7178" text-anchor="start" font-weight="400">os módulos vistos POR TRÁS, que é o lado onde se solda · 12 pontos de solda, 4 emendas, 4 terminais</text>
+<rect x="1440.4" y="613.6" width="38.28" height="47.52" rx="3.96" ry="3.96" fill="#e9e4d7" stroke="#9a9488" stroke-width="0.35"/>
+<rect x="754" y="296.8" width="151.8" height="52.8" rx="3.96" ry="3.96" fill="#e4e6ea" stroke="#9aa0a8" stroke-width="0.3"/>
+<rect x="784.36" y="301.42" width="27.72" height="43.56" rx="1.32" ry="1.32" fill="none" stroke="#c6cad0" stroke-width="0.2"/>
+<rect x="814.72" y="301.42" width="27.72" height="43.56" rx="1.32" ry="1.32" fill="none" stroke="#c6cad0" stroke-width="0.2"/>
+<rect x="845.08" y="301.42" width="27.72" height="43.56" rx="1.32" ry="1.32" fill="none" stroke="#c6cad0" stroke-width="0.2"/>
+<circle cx="769.18" cy="323.2" r="7.59" fill="#ffffff" stroke="#1a1a1a" stroke-width="0.4"/>
+<circle cx="890.62" cy="323.2" r="7.59" fill="#ffffff" stroke="#cc2b2b" stroke-width="0.4"/>
+<text x="769.18" y="330.13" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="19" fill="#1a1a1a" text-anchor="middle" font-weight="700">−</text>
+<text x="890.62" y="329.8" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="17" fill="#cc2b2b" text-anchor="middle" font-weight="700">+</text>
+<text x="829.9" y="286.24" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15" fill="#33383f" text-anchor="middle" font-weight="700">PV101</text>
+<rect x="1057.6" y="296.8" width="151.8" height="52.8" rx="3.96" ry="3.96" fill="#e4e6ea" stroke="#9aa0a8" stroke-width="0.3"/>
+<rect x="1087.96" y="301.42" width="27.72" height="43.56" rx="1.32" ry="1.32" fill="none" stroke="#c6cad0" stroke-width="0.2"/>
+<rect x="1118.32" y="301.42" width="27.72" height="43.56" rx="1.32" ry="1.32" fill="none" stroke="#c6cad0" stroke-width="0.2"/>
+<rect x="1148.68" y="301.42" width="27.72" height="43.56" rx="1.32" ry="1.32" fill="none" stroke="#c6cad0" stroke-width="0.2"/>
+<circle cx="1072.78" cy="323.2" r="7.59" fill="#ffffff" stroke="#1a1a1a" stroke-width="0.4"/>
+<circle cx="1194.22" cy="323.2" r="7.59" fill="#ffffff" stroke="#cc2b2b" stroke-width="0.4"/>
+<text x="1072.78" y="330.13" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="19" fill="#1a1a1a" text-anchor="middle" font-weight="700">−</text>
+<text x="1194.22" y="329.8" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="17" fill="#cc2b2b" text-anchor="middle" font-weight="700">+</text>
+<text x="1133.5" y="286.24" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15" fill="#33383f" text-anchor="middle" font-weight="700">PV102</text>
+<polyline points="890.62,323.2 1282,323.2" fill="none" stroke="#cc2b2b" stroke-width="0.8" stroke-linecap="round"/>
+<polyline points="1194.22,323.2 1282,323.2" fill="none" stroke="#cc2b2b" stroke-width="0.8" stroke-linecap="round"/>
+<circle cx="1282" cy="323.2" r="9.24" fill="#cc2b2b" stroke="#ffffff" stroke-width="0.35"/>
+<text x="1299.16" y="306.04" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15" fill="#cc2b2b" text-anchor="start" font-weight="700">emenda</text>
+<text x="1299.16" y="352.24" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" fill="#cc2b2b" text-anchor="start" font-weight="700">PV_A</text>
+<polyline points="1282,323.2 1387.6,323.2 1440.4,622.51" fill="none" stroke="#cc2b2b" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="769.18,323.2 694.6,323.2" fill="none" stroke="#1a1a1a" stroke-width="0.8" stroke-linecap="round"/>
+<polyline points="1072.78,323.2 1050.34,323.2 1050.34,395.8 694.6,395.8" fill="none" stroke="#1a1a1a" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="754" y="574" width="151.8" height="52.8" rx="3.96" ry="3.96" fill="#e4e6ea" stroke="#9aa0a8" stroke-width="0.3"/>
+<rect x="784.36" y="578.62" width="27.72" height="43.56" rx="1.32" ry="1.32" fill="none" stroke="#c6cad0" stroke-width="0.2"/>
+<rect x="814.72" y="578.62" width="27.72" height="43.56" rx="1.32" ry="1.32" fill="none" stroke="#c6cad0" stroke-width="0.2"/>
+<rect x="845.08" y="578.62" width="27.72" height="43.56" rx="1.32" ry="1.32" fill="none" stroke="#c6cad0" stroke-width="0.2"/>
+<circle cx="769.18" cy="600.4" r="7.59" fill="#ffffff" stroke="#1a1a1a" stroke-width="0.4"/>
+<circle cx="890.62" cy="600.4" r="7.59" fill="#ffffff" stroke="#e08020" stroke-width="0.4"/>
+<text x="769.18" y="607.33" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="19" fill="#1a1a1a" text-anchor="middle" font-weight="700">−</text>
+<text x="890.62" y="607" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="17" fill="#e08020" text-anchor="middle" font-weight="700">+</text>
+<text x="829.9" y="563.44" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15" fill="#33383f" text-anchor="middle" font-weight="700">PV103</text>
+<rect x="1057.6" y="574" width="151.8" height="52.8" rx="3.96" ry="3.96" fill="#e4e6ea" stroke="#9aa0a8" stroke-width="0.3"/>
+<rect x="1087.96" y="578.62" width="27.72" height="43.56" rx="1.32" ry="1.32" fill="none" stroke="#c6cad0" stroke-width="0.2"/>
+<rect x="1118.32" y="578.62" width="27.72" height="43.56" rx="1.32" ry="1.32" fill="none" stroke="#c6cad0" stroke-width="0.2"/>
+<rect x="1148.68" y="578.62" width="27.72" height="43.56" rx="1.32" ry="1.32" fill="none" stroke="#c6cad0" stroke-width="0.2"/>
+<circle cx="1072.78" cy="600.4" r="7.59" fill="#ffffff" stroke="#1a1a1a" stroke-width="0.4"/>
+<circle cx="1194.22" cy="600.4" r="7.59" fill="#ffffff" stroke="#e08020" stroke-width="0.4"/>
+<text x="1072.78" y="607.33" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="19" fill="#1a1a1a" text-anchor="middle" font-weight="700">−</text>
+<text x="1194.22" y="607" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="17" fill="#e08020" text-anchor="middle" font-weight="700">+</text>
+<text x="1133.5" y="563.44" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15" fill="#33383f" text-anchor="middle" font-weight="700">PV104</text>
+<polyline points="890.62,600.4 1282,600.4" fill="none" stroke="#e08020" stroke-width="0.8" stroke-linecap="round"/>
+<polyline points="1194.22,600.4 1282,600.4" fill="none" stroke="#e08020" stroke-width="0.8" stroke-linecap="round"/>
+<circle cx="1282" cy="600.4" r="9.24" fill="#e08020" stroke="#ffffff" stroke-width="0.35"/>
+<text x="1299.16" y="583.24" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15" fill="#e08020" text-anchor="start" font-weight="700">emenda</text>
+<text x="1299.16" y="629.44" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" fill="#e08020" text-anchor="start" font-weight="700">PV_B</text>
+<polyline points="1282,600.4 1387.6,600.4 1440.4,632.41" fill="none" stroke="#e08020" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="769.18,600.4 694.6,600.4" fill="none" stroke="#1a1a1a" stroke-width="0.8" stroke-linecap="round"/>
+<polyline points="1072.78,600.4 1050.34,600.4 1050.34,673 694.6,673" fill="none" stroke="#1a1a1a" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="754" y="851.2" width="151.8" height="52.8" rx="3.96" ry="3.96" fill="#e4e6ea" stroke="#9aa0a8" stroke-width="0.3"/>
+<rect x="784.36" y="855.82" width="27.72" height="43.56" rx="1.32" ry="1.32" fill="none" stroke="#c6cad0" stroke-width="0.2"/>
+<rect x="814.72" y="855.82" width="27.72" height="43.56" rx="1.32" ry="1.32" fill="none" stroke="#c6cad0" stroke-width="0.2"/>
+<rect x="845.08" y="855.82" width="27.72" height="43.56" rx="1.32" ry="1.32" fill="none" stroke="#c6cad0" stroke-width="0.2"/>
+<circle cx="769.18" cy="877.6" r="7.59" fill="#ffffff" stroke="#1a1a1a" stroke-width="0.4"/>
+<circle cx="890.62" cy="877.6" r="7.59" fill="#ffffff" stroke="#9b3fa8" stroke-width="0.4"/>
+<text x="769.18" y="884.53" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="19" fill="#1a1a1a" text-anchor="middle" font-weight="700">−</text>
+<text x="890.62" y="884.2" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="17" fill="#9b3fa8" text-anchor="middle" font-weight="700">+</text>
+<text x="829.9" y="840.64" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15" fill="#33383f" text-anchor="middle" font-weight="700">PV105</text>
+<rect x="1057.6" y="851.2" width="151.8" height="52.8" rx="3.96" ry="3.96" fill="#e4e6ea" stroke="#9aa0a8" stroke-width="0.3"/>
+<rect x="1087.96" y="855.82" width="27.72" height="43.56" rx="1.32" ry="1.32" fill="none" stroke="#c6cad0" stroke-width="0.2"/>
+<rect x="1118.32" y="855.82" width="27.72" height="43.56" rx="1.32" ry="1.32" fill="none" stroke="#c6cad0" stroke-width="0.2"/>
+<rect x="1148.68" y="855.82" width="27.72" height="43.56" rx="1.32" ry="1.32" fill="none" stroke="#c6cad0" stroke-width="0.2"/>
+<circle cx="1072.78" cy="877.6" r="7.59" fill="#ffffff" stroke="#1a1a1a" stroke-width="0.4"/>
+<circle cx="1194.22" cy="877.6" r="7.59" fill="#ffffff" stroke="#9b3fa8" stroke-width="0.4"/>
+<text x="1072.78" y="884.53" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="19" fill="#1a1a1a" text-anchor="middle" font-weight="700">−</text>
+<text x="1194.22" y="884.2" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="17" fill="#9b3fa8" text-anchor="middle" font-weight="700">+</text>
+<text x="1133.5" y="840.64" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15" fill="#33383f" text-anchor="middle" font-weight="700">PV106</text>
+<polyline points="890.62,877.6 1282,877.6" fill="none" stroke="#9b3fa8" stroke-width="0.8" stroke-linecap="round"/>
+<polyline points="1194.22,877.6 1282,877.6" fill="none" stroke="#9b3fa8" stroke-width="0.8" stroke-linecap="round"/>
+<circle cx="1282" cy="877.6" r="9.24" fill="#9b3fa8" stroke="#ffffff" stroke-width="0.35"/>
+<text x="1299.16" y="860.44" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15" fill="#9b3fa8" text-anchor="start" font-weight="700">emenda</text>
+<text x="1299.16" y="906.64" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" fill="#9b3fa8" text-anchor="start" font-weight="700">PV_C</text>
+<polyline points="1282,877.6 1387.6,877.6 1440.4,642.31" fill="none" stroke="#9b3fa8" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="769.18,877.6 694.6,877.6" fill="none" stroke="#1a1a1a" stroke-width="0.8" stroke-linecap="round"/>
+<polyline points="1072.78,877.6 1050.34,877.6 1050.34,950.2 694.6,950.2" fill="none" stroke="#1a1a1a" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="694.6,323.2 694.6,996.4" fill="none" stroke="#1a1a1a" stroke-width="1.1" stroke-linecap="round"/>
+<circle cx="694.6" cy="996.4" r="11.22" fill="#1a1a1a" stroke="#ffffff" stroke-width="0.4"/>
+<text x="715.72" y="1005.64" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" fill="#1a1a1a" text-anchor="start" font-weight="700">emenda dos SEIS negativos</text>
+<polyline points="694.6,996.4 1387.6,996.4 1440.4,652.21" fill="none" stroke="#1a1a1a" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="1450.3" cy="622.51" r="3.3" fill="#cc2b2b"/>
+<circle cx="1450.3" cy="632.41" r="3.3" fill="#e08020"/>
+<circle cx="1450.3" cy="642.31" r="3.3" fill="#9b3fa8"/>
+<circle cx="1450.3" cy="652.21" r="3.3" fill="#1a1a1a"/>
+<text x="1489.24" y="630.76" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="17" fill="#4a4f57" text-anchor="start" font-weight="700">ZHR-4</text>
+<text x="1489.24" y="655.84" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="14" fill="#6b7178" text-anchor="start" font-weight="400">tamanho real</text>
+<text x="1489.24" y="679.6" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="14" fill="#6b7178" text-anchor="start" font-weight="400">ampliado em C</text>
+<text x="610" y="1100" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" fill="#6b7178" text-anchor="start" font-weight="400">As duas ilhas de cada módulo estão marcadas + e − na serigrafia do VERSO. A ficha do KXOB25-05X3F não numera os</text>
+<text x="610" y="1124" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" fill="#6b7178" text-anchor="start" font-weight="400">terminais: a marca impressa na peça é que manda, não este desenho.</text>
+<text x="610" y="1162" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="17" fill="#3a3f47" text-anchor="start" font-weight="400">Fio AWG 28 · 110 mA no arranjo inteiro, 37 mA por face · o terminal SZH-002T-P0.5 aceita de AWG 32 a 28.</text>
+<text x="610" y="1198" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="17" fill="#3a3f47" text-anchor="start" font-weight="400">Ordem de montagem: solde os 12 fios nos módulos → una os 2 positivos de cada face (3 emendas) → una os 6 negativos</text>
+<text x="610" y="1222" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="17" fill="#3a3f47" text-anchor="start" font-weight="400">(1 emenda) → crimpe os 4 terminais → encaixe na carcaça.</text>
+<text x="610" y="1252" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="17" fill="#cc2b2b" text-anchor="start" font-weight="700">Confira a polaridade no multímetro, com os módulos no sol, ANTES de plugar.</text>
+<rect x="1730" y="112" width="610" height="1156" rx="14" fill="#f5f6f8" stroke="#d7dae0" stroke-width="1.5"/>
+<text x="1752" y="148" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="24" fill="#111" text-anchor="start" font-weight="700">C · Onde entra na placa</text>
+<text x="1752" y="172" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" fill="#6b7178" text-anchor="start" font-weight="400">placa 34 × 90 mm · J103 na borda direita</text>
+<rect x="1770" y="262" width="190.4" height="504" rx="14" ry="14" fill="#2f6b3a" stroke="#1f4a28" stroke-width="0.4"/>
+<text x="1865.2" y="239.6" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" fill="#6b7178" text-anchor="middle" font-weight="400">vista de cima</text>
+<rect x="1912.8" y="421.04" width="39.2" height="40.32" rx="3.36" ry="3.36" fill="#e9e4d7" stroke="#9a9488" stroke-width="0.35"/>
+<circle cx="1938" cy="428.6" r="2.52" fill="#cc2b2b"/>
+<circle cx="1938" cy="437" r="2.52" fill="#e08020"/>
+<circle cx="1938" cy="445.4" r="2.52" fill="#9b3fa8"/>
+<circle cx="1938" cy="453.8" r="2.52" fill="#1a1a1a"/>
+<text x="1932.4" y="407.6" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="17" fill="#f0f4f0" text-anchor="middle" font-weight="700">J103</text>
+<polyline points="1979.44,441.2 1960.4,441.2" fill="none" stroke="#2b2b2b" stroke-width="0.3"/>
+<polyline points="1960.4,441.2 1968.24,436.16 1968.24,446.24 1960.4,441.2" fill="#2b2b2b" stroke="none"/>
+<text x="1983.92" y="438.96" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15" fill="#2b2b2b" text-anchor="start" font-weight="700">o cabo do</text>
+<text x="1983.92" y="460.24" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15" fill="#2b2b2b" text-anchor="start" font-weight="700">painel entra</text>
+<text x="1983.92" y="481.52" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15" fill="#2b2b2b" text-anchor="start" font-weight="700">por aqui</text>
+<polyline points="1911.68,428.6 1898.8,428.6" fill="none" stroke="#cc2b2b" stroke-width="0.35"/>
+<rect x="1888.72" y="425.8" width="10.08" height="5.6" rx="0.84" ry="0.84" fill="#d2d6dc" stroke="#cc2b2b" stroke-width="0.2"/>
+<polyline points="1911.68,437 1898.8,437" fill="none" stroke="#e08020" stroke-width="0.35"/>
+<rect x="1888.72" y="434.2" width="10.08" height="5.6" rx="0.84" ry="0.84" fill="#d2d6dc" stroke="#e08020" stroke-width="0.2"/>
+<polyline points="1911.68,445.4 1898.8,445.4" fill="none" stroke="#9b3fa8" stroke-width="0.35"/>
+<rect x="1888.72" y="442.6" width="10.08" height="5.6" rx="0.84" ry="0.84" fill="#d2d6dc" stroke="#9b3fa8" stroke-width="0.2"/>
+<text x="1893.76" y="489.36" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15" fill="#e4efe4" text-anchor="middle" font-weight="700">R113 · R114 · R115</text>
+<text x="1893.76" y="509.52" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="14" fill="#bdd3be" text-anchor="middle" font-weight="400">0 Ω, um por face</text>
+<polyline points="1886.48,441.2 1865.2,441.2 1865.2,374 1846.16,374" fill="none" stroke="#c8a12a" stroke-width="0.55" stroke-linejoin="round"/>
+<rect x="1823.76" y="362.8" width="22.4" height="22.4" rx="1.68" ry="1.68" fill="#1b1d21" stroke="#454b53" stroke-width="0.25"/>
+<text x="1834.96" y="349.36" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15" fill="#e4efe4" text-anchor="middle" font-weight="700">ADP5091</text>
+<text x="1834.96" y="405.36" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="14" fill="#bdd3be" text-anchor="middle" font-weight="400">colhedor</text>
+<text x="1770" y="802" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="20" fill="#111" text-anchor="start" font-weight="700">O conector, ampliado 4,8 ×</text>
+<text x="1770" y="828" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" fill="#6b7178" text-anchor="start" font-weight="400">JST S4B-ZR-SM4A-TF na placa · ZH de 1,5 mm · 4 vias</text>
+<rect x="1800" y="872" width="139.2" height="172.8" rx="14.4" ry="14.4" fill="#e9e4d7" stroke="#9a9488" stroke-width="0.1"/>
+<circle cx="1869.6" cy="904.4" r="9.12" fill="#cc2b2b" stroke="#ffffff" stroke-width="0.05"/>
+<polyline points="1869.6,904.4 1968,904.4" fill="none" stroke="#cc2b2b" stroke-width="0.09"/>
+<text x="1977.6" y="910.16" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="18" fill="#3a3f47" text-anchor="start" font-weight="600">1 · PV_A · frente inclinada</text>
+<circle cx="1869.6" cy="940.4" r="9.12" fill="#e08020" stroke="#ffffff" stroke-width="0.05"/>
+<polyline points="1869.6,940.4 1968,940.4" fill="none" stroke="#e08020" stroke-width="0.09"/>
+<text x="1977.6" y="946.16" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="18" fill="#3a3f47" text-anchor="start" font-weight="600">2 · PV_B · chanfro esquerdo</text>
+<circle cx="1869.6" cy="976.4" r="9.12" fill="#9b3fa8" stroke="#ffffff" stroke-width="0.05"/>
+<polyline points="1869.6,976.4 1968,976.4" fill="none" stroke="#9b3fa8" stroke-width="0.09"/>
+<text x="1977.6" y="982.16" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="18" fill="#3a3f47" text-anchor="start" font-weight="600">3 · PV_C · chanfro direito</text>
+<circle cx="1869.6" cy="1012.4" r="9.12" fill="#1a1a1a" stroke="#ffffff" stroke-width="0.05"/>
+<polyline points="1869.6,1012.4 1968,1012.4" fill="none" stroke="#1a1a1a" stroke-width="0.09"/>
+<text x="1977.6" y="1018.16" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="18" fill="#3a3f47" text-anchor="start" font-weight="600">4 · GND · os seis negativos</text>
+<text x="1770" y="1072" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" fill="#3a3f47" text-anchor="start" font-weight="400">Os três 0 Ω não são enfeite: abrindo um deles, mede-se</text>
+<text x="1770" y="1096" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" fill="#3a3f47" text-anchor="start" font-weight="400">UMA face sozinha no sol. Com um fio de positivo só, os</text>
+<text x="1770" y="1120" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" fill="#3a3f47" text-anchor="start" font-weight="400">seis dariam um número e nunca se saberia qual face</text>
+<text x="1770" y="1144" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" fill="#3a3f47" text-anchor="start" font-weight="400">está rendendo.</text>
+<text x="1770" y="1182" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" fill="#3a3f47" text-anchor="start" font-weight="400">O conector da bateria é de outra família de propósito</text>
+<text x="1770" y="1206" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" fill="#3a3f47" text-anchor="start" font-weight="400">(JST GH de 1,25 mm): os dois não entram um no outro.</text>
+<text x="1770" y="1242" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" fill="#cc2b2b" text-anchor="start" font-weight="700">A ordem das quatro vias ainda não foi conferida contra</text>
+<text x="1770" y="1264" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" fill="#cc2b2b" text-anchor="start" font-weight="700">uma peça real: confirme o contato 1 na carcaça.</text>
+</svg>

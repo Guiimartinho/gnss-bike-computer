@@ -264,37 +264,13 @@ nunca se saberia qual face está rendendo.
 São **12 pontos de solda nos módulos** e **4 terminais crimpados** no
 conector.
 
-```mermaid
-flowchart LR
-    subgraph FACE["face inclinada"]
-        P1["PV101<br/>+ −"]
-        P2["PV102<br/>+ −"]
-    end
-    subgraph ESQ["chanfro esquerdo"]
-        P3["PV103<br/>+ −"]
-        P4["PV104<br/>+ −"]
-    end
-    subgraph DIR["chanfro direito"]
-        P5["PV105<br/>+ −"]
-        P6["PV106<br/>+ −"]
-    end
-    P1 -->|"+"| A(("emenda A"))
-    P2 -->|"+"| A
-    P3 -->|"+"| B(("emenda B"))
-    P4 -->|"+"| B
-    P5 -->|"+"| C(("emenda C"))
-    P6 -->|"+"| C
-    P1 -->|"−"| G(("emenda de terra<br/>os seis negativos"))
-    P2 -->|"−"| G
-    P3 -->|"−"| G
-    P4 -->|"−"| G
-    P5 -->|"−"| G
-    P6 -->|"−"| G
-    A --> V1["contato 1 · PV_A"]
-    B --> V2["contato 2 · PV_B"]
-    C --> V3["contato 3 · PV_C"]
-    G --> V4["contato 4 · GND"]
-```
+![Como ligar os seis módulos solares na placa: onde fica cada módulo na caixa, o chicote desenrolado com os 12 pontos de solda e as 4 emendas, e o conector J103 na placa com os três resistores de 0 Ω](../docs/img/chicote-solar.svg)
+
+O desenho acima está **em escala** e sai de
+[`tools/docs/solar_harness_drawing.py`](../tools/docs/solar_harness_drawing.py):
+os módulos têm os 23 × 8 mm de verdade, o conector tem o passo de 1,5 mm de
+verdade, e o `J103` está na posição que ocupa na placa. Ele é a folha para
+levar à bancada.
 
 Passo a passo:
 
