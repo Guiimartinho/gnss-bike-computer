@@ -133,19 +133,34 @@ ZONES = [
     # inteira; a Unictron pede 15,00 x 9,35 na face de cima e 15,00 x 9,88 na
     # de baixo, medidos da BORDA DA PLACA.
     #
-    # POR QUE 20,08 E NAO 15,00: o recorte da ficha nao e simetrico em
-    # relacao a antena - ela ocupa 5,0 mm no meio, com 2,46 mm de um lado e
-    # 7,54 do outro -, e QUAL lado e qual nao esta determinado. Aplicar os
-    # 7,54 nos dois lados garante a exigencia seja qual for a orientacao;
-    # aplicar 15,00 centrado poderia deixar cobre onde a ficha nao quer.
-    # Custa cerca de 5 mm a mais de plano de terra numa antena que depende
-    # dele - a ficha mede 70 % de eficiencia numa placa de 80 x 40 mm e esta
-    # tem 34 de largura, entao 70 % ja e teto otimista. PENDENCIA: descoberto
-    # o lado, o recorte pode voltar para 15,00 e a placa recupera o cobre.
+    # O recorte e ASSIMETRICO, e isso e de proposito da Unictron: a antena
+    # ocupa 5,0 mm no meio, com 2,46 mm de recorte de um lado e 7,54 do
+    # outro. Nao e artefato de canto de placa - na placa de avaliacao de
+    # 80 x 40 o recorte fica no MEIO, a 30 mm de uma borda lateral e 35 da
+    # outra, entao havia espaco de sobra para centra-lo e nao centraram.
+    #
+    # Qual lado leva os 7,54: o da letra "U" impressa no topo da peca. O "U"
+    # e descentrado 1,10 mm (22 % do comprimento) e cai na porcao voltada
+    # para o recorte largo, o que confere em duas figuras independentes - o
+    # desenho de dimensoes e a figura da placa de avaliacao. RESSALVA: o "U"
+    # e o logotipo da Unictron, e a ficha NAO o declara como marca de
+    # orientacao; e leitura de figura, nao afirmacao do fabricante. A ficha
+    # tambem nao numera os pads em vista nenhuma e nao traz nota de keep-out
+    # minimo - remete a uma nota de aplicacao que nao esta no PDF.
+    #
+    # Aqui o lado largo aponta para +x, e o estreito para -x: assim as duas
+    # ilhas de cobre que sobram na faixa tem 8,3 e 10,7 mm, em vez de uma de
+    # 3,2 mm que nao serve de plano para nada.
+    #
+    # ATENCAO DE MONTAGEM: a peca e FISICAMENTE SIMETRICA - as duas pontas
+    # sao wrap-around iguais e o sinal fica no centro geometrico -, entao o
+    # pick-and-place nao distingue a orientacao pela geometria, e uma peca
+    # girada 180 graus fica com o lado errado no recorte largo sem nenhum
+    # sinal no teste eletrico. Dai a marca de orientacao na serigrafia.
     #
     # A profundidade e 9,88, a da face de BAIXO, que e a maior das duas: uma
     # zona so vale para todas as camadas.
-    ("KEEPOUT_ANTENA_GNSS", _f(13.25 - 10.04, 0.0, 13.25 + 10.04, 9.88), 1,
+    ("KEEPOUT_ANTENA_GNSS", _f(13.25 - 4.96, 0.0, 13.25 + 10.04, 9.88), 1,
      "04#zonas-proibidas: sem cobre em nenhuma camada. Unictron "
      "H2UJ4U1H2Q0100, guia de layout da ficha rev. E"),
     ("KEEPOUT_ANTENA_MODULO",

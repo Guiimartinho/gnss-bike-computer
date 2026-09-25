@@ -404,7 +404,33 @@ def antena_unictron(nome):
     pads = [_pad("1", 2.50, 0.0, 0.80, 2.98),
             _pad("2", -2.50, 0.0, 0.80, 2.98),
             _pad("3", 0.0, 0.0, 1.00, 2.00)]
-    return _corpo(nome, 5.0, 3.0, pads,
+    # A marca de orientacao, e ela nao e enfeite. A peca e FISICAMENTE
+    # SIMETRICA - as duas terminacoes de ponta sao wrap-around iguais e o
+    # terminal de sinal fica no centro geometrico -, entao o pick-and-place
+    # nao tem como distinguir a orientacao pela geometria. Uma peca montada
+    # girada 180 graus fica com o lado errado voltado para o recorte largo e
+    # PASSA em todo teste eletrico, porque eletricamente os dois terras sao
+    # iguais. A unica assimetria da peca e a letra "U" impressa no topo,
+    # descentrada 1,10 mm, e ela aponta para o lado do recorte de 7,54.
+    #
+    # Entao a serigrafia marca esse lado: uma seta curta fora do contorno,
+    # do lado +x, que e para onde o "U" tem de apontar.
+    seta = (
+        '\t(fp_poly\n'
+        '\t\t(pts (xy 3.10 -1.90) (xy 4.00 -1.40) (xy 3.10 -0.90))\n'
+        '\t\t(stroke (width 0.12) (type solid))\n'
+        '\t\t(fill solid)\n'
+        '\t\t(layer "F.SilkS")\n'
+        '\t\t(uuid "' + _uid(nome, "seta") + '")\n'
+        '\t)')
+    texto = (
+        '\t(fp_text user "U"\n'
+        '\t\t(at 2.20 -2.40 0)\n'
+        '\t\t(layer "F.SilkS")\n'
+        '\t\t(uuid "' + _uid(nome, "txtU") + '")\n'
+        '\t\t(effects (font (size 0.6 0.6) (thickness 0.12)))\n'
+        '\t)')
+    return _corpo(nome, 5.0, 3.0, pads + [seta, texto],
                   "Unictron H2UJ4U1H2Q0100, antena de chip L1+L5; pino 3 e o "
                   "sinal, 1 e 2 sao terra por capacitor de sintonia")
 

@@ -318,10 +318,10 @@
 		)
 		(polygon
 			(pts
-				(xy 28.2100 25.0000)
+				(xy 33.2900 25.0000)
 				(xy 48.2900 25.0000)
 				(xy 48.2900 34.8800)
-				(xy 28.2100 34.8800)
+				(xy 33.2900 34.8800)
 			)
 		)
 	)
@@ -7066,6 +7066,19 @@
 		(roundrect_rratio 0.25)
 		(uuid "b67db760-e247-4e7c-8d5c-4f2fb4bd9dbf")
 	)
+	(fp_poly
+		(pts (xy 3.10 -1.90) (xy 4.00 -1.40) (xy 3.10 -0.90))
+		(stroke (width 0.12) (type solid))
+		(fill solid)
+		(layer "F.SilkS")
+		(uuid "71d20d8b-350e-45db-8571-e6994d5b3f57")
+	)
+	(fp_text user "U"
+		(at 2.20 -2.40 0)
+		(layer "F.SilkS")
+		(uuid "2636e84d-fe07-4808-8743-54e7f1c921bc")
+		(effects (font (size 0.6 0.6) (thickness 0.12)))
+	)
 	(model "${KIPRJMOD}/3d/Antena_Unictron_H2UJ4U1H2Q0100_5x3mm.wrl"
 		(offset (xyz 0 0 0))
 		(scale (xyz 1 1 1))
@@ -10419,7 +10432,7 @@
 		(at 41.5000 35.5000 0)
 		(uuid "31ec7b0e-3fe9-4778-8549-f0d1b3d2af87")
 		(property "Reference" "JP301"
-			(at 0.0000 -1.1000 0)
+			(at 0.0000 1.1000 0)
 			(layer "F.SilkS")
 			(uuid "42b6efa6-dfbb-4b1a-8888-316c5aed3ab8")
 			(effects (font (size 0.6 0.6) (thickness 0.12)))
@@ -11130,7 +11143,7 @@
 		(at 40.8000 40.2000 90)
 		(uuid "4feb5ca5-5c6e-4f4b-847d-db8387bcc3e7")
 		(property "Reference" "L301"
-			(at 2.4020 -0.0000 90)
+			(at -0.0000 -1.1500 90)
 			(layer "F.SilkS")
 			(uuid "5bc8b3f7-fd13-409c-8b0d-6b49f14c1baa")
 			(effects (font (size 0.6 0.6) (thickness 0.12)))
@@ -21613,7 +21626,7 @@
 		(at 33.5000 40.3000 180)
 		(uuid "e3ee7189-42c6-4222-8703-ee6305ae7eea")
 		(property "Reference" "U301"
-			(at 0.0000 5.8000 0)
+			(at -7.1720 5.8000 0)
 			(layer "F.SilkS")
 			(uuid "6357aabc-4657-407d-8b83-8c7eb71de247")
 			(effects (font (size 0.6 0.6) (thickness 0.12)))
@@ -21793,10 +21806,10 @@
 	)
 	(footprint "gnssbike:TXU0204_WQFN-14_3x2.5mm_P0.5mm"
 		(layer "F.Cu")
-		(at 44.0000 42.0000 0)
+		(at 31.5000 33.0000 0)
 		(uuid "475c64c0-da59-4c84-8b86-cc46fc61e4fe")
 		(property "Reference" "U302"
-			(at 0.0000 2.1400 0)
+			(at 0.0000 -2.1400 0)
 			(layer "F.SilkS")
 			(uuid "7bc7c560-d003-46ec-8309-16ddaef8c9d4")
 			(effects (font (size 0.6 0.6) (thickness 0.12)))
