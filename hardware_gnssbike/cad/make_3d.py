@@ -484,10 +484,43 @@ def caixas_das_pecas() -> tuple[np.ndarray, np.ndarray]:
     return np.array(tris), np.array(cols)
 
 
-def main() -> int:
+def _glb_atual() -> pathlib.Path | None:
+    """O GLB da placa, exportado do KiCad, e sempre o da placa de AGORA.
+
+    Este desenho e feito de duas metades: a placa e os modelos do KiCad vem
+    do GLB, e os corpos que este projeto desenha sao acrescentados por cima,
+    lidos do `.kicad_pcb`. Se o GLB for de uma versao anterior da placa, as
+    duas metades ficam de versoes diferentes - a placa de antes com os corpos
+    de agora -, e o resultado parece uma peca torta, com o pad fora da ilha.
+    Foi exatamente o que aconteceu: um GLB de sete horas antes, com todas as
+    pecas que se moveram no intervalo, e ninguem avisou.
+
+    Entao aqui nao se confia: se o GLB nao existe ou e mais velho que a
+    placa, ele e refeito. Nunca se desenha a partir de entrada velha.
+    """
+    import subprocess
+
     glb = HERE / "gnssbike.glb"
-    if not glb.exists():
-        print("gnssbike.glb nao existe: rode o kicad-cli pcb export glb antes")
+    pcb = HERE / "gnssbike.kicad_pcb"
+    if not pcb.exists():
+        print("gnssbike.kicad_pcb nao existe: rode o make_pcb.py antes")
+        return None
+    if glb.exists() and glb.stat().st_mtime >= pcb.stat().st_mtime:
+        return glb
+    print("exportando o GLB da placa (o que havia era mais velho que ela)...")
+    r = subprocess.run(
+        [str(KICAD_CLI), "pcb", "export", "glb", "--subst-models",
+         "--include-tracks", "--include-zones", "-o", str(glb), str(pcb)],
+        capture_output=True, text=True)
+    if r.returncode != 0 or not glb.exists():
+        print("o kicad-cli nao exportou o GLB:", r.stderr.strip()[:200])
+        return None
+    return glb
+
+
+def main() -> int:
+    glb = _glb_atual()
+    if glb is None:
         return 1
     j, bina = ler_glb(glb)
     tris, cols = triangulos(j, bina)
