@@ -55,6 +55,7 @@ Três entradas (USB, painel e célula), quatro trilhos de saída
 | BT101 | Célula LiPo 1S, 2000 mAh, com PCM e NTC | sob encomenda, 60 × 36 × 7 mm | 1 | [Compras fora da DigiKey](../docs/19-lista-de-compras.md#compras-fora-da-digikey) |
 | J102 | Conector da bateria na placa | JST SM06B-GHS-TB | 1 | [Energia](../docs/19-lista-de-compras.md#energia) |
 | — | Carcaça e terminais do cabo da célula | JST GHR-06V-S e 6 × SSHL-002T-P0.2 | 1 + 6, fora da placa | [Energia](../docs/19-lista-de-compras.md#energia) |
+| — | Carcaça e terminais do chicote do painel | JST ZHR-4 e 4 × SZH-002T-P0.5, mais cerca de 1 m de AWG 28 | 1 + 4, fora da placa | [Energia](../docs/19-lista-de-compras.md#energia), [J103](06-conectores-e-pontos-de-teste.md#j103--painel-solar) |
 | RT101 | NTC do `TH_MON` do AEM10900, **na face de trás da placa, sob a célula** | TDK NTCG103JF103FT1, 10 kΩ B3380 | 1 | [Energia](../docs/19-lista-de-compras.md#energia). **Este é o caminho escolhido**: montá-lo **e** o segundo NTC do pack põe 10 kΩ em paralelo com 10 kΩ e mata a carga solar ([01](01-esquematico.md#folha-1--energia)) |
 | RT102 | NTC do pack, para o JEITA do nPM1300 | 10 kΩ B3380, **dentro da bateria** | 1 | [Compras fora da DigiKey](../docs/19-lista-de-compras.md#compras-fora-da-digikey) |
 | D103 | LED de carga, no `LED1` | Kingbright APT1608SURCK | 1 | [Energia](../docs/19-lista-de-compras.md#energia) |
