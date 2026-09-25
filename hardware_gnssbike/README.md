@@ -261,6 +261,7 @@ python tools/docs/mermaid_check.py     # diagramas
 python tools/docs/links_check.py       # links e âncoras
 python tools/fw/board_check.py         # o mapa de pinos do firmware
 python hardware_gnssbike/net_check.py  # a lista de nós contra o devicetree
+python tools/docs/solar_harness_drawing.py  # o desenho do chicote solar
 ```
 
 O `net_check.py` é deste esquemático: lê a [lista de nós](03-netlist.md) e
