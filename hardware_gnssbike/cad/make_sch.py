@@ -125,8 +125,12 @@ def posicionar(refs: list[str], papel: str) -> float:
             x = MARGEM + LABEL_X
             y += alt_linha + ROW_GAP
             alt_linha = 0.0
-        part.x = snap(x + w / 2.0)
-        part.y = snap(y + h / 2.0)
+        # `desloca_centro` e zero para os simbolos deste projeto e diferente
+        # de zero para os da biblioteca do KiCad, que nao sao centrados na
+        # origem. Sem descontar aqui, a peca sai da celula que a fila lhe deu.
+        dx, dy = part.desloca_centro()
+        part.x = snap(x + w / 2.0 - dx)
+        part.y = snap(y + h / 2.0 - dy)
         x += w + COL_GAP
         alt_linha = max(alt_linha, h)
     return y + alt_linha
@@ -145,16 +149,26 @@ def ponto(ref: str, pin_name: str) -> tuple[float, float]:
 
 def lado_do_pino(ref: str, pin_name: str) -> str:
     part = P.PARTS[ref]
+    numero = next(q.number for q in part.pins
+                  if q.name == pin_name or q.number == pin_name)
+    if part.kicad:
+        # Num simbolo da biblioteca do KiCad quem manda e o angulo do pino,
+        # nao o lado que este projeto declarou em parts.py: o desenho ja
+        # existe e o fio tem de sair na direcao em que o pino aponta. Angulo
+        # 0 e um pino que aponta para a direita, ou seja, esta na ESQUERDA.
+        ang = part.pin_local()[numero][2]
+        return {0: "L", 180: "R", 90: "B", 270: "T"}.get(ang, "L")
     return next(q.side for q in part.pins
                 if q.name == pin_name or q.number == pin_name)
 
 
 def montar_folha(nome: str, arquivo: str, pagina: str, root_uuid: str,
-                 sheet_uuid: str, tipo: dict[str, str]) -> tuple[Schematic, list[str], int]:
+                 sheet_uuid: str, tipo: dict[str, str],
+                 papel_forcado: str = "") -> tuple[Schematic, list[str], int]:
     refs = ordenar_por_ligacao(S.por_folha()[nome])
     entre = sorted(n for n, k in tipo.items()
                    if k == "ENTRE" and any(S.sheet_of(r) == nome for r, _p in N.NETS[n]))
-    papel = escolher_papel(refs, len(entre))
+    papel = papel_forcado or escolher_papel(refs, len(entre))
     posicionar(refs, papel)
     w_pag, h_pag = PAPEIS[papel]
 

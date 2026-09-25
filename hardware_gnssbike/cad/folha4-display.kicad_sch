@@ -239,14 +239,14 @@
 			(in_bom yes)
 			(on_board yes)
 			(property "Reference" "J402"
-				(at -12.700 8.890 0)
+				(at -16.510 8.890 0)
 				(effects (font (size 1.27 1.27)) (justify left bottom))
 			)
-			(property "Value" "Molex 503480-0500"
-				(at -12.700 -8.890 0)
+			(property "Value" "HCTL HC-FPC-05-10-5RLTAG"
+				(at -16.510 -8.890 0)
 				(effects (font (size 1.27 1.27)) (justify left top))
 			)
-			(property "Footprint" "Connector_FFC-FPC:TE_0-1734839-5_1x05-1MP_P0.5mm_Horizontal"
+			(property "Footprint" "gnssbike:HC-FPC-05-10-5RLTAG"
 				(at 0 0 0)
 				(effects (font (size 1.27 1.27)) (hide yes))
 			)
@@ -260,39 +260,39 @@
 			)
 			(symbol "J402_0_1"
 				(rectangle
-					(start -12.700 -7.620)
-					(end 12.700 7.620)
+					(start -16.510 -7.620)
+					(end 16.510 7.620)
 					(stroke (width 0.254) (type default))
 					(fill (type background))
 				)
 			)
 			(symbol "J402_1_1"
 				(pin passive line
-					(at -15.240 5.080 0)
+					(at -19.050 5.080 0)
 					(length 2.54)
 					(name "1" (effects (font (size 1.016 1.016))))
 					(number "1" (effects (font (size 1.016 1.016))))
 				)
 				(pin passive line
-					(at -15.240 2.540 0)
+					(at -19.050 2.540 0)
 					(length 2.54)
 					(name "2" (effects (font (size 1.016 1.016))))
 					(number "2" (effects (font (size 1.016 1.016))))
 				)
 				(pin passive line
-					(at -15.240 0.000 0)
+					(at -19.050 0.000 0)
 					(length 2.54)
 					(name "3" (effects (font (size 1.016 1.016))))
 					(number "3" (effects (font (size 1.016 1.016))))
 				)
 				(pin passive line
-					(at -15.240 -2.540 0)
+					(at -19.050 -2.540 0)
 					(length 2.54)
 					(name "4" (effects (font (size 1.016 1.016))))
 					(number "4" (effects (font (size 1.016 1.016))))
 				)
 				(pin passive line
-					(at -15.240 -5.080 0)
+					(at -19.050 -5.080 0)
 					(length 2.54)
 					(name "5" (effects (font (size 1.016 1.016))))
 					(number "5" (effects (font (size 1.016 1.016))))
@@ -300,16 +300,17 @@
 			)
 		)
 		(symbol "gnssbike:Q401"
-			(pin_names (offset 0.508))
+			(pin_names
+				(offset 0) hide)
 			(exclude_from_sim no)
 			(in_bom yes)
 			(on_board yes)
 			(property "Reference" "Q401"
-				(at -7.620 5.080 0)
+				(at -3.810 4.445 0)
 				(effects (font (size 1.27 1.27)) (justify left bottom))
 			)
 			(property "Value" "DMG1012T-7"
-				(at -7.620 -5.080 0)
+				(at -3.810 -4.445 0)
 				(effects (font (size 1.27 1.27)) (justify left top))
 			)
 			(property "Footprint" "Package_TO_SOT_SMD:SOT-523"
@@ -325,31 +326,226 @@
 				(effects (font (size 1.27 1.27)) (hide yes))
 			)
 			(symbol "Q401_0_1"
-				(rectangle
-					(start -7.620 -3.810)
-					(end 7.620 3.810)
-					(stroke (width 0.254) (type default))
-					(fill (type background))
+				(polyline
+					(pts
+						(xy 0.254 0) (xy -2.54 0)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0.254 1.905) (xy 0.254 -1.905)
+					)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0.762 -1.27) (xy 0.762 -2.286)
+					)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0.762 0.508) (xy 0.762 -0.508)
+					)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0.762 2.286) (xy 0.762 1.27)
+					)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 2.54 2.54) (xy 2.54 1.778)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 2.54 -2.54) (xy 2.54 0) (xy 0.762 0)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0.762 -1.778) (xy 3.302 -1.778) (xy 3.302 1.778) (xy 0.762 1.778)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 1.016 0) (xy 2.032 0.381) (xy 2.032 -0.381) (xy 1.016 0)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
+				(polyline
+					(pts
+						(xy 2.794 0.508) (xy 2.921 0.381) (xy 3.683 0.381) (xy 3.81 0.254)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 3.302 0.381) (xy 2.921 -0.254) (xy 3.683 -0.254) (xy 3.302 0.381)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(circle
+					(center 1.651 0)
+					(radius 2.794)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(circle
+					(center 2.54 -1.778)
+					(radius 0.254)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
+				(circle
+					(center 2.54 1.778)
+					(radius 0.254)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
 				)
 			)
 			(symbol "Q401_1_1"
 				(pin input line
-					(at -10.160 1.270 0)
+					(at -5.08 0 0)
 					(length 2.54)
-					(name "G" (effects (font (size 1.016 1.016))))
-					(number "1" (effects (font (size 1.016 1.016))))
+					(name "G"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
 				)
 				(pin passive line
-					(at -5.080 -6.350 90)
+					(at 2.54 -5.08 90)
 					(length 2.54)
-					(name "S" (effects (font (size 1.016 1.016))))
-					(number "2" (effects (font (size 1.016 1.016))))
+					(name "S"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
 				)
 				(pin passive line
-					(at -5.080 6.350 270)
+					(at 2.54 5.08 270)
 					(length 2.54)
-					(name "D" (effects (font (size 1.016 1.016))))
-					(number "3" (effects (font (size 1.016 1.016))))
+					(name "D"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "3"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
 				)
 			)
 		)
@@ -793,10 +989,10 @@
 	)
 	(wire
 		(pts
-			(xy 171.450 44.450) (xy 171.450 46.990)
+			(xy 181.610 41.910) (xy 181.610 44.450)
 		)
 		(stroke (width 0) (type default))
-		(uuid "b6b8ee0f-9da7-4517-8256-fac653e12aeb")
+		(uuid "cc6f5eee-6fef-4417-8781-6c31761bde1b")
 	)
 	(wire
 		(pts
@@ -919,17 +1115,31 @@
 	)
 	(wire
 		(pts
-			(xy 124.460 31.750) (xy 171.450 31.750)
+			(xy 181.610 30.480) (xy 181.610 31.750)
 		)
 		(stroke (width 0) (type default))
-		(uuid "b0bc3781-35ab-4fce-8ba3-69cc548bce72")
+		(uuid "35de46d2-8b0b-4288-868e-87fe42bc7996")
 	)
 	(wire
 		(pts
-			(xy 124.460 31.750) (xy 124.460 36.830)
+			(xy 124.460 30.480) (xy 181.610 30.480)
 		)
 		(stroke (width 0) (type default))
-		(uuid "cdd3a4c4-e9c9-4cc4-8dd4-88c92c91e1f0")
+		(uuid "ad574eac-9d8c-4fb2-84c4-243f8d8f7887")
+	)
+	(wire
+		(pts
+			(xy 124.460 31.750) (xy 124.460 30.480)
+		)
+		(stroke (width 0) (type default))
+		(uuid "419c93d1-633b-4456-8927-d82fd364f082")
+	)
+	(wire
+		(pts
+			(xy 124.460 30.480) (xy 124.460 36.830)
+		)
+		(stroke (width 0) (type default))
+		(uuid "afe18932-fbe6-4a43-8dfe-f4e96da315e1")
 	)
 	(wire
 		(pts
@@ -1416,17 +1626,17 @@
 	)
 	(wire
 		(pts
-			(xy 48.260 72.390) (xy 166.370 72.390)
+			(xy 48.260 72.390) (xy 173.990 72.390)
 		)
 		(stroke (width 0) (type default))
-		(uuid "94b94854-909e-4074-8124-851e17610f84")
+		(uuid "15f8d3e1-dcd3-4605-8827-a5b829fb7fdd")
 	)
 	(wire
 		(pts
-			(xy 166.370 36.830) (xy 166.370 72.390)
+			(xy 173.990 36.830) (xy 173.990 72.390)
 		)
 		(stroke (width 0) (type default))
-		(uuid "b0d51eee-14ff-4b97-8fe7-97fe53ee7c8f")
+		(uuid "49505693-63dd-440f-8d69-e51dff078575")
 	)
 	(wire
 		(pts
@@ -1605,10 +1815,10 @@
 	)
 	(wire
 		(pts
-			(xy 243.840 30.480) (xy 243.840 31.750)
+			(xy 243.840 29.210) (xy 243.840 31.750)
 		)
 		(stroke (width 0) (type default))
-		(uuid "cdacfab0-1d3a-41fb-8393-55752af514b1")
+		(uuid "59d1933c-cdbd-45d0-8d4a-2ace2f8d941c")
 	)
 	(wire
 		(pts
@@ -1619,17 +1829,17 @@
 	)
 	(wire
 		(pts
-			(xy 123.190 30.480) (xy 243.840 30.480)
+			(xy 123.190 29.210) (xy 243.840 29.210)
 		)
 		(stroke (width 0) (type default))
-		(uuid "89822fd5-0538-419e-85a9-d87e9bd2f359")
+		(uuid "3bb8e2fd-4e60-43ee-8b4d-e593256d1357")
 	)
 	(wire
 		(pts
-			(xy 123.190 30.480) (xy 123.190 48.260)
+			(xy 123.190 29.210) (xy 123.190 48.260)
 		)
 		(stroke (width 0) (type default))
-		(uuid "010e0bea-ab51-4bf1-8ac1-7540f711948b")
+		(uuid "f5d2e9d2-6d1a-42ed-87d5-fa9562da1f9d")
 	)
 	(wire
 		(pts
@@ -1767,6 +1977,12 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "33b2113f-187d-4d77-83d3-4225e90f41c4")
+	)
+	(junction
+		(at 124.460 30.480)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "0eb857ee-e2dc-442e-86db-1c41106a2ed5")
 	)
 	(junction
 		(at 124.460 31.750)
@@ -2009,7 +2225,7 @@
 	)
 	(symbol
 		(lib_id "gnssbike:J402")
-		(at 139.700 41.910 0)
+		(at 143.510 41.910 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -2020,20 +2236,20 @@
 			(at 127.000 33.020 0)
 			(effects (font (size 1.27 1.27)) (justify left bottom))
 		)
-		(property "Value" "Molex 503480-0500"
+		(property "Value" "HCTL HC-FPC-05-10-5RLTAG"
 			(at 127.000 50.800 0)
 			(effects (font (size 1.27 1.27)) (justify left top))
 		)
-		(property "Footprint" "Connector_FFC-FPC:TE_0-1734839-5_1x05-1MP_P0.5mm_Horizontal"
-			(at 139.7 41.910000000000004 0)
+		(property "Footprint" "gnssbike:HC-FPC-05-10-5RLTAG"
+			(at 143.51 41.910000000000004 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
 		(property "Datasheet" ""
-			(at 139.7 41.910000000000004 0)
+			(at 143.51 41.910000000000004 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
 		(property "Description" "conector da luz do painel, 5 vias, passo 0,5 mm, recomendado pela propria JDI no desenho de contorno"
-			(at 139.7 41.910000000000004 0)
+			(at 143.51 41.910000000000004 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
 		(pin "1" (uuid "cc11017f-c429-43ee-87e9-2fe8438a2801"))
@@ -2052,7 +2268,7 @@
 	)
 	(symbol
 		(lib_id "gnssbike:Q401")
-		(at 176.530 38.100 0)
+		(at 179.070 36.830 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -2060,23 +2276,23 @@
 		(dnp no)
 		(uuid "d0ec443d-9727-4dbf-8bdf-86cf823edfb3")
 		(property "Reference" "Q401"
-			(at 168.910 33.020 0)
+			(at 175.260 32.385 0)
 			(effects (font (size 1.27 1.27)) (justify left bottom))
 		)
 		(property "Value" "DMG1012T-7"
-			(at 168.910 43.180 0)
+			(at 175.260 41.275 0)
 			(effects (font (size 1.27 1.27)) (justify left top))
 		)
 		(property "Footprint" "Package_TO_SOT_SMD:SOT-523"
-			(at 176.53 38.1 0)
+			(at 179.07 36.83 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
 		(property "Datasheet" ""
-			(at 176.53 38.1 0)
+			(at 179.07 36.83 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
 		(property "Description" "chave de canal N da luz. A Diodes NAO publica numero de pino: o diagrama so mostra a posicao, e a numeracao vem do padrao SOT-523 | PINAGEM NAO CONFIRMADA NA FICHA"
-			(at 176.53 38.1 0)
+			(at 179.07 36.83 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
 		(pin "1" (uuid "f4a3a417-9fed-425b-8886-d3916b36ddf0"))
@@ -2443,30 +2659,30 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 171.450 46.990 0)
+		(at 181.610 44.450 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom no)
 		(on_board yes)
 		(dnp no)
-		(uuid "c91d16e1-1fc1-4f9d-89a5-279403bd4c2a")
+		(uuid "180d3701-e61c-4a7c-87d8-9c6b1f25b3f7")
 		(property "Reference" "#PWR003"
-			(at 171.45 46.99 0)
+			(at 181.61 44.449999999999996 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
 		(property "Value" "GND"
-			(at 171.450 50.800 0)
+			(at 181.610 48.260 0)
 			(effects (font (size 1.27 1.27)))
 		)
 		(property "Footprint" ""
-			(at 171.45 46.99 0)
+			(at 181.61 44.449999999999996 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
 		(property "Datasheet" ""
-			(at 171.45 46.99 0)
+			(at 181.61 44.449999999999996 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
-		(pin "1" (uuid "78d8aee5-b0ac-414d-8460-3742265ea9f6"))
+		(pin "1" (uuid "5ab44cd9-4417-485f-8716-5b24f41e241e"))
 		(instances
 			(project "gnssbike"
 				(path "/9c874366-f223-4aef-8b18-3e2a2bab2b25/95879dbd-9df4-46a9-8947-65d27260827b"

@@ -675,10 +675,14 @@ add("DS401", "JDI LPM027M128C", [
 
 # The same outline drawing names the connector: "Backlight FPC 503480-0500,
 # 5pin / molex". The 4-way 5034800440 of the Sharp plan B is the same family.
-add("J402", "Molex 503480-0500", [
+# O Molex 503480-0500 que a JDI nomeia no desenho de contorno do display nao
+# esta na LCSC, e a placa e montada na JLCPCB. Este e o equivalente com
+# estoque: 45.619 pecas, contato inferior como o J401 do sinal, e corpo bem
+# menor - 4,27 x 2,90 x 1,00 contra 7,93 x 4,40 x 1,20.
+add("J402", "HCTL HC-FPC-05-10-5RLTAG", [
     (1, "1", "passive", L), (2, "2", "passive", L), (3, "3", "passive", L),
     (4, "4", "passive", L), (5, "5", "passive", L),
-], confirmed=True, note="conector da luz do painel, 5 vias, passo 0,5 mm, "
+], confirmed=True, lcsc="C5213728", note="conector da luz do painel, 5 vias, passo 0,5 mm, "
                         "recomendado pela propria JDI no desenho de contorno")
 
 add("Q401", "DMG1012T-7", [

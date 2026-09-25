@@ -97,10 +97,12 @@ _fp("J401", "Connector_FFC-FPC:Hirose_FH12-10S-0.5SH_1x10-1MP_P0.50mm_Horizontal
     "10 vias, passo 0,5 mm, CONTATO INFERIOR: a cauda do display entra com "
     "as trilhas viradas para a placa. O footprint e da peca: FH12-10S-"
     "0.5SH(55), LCSC C506791, que tem modelo STEP na biblioteca do KiCad")
-_fp("J402", "Connector_FFC-FPC:TE_0-1734839-5_1x05-1MP_P0.5mm_Horizontal",
-    "ENCAPSULAMENTO",
-    "5 vias, passo 0,5 mm. A peca e o Molex 503480-0500, que a JDI nomeia no "
-    "desenho de contorno; a KiCad nao tem essa serie")
+_fp("J402", "gnssbike:HC-FPC-05-10-5RLTAG", "GERADO",
+    "5 vias, passo 0,5 mm, CONTATO INFERIOR - a cauda da luz entra com as "
+    "trilhas viradas para a placa, igual a do sinal no J401. Era o Molex "
+    "503480-0500 que a JDI nomeia no desenho de contorno, mas ele nao esta "
+    "na LCSC e a placa e montada na JLCPCB; este tem 45.619 pecas e o STEP "
+    "do fabricante. O corpo encolhe de 7,93 x 4,40 para 4,27 x 2,90")
 import parts as _P  # noqa: E402
 
 _fp([t[0] for t in _P.TESTE] + ["TP201", "TP202", "TP203"],
@@ -115,15 +117,12 @@ _fp("J103", "Connector_JST:JST_ZH_S4B-ZR-SM4A-TF_1x04-1MP_P1.50mm_Horizontal",
     "modulos e um terra comum. "
     "Passo diferente do GH de 1,25 da bateria de proposito, para os dois "
     "chicotes nao trocarem de lugar")
-_fp("U103", "Package_DFN_QFN:QFN-24-1EP_4x4mm_P0.5mm_EP2.15x2.15mm",
-    "ENCAPSULAMENTO",
-    "ADP5091 em LFCSP-24 de 4 x 4 mm, passo 0,5. A ADI NAO publica land "
-    "pattern na ficha - so o desenho do encapsulamento -, entao este e o "
-    "padrao IPC do KiCad para o mesmo encapsulamento. O pad termico de "
-    "2,15 e conservador contra o pad exposto de 2,30 nominal da peca "
-    "(2,16 a 2,44), o que deixa 0,075 mm de recuo de cada lado e afasta "
-    "o risco de ponte com os pads de sinal. A ficha exige K >= 0,20 mm "
-    "entre o terminal e o pad exposto, e este footprint da mais que isso")
+_fp("U103", "Package_CSP:LFCSP-24-1EP_4x4mm_P0.5mm_EP2.3x2.3mm", "EXATO",
+    "ADP5091 em LFCSP-24 de 4 x 4 mm, passo 0,5. E o footprint que o proprio "
+    "simbolo Battery_Management:ADP5091 da biblioteca do KiCad aponta, com "
+    "pad termico de 2,30 - o NOMINAL da ficha (2,16 a 2,44) - e nao os 2,15 "
+    "do QFN generico que estava aqui. Tem modelo STEP na biblioteca, entao a "
+    "peca deixa de aparecer como pad pelado no 3D")
 _fp("E301", "gnssbike:Antena_Unictron_H2UJ4U1H2Q0100_5x3mm", "GERADO",
     "antena de chip L1+L5 soldada na borda; land pattern do guia de "
     "layout da ficha rev. E")
@@ -187,6 +186,9 @@ CORPO: dict[str, tuple[float, float, float]] = {
     "gnssbike:MMC5603_WLP-4_0.82x0.82mm": (0.82, 0.82, 0.54),
     # XunPu TS-1088R-02026: 3,90 x 3,00 x 2,00 do desenho rev A
     "gnssbike:SW_TS-1088R_3.9x3mm": (3.90, 3.00, 2.00),
+    # HCTL HC-FPC-05-10-5RLTAG: 4,27 x 2,90 x 1,00 do desenho, e o STEP
+    # do fabricante mede 4,280 x 3,920 x 1,010 (o 3,92 inclui os pes)
+    "gnssbike:HC-FPC-05-10-5RLTAG": (4.27, 2.90, 1.00),
     # Unictron H2UJ4U1H2Q0100: 5,0 x 3,0 x 0,5, +-0,15 nos tres
     "gnssbike:Antena_Unictron_H2UJ4U1H2Q0100_5x3mm": (5.00, 3.00, 0.50),
     # Murata PKLCS1212E4001-R1: 12,0 x 12,0 x 3,0 max (JGB40-1584B)
@@ -238,11 +240,27 @@ def wrl_caixa(caminho, w: float, h: float, alt: float, cor=(0.13, 0.13, 0.14)):
         + " ]\n  }\n}\n", encoding="utf-8", newline="\n")
 
 
-def _corpo(nome, w, h, pads, descr):
-    """Wrap pads in a footprint with a courtyard and a fab outline."""
+def _corpo(nome, w, h, pads, descr, crtyd=None):
+    """Wrap pads in a footprint with a courtyard and a fab outline.
+
+    `crtyd` is (largura, altura) para o contorno de ocupacao quando ele NAO e
+    o corpo mais a folga. Num conector de FPC os pes de fixacao ficam atras
+    do corpo, e um contorno tirado so do corpo deixaria o vizinho encostar
+    neles - o colocador acredita no contorno, nao no que esta desenhado.
+    O F.Fab continua sendo o corpo, porque e ele que o ME3 compara com a
+    ficha.
+    """
     hw, hh = w / 2.0, h / 2.0
+    cw, ch = (crtyd if crtyd else (w, h))
     linhas = []
     for lay, larg, folga in (("F.CrtYd", 0.05, 0.25), ("F.Fab", 0.1, 0.0)):
+        if lay == "F.CrtYd":
+            a, b = cw / 2.0 + folga, ch / 2.0 + folga
+            linhas.append(
+                f'\t(fp_rect\n\t\t(start {-a:.4f} {-b:.4f})\n\t\t(end {a:.4f} {b:.4f})\n'
+                f'\t\t(stroke (width {larg}) (type solid))\n\t\t(fill none)\n'
+                f'\t\t(layer "{lay}")\n\t\t(uuid "{_uid(nome, lay)}")\n\t)')
+            continue
         a, b = hw + folga, hh + folga
         linhas.append(
             f'\t(fp_rect\n\t\t(start {-a:.4f} {-b:.4f})\n\t\t(end {a:.4f} {b:.4f})\n'
@@ -446,6 +464,38 @@ def antena_unictron(nome):
                   "sinal, 1 e 2 sao terra por capacitor de sintonia")
 
 
+def fpc_hctl_5(nome):
+    """HCTL HC-FPC-05-10-5RLTAG: FPC ZIF de 5 vias, passo 0,5, tampa flip-top.
+
+    Substitui o Molex 503480-0500 que a JDI nomeia no desenho de contorno do
+    display: o Molex nao esta na LCSC, e a placa e montada na JLCPCB. Esta
+    tem 45.619 pecas e o STEP do fabricante.
+
+    Cotas do desenho HC-FPC-05-10-NRLTAG, com a tabela por numero de vias e
+    a largura A = n x 0,5 + 1,77, medidas por segmentacao de pixels a
+    292,5 px/mm calibrados pelo passo:
+
+      corpo        4,27 +-0,15 x 2,90, altura 1,00 fechado
+      contato      0,30 +-0,03 x 0,65, passo 0,50, cinco vias
+      fixacao      0,30 +-0,03 x 1,15, centros em +-1,885
+      vao entre as duas fileiras  1,91
+      FPC          0,30 +-0,03 de espessura, CONTATO INFERIOR
+      alojamento   BRANCO, tampa MARROM (declarados na ficha)
+
+    O "10" do part number e a altura de 1,0 mm.
+
+    A origem fica no centro da caixa do land pattern, que vai de y 0 a 3,71.
+    """
+    pads = [_pad(str(i + 1), -1.0 + 0.5 * i, -1.53, 0.30, 0.65)
+            for i in range(5)]
+    pads += [_pad("MP1", -1.885, 1.28, 0.30, 1.15),
+             _pad("MP2", 1.885, 1.28, 0.30, 1.15)]
+    return _corpo(nome, 4.27, 2.90, pads,
+                  "HCTL HC-FPC-05-10-5RLTAG, FPC ZIF de 5 vias, passo 0,5, "
+                  "contato inferior, 1,0 mm de altura",
+                  crtyd=(4.28, 3.92))
+
+
 GERADOS: dict[str, str] = {}
 
 
@@ -472,6 +522,8 @@ def _gerar():
         "ficha Rev. B")
     GERADOS["gnssbike:Antena_Unictron_H2UJ4U1H2Q0100_5x3mm"] = antena_unictron(
         "gnssbike:Antena_Unictron_H2UJ4U1H2Q0100_5x3mm")
+    GERADOS["gnssbike:HC-FPC-05-10-5RLTAG"] = fpc_hctl_5(
+        "gnssbike:HC-FPC-05-10-5RLTAG")
     GERADOS["gnssbike:SW_TS-1088R_3.9x3mm"] = tecla_ts1088(
         "gnssbike:SW_TS-1088R_3.9x3mm")
     GERADOS["gnssbike:Buzzer_PKLCS1212E4001_12x12mm"] = buzzer_pklcs1212(
@@ -559,9 +611,15 @@ ALTURA: dict[str, tuple[float, str]] = {
     "Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12": (3.26, "altura "
         "corrente de um receptaculo USB-C de montagem em superficie - "
         "CONFERIR na ficha do HRO TYPE-C-31-M-12 (LCSC C165948)"),
-    "Connector_JST:JST_ZH_S4B-ZR-SM4A-TF_1x04-1MP_P1.50mm_Horizontal": (4.50,
-        "altura corrente de um header ZH de entrada lateral - CONFERIR na "
-        "ficha da JST"),
+    # 3,75 e a altura da serie ZH, e nao os 4,50 que estavam aqui como
+    # "altura corrente de um header de entrada lateral". O numero saiu do
+    # STEP da propria JST, medido nos vertices: corpo 9,000 x 6,000, altura
+    # 3,751, Z minimo +0,030 (SMT puro, nada abaixo da placa). A largura de
+    # 9,00 = 1,5 x 3 + 4,5 e exatamente o que a ficha da JST da para 4 vias.
+    # Sao 0,75 mm a favor da tampa fechar.
+    "Connector_JST:JST_ZH_S4B-ZR-SM4A-TF_1x04-1MP_P1.50mm_Horizontal": (3.75,
+        "JST S4B-ZR-SM4A-TF, medido no STEP do fabricante: corpo de 9,000 x "
+        "6,000 e altura 3,751"),
     "Diode_SMD:D_SOD-523": (0.65, "altura corrente de um SOD-523 - a peca do "
         "D105 ainda nao foi escolhida"),
 
@@ -1530,8 +1588,15 @@ def _com_modelo() -> None:
             wrl_ci(pasta / (base + ".wrl"), w, h, alt, est, nome)
         else:
             wrl_caixa(pasta / (base + ".wrl"), w, h, alt, cor=cor_de(nome))
+        # O modelo do FABRICANTE ganha do desenhado aqui, sempre. A caixa
+        # que este arquivo desenha existe porque quase nenhuma destas pecas
+        # tem modelo publico; quando tem, ele e melhor em tudo - traz o
+        # chanfro, a marcacao, a lingueta, e foi feito por quem fabrica.
+        # E, ao contrario do .wrl, o STEP chega ao GLB e ao STEP exportados,
+        # que e o que o mecanico abre.
+        real = modelo_de_verdade(base)
         modelo = (
-            '\t(model "${KIPRJMOD}/3d/' + base + '.wrl"\n'
+            '\t(model "${KIPRJMOD}/' + (real if real else "3d/" + base + ".wrl") + '"\n'
             '\t\t(offset (xyz 0 0 0))\n'
             '\t\t(scale (xyz 1 1 1))\n'
             '\t\t(rotate (xyz 0 0 0))\n'

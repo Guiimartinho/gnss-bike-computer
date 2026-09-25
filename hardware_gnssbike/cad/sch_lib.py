@@ -277,6 +277,52 @@ class Part:
     def sym_name(self) -> str:
         return f"gnssbike:{self.ref}"
 
+    # ---------------------------------------------------- simbolo do KiCad
+    @property
+    def kicad(self) -> str:
+        """"Biblioteca:Nome" quando a peca usa um simbolo do KiCad."""
+        import simbolos
+        return simbolos.KICAD.get(self.ref, "")
+
+    def _k_bloco(self) -> str:
+        import ksym
+        return ksym.bloco(self.kicad)
+
+    def _k_caixa(self) -> tuple[float, float, float, float]:
+        """A caixa do simbolo no espaco DELE: desenho mais pontas de pino.
+
+        E aqui que mora um erro que custou um curto-circuito. Os simbolos
+        deste projeto sao centrados na origem por construcao, e o roteador de
+        fios foi escrito contando com isso: `box()` devolvia um retangulo
+        simetrico em volta do ponto onde a peca esta.
+
+        Os simbolos da biblioteca do KiCad NAO sao. Um `Conn_01x10_Socket`
+        tem o desenho em x de -1,27 a 0 e os dez pinos todos em x = -5,08; o
+        `USB_C_Receptacle_USB2.0_16P` tem pinos de -7,62 a +15,24. Tratados
+        como simetricos, alguns pinos caem DENTRO do obstaculo, o roteador
+        nao consegue chegar neles pelo lado de fora e acaba passando por
+        cima - e dois nos que se encostam viram um so para o KiCad, sem nada
+        no desenho dizendo isso. Foi assim que o MPPT engoliu o terra.
+        """
+        import ksym
+        # SO o desenho, sem as pontas dos pinos - exatamente como os simbolos
+        # deste projeto, onde  e o corpo e o pino fica PIN_LEN para
+        # fora. Conferido: nenhum dos pinos dos simbolos que usamos cai
+        # dentro da caixa do desenho, entao todos continuam alcancaveis pelo
+        # lado de fora, que e o que o roteador precisa.
+        #
+        # Incluir as pontas parece mais seguro e nao e: infla cada simbolo em
+        # 5 mm por lado, as folhas crescem para caber, e o A* do roteador
+        # passa de 26 segundos para mais de oito minutos sem terminar.
+        return ksym.caixa(self._k_bloco())
+
+    def desloca_centro(self) -> tuple[float, float]:
+        """Do ponto onde a peca esta ate o centro da caixa dela, na folha."""
+        if not self.kicad:
+            return (0.0, 0.0)
+        x0, y0, x1, y1 = self._k_caixa()
+        return (snap((x0 + x1) / 2.0), snap(-(y0 + y1) / 2.0))
+
     def _sides(self) -> dict[str, list[Pin]]:
         out: dict[str, list[Pin]] = {"L": [], "R": [], "T": [], "B": []}
         for p in self.pins:
@@ -296,6 +342,13 @@ class Part:
         what an IC gets, and only there does the size come from counting
         pins and measuring names.
         """
+        if self.kicad:
+            # O simbolo vem pronto da biblioteca do KiCad: o tamanho e o da
+            # caixa dele, e `desloca_centro()` diz onde essa caixa esta em
+            # relacao ao ponto da peca - porque ela nao e centrada nele.
+            x0, y0, x1, y1 = self._k_caixa()
+            arr = lambda v: math.ceil(v / GRID) * GRID
+            return (arr(x1 - x0), arr(y1 - y0))
         if classe_do_simbolo(self):
             return (2 * CORPO_2T, 2 * CORPO_2T)
         s = self._sides()
@@ -317,6 +370,9 @@ class Part:
 
     def pin_local(self) -> dict[str, tuple[float, float, int]]:
         """Pin number to its tip in symbol space, and the pin angle."""
+        if self.kicad:
+            import ksym
+            return ksym.pinos(self._k_bloco())
         if classe_do_simbolo(self):
             a = CORPO_2T + PIN_LEN
             p = list(self.pins)
@@ -362,9 +418,46 @@ class Part:
     def box(self) -> tuple[float, float, float, float]:
         """Body rectangle on the sheet: x0, y0, x1, y1."""
         w, h = self.size()
-        return (self.x - w / 2.0, self.y - h / 2.0, self.x + w / 2.0, self.y + h / 2.0)
+        dx, dy = self.desloca_centro()
+        cx, cy = self.x + dx, self.y + dy
+        return (cx - w / 2.0, cy - h / 2.0, cx + w / 2.0, cy + h / 2.0)
+
+    def _lib_symbol_kicad(self) -> str:
+        """O simbolo da biblioteca do KiCad, com as nossas propriedades.
+
+        Sai o que a biblioteca desenhou - e entra o que e deste projeto: a
+        referencia, o valor, o footprint da nossa escolha e a nota. Deixar as
+        propriedades da biblioteca faz o KiCad mostrar duas de cada, uma por
+        cima da outra, e a da biblioteca aponta para o footprint dela, que
+        nem sempre e o nosso.
+        """
+        import ksym
+        nome = self.kicad.split(":", 1)[1]
+        b = ksym.sem_propriedades(ksym.bloco(self.kicad))
+        b = ksym.renomear(b, nome, self.ref)
+        b = b.replace(f'(symbol "{self.ref}"', f'(symbol "{self.sym_name}"', 1)
+        b = "\n".join("\t" + ln if ln.strip() else ln for ln in b.split("\n"))
+        w, h = self.size()
+        hw, hh = w / 2.0, h / 2.0
+        props = "\n".join([
+            f'\t\t\t(property "Reference" "{esc(self.ref)}"\n\t\t\t\t(at {-hw:.3f} {hh + 1.27:.3f} 0)'
+            f'\n\t\t\t\t(effects (font (size {TEXT} {TEXT})) (justify left bottom))\n\t\t\t)',
+            f'\t\t\t(property "Value" "{esc(self.value)}"\n\t\t\t\t(at {-hw:.3f} {-hh - 1.27:.3f} 0)'
+            f'\n\t\t\t\t(effects (font (size {TEXT} {TEXT})) (justify left top))\n\t\t\t)',
+            f'\t\t\t(property "Footprint" "{esc(self.footprint)}"\n\t\t\t\t(at 0 0 0)'
+            f'\n\t\t\t\t(effects (font (size {TEXT} {TEXT})) (hide yes))\n\t\t\t)',
+            f'\t\t\t(property "Datasheet" "{esc(self.datasheet)}"\n\t\t\t\t(at 0 0 0)'
+            f'\n\t\t\t\t(effects (font (size {TEXT} {TEXT})) (hide yes))\n\t\t\t)',
+            f'\t\t\t(property "Description" "{esc(self.note)}"\n\t\t\t\t(at 0 0 0)'
+            f'\n\t\t\t\t(effects (font (size {TEXT} {TEXT})) (hide yes))\n\t\t\t)'])
+        # as propriedades entram logo depois do cabecalho, antes da primeira
+        # unidade de desenho
+        i = b.index(f'\t\t\t(symbol "{self.ref}_')
+        return b[:i] + props + "\n" + b[i:]
 
     def lib_symbol(self) -> str:
+        if self.kicad:
+            return self._lib_symbol_kicad()
         w, h = self.size()
         hw, hh = w / 2.0, h / 2.0
         loc = self.pin_local()
@@ -476,9 +569,37 @@ class Router:
         # connects to that pin, whatever the drawing looks like
         self.pin_cells.clear()
         for p in self.parts:
-            for xy in p.pin_sheet().values():
+            folha = p.pin_sheet()
+            local = p.pin_local()
+            bx0, by0, bx1, by1 = p.box()
+            for n, xy in folha.items():
                 self.blocked.discard(self.key(*xy))
                 self.pin_cells.add(self.key(*xy))
+                # E o TALO do pino, da ponta ate o corpo. Um fio que cruza o
+                # talo encosta no pino tanto quanto um que cruza a ponta - o
+                # KiCad junta os dois nos e nada no desenho diz isso.
+                #
+                # Nos simbolos deste projeto o talo tem uma celula e quase
+                # nunca da problema. Nos da biblioteca do KiCad a folga entre
+                # o corpo e a ponta chega a tres celulas: num
+                # `Conn_01x10_Socket` o desenho vai de x -1,27 a 0 e os dez
+                # pinos ficam em x = -5,08, entao um unico fio descendo em
+                # x = -2,54 cruza os DEZ talos. Foi assim que o MPPT e o
+                # terra viraram um no so.
+                ang = local[n][2]
+                dx, dy = {0: (1, 0), 90: (0, -1),
+                          180: (-1, 0), 270: (0, 1)}.get(ang, (0, 0))
+                cx, cy = xy
+                for _ in range(8):
+                    cx += dx * GRID
+                    cy += dy * GRID
+                    # a celula entra na protecao ANTES do teste de parada: a
+                    # ultima do talo, encostada no corpo, tambem e talo, e
+                    # deixa-la de fora abre exatamente a fresta por onde um
+                    # fio passa raspando em todos os pinos de uma borda
+                    self.pin_cells.add(self.key(cx, cy))
+                    if bx0 <= cx <= bx1 and by0 <= cy <= by1:
+                        break
 
     def route(self, net: str, a: tuple[float, float],
               targets: set[tuple[int, int]], folga: int = 90) -> list[tuple[int, int]] | None:
