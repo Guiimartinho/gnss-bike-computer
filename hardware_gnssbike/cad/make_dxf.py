@@ -127,8 +127,27 @@ def _f(x0: float, y0: float, x1: float, y1: float) -> tuple:
 #                     fits there and the only corner the module may have
 ZONES = [
     # name, rect, colour, source
-    ("KEEPOUT_ANTENA_GNSS", _f(0.0, 0.0, W, 8.0), 1,
-     "04#zonas-proibidas: sem cobre em nenhuma camada"),
+    # O recorte da antena GNSS encolheu MUITO em 2026-09-24, quando a antena
+    # passou da TE L000670-01 (estoque zero) para a Unictron
+    # H2UJ4U1H2Q0100. A TE pedia 40,5 x 14,5 mm, mais larga que esta placa
+    # inteira; a Unictron pede 15,00 x 9,35 na face de cima e 15,00 x 9,88 na
+    # de baixo, medidos da BORDA DA PLACA.
+    #
+    # POR QUE 20,08 E NAO 15,00: o recorte da ficha nao e simetrico em
+    # relacao a antena - ela ocupa 5,0 mm no meio, com 2,46 mm de um lado e
+    # 7,54 do outro -, e QUAL lado e qual nao esta determinado. Aplicar os
+    # 7,54 nos dois lados garante a exigencia seja qual for a orientacao;
+    # aplicar 15,00 centrado poderia deixar cobre onde a ficha nao quer.
+    # Custa cerca de 5 mm a mais de plano de terra numa antena que depende
+    # dele - a ficha mede 70 % de eficiencia numa placa de 80 x 40 mm e esta
+    # tem 34 de largura, entao 70 % ja e teto otimista. PENDENCIA: descoberto
+    # o lado, o recorte pode voltar para 15,00 e a placa recupera o cobre.
+    #
+    # A profundidade e 9,88, a da face de BAIXO, que e a maior das duas: uma
+    # zona so vale para todas as camadas.
+    ("KEEPOUT_ANTENA_GNSS", _f(13.25 - 10.04, 0.0, 13.25 + 10.04, 9.88), 1,
+     "04#zonas-proibidas: sem cobre em nenhuma camada. Unictron "
+     "H2UJ4U1H2Q0100, guia de layout da ficha rev. E"),
     ("KEEPOUT_ANTENA_MODULO",
      _f(W - _ANT_FAIXA, H - _MOD_ALT - 8.5, W, H), 1,
      "ficha ME54BS13 V1.0.0, 7.3 e 7.4: sobre a area da antena nao pode cobre, "
@@ -139,7 +158,7 @@ ZONES = [
      "ficha ME54BS13 V1.0.0, 7.4: a placa sob a area da antena e VAZADA, para "
      "deixar a regiao suspensa. Comeca 0,4 mm dentro da faixa: a ultima coluna "
      "de pads LGA do modulo tem de manter 0,3 mm de cobre a borda do corte"),
-    ("ZONA_GNSS_MAX-F10S", _f(W / 2 - 8.0, 8.5, W / 2 + 8.0, 20.0), 3,
+    ("ZONA_GNSS_MAX-F10S", _f(W / 2 - 14.0, 10.5, W / 2 + 8.0, 22.0), 3,
      "MAX-F10S IM 4.4: o receptor logo abaixo da zona da antena, com a rede pi "
      "entre o pino RF_IN e o contato de mola"),
     ("ZONA_LUZ_AMBIENTE_OPT3001", _f(1.2, 10.5, 3.8, 13.5), 3,

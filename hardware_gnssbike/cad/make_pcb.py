@@ -191,12 +191,21 @@ BORDA_FIXA: dict[str, tuple[float, float, int]] = {
     # feed and its pi network had nowhere to go and ended up 10.5 mm from the
     # pin that 4.4 wants them "as short as possible" from. Turned round, the
     # pin faces into the board, where the network fits in line.
-    "U301": (8.5, 14.2, 180),
+    "U301": (8.5, 15.3, 180),
     # Where the antenna in the case wall lands: under its keep-out and a few
     # millimetres from the pi network, which is what "linha de 50 ohm, poucos
     # mm" in 04-pcb-e-caixa.md asks for. To the right of the receiver, so the
     # pi network sits between the two.
-    "J302": (19.5, 11.2, 0),
+    # A antena de chip, na borda de baixo. O corpo tem 3,0 mm de
+    # profundidade e a ficha o poe a 0,30 mm da borda, entao o centro
+    # fica em y = 1,80. O x e o do resto da cadeia de RF, para o
+    # caminho ser o mais curto possivel.
+    "E301": (13.25, 1.8, 0),
+    # Os dois capacitores de sintonia, encostados nos pinos de terra
+    # da antena: eles SAO parte da antena, nao desacoplamento.
+    "C305": (17.55, 1.8, 90),
+    "C306": (8.95, 1.8, 90),
+    "J302": (20.4, 12.4, 0),
     # The pi network, IN LINE between the antenna contact and the receiver's
     # RF_IN pin, and fixed here rather than left to the netlist placer -
     # which put it 10.5 mm away, on a rule that asks for "as short as
@@ -208,9 +217,9 @@ BORDA_FIXA: dict[str, tuple[float, float, int]] = {
     # Shifted 0,6 mm right on 2026-09-24: the module's land pattern grew when
     # the real drawing was read - the pad now reaches 0,8 mm outside the body
     # instead of 0,35 - and the old positions had the inductor sitting on it.
-    "C301": (16.0, 12.6, 0),
-    "L301": (15.2, 14.8, 90),
-    "C302": (15.4, 16.4, 0),
+    "C301": (17.4, 13.4, 0),
+    "L301": (15.8, 15.2, 90),
+    "C302": (15.8, 17.2, 0),
     # The six solar modules, in three groups of two, on one connector on the
     # right edge. They carry the harvester's SRC node, which is low voltage
     # and is the input of a boost, so it sits as close to the harvester's
@@ -259,7 +268,19 @@ DECOPLA: dict[str, str] = {
 
 # A part is allowed inside the keep-out that exists because of it: the
 # radio module sits over its own antenna zone, which forbids copper, not it.
-DONO_DO_KEEPOUT: dict[str, str] = {"U201": "KEEPOUT_ANTENA_MODULO"}
+#
+# The same goes for the GNSS chip antenna and its two tuning capacitors. The
+# Unictron layout guide is explicit that the 50 ohm trace AND the matching
+# components live INSIDE the cut-out - the cut-out forbids ground plane, not
+# the antenna's own network. Putting the tuning capacitors outside it would
+# put ground between the antenna and its own tuning, which is the one place
+# copper must not be.
+DONO_DO_KEEPOUT: dict[str, str] = {
+    "U201": "KEEPOUT_ANTENA_MODULO",
+    "E301": "KEEPOUT_ANTENA_GNSS",
+    "C305": "KEEPOUT_ANTENA_GNSS",
+    "C306": "KEEPOUT_ANTENA_GNSS",
+}
 
 # What the ME54BS13 datasheet actually asks around its antenna, read in
 # V1.0.0 and not in a summary of it:

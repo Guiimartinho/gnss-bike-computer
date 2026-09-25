@@ -190,6 +190,11 @@ net("RF_IN", ("U301", "RF_IN"), ("L301", "2"), ("C302", "1"))
 net("RF_ANT", ("L301", "1"), ("C301", "1"), ("JP301", "COMUM"))
 net("RF_UFL", ("JP301", "UFL"), ("J302", "FEED"))
 net("RF_CHIP", ("JP301", "CHIP"), ("E301", "FEED"))
+# Os pinos 1 e 2 da antena de chip sao terra E sintonia: vao ao plano
+# por C305 e C306, nao direto. Sao as posicoes [8] e [9] do circuito da
+# ficha da Unictron.
+net("ANT_T1", ("E301", "GND_T1"), ("C305", "1"))
+net("ANT_T2", ("E301", "GND_T2"), ("C306", "1"))
 
 # ------------------------------------------------------------ interface
 net("KEY_L", ("U201", "P1.26"), ("R604", "1"))
@@ -231,8 +236,9 @@ net("GND",
     ("U201", "GND"), ("U201", "GND3"), ("U201", "GND10"), ("U201", "GND11"),
     ("U201", "GND20"), ("U201", "GND_D0"), ("U201", "GND_E0"),
     ("U201", "GND_F0"), ("J201", "GND"), ("TP203", "1"),
-    ("U301", "GND"), ("U301", "GND2"), ("U301", "GND3"), ("U301", "VIO_SEL"), ("U302", "GND"), ("U302", "PAD"), ("E301", "GND"),
+    ("U301", "GND"), ("U301", "GND2"), ("U301", "GND3"), ("U301", "VIO_SEL"), ("U302", "GND"), ("U302", "PAD"),
     ("C301", "2"), ("C302", "2"), ("C303", "2"), ("C304", "2"),
+    ("C305", "2"), ("C306", "2"),
     ("U501", "GND"), ("U502", "VSSIO"), ("U503", "GND"), ("U503", "GNDIO"),
     ("U503", "SDO"), ("U504", "VSA"), ("U505", "GND"), ("U505", "ADDR"),
     ("DS401", "VSS"), ("DS401", "VSSA"),

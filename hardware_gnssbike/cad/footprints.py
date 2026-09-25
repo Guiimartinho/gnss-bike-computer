@@ -27,7 +27,7 @@ FP: dict[str, tuple[str, str, str]] = {}
 
 # Parts that are not on the board: they live in the case and reach the board
 # through spring contacts or a flat cable that no document dimensions yet.
-FORA_DA_PLACA = {"DS401", "E301", "PV101", "PV102", "PV103", "PV104", "PV105",
+FORA_DA_PLACA = {"DS401", "PV101", "PV102", "PV103", "PV104", "PV105",
                  "PV106"}
 
 
@@ -45,7 +45,7 @@ _fp(["R102", "R103", "R104", "R105", "R106", "R107", "R108", "R109", "R110",
      "R111", "R112", "R401", "R402", "R403", "R404", "R405", "R501", "R502",
      "R503", "R504", "R505", "R506", "R507", "R508", "R601", "R602", "R603",
      "R604", "R605", "R606", "R607", "R608", "R609", "R610", "R611",
-     "R113", "R114", "R115",
+     "R113", "R114", "R115", "C305", "C306",
      "JP102", "JP103", "JP104", "JP105", "JP106", "JP401"], R0402,
     "ENCAPSULAMENTO", "0402; a lista de compras usa a serie Panasonic ERJ-2")
 _fp("JP101", "Resistor_SMD:R_1206_3216Metric", "ENCAPSULAMENTO",
@@ -92,8 +92,9 @@ _fp("J201", "Connector:Tag-Connect_TC2030-IDC-NL_2x03_P1.27mm_Vertical", "EXATO"
     "TC2030-NL, so furos e pads")
 _fp("J401", "Connector_FFC-FPC:Hirose_FH12-10S-0.5SH_1x10-1MP_P0.50mm_Horizontal",
     "ENCAPSULAMENTO",
-    "10 vias, passo 0,5 mm, contato por baixo. A peca escolhida e o FH28-10S-"
-    "0.5SH(05), que a propria JDI recomenda; a KiCad so tem o FH12")
+    "10 vias, passo 0,5 mm, CONTATO INFERIOR: a cauda do display entra com "
+    "as trilhas viradas para a placa. O footprint e da peca: FH12-10S-"
+    "0.5SH(55), LCSC C506791, que tem modelo STEP na biblioteca do KiCad")
 _fp("J402", "Connector_FFC-FPC:TE_0-1734839-5_1x05-1MP_P0.5mm_Horizontal",
     "ENCAPSULAMENTO",
     "5 vias, passo 0,5 mm. A peca e o Molex 503480-0500, que a JDI nomeia no "
@@ -112,6 +113,9 @@ _fp("J103", "Connector_JST:JST_ZH_S4B-ZR-SM4A-TF_1x04-1MP_P1.50mm_Horizontal",
     "modulos e um terra comum. "
     "Passo diferente do GH de 1,25 da bateria de proposito, para os dois "
     "chicotes nao trocarem de lugar")
+_fp("E301", "gnssbike:Antena_Unictron_H2UJ4U1H2Q0100_5x3mm", "GERADO",
+    "antena de chip L1+L5 soldada na borda; land pattern do guia de "
+    "layout da ficha rev. E")
 _fp("D105", "Diode_SMD:D_SOD-523", "ENCAPSULAMENTO",
     "grampo do SRC; a peca ainda nao foi escolhida, o SOD-523 e so o "
     "encapsulamento mais provavel de um TVS pequeno de fuga baixa")
@@ -172,6 +176,8 @@ CORPO: dict[str, tuple[float, float, float]] = {
     "gnssbike:MMC5603_WLP-4_0.82x0.82mm": (0.82, 0.82, 0.54),
     # XunPu TS-1088R-02026: 3,90 x 3,00 x 2,00 do desenho rev A
     "gnssbike:SW_TS-1088R_3.9x3mm": (3.90, 3.00, 2.00),
+    # Unictron H2UJ4U1H2Q0100: 5,0 x 3,0 x 0,5, +-0,15 nos tres
+    "gnssbike:Antena_Unictron_H2UJ4U1H2Q0100_5x3mm": (5.00, 3.00, 0.50),
     # Murata PKLCS1212E4001-R1: 12,0 x 12,0 x 3,0 max (JGB40-1584B)
     "gnssbike:Buzzer_PKLCS1212E4001_12x12mm": (12.00, 12.00, 3.00),
     # TUOZHAN S4-3528RGBTA-A: 3,5 x 2,8 x 1,9
@@ -370,6 +376,39 @@ def led_rgb_3528(nome):
                   "chanfrado junto ao pino 4 (vermelho). MSL4")
 
 
+def antena_unictron(nome):
+    """Unictron H2UJ4U1H2Q0100 (CB501F), ficha rev. E de 2020-07-07.
+
+    Antena de chip ceramica L1 + L5, 5,0 x 3,0 x 0,5 mm. Substitui a TE
+    L000670-01, que esta com estoque zero na LCSC - e de quebra resolve o
+    problema que a TE criava: a area sem cobre cai de 40,5 x 14,5 mm, que e
+    mais larga que esta placa inteira, para 15,00 x 9,35.
+
+    Land pattern do guia de layout, com o desenho medido em pixels contra as
+    cotas impressas (13,92 px/mm em x e 13,95 em y, conferidas em 7 cotas
+    cada). Origem aqui no centro do corpo:
+
+      pino 1  terra / sintonia   (+2,50; 0)   0,80 x 2,98
+      pino 2  terra / sintonia   (-2,50; 0)   0,80 x 2,98
+      pino 3  SINAL              ( 0,00; 0)   1,00 x 2,00
+
+    Os dois pads de terra ficam A CAVALEIRO das pontas: 0,40 mm sob o corpo
+    e 0,40 para fora, porque as terminacoes das pontas sao wrap-around e o
+    filete precisa subir pela lateral metalizada. Nao e folga de desenho.
+    O terminal de sinal, de 0,75 mm, existe so na face de baixo, no centro
+    geometrico da antena.
+
+    Os pinos de terra NAO vao direto ao plano: vao por dois capacitores de
+    sintonia, que e o que a ficha manda ([8] e [9] do circuito da pagina 11).
+    """
+    pads = [_pad("1", 2.50, 0.0, 0.80, 2.98),
+            _pad("2", -2.50, 0.0, 0.80, 2.98),
+            _pad("3", 0.0, 0.0, 1.00, 2.00)]
+    return _corpo(nome, 5.0, 3.0, pads,
+                  "Unictron H2UJ4U1H2Q0100, antena de chip L1+L5; pino 3 e o "
+                  "sinal, 1 e 2 sao terra por capacitor de sintonia")
+
+
 GERADOS: dict[str, str] = {}
 
 
@@ -394,6 +433,8 @@ def _gerar():
         "gnssbike:MMC5603_WLP-4_0.82x0.82mm", 2, 2, 0.4, 0.23, 0.82, 0.82,
         "Memsic MMC5603NJ, WLP de 4 bolas; land pattern da pagina 18 da "
         "ficha Rev. B")
+    GERADOS["gnssbike:Antena_Unictron_H2UJ4U1H2Q0100_5x3mm"] = antena_unictron(
+        "gnssbike:Antena_Unictron_H2UJ4U1H2Q0100_5x3mm")
     GERADOS["gnssbike:SW_TS-1088R_3.9x3mm"] = tecla_ts1088(
         "gnssbike:SW_TS-1088R_3.9x3mm")
     GERADOS["gnssbike:Buzzer_PKLCS1212E4001_12x12mm"] = buzzer_pklcs1212(
@@ -1244,15 +1285,20 @@ PACOTE: dict[str, tuple] = {
     # dizer nada. Corpo de 7,35 mm segundo a parametria da LCSC contra
     # 8,58 do Molex, e a abertura da caixa muda com isso.
     "Connector_FFC-FPC:Hirose_FH12-10S-0.5SH_1x10-1MP_P0.50mm_Horizontal":
-        (9.90, 5.70, 2.55, 0.00, None, 0.30, 0.70, 0.50,
-         "Hirose, catalogo da serie FH28 (2019.9 quarta edicao), pagina 3, "
-         "linha FH28-10S-0.5SH, HRS 586-1861-4: B 9,9 de largura total, corpo "
-         "de 5,7 de profundidade (6,5 com os rabichos), altura 2,55 fechado e "
-         "5,4 de referencia com o atuador aberto, A 4,5 entre os contatos "
-         "extremos, C 5,57 de abertura para o FPC. Atuador flip-lock traseiro "
-         "que abre 116 graus, contato por BAIXO, aceita FPC de 0,3. Isolador "
-         "de LCP CINZA, atuador de LCP PRETO (pagina 2, Materials/Finish). "
-         "CUIDADO: o footprint em uso e da serie FH12, nao da FH28"),
+        (8.10, 5.60, 2.00, 0.00, None, 0.30, 1.30, 0.50,
+         "8,10 e o CORPO ISOLANTE, que e o que o F.Fab do KiCad desenha; a "
+         "largura total com as duas abas metalicas e 9,1 +-0,3 e o land "
+         "pattern se estende por 10,1. As tres medidas sao da ficha, e "
+         "descrevem coisas diferentes. "
+         "Hirose EDC3-150229-11 (code CL586-0522-3-55), a ficha da peca que "
+         "esta na lista: largura total 9,1 +-0,3, corpo isolante 8,1 +-0,2, "
+         "profundidade 5,6 +-0,3 (6,4 com as caudas), ALTURA 2,00 +-0,2 "
+         "fechado. Ilha de contato 0,30 +-0,03 por 1,30 +-0,1 a passo 0,50, "
+         "ilha de fixacao 1,80 x 2,20 com centros em +-4,15, vao entre as "
+         "fileiras 1,50. FPC de 0,30 +-0,05, CONTATO INFERIOR. Alojamento de "
+         "poliamida BEGE, atuador de PPS MARROM ESCURO, contatos dourados "
+         "(o sufixo 55 e a versao de ouro). Substituiu o FH28-10S-0.5SH, que "
+         "tem 2,55 de altura contra o teto de 2,6 mm da sombra do display"),
     "LED_SMD:LED_0603_1608Metric":
         (1.60, 0.80, 0.75, 0.00, None, 0.30, 0.30, 1.00,
          "Kingbright APT1608SURCK, spec DSAD0926 rev V.22A (2023-04-08), "

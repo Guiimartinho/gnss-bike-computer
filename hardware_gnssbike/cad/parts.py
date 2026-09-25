@@ -402,10 +402,45 @@ add("U302", "TI TXU0204BQAR", [
     note="direcao FIXA: A1 e A2 vao de A para B; B3 e B4 vao de B para A. "
          "Pad termico ao GND, recomendado pela TI")
 
-add("E301", "TE L000670-01", [(1, "FEED", "passive", R), (2, "GND", "passive", B)],
-    confirmed=False, note="antena de chip L1/L5 soldada na borda de cima; "
-                          "14 x 10,75 x 1 mm (docs/14:146). Uma das duas "
-                          "opcoes, escolhida pelo JP301")
+# A antena de chip mudou de peca em 2026-09-24, e a nova resolve de vez o
+# problema que a antiga criava.
+#
+# A TE L000670-01 esta com estoque ZERO na LCSC, e exigia area sem cobre de
+# 40,5 x 14,5 mm EM TODAS AS CAMADAS - mais larga que esta placa inteira, que
+# tem 34 mm. Alem disso a curva de eficiencia da ficha dela desabava com
+# plano de terra curto: 62 % de eficiencia em L5 com 90 mm de terra, 43 % com
+# 70 e 29 % com 50, e L5 e a razao inteira de ter escolhido o MAX-F10S.
+#
+# A Unictron H2UJ4U1H2Q0100 pede 15,00 x 9,35 mm na face de cima e 15,00 x
+# 9,88 na de baixo, medidos da BORDA DA PLACA, e o recorte nao e simetrico em
+# relacao a ela: a antena ocupa 5,0 mm no meio, com 2,45 mm de recorte de um
+# lado e 7,55 do outro. Entre o recorte de cima e a borda fica uma faixa de
+# terra de 0,65 mm, interrompida no meio, onde os pads de terra se ligam.
+#
+# O que NAO melhorou: a ficha da 70 % de eficiencia tipica em L1 e em L5, mas
+# medidos numa placa de avaliacao de 80 x 40 mm. Esta placa tem 34 mm de
+# largura, menos que os 40 do plano de referencia, e antena de chip depende
+# forte do plano de terra. A ficha NAO traz curva de eficiencia contra
+# tamanho de terra, entao 70 % e teto otimista, nao previsao.
+#
+# Os pinos 1 e 2 sao terra E sintonia: vao ao plano por dois capacitores, e
+# nao direto. O 3 e o sinal, no centro geometrico da antena.
+add("E301", "Unictron H2UJ4U1H2Q0100", [
+    (1, "GND_T1", "passive", B), (2, "GND_T2", "passive", B),
+    (3, "FEED", "passive", R),
+], confirmed=True, lcsc="C6569550",
+    note="antena de chip ceramica L1+L5, 5,0 x 3,0 x 0,5 mm, na borda da "
+         "placa. Substitui a TE L000670-01 (estoque zero e recorte de "
+         "40,5 x 14,5). Uma das duas opcoes, escolhida pelo JP301")
+
+# Os dois capacitores de sintonia dos pinos de terra da antena: posicoes [8]
+# e [9] do circuito da pagina 11 da ficha. Os valores sao os que a Unictron
+# recomenda, e a propria ficha avisa que eles centram a antena na placa de
+# avaliacao de 80 x 40 mm e VAO PRECISAR DE MUDANCA numa placa diferente.
+passive("C305", "2,7 pF", "sintonia do pino 1 da antena ao terra; valor de "
+                          "partida da ficha, a ajustar na bancada")
+passive("C306", "6,8 pF", "sintonia do pino 2 da antena ao terra; valor de "
+                          "partida da ficha, a ajustar na bancada")
 # The board carries BOTH ways of feeding the receiver, and a 0 ohm chooses.
 # The chip soldered on the edge is the shorter path and has no connector in
 # it; the u.FL lets an external element be tried without touching the board.
@@ -457,21 +492,44 @@ passive("FB301", "600 R @100 MHz", "ferrite do 1V8 junto do receptor; DCR de "
                                    "230 mOhm CONTRA o limite de 200 da ficha "
                                    "do receptor - defeito aberto",
         lcsc="C160977")
-passive("C301", "2,2 pF", "paralelo da rede em pi, valor de partida")
-passive("C302", "2,2 pF", "paralelo da rede em pi, valor de partida")
-passive("L301", "3,9 nH", "serie da rede em pi, valor de partida", lcsc="C98063")
+passive("C301", "1,5 pF", "shunt [1] da rede de casamento. O valor depende "
+                          "de QUAL antena for montada: 1,5 pF e o que a "
+                          "Unictron recomenda para a antena de chip; com "
+                          "o u.FL e uma antena externa de 50 ohm, nao se "
+                          "monta")
+passive("C302", "NP", "shunt [3] da rede de casamento: a Unictron manda "
+                      "NAO MONTAR. O pad fica para a bancada")
+# O elemento em serie MUDA DE TIPO conforme a antena. A Unictron pede um
+# CAPACITOR de 3,6 pF em [2]; o caminho do u.FL com antena externa de
+# 50 ohm pede um 0 ohm ou um indutor. O footprint e 0402 nos dois casos,
+# entao a placa nao muda - so o que se solda nela.
+passive("L301", "3,6 pF", "serie [2] da rede de casamento, com a antena de "
+                          "chip. Com o u.FL, 0 ohm. A serie de indutores "
+                          "de RF 2,2 a 5,6 nH esta toda na LCSC para "
+                          "ajuste de bancada", lcsc="C98063")
 passive("C303", "10 uF")
 passive("C304", "100 nF")
 
 # ---------------------------------------------------------------- folha 4
 # The 10-way display FPC order is the one 03-netlist.md uses, contact by
 # contact, and it is the same for the JDI and for the Sharp.
-add("J401", "Hirose FH28-10S-0.5SH", [
+# O conector do display passou do FH28 para o FH12 em 2026-09-24, e a altura
+# foi a razao: a sombra sob o display tem 2,6 mm de teto, o FH28 tem 2,55 de
+# altura fechado (folga de 0,05, que na pratica nao passa) e o FH12 tem
+# 2,00 +-0,2 (folga de 0,40 no pior caso da tolerancia). De quebra o FH12 e
+# 0,8 mm mais estreito, o land pattern economiza 2,4 mm de profundidade, tem
+# mais estoque na LCSC (8.351 contra 2.487) e e o footprint que o KiCad ja
+# traz - com modelo STEP, que o FH28 nao tem em lugar nenhum.
+#
+# Os dois sao BOTTOM CONTACT: a cauda do display entra com as trilhas
+# viradas para a placa. E os dois sao flip-lock rotativo - o atuador gira
+# para cima, entao o FPC tem de ser travado ANTES de fechar a caixa.
+add("J401", "Hirose FH12-10S-0.5SH(55)", [
     (1, "SCLK", "input", R), (2, "SI", "input", R), (3, "SCS", "input", R),
     (4, "EXTCOMIN", "input", R), (5, "DISP", "input", R), (6, "VDDA", "power_in", R),
     (7, "VDD", "power_in", R), (8, "EXTMODE", "input", R), (9, "VSS", "power_in", R),
     (10, "VSSA", "power_in", R),
-], confirmed=True, note="FPC de sinal do painel, 10 vias; ordem de 03-netlist.md")
+], confirmed=True, lcsc="C506791", note="FPC de sinal do painel, 10 vias; ordem de 03-netlist.md")
 
 # LPM027M128C specification ver.02: the signal FPC in 1.4.1 (page 4) and the
 # backlight FPC in 1.4.2 (page 5). The light is four white LEDs in parallel
