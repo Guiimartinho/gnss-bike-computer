@@ -719,11 +719,47 @@ def modelo_de_verdade(base: str) -> str | None:
     return None
 
 
+# Modelos de fabricante que vem girados em relacao ao referencial do
+# footprint, com quantos graus em Z.
+#
+# O STEP do receptaculo USB-C que a LCSC publica esta 180 graus fora: com
+# ele como vem, os rabichos de solda caem 1,45 mm ALEM das ilhas, do lado
+# oposto, e a boca do conector aponta para o miolo da placa. Girado, o corpo
+# vai de y -5,30 a +2,60 no referencial do footprint, cobre as ilhas dos 16
+# contatos (-4,05), os quatro pinos da blindagem (-3,13 e +1,05) e os dois
+# furos de localizacao (-2,60), e a boca fica virada para a borda.
+#
+# Quem viu foi o dono, no desenho 3D, e disse duas vezes - "o STEP esta 180
+# graus invertido" e depois "a boca do usb esta apontando para dentro da
+# PCB". Verificacao nenhuma daqui pegava: o 2D so tem as ilhas, que estao
+# certas, e o DRC nao le modelo 3D.
+#
+# O alvo nao e um palpite: o `F.Fab` do footprint do KiCad para esta peca -
+# `Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12` - desenha o corpo em
+# X -4,47..+4,47 e Y **-3,65..+3,65**, centrado na origem, com as 16 ilhas
+# de contato logo atras, em -4,04. E esse o lugar certo do corpo, e a boca
+# e a ponta +3,65.
+#
+# Cada peca aqui: graus em Z, e depois o deslocamento (x, y) em milimetros
+# no referencial do MODELO, aplicado depois do giro.
+MODELO_GIRADO = {
+    "USB_C_Receptacle_HRO_TYPE-C-31-M-12": (180, 0.0, -1.05),
+    # O JST ZH tem a mesma doenca: como vem, o corpo cai em X -5,97
+    # a +2,75 e uma das duas ilhas de fixacao fica de fora. O F.Fab
+    # do footprint do KiCad poe o corpo em X -4,50..+4,50 e
+    # Y -2,00..+4,00; girado 180 graus o Y bate exatamente, e o X
+    # pede 1,61 mm de volta.
+    "JST_ZH_S4B-ZR-SM4A-TF_1x04-1MP_P1.50mm_Horizontal": (180, -1.61, 0.0),
+}
+
+
 def linha_de_modelo(rel: str) -> str:
+    base = rel.rsplit("/", 1)[-1].rsplit(".", 1)[0]
+    giro, ox, oy = MODELO_GIRADO.get(base, (0, 0.0, 0.0))
     return (TAB + '(model "${KIPRJMOD}/' + rel + '"' + NL +
-            TAB * 2 + "(offset (xyz 0 0 0))" + NL +
+            TAB * 2 + "(offset (xyz %g %g 0))" % (ox, oy) + NL +
             TAB * 2 + "(scale (xyz 1 1 1))" + NL +
-            TAB * 2 + "(rotate (xyz 0 0 0))" + NL +
+            TAB * 2 + "(rotate (xyz 0 0 %d))" % giro + NL +
             TAB + ")" + NL)
 
 

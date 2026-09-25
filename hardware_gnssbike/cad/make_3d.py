@@ -495,6 +495,10 @@ def caixas_das_pecas() -> tuple[np.ndarray, np.ndarray]:
         # altura, o numero velho, contra os 3,75 mm do JST ZH. O resultado e
         # uma peca que parece deslocada, torta ou alta demais. Quem tem STEP
         # e desenhado uma vez so, pelo KiCad.
+        #
+        # Isto vale tambem para o STEP que vem girado de fabrica: o
+        # `(rotate ...)` do footprint e aplicado pelo `kicad-cli` na
+        # exportacao, entao o corpo ja sai do GLB no lugar certo.
         if caminho_kicad.lower().endswith((".step", ".stp")):
             continue
         w, h, alt = FPS.CORPO_TODOS.get(nome, (0.0, 0.0, 0.0))

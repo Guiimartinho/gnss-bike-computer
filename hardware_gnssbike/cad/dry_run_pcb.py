@@ -119,18 +119,16 @@ REGRAS = [
      "hardware_gnssbike/04-pcb-e-caixa.md"),
     ("ME2", "altura dos componentes dentro da sombra da bateria e do display",
      "hardware_gnssbike/04-pcb-e-caixa.md#as-duas-sombras"),
-    ("ME4", "a boca de um conector de borda aponta para fora da placa, a no "
-            "maximo 1 mm da borda",
-     "medida por raio no STEP do fabricante; ninguem encaixa um cabo num "
-     "conector virado para dentro"),
+    ("ME4", "as ilhas de solda de uma peca ficam sob o corpo do modelo 3D "
+            "do fabricante",
+     "um rabicho de solda fica em cima da sua ilha: se o corpo nao as cobre, "
+     "o modelo esta fora de posicao ou fora de orientacao"),
 ]
 
-# Conectores que o cabo do usuario procura na borda: a peca, a distancia
-# maxima entre a boca e a borda, e a altura em que o raio atravessa o corpo
-# (meia altura da cavidade, onde ela e mais larga).
-BOCAS = {
-    "J101": (1.0, 2.20),
-}
+# As pecas cujo corpo vem de um modelo do fabricante: sao as unicas em que
+# o modelo pode estar girado em relacao ao footprint, porque as outras tem o
+# corpo desenhado aqui a partir da cota da ficha.
+CORPOS_CONFERIDOS = ("J101", "J103", "J402")
 
 # What each rail carries, and where the number comes from. Without this a
 # trace width is a guess.
@@ -372,12 +370,21 @@ def largura_ipc(corrente: float, subida: float = 10.0,
     return area_mils2 / esp_mils * 0.0254
 
 
-def _boca_do_conector(ref: str, altura: float, pecas: dict):
-    """Onde abre a cavidade de um conector, medida no modelo 3D.
+def _ilhas_sob_o_corpo(ref: str, pecas: dict):
+    """As ilhas de solda desta peca ficam sob o corpo do modelo 3D?
 
-    Devolve `(aponta_para_fora, distancia_da_boca_a_borda, vao_da_cavidade)`,
-    ou None se nao houver como medir. Tudo em coordenadas locais da placa,
-    como o resto deste arquivo.
+    Devolve `(n_fora, total, caixa_do_corpo)`, ou None se nao houver corpo.
+
+    Esta pergunta e feita porque a outra - "de que lado fica a boca?" - nao
+    tem resposta confiavel por geometria: tentei responde-la com um raio
+    pela cavidade e o raio mentiu, porque a traseira de um receptaculo USB-C
+    tambem e oca. Esta aqui nao depende de palpite nenhum. Um rabicho de
+    solda fica em cima da sua ilha; se o corpo do modelo nao cobre as ilhas
+    da peca, o modelo esta fora de posicao ou fora de orientacao, e ponto.
+
+    Foi exatamente a assinatura do defeito do J101: com o STEP da LCSC como
+    ele vem, as 16 ilhas de contato caiam 1,45 mm ALEM do corpo, do lado
+    oposto, e a boca do conector apontava para o miolo da placa.
     """
     import numpy as np
 
@@ -387,59 +394,29 @@ def _boca_do_conector(ref: str, altura: float, pecas: dict):
     if ref not in pecas:
         return None
     pe = pecas[ref]
-    ang = int(round(pe["ang"])) % 180
+    ilhas = [(q["pad"], q["x"], q["y"]) for q in pe.get("pads", []) if q["smd"]]
     glb = M3._glb_atual()
     if glb is None:
         return None
     j, bina = M3.ler_glb(glb)
     tris, _cor = M3.triangulos(j, bina)
-    # glTF em metros -> placa em milimetros, e depois para o canto de origem
-    P = np.stack([tris[..., 0] * 1000.0 - MP.ORIGEM[0],
-                  -tris[..., 1] * 1000.0 - MP.ORIGEM[1],
-                  tris[..., 2] * 1000.0], axis=-1)
-    cx, cy = (pe["caixa"][0] + pe["caixa"][2]) / 2, (pe["caixa"][1] + pe["caixa"][3]) / 2
-    perto = ((abs(P[..., 0].mean(1) - cx) < 7.0)
-             & (abs(P[..., 1].mean(1) - cy) < 7.0)
-             & (P[..., 2].mean(1) > 0.9))
-    T = P[perto]
-    if len(T) < 100:
+    X = tris[..., 0] * 1000.0 - MP.ORIGEM[0]
+    Y = -tris[..., 1] * 1000.0 - MP.ORIGEM[1]
+    H = tris[..., 2] * 1000.0
+    x0, y0, x1, y1 = pe["caixa"]
+    # so o que esta INTEIRO dentro da envoltoria da peca mais 1 mm: assim a
+    # caixa medida e a do corpo dela, e nao a do vizinho
+    c = ((X.min(axis=1) > x0 - 1.0) & (X.max(axis=1) < x1 + 1.0)
+         & (Y.min(axis=1) > y0 - 1.0) & (Y.max(axis=1) < y1 + 1.0)
+         & (H.min(axis=1) > 0.95))
+    if not c.any():
         return None
-    # eixo do conector: Y quando a peca esta a 0 ou 180, X nos outros dois
-    eixo, outro = (1, 0) if ang == 0 else (0, 1)
-    # o raio anda ao longo de `eixo`, passando pelo centro em `outro`, na
-    # altura pedida. A interseccao e resolvida no plano (outro, altura).
-    u0 = cx if eixo == 1 else cy
-    p = np.stack([T[:, 0, outro], T[:, 0, 2], T[:, 0, eixo]], axis=-1)
-    q = np.stack([T[:, 1, outro], T[:, 1, 2], T[:, 1, eixo]], axis=-1)
-    r = np.stack([T[:, 2, outro], T[:, 2, 2], T[:, 2, eixo]], axis=-1)
-    d = (q[:, 1] - r[:, 1]) * (p[:, 0] - r[:, 0]) + (r[:, 0] - q[:, 0]) * (p[:, 1] - r[:, 1])
-    d = np.where(np.abs(d) < 1e-12, 1e-12, d)
-    w0 = ((q[:, 1] - r[:, 1]) * (u0 - r[:, 0]) + (r[:, 0] - q[:, 0]) * (altura - r[:, 1])) / d
-    w1 = ((r[:, 1] - p[:, 1]) * (u0 - r[:, 0]) + (p[:, 0] - r[:, 0]) * (altura - r[:, 1])) / d
-    w2 = 1.0 - w0 - w1
-    bate = (w0 >= 0) & (w1 >= 0) & (w2 >= 0)
-    if not bate.any():
-        return None
-    brutos = sorted((w0 * p[:, 2] + w1 * q[:, 2] + w2 * r[:, 2])[bate])
-    faces: list[float] = []
-    for v in brutos:
-        if not faces or v - faces[-1] > 0.15:
-            faces.append(float(v))
-    if len(faces) < 2:
-        return None
-    # o maior vao entre duas faces seguidas e a cavidade
-    k = max(range(len(faces) - 1), key=lambda i: faces[i + 1] - faces[i])
-    a, b = faces[k], faces[k + 1]
-    vao = b - a
-    corpo0, corpo1 = float(T[..., eixo].min()), float(T[..., eixo].max())
-    # a boca e a ponta da cavidade que coincide com o extremo do corpo; a
-    # outra e a lingueta ou o fundo, que sao internos
-    boca_no_alto = abs(b - corpo1) < abs(a - corpo0)
-    limite_alto = M.H if eixo == 1 else M.W
-    # de que borda o conector esta perto
-    perto_do_alto = (limite_alto - corpo1) < corpo0
-    dist = (limite_alto - b) if boca_no_alto else a
-    return (boca_no_alto == perto_do_alto, dist, vao)
+    caixa = (float(X[c].min()), float(Y[c].min()),
+             float(X[c].max()), float(Y[c].max()))
+    fora = [nome for nome, px, py in ilhas
+            if not (caixa[0] - 0.05 <= px <= caixa[2] + 0.05
+                    and caixa[1] - 0.05 <= py <= caixa[3] + 0.05)]
+    return (fora, len(ilhas), caixa)
 
 
 def main() -> int:
@@ -1010,23 +987,20 @@ def main() -> int:
     # so reencontra material milimetros adiante, que e o vao onde o plugue
     # entra; do lado de tras bate em material logo na entrada. O lado com o
     # vao tem de ser o que olha para a borda.
-    for ref, (folga_max, altura_raio) in sorted(BOCAS.items()):
-        achado = _boca_do_conector(ref, altura_raio, pecas)
+    for ref in sorted(CORPOS_CONFERIDOS):
+        achado = _ilhas_sob_o_corpo(ref, pecas)
         if achado is None:
-            falhou("ME4", f"{ref}: nao consegui medir a boca no modelo 3D")
+            falhou("ME4", f"{ref}: nao achei o corpo 3D para conferir")
             continue
-        para_fora, dist, vao = achado
-        if not para_fora:
-            falhou("ME4", f"{ref}: a boca aponta para DENTRO da placa "
-                          f"(cavidade de {vao:.2f} mm virada para o miolo); "
-                          f"gire o footprint 180 graus")
-        elif dist > folga_max:
-            falhou("ME4", f"{ref}: a boca aponta para fora mas esta {dist:.2f} "
-                          f"mm da borda, mais que os {folga_max:.1f} mm que o "
-                          f"plugue perdoa")
+        fora, total, caixa = achado
+        if fora:
+            falhou("ME4", f"{ref}: {len(fora)} das {total} ilhas de solda "
+                          f"ficam FORA do corpo do modelo 3D "
+                          f"({' '.join(sorted(set(fora))[:6])}); o modelo esta "
+                          f"deslocado ou girado em relacao ao footprint")
         else:
-            ok.append(f"ME4: a boca de {ref} aponta para fora, a {dist:.2f} mm "
-                      f"da borda, com {vao:.2f} mm de cavidade")
+            ok.append(f"ME4: as {total} ilhas de {ref} ficam sob o corpo do "
+                      f"modelo do fabricante")
 
     # -- resultado -------------------------------------------------------------
     for linha in ok:

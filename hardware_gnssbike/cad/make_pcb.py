@@ -141,25 +141,20 @@ PASSANTE = passantes()
 _W, _H = M.W, M.H
 
 BORDA_FIXA: dict[str, tuple[float, float, int]] = {
-    # A boca do USB-C aponta para +Y no referencial deste footprint, e o
-    # angulo aqui e 0 por causa disso. A peca fica na ESQUERDA da borda de
-    # baixo; o modulo fica na direita, e os dois sao o unico par que cabe
-    # ali.
+    # A peca fica na ESQUERDA da borda de baixo; o modulo fica na direita, e
+    # os dois sao o unico par que cabe ali.
     #
-    # Como se sabe de que lado e a boca, sem adivinhar: um raio lancado ao
-    # longo de Y pelo eixo do conector, na meia altura da blindagem, atravessa
-    # o STEP do fabricante. Do lado da boca ele entra na parede externa e so
-    # volta a encontrar material 3,3 mm adiante - a cavidade onde o plugue
-    # entra. Do lado de tras ele bate em plastico macico logo na entrada.
-    # Medido assim, a cavidade abre em y +4,70 local; com a peca a 0 na borda
-    # de baixo (y cresce para a borda), a boca cai a 0,64 mm dela.
+    # O que fixa o y e a BOCA, nao o centro: com o modelo do fabricante
+    # girado 180 graus (footprints.MODELO_GIRADO), o corpo vai de -5,30 a
+    # +2,60 no referencial do footprint, de modo que a boca esta 2,60 mm a
+    # frente da origem. Para ela ficar a 0,64 mm da borda de baixo, a origem
+    # cai em _H - 3,24. Com a origem em _H - 5,34, que e onde esteve, a boca
+    # ficava 2,74 mm DENTRO da placa e o sobremolde do plugue bateria no
+    # canto antes de o conector assentar.
     #
-    # Isto esteve 180 graus errado durante o dia 2026-09-25, e a culpa foi de
-    # uma conta feita de cabeca: as ilhas sao quase simetricas em y, entao o
-    # 2D aceita os dois sentidos, e o corpo unico que havia no desenho era um
-    # paralelepipedo liso - sem boca nenhuma para conferir. O dono disse duas
-    # vezes que a boca apontava para dentro e estava certo nas duas.
-    "J101": (6.2, _H - 5.34, 0),
+    # A ilha mais proxima da borda passa a ser a da blindagem, a 1,14 mm
+    # dela, e os 16 contatos ficam em _H - 7,29, bem dentro.
+    "J101": (6.2, _H - 4.29, 0),
     # The three keys in a row at 10.2 mm of pitch: the courtyard is 10.0 wide
     # and two of them at 10.0 touch, which the placer refuses and is right to
     # refuse. The row is NOT on the bottom edge - on a board this narrow the

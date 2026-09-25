@@ -85,7 +85,7 @@ trilhas de uma colocação que pode já ter mudado.
 | GN2 | costura de vias de terra na borda a cada 5 mm no máximo | λ/10 a 2,44 GHz em FR-4 são 6,1 mm |
 | ME1 | a placa **cabe** dentro da caixa. Não é o que define o tamanho dela — placa e caixa são independentes —, é só a conferência de que uma entra na outra | [04](04-pcb-e-caixa.md) |
 | ME2 | altura dos componentes dentro da sombra da bateria e do display | [04](04-pcb-e-caixa.md#as-duas-sombras-display-e-bateria) |
-| ME4 | a **boca** de um conector de borda aponta para fora da placa, a no máximo 1 mm dela | medida por raio no STEP do fabricante; ninguém encaixa um cabo num conector virado para dentro |
+| ME4 | as ilhas de solda de uma peça ficam **sob o corpo** do modelo 3D do fabricante | um rabicho de solda fica em cima da sua ilha: se o corpo não as cobre, o modelo está fora de posição ou fora de orientação |
 
 > [!CAUTION]
 > **Este documento já errou duas vezes sobre a mesma ficha, nos dois
@@ -194,7 +194,7 @@ e 450 vias:
 | ME1 | a placa de **34 × 90** deixa 12,0 mm de cada lado e 5,0 mm em cima e embaixo | cumprida |
 | ME2 | nenhuma peça passa do teto da sombra em que está; **3 peças sem altura conhecida** | cumprida |
 | ME3 | os **18** encapsulamentos com cota de ficha cabem no footprint desenhado para eles e batem com o contorno | cumprida |
-| ME4 | a boca do `J101` aponta **para fora**, a **0,64 mm** da borda, com 3,30 mm de cavidade | cumprida |
+| ME4 | as ilhas de `J101` (16), `J103` (6) e `J402` (7) ficam sob o corpo do modelo do fabricante | cumprida |
 | OP1 | nenhuma peça de altura conhecida a menos de duas alturas do sensor de luz | cumprida |
 | **US1** | **o par `USB_DP`/`USB_DM` não está roteado** | **violada** |
 
@@ -215,23 +215,34 @@ e 450 vias:
 > o roteador automático não o fecha.
 
 > [!WARNING]
-> **A regra `ME4` nasceu de um defeito que ficou um dia inteiro na placa, e
-> que verificação nenhuma daqui pegava.** O `J101` esteve a 180°, com a boca
-> do USB-C apontando **10,04 mm para dentro** da placa. As ilhas de um
-> receptáculo USB-C são quase simétricas em y, então o 2D aceita os dois
-> sentidos e o DRC não tem opinião; a única coisa assimétrica é o corpo, e o
-> corpo que havia no desenho 3D era um paralelepípedo liso, sem boca nenhuma
-> para conferir. Quem viu foi o dono, duas vezes — e na primeira a correção
-> saiu para o lado errado, porque a rotação foi deduzida de cabeça em vez de
-> medida.
+> **A regra `ME4` nasceu de dois modelos de fabricante que vêm girados, e de
+> três tentativas erradas de consertar o primeiro.** O STEP do receptáculo
+> USB-C que a LCSC publica está 180° fora do referencial do footprint: com
+> ele como vem, as 16 ilhas de contato caem 1,45 mm **além** do corpo, do
+> lado oposto, e a boca do conector aponta para o miolo da placa. O do JST
+> ZH tem o mesmo problema, mais 1,61 mm de deslocamento em X.
 >
-> A `ME4` não deduz. Ela lança um raio ao longo do eixo do conector, na meia
-> altura da cavidade, contra o STEP do fabricante: do lado da boca o raio
-> entra na parede externa e só reencontra material 3,30 mm adiante, que é o
-> vão onde o plugue entra; do lado de trás bate em material logo na entrada.
-> A ponta desse vão que coincide com o extremo do corpo é a boca. A regra foi
-> conferida contra o defeito que existe para pegar: com o `J101` de volta a
-> 180° ela acusa a boca virada para dentro e a rodada falha.
+> Verificação nenhuma daqui pegava. O 2D só tem as ilhas, que estão certas;
+> o DRC não lê modelo 3D; e as ilhas de um receptáculo USB-C são quase
+> simétricas em y, de modo que a peça "cabe" nos dois sentidos. Quem viu foi
+> o dono, no desenho 3D, e disse três vezes. Nas duas primeiras eu girei o
+> **footprint**, que é o que estava certo, e piorei.
+>
+> A primeira versão da regra perguntava de que lado ficava a **boca**,
+> lançando um raio pela cavidade. Não serve: a traseira de um receptáculo
+> USB-C também é oca, e o raio respondeu o que eu queria ouvir. A regra que
+> ficou não tem palpite nenhum — um rabicho de solda fica em cima da sua
+> ilha, então o corpo do modelo tem de cobrir as ilhas da peça. É a
+> assinatura exata do defeito, e foi ela que achou o do `J103`, que ninguém
+> tinha visto.
+>
+> O alvo do conserto também não é palpite: o `F.Fab` do footprint do KiCad
+> desenha o corpo do USB-C em X −4,47..+4,47 e **Y −3,65..+3,65**, e o do
+> JST em X −4,50..+4,50 e Y −2,00..+4,00. Girados e deslocados
+> (`footprints.MODELO_GIRADO`), os dois modelos caem exatamente aí. Com
+> isso a boca do USB-C ficou a **0,64 mm** da borda: antes estava 2,74 mm
+> para dentro, e o sobremolde do plugue bateria no canto da placa antes de
+> o conector assentar.
 
 ## Resultado do roteamento
 
