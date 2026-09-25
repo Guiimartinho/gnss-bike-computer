@@ -48,6 +48,8 @@ vistas. A cadeia inteira e os comandos estão em
 | `gnssbike-montagem.pdf` | o desenho de montagem, 144 peças com linha de chamada |
 | `gnssbike-3d-frente.png`, `-tras.png`, `-angulo.png` | a placa vista de cima, de baixo e em ângulo |
 | `gnssbike-3d-montagem.png` | a pilha: display, placa e célula |
+| [`docs/img/manual-de-montagem.svg`](../docs/img/manual-de-montagem.svg) | o **manual de montagem**: as peças em escala e os oito passos |
+| [`docs/img/chicote-solar.svg`](../docs/img/chicote-solar.svg) | como ligar os seis módulos solares na placa |
 
 ## Índice
 
@@ -262,6 +264,7 @@ python tools/docs/links_check.py       # links e âncoras
 python tools/fw/board_check.py         # o mapa de pinos do firmware
 python hardware_gnssbike/net_check.py  # a lista de nós contra o devicetree
 python tools/docs/solar_harness_drawing.py  # o desenho do chicote solar
+python tools/docs/assembly_manual.py        # o manual de montagem
 ```
 
 O `net_check.py` é deste esquemático: lê a [lista de nós](03-netlist.md) e
