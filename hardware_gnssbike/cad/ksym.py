@@ -152,11 +152,77 @@ def sem_propriedades(blk: str) -> str:
     return blk
 
 
-def checar(ref: str, numeros) -> tuple[set[str], set[str]]:
-    """(pinos que so o KiCad tem, pinos que so nos temos)."""
-    k = set(pinos(bloco(ref)))
-    n = set(str(x) for x in numeros)
-    return (k - n, n - k)
+def nomes(blk: str) -> dict[str, str]:
+    """Numero do pino -> nome do pino."""
+    out: dict[str, str] = {}
+    for m in re.finditer(r'\(pin\s', blk):
+        p = _recorta(blk, m.start())
+        n = re.search(r'\(number\s+"([^"]+)"', p)
+        nm = re.search(r'\(name\s+"([^"]+)"', p)
+        if n and nm:
+            out[n.group(1)] = nm.group(1)
+    return out
+
+
+_PLACEHOLDER = re.compile(r'^(pin_?\d+|in|out|ext|~|\d+|[abk]|nc|k?a)$', re.I)
+
+
+def _generico(nome: str) -> bool:
+    """O nome do pino e enfeite de simbolo de classe, nao funcao de peca.
+
+    `Conn_01x06_Socket` chama os pinos de `Pin_1` a `Pin_6` e `Conn_Coaxial`
+    de `In` e `Ext`: sao simbolos de CLASSE, e neles o que liga o desenho a
+    peca e o numero. Ja num simbolo de PECA - o ADP5091, o MAX-M10S - o nome
+    e a funcao, e uma diferenca ali significa que uma das duas fontes esta
+    errada sobre o que o pino faz.
+    """
+    return bool(_PLACEHOLDER.match(nome.strip()))
+
+
+def _normal(s: str) -> str:
+    """O nome de um pino sem as diferencas que sao so de escrita.
+
+    A barra do KiCad e o sufixo `_N` deste projeto dizem a mesma coisa, e um
+    nome com barra - `LSIN1/VINLDO1` - traz duas funcoes do mesmo pino.
+    """
+    s = s.strip().upper()
+    s = s.replace("~{", "").replace("}", "")
+    s = s.split("/")[0]
+    for suf in ("_N", "_L", "#"):
+        if s.endswith(suf):
+            s = s[:-len(suf)]
+    return s.replace("_", "").replace("-", "")
+
+
+def checar(ref: str, peca) -> tuple[set[str], set[str], list[tuple[str, str, str]]]:
+    """(so no KiCad, so no nosso, [(pino, nosso nome, nome do KiCad)]).
+
+    Conferir so os NUMEROS nao basta, e isso custou caro: o simbolo
+    `Battery_Management:ADP5091` tem os mesmos 25 numeros que a nossa peca e
+    **seis deles com outro sinal** - duas permutacoes de tres, MPPT/VIN/AGND
+    e SETHYST/SETSD/TERM. A conferencia por numero passava, e o esquematico
+    sairia com o fio do MPPT no pino do terra.
+
+    Um numero igual com nome diferente e um erro de projeto ou um erro da
+    biblioteca, e nos dois casos quem decide e a ficha - nunca este arquivo.
+    """
+    b = bloco(ref)
+    k = set(pinos(b))
+    kn = nomes(b)
+    nossos = {q.number: q.name for q in peca.pins}
+    n = set(nossos)
+    dif = []
+    for num in sorted(k & n):
+        deles = kn.get(num, "")
+        if _generico(deles):
+            # o simbolo e de classe, nao de peca: o nome do pino e enfeite e
+            # o que liga o desenho a peca e o NUMERO
+            continue
+        a, b2 = _normal(nossos[num]), _normal(deles)
+        if a == b2 or a.startswith(b2) or b2.startswith(a):
+            continue
+        dif.append((num, nossos[num], deles))
+    return (k - n, n - k, dif)
 
 
 def main() -> int:
@@ -172,13 +238,17 @@ def main() -> int:
             print(f"  ! {our} nao e peca deste projeto")
             ruim += 1
             continue
-        so_k, so_n = checar(ksimbolo, [q.number for q in P.PARTS[our].pins])
-        if so_k or so_n:
+        so_k, so_n, dif = checar(ksimbolo, P.PARTS[our])
+        aceitos = S.ALIAS.get(our, set())
+        dif = [d for d in dif if d[0] not in aceitos]
+        if so_k or so_n or dif:
             print(f"  FALHA {our} ({ksimbolo})")
             if so_k:
                 print(f"      so no KiCad: {sorted(so_k)}")
             if so_n:
                 print(f"      so no nosso: {sorted(so_n)}")
+            for num, a, b2 in dif:
+                print(f"      pino {num}: nosso diz {a}, o KiCad diz {b2}")
             ruim += 1
         else:
             b = bloco(ksimbolo)

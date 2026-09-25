@@ -8663,6 +8663,7 @@
 		(uuid "45d8e94f-155b-406c-98b5-a8dc2b802a24")
 	)
 	(pad "3" connect circle
+		(net 57 "MOD_RESET")
 		(at 0 0.635)
 		(size 0.7874 0.7874)
 		(layers "F.Cu" "F.Mask")
@@ -8683,7 +8684,6 @@
 		(uuid "356bdc74-443f-47c5-8ce8-a3ed2c9255ee")
 	)
 	(pad "6" connect circle
-		(net 57 "MOD_RESET")
 		(at 1.27 -0.635)
 		(size 0.7874 0.7874)
 		(layers "F.Cu" "F.Mask")

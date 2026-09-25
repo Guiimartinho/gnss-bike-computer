@@ -21,6 +21,19 @@ from __future__ import annotations
 # peca -> "Biblioteca:Simbolo" da biblioteca oficial do KiCad
 KICAD: dict[str, str] = {}
 
+# Pinos em que o nome do nosso e o do KiCad diferem DE PROPOSITO, aceitos um
+# a um. Nao e para acomodar divergencia de ficha - e para o caso em que os
+# dois nomes dizem a mesma coisa e a normalizacao nao alcanca.
+ALIAS: dict[str, set[str]] = {
+    # Os quatro contatos de dados do USB-C: a ficha os chama D+ e D-, e este
+    # projeto precisou de nome unico por contato porque quatro pinos nao
+    # podem ter o mesmo nome na nossa estrutura. Mesmo sinal.
+    "J101": {"A6", "B6", "A7", "B7", "S1"},
+    # V_IO e VCC_IO sao o mesmo pino 7 do receptor: a ficha do MAX-F10S
+    # escreve V_IO e a do MAX-M10S escreve VCC_IO. Foi conferido nas duas.
+    "U301": {"7"},
+}
+
 
 def _p(refs, simbolo: str) -> None:
     for r in ([refs] if isinstance(refs, str) else refs):
@@ -30,7 +43,25 @@ def _p(refs, simbolo: str) -> None:
 # ---------------------------------------------------------------- exatos
 # O simbolo do KiCad foi desenhado para este numero de encomenda: os 18
 # pinos, os 18 nomes e o encapsulamento LCC-18 sao os do nosso receptor.
+# O ADP5091 SAIU daqui em 2026-09-25, e o motivo e serio: o simbolo do
+# KiCad e a leitura que este projeto fez da ficha DISCORDAM em seis pinos,
+# em duas permutacoes de tres -
+#
+#     pino 2  nos SETHYST   KiCad SETSD
+#     pino 4  nos SETSD     KiCad TERM
+#     pino 6  nos TERM      KiCad SETHYST
+#     pino 7  nos MPPT      KiCad AGND
+#     pino 9  nos VIN       KiCad MPPT
+#     pino 10 nos AGND      KiCad VIN
+#
+# Os NUMEROS batem, entao a conferencia antiga - que so comparava numeros -
+# passava, e o esquematico sairia com o fio do MPPT no pino do terra. Foi
+# esse curto que apareceu no netlist e levou a este achado.
+#
+# Uma das duas fontes esta errada, e isso vai para a placa: enquanto a ficha
+# nao responder, nem o simbolo entra nem a nossa pinagem e dada por boa.
 _p("U301", "RF_GPS:MAX-M10S")
+_p("J101", "Connector:USB_C_Receptacle_USB2.0_16P")
 
 # ------------------------------------------------------------ conectores
 # Coaxial: o circulo com o ponto no meio, que e como se desenha desde sempre.
@@ -41,6 +72,8 @@ _p("J302", "Connector:Conn_Coaxial")
 # de contato diz isso melhor que um retangulo vazio.
 _p("J102", "Connector:Conn_01x06_Socket")
 _p("J103", "Connector:Conn_01x04_Socket")
+_p("J401", "Connector:Conn_01x10_Socket")
+_p("J402", "Connector:Conn_01x05_Socket")
 
 # ------------------------------------------------------------- discretos
 _p(["SW601", "SW602", "SW603"], "Switch:SW_Push")

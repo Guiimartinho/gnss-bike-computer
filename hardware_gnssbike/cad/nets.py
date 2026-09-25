@@ -334,7 +334,7 @@ SEM_LIGACAO: dict[str, str] = {
     "U503 OCSB, OSDO": "a Bosch manda deixar abertos com a interface OIS "
         "desligada",
     "J101 SBU1, SBU2": "as duas linhas laterais do USB-C, sem uso em USB 2.0",
-    "J201 NC3": "o padrao TC2030 nao usa o pino 3",
+    "J201 SWO": "o pino 6 do TC2030 e o SWO, saida de trace do alvo. A sonda nunca o aciona, entao deixa-lo aberto nao quebra nada; leva-lo a um pad de trace do modulo daria printf por ITM no bring-up, e falta descobrir qual pad do ME54BS13 expoe o SWO",
     "D102 NC1 a NC4": "a TI os reserva para roteamento reto, nao sao pinos",
 }
 

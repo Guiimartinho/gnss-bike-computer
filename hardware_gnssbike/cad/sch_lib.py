@@ -316,6 +316,22 @@ class Part:
         # passa de 26 segundos para mais de oito minutos sem terminar.
         return ksym.caixa(self._k_bloco())
 
+    def avanco_dos_pinos(self) -> tuple[float, float]:
+        """Quanto os pinos passam da caixa, a esquerda e a direita.
+
+        Nos simbolos deste projeto e PIN_LEN dos dois lados. Nos da
+        biblioteca do KiCad depende: num conector com todos os pinos numa
+        borda o avanco e grande de um lado e zero do outro, e e isso que a
+        colocacao precisa saber para nao encostar o vizinho nos pinos.
+        """
+        if not self.kicad:
+            return (PIN_LEN, PIN_LEN)
+        import ksym
+        b = self._k_bloco()
+        x0, _y0, x1, _y1 = ksym.caixa(b)
+        px = [p[0] for p in ksym.pinos(b).values()] or [0.0]
+        return (max(0.0, x0 - min(px)), max(0.0, max(px) - x1))
+
     def desloca_centro(self) -> tuple[float, float]:
         """Do ponto onde a peca esta ate o centro da caixa dela, na folha."""
         if not self.kicad:

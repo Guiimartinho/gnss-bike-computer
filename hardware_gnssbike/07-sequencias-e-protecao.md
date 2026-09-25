@@ -217,7 +217,7 @@ não deixa o ciclista sem saída.
 
 ```mermaid
 flowchart LR
-    TC["Tag-Connect pino 6<br/>MOD_RESET, pad G2"] --> NRST["nRESET do nRF54LM20A"]
+    TC["Tag-Connect pino 3<br/>MOD_RESET, pad G2"] --> NRST["nRESET do nRF54LM20A"]
     WDT["task_wdt estourou<br/>sys_reboot(COLD)"] --> NRST
     LP["tecla central por mais de 10 s<br/>LPRESETCONFIG do nPM1300"] --> RAILS["trilhos do PMIC"]
     RAILS --> NRST
@@ -229,7 +229,7 @@ flowchart LR
 
 | Fonte | O que ela derruba | O que o firmware vê | Conferido em |
 |---|---|---|---|
-| Reset do Tag-Connect (pino 6 → `MOD_RESET`, pad G2) | só o MCU; os trilhos continuam | `RESET_PIN` | [03](03-netlist.md#dedicados-do-módulo) e `crash_recovery.c:185` |
+| Reset do Tag-Connect (pino **3** → `MOD_RESET`, pad G2) | só o MCU; os trilhos continuam | `RESET_PIN` | [03](03-netlist.md#dedicados-do-módulo) e `crash_recovery.c:185` |
 | `sys_reboot(SYS_REBOOT_COLD)` do `task_wdt` | só o MCU | `RESET_SOFTWARE`, ou `RESET_WATCHDOG` se o WDT de hardware chegou antes | [`app_svc.c:55`](../zephyr_app/src/app/app_svc.c) |
 | Erro fatal do kernel | só o MCU | `RESET_SOFTWARE` ou `RESET_CPU_LOCKUP` | `crash_recovery.c:191-196` |
 | `LPRESETCONFIG` do nPM1300 (toque longo) | **os trilhos**, e com eles o MCU | a conferir: ver abaixo | ficha do nPM1300 |

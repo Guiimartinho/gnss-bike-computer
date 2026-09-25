@@ -60,7 +60,7 @@ flowchart LR
 |---|---|---|
 | `J101` USB-C | **padrão da indústria**: USB Type-C, receptáculo de 16 contatos (USB 2.0) | a norma define os sinais; o desenho da Molex dá o número do pad no footprint |
 | `J102` bateria | **escolha deste projeto** — não existe padrão para isto | o fabricante do pack, antes de fechar o pedido |
-| `J201` depuração | **a conferir**: o arranjo abaixo é o Cortex de 6 pinos que o Tag-Connect publica, mas o desenho do cabo comprado **não foi lido** e há variante com `nRESET` no 3 e `SWO` no 6 | o desenho do **TC2030-CTX-NL** ([19](../docs/19-lista-de-compras.md#placas-de-avaliação-e-ferramentas)) |
+| `J201` depuração | **conferido em 2026-09-25** na ficha `TC2030-CTX_1.pdf` da Tag-Connect: 1 `VCC`, 2 `SWDIO`, 3 `nRESET`, 4 `SWCLK`, 5 `GND`, 6 `SWO`. O projeto tinha o reset no 6 e foi corrigido | ficha oficial da Tag-Connect |
 | `J401` display | **ficha do fabricante**, e a mesma ordem nas duas telas | fichas JDI LPM027M128B Ver.01 e Sharp LS027B7DH01A (LD-28305A) |
 | Conector da luz do JDI | **falta tudo**: não se sabe sequer se ele existe como conector separado ou se o C traz um FPC maior | ficha do **LPM027M128C**, ou uma amostra |
 | `JP401` tensão do display | **escolha deste projeto** | este documento |
@@ -226,18 +226,36 @@ montada** ([05](05-materiais.md#folha-2--mcu)). O cabo é o
 Cortex de 10 vias do J-Link ([14](../docs/14-hardware-placa-nova.md#teste-e-bring-up),
 [19](../docs/19-lista-de-compras.md#placas-de-avaliação-e-ferramentas)).
 
-A pinagem abaixo é o **Cortex de 6 pinos que o Tag-Connect publica** — não
-é escolha deste projeto, mas também **não foi conferida contra o desenho do
-cabo comprado**, e ver a ressalva logo abaixo da tabela.
+A pinagem abaixo é a da ficha oficial **`TC2030-CTX_1.pdf`** da
+Tag-Connect, tabela *Connections*, conferida em 2026-09-25.
 
 | Contato | Sinal | Direção | Nota |
 |---|---|---|---|
-| 1 | `VTref` | saída | ao **`3V0`**; é o alvo informando à sonda em que tensão falar |
-| 2 | `SWDIO` | bidir | pad **5** do ME54BS13 |
-| 3 | `GND` | alim | — |
-| 4 | `SWDCLK` | entrada | pad **6** do ME54BS13 |
-| 5 | `GND` | alim | pode ser `NC`; aqui vai ao `GND`, como a [lista de nós](03-netlist.md#pinos-de-configuração-amarrados-em-cobre) já registra |
-| 6 | `nRESET` | entrada | pad **4** do ME54BS13; a sonda puxa para baixo |
+| 1 | `VCC` / `VTref` | saída | ao **`3V0`**; é o alvo informando à sonda em que tensão falar |
+| 2 | `SWDIO` / `TMS` | bidir | pad **5** do ME54BS13 |
+| 3 | **`nRESET`** | entrada | pad **4** do ME54BS13; a sonda puxa para baixo |
+| 4 | `SWCLK` / `TCK` | entrada | pad **6** do ME54BS13 |
+| 5 | `GND` | alim | também é o `GNDDetect` do lado da sonda |
+| 6 | `SWO` / `TDO` | saída | **sem ligação hoje.** É trace do alvo para a sonda; levá-lo a um pad do módulo daria `printf` por ITM no bring-up, e falta descobrir qual pad do ME54BS13 expõe o `SWO` |
+
+> [!WARNING]
+> **Esta tabela mudou em 2026-09-25, e a versão anterior era um erro de
+> placa.** Ela trazia `GND` no contato 3 e `nRESET` no 6 — o arranjo
+> `1 VCC, 2 SWDIO, 3 GND, 4 SWCLK, 5 GND, 6 SWO` é a numeração do
+> **cabeçalho Cortex de 10 vias, do lado da sonda**, e não a do footprint
+> de 6 pinos da placa. Quem mistura as duas chega exatamente ao que estava
+> escrito aqui.
+>
+> Fabricada assim, a placa amarraria o `nRESET` dreno aberto da sonda ao
+> **terra em cobre** e o alvo ficaria **travado em reset para sempre**. A
+> versão do `parts.py`, que punha o reset no contato 6, era menos grave e
+> ainda assim fatal para a depuração: o `nRESET` da sonda não acionaria
+> nada e o reset do micro ficaria pendurado numa **entrada** da sonda —
+> nada queima, e o depurador nunca reseta o alvo. Num nRF54LM20A que
+> reinicia pelo `task_wdt` ou reconfigura os pinos de SWD, isso tira a
+> saída de emergência e sobra só o apagamento total por CTRL-AP.
+>
+> O aviso que estava aqui previa exatamente esta variante. Era ela.
 
 **Sem o `VTref` a maioria das sondas recusa conectar.** Elas o usam para
 descobrir a tensão de I/O e, em muitos modelos, como prova de que existe
@@ -252,16 +270,6 @@ de depuração.
 > é defeito; é o que acontece quando se referencia o `VTref` a um trilho
 > comutado em vez do `VSYS`, e a alternativa teria o custo de expor a
 > sonda a 5,5 V com cabo ligado.
-
-> [!CAUTION]
-> **A Tag-Connect publica mais de um arranjo de seis pinos, e o desenho do
-> cabo TC2030-CTX-NL não foi lido nesta sessão.** A tabela acima repete o
-> que a [lista de nós](03-netlist.md#dedicados-do-módulo) já traz. Se o
-> cabo comprado entregar outro arranjo — e há variantes conhecidas que
-> põem `nRESET` no contato 3 e `SWO` no 6 —, o pad 6 desta placa ligaria o
-> reset do alvo a uma **saída** da sonda e o chip nunca seria resetado
-> pelo depurador, com o `GND` no lugar errado por cima. **É de conferência
-> obrigatória antes do layout**, e custa um PDF.
 
 **O footprint pede espaço.** O TC2030-NL não tem pernas de retenção, o que
 é o motivo de existir o clipe: a placa precisa da área livre em volta dos
@@ -554,7 +562,7 @@ Honesto, item a item:
 | **`J102`: NTC do pack ou NTC de placa** | os dois juntos dão 5 kΩ, que o AEM10900 lê como 44,4 °C contra um limite de 45 °C, e a carga solar morre | decisão do dono |
 | **`J102`: entrada lateral ou superior** | pela nomenclatura da JST o prefixo `SM` é de entrada lateral e `BM`, de topo; o desenho **não foi lido aqui** e é ele que decide para que lado o cabo sai | catálogo GH da JST |
 | **`TH_MON`: ordem do divisor** | [14](../docs/14-hardware-placa-nova.md#ligações-fixas-dos-cis) registra "`RDIV` de 22 kΩ" e o NTC, mas não diz qual perna fica no `TH_REF` e qual no `GND`. Trocar inverte o sentido da leitura de temperatura | ficha do AEM10900 |
-| **`J201`: qual arranjo de seis pinos o TC2030-CTX-NL entrega** | há variantes com `nRESET` no 3 e `SWO` no 6; com a variante errada o depurador não reseta o alvo. **Não foi lido nesta sessão** | desenho do cabo |
+| **`J201`: a que pad do ME54BS13 levar o `SWO`** | o contato 6 do TC2030 é o `SWO` e hoje está sem ligação. Levá-lo a um pad de trace daria `printf` por ITM no bring-up, e qual pad do módulo expõe o `SWO` não está na ficha dele | ficha do ME54BS13 |
 | **Por onde a luz do LPM027M128C se liga** | **alta prioridade, e bloqueia o layout**: o FPC de 10 vias não tem par de LED, e nenhum documento do projeto diz se o C traz um FPC maior ou um rabicho próprio. A ficha lida é a do **B**, que não tem luz ([acima](#j402--luz-do-lpm027m128c)) | ficha do **LPM027M128C**, ou uma amostra |
 | **`J401`: de que lado a FPC do painel tem os contatos** | decide se o pino 1 do painel encontra o contato 1 ou o 10 | amostra, e [15](../docs/15-avaliacao-componentes.md#bancada-antes-do-layout) |
 | **`J402`: o que recebe cada uma das quatro vias** | só importa no plano B; **não está em arquivo nenhum do projeto** | desenho 12369-01_T4 da Azumo |

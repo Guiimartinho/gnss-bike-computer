@@ -399,11 +399,35 @@ add("U201", "MinewSemi ME54BS13", _mod, confirmed=True,
          "CONFERIR num modulo real que os GND D0, E0 e F0 ficam do lado do "
          "VCC (pino 19) antes de fabricar")
 
+# CORRIGIDO em 2026-09-25, e era erro de placa.
+#
+# Este projeto declarava o pino 3 sem ligacao e o RESET no pino 6. A ficha
+# oficial `TC2030-CTX_1.pdf` da Tag-Connect, tabela "Connections", diz o
+# contrario: no footprint de 6 pinos e **3 = nRESET** e **6 = SWO/TDO**.
+#
+# De onde vinha a confusao: o arranjo 1 VCC, 2 SWDIO, 3 GND, 4 SWCLK, 5 GND,
+# 6 SWO e a numeracao do CABECALHO CORTEX DE 10 VIAS, do lado da sonda, e
+# nao a do footprint de 6 pinos da placa. Quem mistura as duas chega
+# exatamente ao que estava escrito aqui.
+#
+# O que acontecia com a placa: o nRESET da sonda, que e dreno aberto, nao
+# acionaria nada, e o nRESET do micro ficaria pendurado na entrada SWO da
+# sonda. Nada queima - SWO e alvo para sonda, nao ha curto -, mas o
+# depurador NUNCA conseguiria resetar o alvo: sem connect under reset, sem
+# pin reset. Num nRF54LM20A que reinicia pelo task_wdt ou reconfigura os
+# pinos de SWD, isso tira a saida de emergencia e sobra so o apagamento
+# total por CTRL-AP.
+#
+# O pino 6 fica sem ligacao por enquanto. Ele e o SWO, e leva-lo a um pad de
+# trace do modulo daria printf por ITM no bring-up - falta descobrir QUAL
+# pad do ME54BS13 expoe o SWO.
 add("J201", "Tag-Connect TC2030-NL", [
     (1, "VTref", "power_in", L), (2, "SWDIO", "bidirectional", R),
-    (3, "NC3", "no_connect", R), (4, "SWDCLK", "output", R),
-    (5, "GND", "power_in", B), (6, "RESET", "output", R),
-], confirmed=True, note="so furos e pads; pinagem do padrao TC2030 da Tag-Connect")
+    (3, "RESET", "output", R), (4, "SWDCLK", "output", R),
+    (5, "GND", "power_in", B), (6, "SWO", "no_connect", R),
+], confirmed=True,
+    note="so furos e pads. Pinagem da ficha TC2030-CTX_1.pdf da Tag-Connect: "
+         "1 VCC, 2 SWDIO/TMS, 3 nRESET, 4 SWCLK/TCK, 5 GND, 6 SWO/TDO")
 
 # The sixteen test points of 06-conectores-e-pontos-de-teste.md. Eleven of
 # the twelve on the power sheet were missing from the board entirely - only

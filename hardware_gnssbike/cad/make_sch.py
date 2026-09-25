@@ -121,17 +121,27 @@ def posicionar(refs: list[str], papel: str) -> float:
     for ref in refs:
         part = P.PARTS[ref]
         w, h = part.size()
-        if x + w > x_lim and alt_linha > 0.0:
+        # Quanto os pinos avancam para fora da caixa de cada lado.
+        #
+        # Nos simbolos deste projeto isso e sempre PIN_LEN e da na mesma. Nos
+        # da biblioteca do KiCad nao: um `Conn_01x10_Socket` tem o desenho com
+        # 1,27 mm de largura e os DEZ pinos 3,81 mm a esquerda dele. Sem
+        # reservar esse avanco, o vizinho da esquerda encosta nos dez pinos e
+        # os dez fios tem de se espremer no que sobra - dois deles nao
+        # roteavam.
+        esq, dire = part.avanco_dos_pinos()
+        if x + esq + w + dire > x_lim and alt_linha > 0.0:
             x = MARGEM + LABEL_X
             y += alt_linha + ROW_GAP
             alt_linha = 0.0
+        x += esq
         # `desloca_centro` e zero para os simbolos deste projeto e diferente
         # de zero para os da biblioteca do KiCad, que nao sao centrados na
         # origem. Sem descontar aqui, a peca sai da celula que a fila lhe deu.
         dx, dy = part.desloca_centro()
         part.x = snap(x + w / 2.0 - dx)
         part.y = snap(y + h / 2.0 - dy)
-        x += w + COL_GAP
+        x += w + dire + COL_GAP
         alt_linha = max(alt_linha, h)
     return y + alt_linha
 
@@ -180,6 +190,41 @@ def montar_folha(nome: str, arquivo: str, pagina: str, root_uuid: str,
     router = Router(sch.parts)
     router.build_obstacles()
 
+    # De quem e cada celula de pino desta folha.
+    #
+    # O roteador sabe QUE uma celula e de pino, mas nao DE QUEM - e o
+    # colocador de simbolos de alimentacao, que roda antes de qualquer fio,
+    # so olhava `router.blocked`. Uma celula de pino nao esta em `blocked`,
+    # esta em `pin_cells`: nada impedia um simbolo de GND de pousar em cima
+    # do pino do vizinho, ou o talo dele de atravessar o pino alheio. Dois
+    # fios que se encostam sao um no so para o KiCad, e nada no desenho diz
+    # isso - foi assim que o MPPT do ADP5091, que fica na borda de baixo
+    # junto dos tres pinos de terra, virou terra.
+    dono_da_celula: dict[tuple[int, int], set[str]] = {}
+    for rede_n, pinos_n in N.NETS.items():
+        for ref_n, pin_n in pinos_n:
+            if S.sheet_of(ref_n) != nome:
+                continue
+            peca = P.PARTS[ref_n]
+            num = next(q.number for q in peca.pins
+                       if q.name == pin_n or q.number == pin_n)
+            px_n, py_n = peca.pin_sheet()[num]
+            ang_n = peca.pin_local()[num][2]
+            dx_n, dy_n = {0: (1, 0), 90: (0, -1),
+                          180: (-1, 0), 270: (0, 1)}.get(ang_n, (0, 0))
+            bx0, by0, bx1, by1 = peca.box()
+            cx_n, cy_n = px_n, py_n
+            for _ in range(9):
+                dono_da_celula.setdefault(router.key(cx_n, cy_n),
+                                          set()).add(rede_n)
+                if bx0 <= cx_n <= bx1 and by0 <= cy_n <= by1:
+                    break
+                cx_n += dx_n * GRID
+                cy_n += dy_n * GRID
+
+    def _de_outro(cel, rede: str) -> bool:
+        return bool(dono_da_celula.get(cel, set()) - {rede})
+
     # ---- supplies and grounds, one power symbol per pin ----
     # A power symbol is a symbol AND a label, and only the symbol was being
     # given room: two ground pins two grid steps apart each got their own
@@ -215,6 +260,12 @@ def montar_folha(nome: str, arquivo: str, pagina: str, root_uuid: str,
                     if (qx, qy) in ocupados:
                         continue
                     if router.key(qx, qy) in router.blocked:
+                        continue
+                    # nem o simbolo nem o talo dele podem encostar num pino
+                    # de OUTRA rede: seria um curto que o desenho nao mostra
+                    if any(_de_outro(router.key(px + dx * k * GRID,
+                                                py + dy * k * GRID), rede)
+                           for k in range(1, tentativa + 1)):
                         continue
                     if exigir_rotulo and not _cabe(qx, qy, rede):
                         continue
@@ -260,7 +311,26 @@ def montar_folha(nome: str, arquivo: str, pagina: str, root_uuid: str,
     falhas: list[str] = []
     dentro = [n for n, k in tipo.items()
               if k == "DENTRO" and any(S.sheet_of(r) == nome for r, _p in N.NETS[n])]
-    for rede in sorted(dentro) + sorted(entre):
+    # A ORDEM importa, e muito. Um pino no MEIO de uma coluna de dez - o
+    # pino 5 do FPC do display - fica cercado pelos fios dos vizinhos assim
+    # que eles saem, e quem chega por ultimo nao acha caminho. Roteando
+    # primeiro quem tem menos espaco em volta, o apertado passa e o folgado
+    # da a volta, que e o que uma pessoa faz.
+    #
+    # "Espaco em volta" aqui e quantas celulas livres ha ao redor dos pinos
+    # da rede, contadas no raio de tres passos de grade.
+    def _aperto(rede: str) -> int:
+        livre = 0
+        for r, p in pinos_do_no(rede, nome):
+            kx, ky = router.key(*ponto(r, p))
+            for ax in range(-3, 4):
+                for ay in range(-3, 4):
+                    c = (kx + ax, ky + ay)
+                    if c not in router.blocked and c not in router.pin_cells:
+                        livre += 1
+        return livre
+
+    for rede in sorted(dentro, key=lambda n: (_aperto(n), n)) + sorted(entre):
         pts = [ponto(r, p) for r, p in pinos_do_no(rede, nome)]
         if rede in alvos_label:
             pts.append(alvos_label[rede])

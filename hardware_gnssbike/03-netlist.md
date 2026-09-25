@@ -206,7 +206,7 @@ castelado da ficha ME54BS13 V1.0.0.
 | `MOD_VBUS` | 9 | `VBUSOUT` | alim | detecção e PHY do USB. **A faixa aceita neste pad não foi levantada na ficha do ME54BS13**; os 4,4 a 5,5 V que este documento trazia eram do BM20C |
 | `SWDIO` | 5 | Tag-Connect pino 2 | dig | — |
 | `SWDCLK` | 6 | Tag-Connect pino 4 | dig | — |
-| `MOD_RESET` | 4 | Tag-Connect pino 6 | dig | — |
+| `MOD_RESET` | 4 | Tag-Connect pino **3** | dig | corrigido em 2026-09-25: a ficha `TC2030-CTX_1.pdf` põe o `nRESET` no contato 3, e o 6 é o `SWO` |
 | `3V0_MOD` | 19 | `JP102`, do `3V0` | alim | com o 100 nF e o 4,7 µF de volume ao lado |
 | — | 2 | **aberto** | rf | saída para antena externa; o módulo já traz a antena de PCB |
 | `GND` | 1, 3, 10, 11, 20, `D0`, `E0`, `F0` | plano | alim | oito pads de terra, cinco castelados e três da matriz |
