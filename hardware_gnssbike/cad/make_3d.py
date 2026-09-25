@@ -17,6 +17,7 @@ from __future__ import annotations
 import json
 import math
 import pathlib
+import re
 import struct
 import sys
 
@@ -288,13 +289,28 @@ def serigrafia() -> tuple[np.ndarray, np.ndarray]:
 
 
 def ler_wrl(caminho: pathlib.Path) -> list[tuple[np.ndarray, tuple]]:
-    """The shapes of one of our own VRML bodies, in millimetres.
+    """The shapes of a VRML body, in millimetres.
 
-    Only the dialect footprints.py writes: a run of `Shape` blocks, each with
-    one diffuseColor and one IndexedFaceSet whose faces are polygons closed
-    by -1. Reading it is the whole point of this function - the geometry and
-    the colour are already there, in the file the footprint points at, and
-    drawing a black cuboid instead threw both away.
+    Reads two dialects, and reading the SECOND one is what put the passives
+    back on the board:
+
+      - the one footprints.py writes, with each face on its own line as
+        `0 1 2 -1` and the faces separated by commas;
+      - the one KiCad's own library uses, written by kicad StepUp, with a
+        comma between EVERY index: `0,1,2,-1,2,1,3,-1`.
+
+    Splitting on the comma and reading each piece as a face works for the
+    first and silently yields nothing for the second - every piece is a
+    single index, no triangle comes out, and the part simply does not
+    appear. That is why 105 resistors, capacitors and inductors were
+    invisible in the 3D while their pads were there: the drawing showed
+    bare copper where a component should be, which is exactly what the
+    owner saw. The list of indices is now read as one flat sequence and cut
+    at each -1, which is what VRML actually specifies.
+
+    Colour: the library files declare materials once with `DEF` and reuse
+    them with `USE`, so most Shape blocks carry no diffuseColor of their
+    own. The map is built on the way through.
 
     VRML here is in tenths of an inch, the unit KiCad uses for .wrl, so
     everything is multiplied by 2.54 on the way out.
@@ -333,13 +349,22 @@ def ler_wrl(caminho: pathlib.Path) -> list[tuple[np.ndarray, tuple]]:
         if k < 0 or not pts:
             continue
         idx = bloco[k + 12:bloco.index("]", k)]
+        # uma sequencia unica de indices, cortada a cada -1. Nao se separa
+        # por virgula: a biblioteca do KiCad poe virgula entre TODOS os
+        # indices, e nao so entre as faces.
+        seq = [int(q) for q in re.findall(r"-?\d+", idx)]
         tris = []
-        for face in idx.split(","):
-            n = [int(q) for q in face.split() if q.lstrip("-").isdigit()]
-            n = [q for q in n if q >= 0]
-            # a fan: every face this writer emits is convex
-            for m in range(1, len(n) - 1):
-                tris.append([pts[n[0]], pts[n[m]], pts[n[m + 1]]])
+        face: list[int] = []
+        for q in seq + [-1]:
+            if q < 0:
+                # um leque: toda face que estes dois escritores emitem e convexa
+                for m in range(1, len(face) - 1):
+                    if max(face[0], face[m], face[m + 1]) < len(pts):
+                        tris.append([pts[face[0]], pts[face[m]],
+                                     pts[face[m + 1]]])
+                face = []
+            else:
+                face.append(q)
         if tris:
             saida.append((np.array(tris, dtype=np.float64), cor))
     return saida
@@ -439,26 +464,74 @@ def caixas_das_pecas() -> tuple[np.ndarray, np.ndarray]:
     cols: list[np.ndarray] = []
     for f in fp_load.kids(arv, "footprint"):
         nome = f[1]
-        if nome not in FPS.CORPO_TODOS:
+        # O corpo sai de tres lugares, nesta ordem: o .wrl que este projeto
+        # desenhou, o .wrl da biblioteca do KiCad que o proprio footprint
+        # aponta, e - so se nao houver nenhum - a caixa do contorno.
+        #
+        # Ate 2026-09-25 a funcao pulava tudo o que nao fosse desenhado aqui,
+        # confiando no GLB para o resto. Mas o `--subst-models` do kicad-cli
+        # nao substitui o .wrl pelo .step no GLB, entao os 105 resistores,
+        # capacitores e indutores da biblioteca NAO APARECIAM: o desenho
+        # mostrava cobre nu onde havia peca, e foi isso que o dono viu.
+        caminho_kicad = ""
+        desloca_modelo = (0.0, 0.0, 0.0)
+        for mm in f:
+            if isinstance(mm, list) and mm and mm[0] == "model":
+                caminho_kicad = mm[1]
+                sub = fp_load.kid(mm, "offset")
+                if sub:
+                    v = fp_load.kid(sub, "xyz")
+                    if v:
+                        desloca_modelo = tuple(float(q) for q in v[1:4])
+                break
+        if nome not in FPS.CORPO_TODOS and not caminho_kicad:
             continue
-        w, h, alt = FPS.CORPO_TODOS[nome]
+        # Uma peca com STEP de verdade ja vem desenhada pelo GLB, que o
+        # kicad-cli exporta do proprio `.kicad_pcb`. Desenhar por cima dela o
+        # `.wrl` que este projeto tinha escrito antes de conseguir o STEP poe
+        # DOIS corpos no mesmo lugar - e os dois discordam: o `.wrl` do J101 e
+        # um paralelepipedo centrado nas ilhas, enquanto o receptaculo de
+        # verdade tem a boca numa ponta so, e o do J103 tinha 4,50 mm de
+        # altura, o numero velho, contra os 3,75 mm do JST ZH. O resultado e
+        # uma peca que parece deslocada, torta ou alta demais. Quem tem STEP
+        # e desenhado uma vez so, pelo KiCad.
+        if caminho_kicad.lower().endswith((".step", ".stp")):
+            continue
+        w, h, alt = FPS.CORPO_TODOS.get(nome, (0.0, 0.0, 0.0))
         at = fp_load.kid(f, "at")
         x, y = float(at[1]), float(at[2])
         ang = math.radians(float(at[3])) if len(at) > 3 else 0.0
         atras = fp_load.kid(f, "layer")[1] == "B.Cu"
         ca, sa = math.cos(ang), math.sin(ang)
 
+        ox, oy, oz = desloca_modelo
+
         def por_no_lugar(v: np.ndarray) -> np.ndarray:
-            """The body's own coordinates, put where the board has the part."""
-            vx = -v[..., 0] if atras else v[..., 0]
-            vy, vz = v[..., 1], v[..., 2]
+            """The body's own coordinates, put where the board has the part.
+
+            The footprint's `(model ... (offset ...))` comes first, in
+            millimetres and in the model's own frame: the U.FL of J302 carries
+            0.475 mm in X, and without it the connector sat half a millimetre
+            off its pads in the drawing while the board itself was right.
+            """
+            vx = v[..., 0] + ox
+            vx = -vx if atras else vx
+            vy, vz = v[..., 1] + oy, v[..., 2] + oz
             return np.stack([x + vx * ca + vy * sa,
                              y - vx * sa + vy * ca,
                              (VERSO_Z - vz) if atras else (FRENTE_Z + vz)],
                             axis=-1)
 
         arq = pasta3d / (nome.split(":", 1)[1] + ".wrl")
-        formas = ler_wrl(arq) if arq.exists() else []
+        if not arq.exists() and caminho_kicad:
+            # o caminho que o footprint aponta, com a variavel do KiCad
+            # resolvida para a biblioteca instalada
+            alvo = caminho_kicad.replace("${KICAD8_3DMODEL_DIR}",
+                                         str(FPS.LIB3D)).replace("${KIPRJMOD}",
+                                                             str(HERE))
+            arq = pathlib.Path(alvo.replace("\\", "/"))
+        formas = ler_wrl(arq) if (arq.exists() and arq.suffix.lower() == ".wrl") \
+            else []
         if formas:
             for malha, cor in formas:
                 tris.extend(por_no_lugar(malha))
