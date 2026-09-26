@@ -17,6 +17,7 @@ Check: python hardware_gnssbike/cad/check_sch.py
 from __future__ import annotations
 
 import math
+import os
 import pathlib
 import sys
 
@@ -164,6 +165,12 @@ def ponto(ref: str, pin_name: str) -> tuple[float, float]:
     return part.pin_sheet()[numero]
 
 
+def _dentro_do_corpo(part, x: float, y: float) -> bool:
+    """Is the point on the part's body, a hair of margin included?"""
+    bx0, by0, bx1, by1 = part.box()
+    return bx0 - 0.3 <= x <= bx1 + 0.3 and by0 - 0.3 <= y <= by1 + 0.3
+
+
 def lado_do_pino(ref: str, pin_name: str) -> str:
     part = P.PARTS[ref]
     numero = next(q.number for q in part.pins
@@ -264,9 +271,45 @@ def montar_folha(nome: str, arquivo: str, pagina: str, root_uuid: str,
                     break
                 cx_n += dx_n * GRID
                 cy_n += dy_n * GRID
+            # ...and two cells OUTWARD of the tip, kept for the stub the
+            # pin will need - its label, its symbol, its own wire. Nothing
+            # reserved them, FPC_DISP ran along the line in front of
+            # J401.VDDA, and that pin had nowhere to go (2026-09-26).
+            for k in (1, 2):
+                cel = router.key(px_n - dx_n * k * GRID, py_n - dy_n * k * GRID)
+                cx_k, cy_k = router.pos(cel)
+                # a cell inside another part's body stays an obstacle (the
+                # pad of a test point faced the edge of a standing resistor,
+                # and a wire ran along that edge)
+                if any(r_o != ref_n and _dentro_do_corpo(P.PARTS[r_o], cx_k, cy_k)
+                       for r_o in refs):
+                    continue
+                dono_da_celula.setdefault(cel, set()).add(rede_n)
+                router.pin_cells.add(cel)
+                router.used.setdefault(cel, set()).add(rede_n)
+                # and never an obstacle: the coil on SW2 sat one line under
+                # the coil on SW1, whose margin covered the two cells in
+                # front of its pin, and its own net could not reach it
+                router.blocked.discard(cel)
+
+    # A pass-through connector's pin is in two nets that are one node (the
+    # board's DISP_SCK and the panel's FPC_SCLK on J401.SCLK): for the
+    # keep-outs of that pin the two are not "another net" to each other.
+    irmas: dict[str, set[str]] = {}
+    for ref_p in N.PASSA_DIRETO:
+        por_pino: dict[str, set[str]] = {}
+        for rede_n, pinos_n in N.NETS.items():
+            for r_n, p_n in pinos_n:
+                if r_n == ref_p:
+                    por_pino.setdefault(p_n, set()).add(rede_n)
+        for redes_p in por_pino.values():
+            for r1 in redes_p:
+                irmas.setdefault(r1, set()).update(redes_p - {r1})
+
+    router.irmas = irmas
 
     def _de_outro(cel, rede: str) -> bool:
-        return bool(dono_da_celula.get(cel, set()) - {rede})
+        return bool(dono_da_celula.get(cel, set()) - {rede} - irmas.get(rede, set()))
 
     # ---- supplies and grounds, one power symbol per pin ----
     # A power symbol is a symbol AND a label, and only the symbol was being
@@ -278,15 +321,70 @@ def montar_folha(nome: str, arquivo: str, pagina: str, root_uuid: str,
     # what a symbol's name must not sit on: the other symbols (added as
     # they are placed) and the parts, with the room their reference and
     # value take - the same boxes the block placer keeps apart
+    # as SEPARATE rectangles per part (body with pins, each text), never
+    # one bounding box: the 26 mm value of the FPC connector, in one box
+    # with the connector, walled off the two steps in front of every one
+    # of its pins, and its ten labels were placed by the maze in a heap
     caixas: list[tuple[float, float, float, float]] = [
-        B._caixa(r, P.PARTS[r].x, P.PARTS[r].y) for r in refs]
+        rect for r in refs
+        for rect in B._retangulos(r, P.PARTS[r].x, P.PARTS[r].y)]
+    # and the blocks' titles, which a symbol's name printed over
+    for b in blocos:
+        caixas.append((b.caixa[0], b.caixa[1] - 0.8 - 1.8,
+                       b.caixa[0] + len(b.titulo) * 1.5, b.caixa[1] - 0.8))
 
-    def _cabe(qx: float, qy: float, rede: str) -> bool:
-        w = len(rede) * 0.9 + 0.8
-        h = 4.2                     # the symbol plus its name under it
-        a = (qx - w / 2, qy - h / 2, qx + w / 2, qy + h / 2)
+    flags_desta = FLAGS_AQUI.get(nome, set())
+    # the point and direction of the first symbol placed for each rail on
+    # this sheet: a PWR_FLAG the rail needs goes there, pointing the other
+    # way
+    simbolo_da_rede: dict[str, tuple[float, float, str]] = {}
+    SENTIDO_DO_LADO = {"L": "L", "R": "R", "T": "U", "B": "D"}
+    # where the PWR_FLAG points when it shares the point of the rail's
+    # symbol: sideways off a standing symbol (pointing back down went over
+    # the stub that feeds the point), down off a lying one
+    CONTRARIO = {"U": "R", "D": "R", "L": "D", "R": "D"}
+
+    def _caixa_simbolo(qx: float, qy: float, rede: str, sentido: str
+                       ) -> tuple[float, float, float, float]:
+        """What a power symbol occupies: the art (2,54 from the point) and
+        its name beyond it, in the direction it points - plus the PWR_FLAG
+        and its name on the other side, when the rail carries one here."""
+        terra = S.TRILHOS.get(rede, False)
+        a = PowerPort(rede, qx, qy, ground=terra, sentido=sentido).caixa()
+        if rede in flags_desta:
+            f = PowerPort("PWR_FLAG", qx, qy, sentido=CONTRARIO[sentido]).caixa()
+            a = (min(a[0], f[0]), min(a[1], f[1]), max(a[2], f[2]), max(a[3], f[3]))
+        return a
+
+    def _cabe(qx: float, qy: float, rede: str, sentido: str) -> bool:
+        a = _caixa_simbolo(qx, qy, rede, sentido)
         return not any(a[2] > b[0] and b[2] > a[0] and a[3] > b[1] and b[3] > a[1]
                        for b in caixas)
+
+    def _reservar_simbolo(qx: float, qy: float, rede: str, sentido: str) -> None:
+        """The symbol is placed: keep the next symbols and the labels off
+        it, and keep the wires routed later out of it.
+
+        A symbol lying along a side pin's line (L, R) is closed whole: art
+        and name are on that line and on nothing else. A standing one (U, D)
+        has only its art closed: its name is 3,3 mm past the point, between
+        two pin lines, and the neighbouring pins' wires run under it the
+        way they do on any dense chip - closing the name too shut the
+        neighbours in, and CC1, CC2 and TERM lost their labels.
+        """
+        a = _caixa_simbolo(qx, qy, rede, sentido)
+        caixas.append(a)
+        simbolo_da_rede.setdefault(rede, (qx, qy, sentido))
+        kx0, ky0 = router.key(qx, qy)
+        sentidos = [sentido] + ([CONTRARIO[sentido]] if rede in flags_desta else [])
+        for s in sentidos:
+            dx, dy = {"U": (0, -1), "D": (0, 1), "L": (-1, 0), "R": (1, 0)}[s]
+            fim = 2 if s in ("U", "D") else int(math.ceil(
+                (2.54 + 0.76 + len(rede) * 1.05 + 0.5) / GRID))
+            for k in range(1, fim + 1):
+                cel = (kx0 + dx * k, ky0 + dy * k)
+                if cel not in router.pin_cells:
+                    router.blocked.add(cel)
 
     # A rail pin that gets no room for its symbol is closed by a LABEL with
     # the rail's name instead (same net for KiCad: a local label named GND
@@ -294,6 +392,13 @@ def montar_folha(nome: str, arquivo: str, pagina: str, root_uuid: str,
     # was "put the symbol two steps away anyway", and two steps away was the
     # neighbour's pin: that is how GND swallowed PV_A, SRC and MPPT.
     sem_simbolo: list[tuple[str, str, str]] = []
+    # every pin tip of the sheet with its net: what a rail run must not
+    # cross, and what a stub must not land on
+    todas_pontas: dict[tuple[float, float], str] = {}
+    for rede_t, pinos_t in N.NETS.items():
+        for ref_t, pin_t in pinos_t:
+            if S.sheet_of(ref_t) == nome:
+                todas_pontas[ponto(ref_t, pin_t)] = rede_t
     for rede, terra in S.TRILHOS.items():
         if rede not in N.NETS:
             continue
@@ -301,20 +406,59 @@ def montar_folha(nome: str, arquivo: str, pagina: str, root_uuid: str,
         # the four VDD pins across the top of the IMU - are joined by one
         # wire along their tips and get ONE symbol, at the end of the run.
         # One symbol per pin printed four names on top of each other.
-        grupos: dict[tuple[str, str], list[tuple[float, tuple[float, float], str]]] = {}
+        # A run may cross parts: the tops of a row of stood-up decoupling
+        # capacitors are one line of tips of the same rail, and get one
+        # wire along them and one symbol. Grouped by side and by the line
+        # the tips are on; two tips are neighbours when they are at most
+        # eight steps apart and no tip of ANOTHER net lies between them.
+        grupos: dict[tuple[str, float], list[tuple[float, tuple[float, float], str, str]]] = {}
+        pontos_vistos: set[tuple[float, float]] = set()
         for ref, pin_name in pinos_do_no(rede, nome):
             px, py = ponto(ref, pin_name)
+            # pins a KiCad symbol stacks on one point (the USB-C's GND
+            # A1/B1/A12/B12) are one tip and get one symbol, not a column
+            if (px, py) in pontos_vistos:
+                continue
+            pontos_vistos.add((px, py))
             lado = lado_do_pino(ref, pin_name)
-            chave = py if lado in ("L", "R") else px
-            grupos.setdefault((ref, lado), []).append((chave, (px, py), pin_name))
+            chave, linha = (py, px) if lado in ("L", "R") else (px, py)
+            grupos.setdefault((lado, round(linha, 3)), []).append(
+                (chave, (px, py), pin_name, ref))
+
+        def _alheia_entre(a: tuple[float, float], b: tuple[float, float]) -> bool:
+            for (tx, ty), outra in todas_pontas.items():
+                if outra == rede:
+                    continue
+                if abs(a[0] - b[0]) < 1e-6 and abs(tx - a[0]) < 1e-6 \
+                        and min(a[1], b[1]) + 1e-6 < ty < max(a[1], b[1]) - 1e-6:
+                    return True
+                if abs(a[1] - b[1]) < 1e-6 and abs(ty - a[1]) < 1e-6 \
+                        and min(a[0], b[0]) + 1e-6 < tx < max(a[0], b[0]) - 1e-6:
+                    return True
+            return False
+
+        def _caminho_livre(a: tuple[float, float], b: tuple[float, float]) -> bool:
+            """No body, no text and no other net's pin between two tips."""
+            ka, kb = router.key(*a), router.key(*b)
+            n = max(abs(kb[0] - ka[0]), abs(kb[1] - ka[1]))
+            for k in range(1, n):
+                cel = (ka[0] + (kb[0] - ka[0]) * k // n, ka[1] + (kb[1] - ka[1]) * k // n)
+                if cel in router.blocked or _de_outro(cel, rede):
+                    return False
+            return True
+
         primeiros: list[tuple[str, str]] = []
-        for (ref, lado), lista in grupos.items():
+        for (lado, _linha), lista in grupos.items():
             lista.sort()
             i = 0
             while i < len(lista):
                 j = i
+                # up to the shelf pitch apart (blocos.PASSO_PRATELEIRA), so
+                # that the stood-up capacitors of one rail share the wire
                 while (j + 1 < len(lista)
-                       and abs(lista[j + 1][0] - lista[j][0] - 2 * GRID) < 1e-6):
+                       and 1e-6 < lista[j + 1][0] - lista[j][0] <= B.PASSO_PRATELEIRA + 1e-6
+                       and not _alheia_entre(lista[j][1], lista[j + 1][1])
+                       and _caminho_livre(lista[j][1], lista[j + 1][1])):
                     j += 1
                 if j > i:
                     # one wire per pair of neighbours, not one wire over the
@@ -324,64 +468,77 @@ def montar_folha(nome: str, arquivo: str, pagina: str, root_uuid: str,
                     for k in range(i, j):
                         a, b = lista[k][1], lista[k + 1][1]
                         sch.wires.append((a, b))
-                        for cel in (router.key(*a), router.key(*b),
-                                    router.key((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)):
+                        # EVERY cell of the wire is the net's: marking only
+                        # the two ends and the middle left the cells between
+                        # free, a label of another net was placed on one of
+                        # them, and FPC_VSSA became the ground (2026-09-26)
+                        ka, kb = router.key(*a), router.key(*b)
+                        n = max(abs(kb[0] - ka[0]), abs(kb[1] - ka[1]), 1)
+                        for t in range(n + 1):
+                            cel = (ka[0] + (kb[0] - ka[0]) * t // n,
+                                   ka[1] + (kb[1] - ka[1]) * t // n)
                             router.used.setdefault(cel, set()).add(rede)
                             router.dirs.setdefault(cel, {}).setdefault(rede, set()).add(
                                 "V" if lado in ("L", "R") else "H")
-                primeiros.append((ref, lista[i][2]))
+                primeiros.append((lista[i][3], lista[i][2]))
                 i = j + 1
         for ref, pin_name in primeiros:
             px, py = ponto(ref, pin_name)
             lado = lado_do_pino(ref, pin_name)
             dx, dy = {"L": (-1, 0), "R": (1, 0), "T": (0, -1), "B": (0, 1)}[lado]
+            sentido = SENTIDO_DO_LADO[lado]
             # First pass: a spot where the NAME also fits. Second: any free
             # spot at all. A long stub to save a label is worse than the
             # label - at fourteen grid steps one of them ran across a
             # component and split a net.
             passo = None
-            for exigir_rotulo in (True, False):
-                for tentativa in range(2, 9):
-                    qx, qy = (px + dx * tentativa * GRID,
-                              py + dy * tentativa * GRID)
-                    if (qx, qy) in ocupados:
-                        continue
-                    if router.key(qx, qy) in router.blocked:
-                        continue
-                    # nem o simbolo nem o talo dele podem encostar num pino
-                    # de OUTRA rede: seria um curto que o desenho nao mostra
-                    if any(_de_outro(router.key(px + dx * k * GRID,
-                                                py + dy * k * GRID), rede)
-                           for k in range(1, tentativa + 1)):
-                        continue
-                    if exigir_rotulo and not _cabe(qx, qy, rede):
-                        continue
-                    passo = tentativa
-                    break
-                if passo is not None:
-                    break
+            # only a spot where the NAME also fits; a second pass that took
+            # any free spot printed the name on the neighbour's value
+            motivos: list[str] = []
+            for tentativa in range(2, 13):
+                qx, qy = (px + dx * tentativa * GRID,
+                          py + dy * tentativa * GRID)
+                if (qx, qy) in ocupados:
+                    motivos.append(f"{tentativa}:ocupado")
+                    continue
+                if router.key(qx, qy) in router.blocked:
+                    motivos.append(f"{tentativa}:bloqueado")
+                    continue
+                # nor may the stub run through a body or a text on its way
+                # there: the shield of the U.FL took its ground straight
+                # through the antenna jumper's box (2026-09-26)
+                if any(router.key(px + dx * k * GRID, py + dy * k * GRID) in router.blocked
+                       for k in range(1, tentativa)):
+                    motivos.append(f"{tentativa}:talo bloqueado")
+                    continue
+                # nem o simbolo nem o talo dele podem encostar num pino
+                # de OUTRA rede: seria um curto que o desenho nao mostra
+                if any(_de_outro(router.key(px + dx * k * GRID,
+                                            py + dy * k * GRID), rede)
+                       for k in range(1, tentativa + 1)):
+                    motivos.append(f"{tentativa}:pino alheio")
+                    continue
+                if not _cabe(qx, qy, rede, sentido):
+                    motivos.append(f"{tentativa}:nome nao cabe")
+                    continue
+                passo = tentativa
+                break
+            # No straight spot where the name fits: the maze takes the
+            # symbol to one (below). A third pass that took any free cell
+            # up to twenty steps out printed the name on the neighbour.
             if passo is None:
-                for tentativa in range(9, 16):
-                    qx, qy = (px + dx * tentativa * GRID,
-                              py + dy * tentativa * GRID)
-                    if (qx, qy) in ocupados or router.key(qx, qy) in router.blocked:
-                        continue
-                    if any(_de_outro(router.key(px + dx * k * GRID,
-                                                py + dy * k * GRID), rede)
-                           for k in range(1, tentativa + 1)):
-                        continue
-                    passo = tentativa
-                    break
-            if passo is None:
+                if os.environ.get("SCH_DEBUG"):
+                    print(f"  [debug] {nome}: {rede} em {ref}.{pin_name}: "
+                          + " ".join(motivos))
                 sem_simbolo.append((rede, ref, pin_name))
                 continue
             qx, qy = px + dx * passo * GRID, py + dy * passo * GRID
             ocupados.add((qx, qy))
-            w_r = len(rede) * 0.9 + 0.8
-            caixas.append((qx - w_r / 2, qy - 2.1, qx + w_r / 2, qy + 2.1))
             router.pin_cells.add(router.key(qx, qy))
+            _reservar_simbolo(qx, qy, rede, sentido)
             sch.powers.append(PowerPort(rede, qx, qy, ground=terra,
-                                        ref=f"#PWR{len(sch.powers) + 1:03d}"))
+                                        ref=f"#PWR{len(sch.powers) + 1:03d}",
+                                        sentido=sentido))
             sch.wires.append(((px, py), (qx, qy)))
             for k in range(min(passo, 14) + 1):
                 cel = router.key(px + dx * k * GRID, py + dy * k * GRID)
@@ -402,9 +559,18 @@ def montar_folha(nome: str, arquivo: str, pagina: str, root_uuid: str,
               if k == "DENTRO" and any(S.sheet_of(r) == nome for r, _p in N.NETS[n])]
     nomes_entre = set(entre)
 
+    # where each labelled pin's label ended up, by (ref, pin number): a
+    # pass-through connector's other net continues from there
+    ponta_do_rotulo: dict[tuple[str, str], tuple[float, float]] = {}
+
     def _livre(c: tuple[int, int], rede: str) -> bool:
-        return not (c in router.blocked or c in router.pin_cells
-                    or _de_outro(c, rede) or (router.used.get(c, set()) - {rede}))
+        if c in router.blocked or _de_outro(c, rede):
+            return False
+        # a pin cell is free for the net that owns it (the two cells in
+        # front of its own pin), never for another
+        if c in router.pin_cells and rede not in router.used.get(c, set()):
+            return False
+        return not (router.used.get(c, set()) - {rede} - irmas.get(rede, set()))
 
     def _rotulo(rede: str, ref: str, pin: str, hier: bool) -> bool:
         """A stub out of the pin, in the direction it faces, and the label.
@@ -417,10 +583,24 @@ def montar_folha(nome: str, arquivo: str, pagina: str, root_uuid: str,
         lado, (px, py) = B._lado_e_ponta(ref, pin)
         dx, dy = {"L": (-1, 0), "R": (1, 0), "T": (0, -1), "B": (0, 1)}[lado]
         fim = None
-        for tent in range(2, 9):
+
+        def _texto_cabe(qx: float, qy: float) -> bool:
+            # the label's text runs outward from its point along the stub's
+            # direction, and must not sit on a part, its value or a power
+            # symbol's name (the same boxes the symbols are kept off)
+            w = len(rede) * 1.05 + 2.5
+            if dx:
+                a = (qx if dx > 0 else qx - w, qy - 1.0, qx + w if dx > 0 else qx, qy + 1.0)
+            else:               # on a vertical stub the text still runs to the right
+                a = (qx, qy - 1.0, qx + w, qy + 1.0)
+            return not any(a[2] > b[0] and b[2] > a[0] and a[3] > b[1] and b[3] > a[1]
+                           for b in caixas)
+
+        for tent in range(2, 13):
             cels = [router.key(px + dx * k * GRID, py + dy * k * GRID)
                     for k in range(1, tent + 1)]
-            if all(_livre(c, rede) for c in cels):
+            if all(_livre(c, rede) for c in cels) and \
+                    _texto_cabe(snap(px + dx * tent * GRID), snap(py + dy * tent * GRID)):
                 fim = (snap(px + dx * tent * GRID), snap(py + dy * tent * GRID))
                 sch.wires.append(((px, py), fim))
                 for k in range(tent + 1):
@@ -431,13 +611,31 @@ def montar_folha(nome: str, arquivo: str, pagina: str, root_uuid: str,
                 break
         if fim is None:
             k0 = router.key(px, py)
-            alvos = {(k0[0] + ax, k0[1] + ay)
-                     for ax in range(-10, 11) for ay in range(-10, 11)
-                     if 2 <= abs(ax) + abs(ay) <= 10
-                     and _livre((k0[0] + ax, k0[1] + ay), rede)}
+            # a free cell where the label's text also lands on nothing;
+            # failing that, any free cell, so that the pin is never open
+            livres = {(k0[0] + ax, k0[1] + ay)
+                      for ax in range(-10, 11) for ay in range(-10, 11)
+                      if 2 <= abs(ax) + abs(ay) <= 10
+                      and _livre((k0[0] + ax, k0[1] + ay), rede)}
+            alvos = {c for c in livres if _texto_cabe(*router.pos(c))}
             router.used.setdefault(k0, set()).add(rede)
             caminho = router.route(rede, (px, py), alvos, 12) if alvos else None
+            if caminho is None and livres - alvos:
+                caminho = router.route(rede, (px, py), livres - alvos, 12)
             if caminho is None:
+                if os.environ.get("SCH_DEBUG"):
+                    def _estado(c):
+                        if c in router.blocked:
+                            return "bloqueada"
+                        if c in router.pin_cells:
+                            return "pino"
+                        if _de_outro(c, rede):
+                            return "talo de " + ",".join(sorted(dono_da_celula.get(c, set()) - {rede}))
+                        outras = router.used.get(c, set()) - {rede}
+                        return "fio de " + ",".join(sorted(outras)) if outras else "livre"
+                    vizinhas = [(k, _estado((k0[0] + dx * k, k0[1] + dy * k))) for k in range(1, 7)]
+                    print(f"  [debug] {nome}: rotulo {rede} em {ref}.{pin} ({lado}): "
+                          f"{len(alvos)} alvos; a frente: {vizinhas}")
                 falhas.append(f"{nome}: {rede} sem lugar para o rotulo em {ref}.{pin}")
                 return False
             router.add_path(rede, caminho)
@@ -447,6 +645,9 @@ def montar_folha(nome: str, arquivo: str, pagina: str, root_uuid: str,
         # a label is a connection point: a wire of another net that runs
         # over it joins that signal, silently
         router.pin_cells.add(router.key(qx, qy))
+        numero_r = next(q.number for q in P.PARTS[ref].pins
+                        if q.name == pin or q.number == pin)
+        ponta_do_rotulo[(ref, numero_r)] = (qx, qy)
         ang = 180 if lado == "L" else 0
         if hier:
             sch.labels.append(HierLabel(rede, qx, qy, angle=ang))
@@ -463,12 +664,28 @@ def montar_folha(nome: str, arquivo: str, pagina: str, root_uuid: str,
         terra_s = S.TRILHOS.get(rede_s, False)
         _lado_s, (px_s, py_s) = B._lado_e_ponta(ref_s, pin_s)
         k0 = router.key(px_s, py_s)
+        # a cell where the symbol AND its name fit, pointing some way;
+        # the way it ends up pointing is the path's last leg (below)
         alvos = {(k0[0] + ax, k0[1] + ay)
                  for ax in range(-12, 13) for ay in range(-12, 13)
                  if 2 <= abs(ax) + abs(ay) <= 12
-                 and _livre((k0[0] + ax, k0[1] + ay), rede_s)}
+                 and _livre((k0[0] + ax, k0[1] + ay), rede_s)
+                 and any(_cabe(*router.pos((k0[0] + ax, k0[1] + ay)), rede_s, s)
+                         for s in ("L", "R", "U", "D"))}
         router.used.setdefault(k0, set()).add(rede_s)
         caminho = router.route(rede_s, (px_s, py_s), alvos, 14) if alvos else None
+        if caminho is None:
+            # last resort, so that no pin is ever left open: any free cell
+            # the maze reaches, the name landing where it lands (and the
+            # run says so, to be looked at)
+            alvos = {(k0[0] + ax, k0[1] + ay)
+                     for ax in range(-14, 15) for ay in range(-14, 15)
+                     if 2 <= abs(ax) + abs(ay) <= 14
+                     and _livre((k0[0] + ax, k0[1] + ay), rede_s)}
+            caminho = router.route(rede_s, (px_s, py_s), alvos, 18) if alvos else None
+            if caminho is not None:
+                print(f"  aviso: {nome}: o simbolo de {rede_s} em {ref_s}.{pin_s} "
+                      "ficou onde coube, sem lugar para o nome")
         if caminho is None:
             falhas.append(f"{nome}: {rede_s} sem lugar para o simbolo em {ref_s}.{pin_s}")
             continue
@@ -476,8 +693,16 @@ def montar_folha(nome: str, arquivo: str, pagina: str, root_uuid: str,
         qx_s, qy_s = router.pos(caminho[-1])
         qx_s, qy_s = snap(qx_s), snap(qy_s)
         router.pin_cells.add(router.key(qx_s, qy_s))
+        # it points on along the last leg of the path that brought it here
+        ax_s, ay_s = router.pos(caminho[-2]) if len(caminho) > 1 else (px_s, py_s)
+        if abs(qx_s - ax_s) > abs(qy_s - ay_s):
+            sentido_s = "R" if qx_s > ax_s else "L"
+        else:
+            sentido_s = "D" if qy_s > ay_s else "U"
+        _reservar_simbolo(qx_s, qy_s, rede_s, sentido_s)
         sch.powers.append(PowerPort(rede_s, qx_s, qy_s, ground=terra_s,
-                                    ref=f"#PWR{len(sch.powers) + 1:03d}"))
+                                    ref=f"#PWR{len(sch.powers) + 1:03d}",
+                                    sentido=sentido_s))
 
     # A ORDEM importa: roteando primeiro quem tem menos espaco em volta, o
     # apertado passa e o folgado da a volta, que e o que uma pessoa faz.
@@ -506,7 +731,18 @@ def montar_folha(nome: str, arquivo: str, pagina: str, root_uuid: str,
             com_fio.append(rede)
     for rede in com_fio:
         pinos = pinos_do_no(rede, nome)
-        pts = [ponto(r, p) for r, p in pinos]
+        # On a pass-through connector the pin already has the board net's
+        # label on a stub: the panel's wire continues from the label's
+        # point (a wire end on a wire end: connected), instead of fighting
+        # the label for the two cells in front of the pin.
+        pts = []
+        for r, p in pinos:
+            xy = ponto(r, p)
+            if r in N.PASSA_DIRETO:
+                numero_p = next(q.number for q in P.PARTS[r].pins
+                                if q.name == p or q.number == p)
+                xy = ponta_do_rotulo.get((r, numero_p), xy)
+            pts.append(xy)
         if len(pts) < 2:
             continue
         feito = {router.key(*pts[0])}
@@ -521,6 +757,25 @@ def montar_folha(nome: str, arquivo: str, pagina: str, root_uuid: str,
                 if caminho is not None:
                     break
             if caminho is None:
+                if os.environ.get("SCH_DEBUG"):
+                    quem = [f"{r}.{p}" for r, p in pinos if ponto(r, p) == pt]
+                    ka = router.key(*pt)
+                    kb = min(feito, key=lambda c: abs(c[0] - ka[0]) + abs(c[1] - ka[1]))
+
+                    def _estado_r(c):
+                        if c in router.blocked:
+                            return "B"
+                        if c in router.pin_cells and rede not in router.used.get(c, set()):
+                            return "P(" + ",".join(sorted(router.used.get(c, set())))[:14] + ")"
+                        outras = router.used.get(c, set()) - {rede}
+                        if outras:
+                            return "u(" + ",".join(sorted(outras))[:14] + ")"
+                        return "."
+                    n = max(abs(kb[0] - ka[0]), abs(kb[1] - ka[1]), 1)
+                    linha = [(ka[0] + (kb[0] - ka[0]) * t // n, ka[1] + (kb[1] - ka[1]) * t // n)
+                             for t in range(n + 1)]
+                    print(f"  [debug] {nome}: {rede}: sem caminho de {quem} {pt} ate {kb}; "
+                          f"reta: " + " ".join(_estado_r(c) for c in linha))
                 roteou = False
                 break
             router.add_path(rede, caminho)
@@ -580,12 +835,24 @@ def montar_folha(nome: str, arquivo: str, pagina: str, root_uuid: str,
     #    ERC - e uma rede que atravessa folhas ganharia uma em cada. Por isso
     #    `precisa_de_flag` e calculado uma vez, fora daqui, e cada folha so
     #    coloca as que lhe couberem.
+    #    The flag shares the point of the rail's first power symbol on the
+    #    sheet and hangs under it, the rail's arrow and name going up and
+    #    the flag's going down: on the pin tip itself it printed over the
+    #    pin's neighbours and over the rail symbol's stub.
     for rede in sorted(FLAGS_AQUI.get(nome, ())):
-        px, py = ponto(*pinos_do_no(rede, nome)[0])
+        if rede in simbolo_da_rede:
+            px, py, sentido_f = simbolo_da_rede[rede]
+            sentido_f = CONTRARIO[sentido_f]
+        else:
+            px, py = ponto(*pinos_do_no(rede, nome)[0])
+            sentido_f = "U"
         sch.powers.append(PowerPort("PWR_FLAG", px, py, ground=False,
-                                    ref=f"#FLG{len(sch.powers) + 1:03d}"))
+                                    ref=f"#FLG{len(sch.powers) + 1:03d}",
+                                    sentido=sentido_f))
 
-    sch.text(MARGEM, MARGEM - 8.0,
+    # inside the frame, above the first row of blocks (which start at
+    # MARGEM + 14); at MARGEM - 8 it printed over the sheet's border
+    sch.text(MARGEM, MARGEM + 4.0,
              f"{nome} - {len(refs)} posicoes. NADA MONTADO NEM MEDIDO.", 2.5)
     return sch, falhas, len(refs)
 
@@ -763,6 +1030,9 @@ def main() -> int:
                 FLAGS_AQUI.setdefault(folha_n, set()).add(rede)
                 feitos.add(g)
                 break
+    if os.environ.get("SCH_DEBUG"):
+        print("  [debug] PWR_FLAG por folha:",
+              {f: sorted(v) for f, v in FLAGS_AQUI.items()})
 
     todas: list[tuple[str, Schematic]] = []
     falhas: list[str] = []

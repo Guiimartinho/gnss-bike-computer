@@ -88,6 +88,10 @@ TRILHOS: dict[str, bool] = {   # name -> is it a ground
     "3V0_GNSS": False, "3V0": False, "3V0_MOD": False, "3V0_SENS": False,
     "SD3V0": False, "SD3V0_FLASH": False, "3V3BL": False, "VBCKP": False,
     "VINT": False,
+    # the panel's switched supply: drawn as a rail since 2026-09-26, so
+    # that the three contacts of the FPC, the decoupling and the jumper
+    # carry its symbol instead of a wire wandering across the block
+    "DISP_VDD": False,
 }
 
 

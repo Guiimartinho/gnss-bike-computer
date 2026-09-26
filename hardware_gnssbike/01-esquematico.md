@@ -33,10 +33,14 @@ estão em [`cad/README.md`](cad/README.md#desenhado-por-bloco-funcional-desde-20
 
 O `check_sch.py` confere o resultado contra a [lista de nós](03-netlist.md)
 pino a pino, pelo ERC do KiCad e pela geometria (fio sobre componente, peça
-fora da folha). Duas coisas foram **medidas** no KiCad no caminho e valem
-para quem mexer no gerador: `(mirror x)` troca esquerda por direita (não
-`mirror y`), e um rótulo local com o nome de um trilho é outra rede, não o
-trilho.
+fora da folha). Três coisas foram **medidas** no KiCad no caminho e valem
+para quem mexer no gerador: numa instância cuja biblioteca é o desenho
+base, `(mirror y)` troca esquerda por direita e `(at x y 90)` manda o pino
+da esquerda para baixo (a primeira medição, feita através do gerador com a
+biblioteca já espelhada, saiu invertida); a justificação do texto de um
+campo é transformada junto com a instância; e um rótulo local com o nome de
+um trilho é outra rede, não o trilho. A tabela completa está no
+[`cad/README.md`](cad/README.md).
 
 ## Folha 1 · Energia
 

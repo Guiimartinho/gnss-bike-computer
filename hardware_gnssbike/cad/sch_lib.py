@@ -244,6 +244,31 @@ def arte_do_simbolo(p) -> list[str]:
     return [_re.sub(r"(-?\d+\.\d+) (-?\d+\.\d+)", gira, t) for t in bruta]
 
 
+# How wide a character of TEXT-sized KiCad stroke font is, with its spacing.
+# Measured on the rendered sheets: "KXOB25-05X3F" (twelve characters) spans
+# about 12,5 mm at 1,27 mm. Used to reserve room for a reference or a value
+# so that nothing else is placed or routed over it.
+LARG_CHAR = 1.05
+
+
+def alt_da_arte(cl: str | None) -> float:
+    """How far the class's art reaches off its lead axis, in mm.
+
+    A resistor's zigzag is 0,762 high, a capacitor's plates 1,016, a LED's
+    arrows 2,2: the reference and the value of a lying part sit just past
+    that, one above and one below, in the 2,54 mm to the neighbouring pin
+    line. Read from the art itself, so a new symbol cannot get it wrong.
+    """
+    if cl is None:
+        return 0.0
+    import re as _re
+    alt = 0.0
+    for t in _arte_bruta(cl):
+        for _x, y in _re.findall(r"\((?:xy|start|mid|end|center) (-?\d+\.\d+) (-?\d+\.\d+)\)", t):
+            alt = max(alt, abs(float(y)))
+    return alt
+
+
 @dataclass(frozen=True)
 class Pin:
     number: str
@@ -273,10 +298,27 @@ class Part:
     w: float = 0.0
     h: float = 0.0
     # A two-terminal symbol drawn mirrored, so that the pin that serves the
-    # chip is the one facing it. The generator cannot rotate symbols; it can
-    # flip these, and a flipped resistor is still a resistor. Set by
-    # blocos.py, honoured by pin_local() and instance().
+    # chip is the one facing it; or stood up (90 or 270 degrees), the way a
+    # decoupling capacitor is drawn in a row under its chip. Both set by
+    # blocos.py. The LIBRARY symbol is always the base drawing (pin 1 on
+    # the left, or on top); the instance carries the transform, and
+    # pin_local() reports where the tips land after it. Writing the library
+    # already flipped AND the token on the instance applied it twice, and
+    # that is how every stood-up capacitor came out with both pins in the
+    # air on 2026-09-26.
+    #
+    # MEASURED in KiCad 8 with kicad-cli's netlist on 2026-09-26, on a
+    # symbol whose library drawing is the base one (scratch measurement,
+    # thirteen resistors with a label glued to each pin tip):
+    #   (at x y 90)   the left pin goes to the BOTTOM, the top pin to the left
+    #   (at x y 180)  left and right swap
+    #   (at x y 270)  the left pin goes to the TOP, the top pin to the right
+    #   (mirror y)    swaps left for right; nothing for a vertical symbol
+    #   (mirror x)    swaps top for bottom; nothing for a horizontal symbol
+    #   rotation is applied first, the mirror after it (90 + mirror x = 270)
+    # The tokens are named after the axis they mirror ABOUT.
     espelho: bool = False
+    rotacao: int = 0
 
     @property
     def sym_name(self) -> str:
@@ -335,7 +377,9 @@ class Part:
         b = self._k_bloco()
         x0, _y0, x1, _y1 = ksym.caixa(b)
         px = [p[0] for p in ksym.pinos(b).values()] or [0.0]
-        return (max(0.0, x0 - min(px)), max(0.0, max(px) - x1))
+        esq, dire = (max(0.0, x0 - min(px)), max(0.0, max(px) - x1))
+        # a mirrored connector has its pins on the other side
+        return (dire, esq) if self.espelho_token() == "y" else (esq, dire)
 
     def etype_de(self, numero: str) -> str:
         """O tipo eletrico que VAI para a folha, nao o que parts.py declara.
@@ -358,7 +402,10 @@ class Part:
         if not self.kicad:
             return (0.0, 0.0)
         x0, y0, x1, y1 = self._k_caixa()
-        return (snap((x0 + x1) / 2.0), snap(-(y0 + y1) / 2.0))
+        dx = snap((x0 + x1) / 2.0)
+        if self.espelho_token() == "y":     # the drawing flips with the pins
+            dx = -dx
+        return (dx, snap(-(y0 + y1) / 2.0))
 
     def _sides(self) -> dict[str, list[Pin]]:
         out: dict[str, list[Pin]] = {"L": [], "R": [], "T": [], "B": []}
@@ -366,10 +413,17 @@ class Part:
             out[p.side].append(p)
         return out
 
-    def eixo(self) -> str:
-        """For a part with a symbol: which way its two leads run."""
+    def eixo_base(self) -> str:
+        """Which way the two leads run in the library drawing."""
         lados = {q.side for q in self.pins}
         return "v" if lados == {"T", "B"} else "h"
+
+    def eixo(self) -> str:
+        """For a part with a symbol: which way its two leads run, as drawn."""
+        base = self.eixo_base()
+        if self.rotacao in (90, 270):
+            return "h" if base == "v" else "v"
+        return base
 
     def size(self) -> tuple[float, float]:
         """Body size, from the pin counts and the longest name.
@@ -405,8 +459,14 @@ class Part:
         step = 2 * GRID
         return (math.ceil(w / step - 1e-9) * step, math.ceil(h / step - 1e-9) * step)
 
-    def pin_local(self) -> dict[str, tuple[float, float, int]]:
-        """Pin number to its tip in symbol space, and the pin angle."""
+    def pin_base(self) -> dict[str, tuple[float, float, int]]:
+        """Pin number to its tip in the LIBRARY drawing, and the pin angle.
+
+        Symbol space: y up, angle 0 is a pin on the left pointing right,
+        180 on the right, 90 at the bottom pointing up, 270 on top. This is
+        what lib_symbol() writes; the sheet may then turn or flip the
+        instance, and pin_local() says where the tips end up.
+        """
         if self.kicad:
             import ksym
             return ksym.pinos(self._k_bloco())
@@ -415,15 +475,9 @@ class Part:
             p = list(self.pins)
             if len(p) == 1:
                 return {p[0].number: (a, 0.0, 180)}
-            if self.eixo() == "v":
-                fora = {p[0].number: (0.0, a, 270), p[1].number: (0.0, -a, 90)}
-                if self.espelho:      # flipped top for bottom: (mirror x)
-                    fora = {p[0].number: (0.0, -a, 90), p[1].number: (0.0, a, 270)}
-                return fora
-            fora = {p[0].number: (-a, 0.0, 0), p[1].number: (a, 0.0, 180)}
-            if self.espelho:          # flipped left for right: (mirror y)
-                fora = {p[0].number: (a, 0.0, 180), p[1].number: (-a, 0.0, 0)}
-            return fora
+            if self.eixo_base() == "v":
+                return {p[0].number: (0.0, a, 270), p[1].number: (0.0, -a, 90)}
+            return {p[0].number: (-a, 0.0, 0), p[1].number: (a, 0.0, 180)}
         w, h = self.size()
         hw, hh = w / 2.0, h / 2.0
         s = self._sides()
@@ -440,6 +494,57 @@ class Part:
         for i, p in enumerate(s["B"]):
             x = -hw + GRID * 2 + i * 2 * GRID
             out[p.number] = (x, -hh - PIN_LEN, 90)
+        return out
+
+    def transformado(self) -> bool:
+        """Does the instance turn or flip the library drawing?"""
+        return bool(self.rotacao) or self.espelho
+
+    def espelho_token(self) -> str:
+        """The mirror KiCad applies to this instance, if any.
+
+        A flipped two-terminal part swaps its two ends along the axis it
+        lies on AS DRAWN, after the rotation: (mirror y) when it lies,
+        (mirror x) when it stands. A flipped KiCad-library symbol (a
+        connector whose pins all face away from the chip it feeds) is
+        always turned left for right: (mirror y).
+        """
+        if not self.espelho:
+            return ""
+        if self.kicad or classe_do_simbolo(self) is None:
+            return "y"
+        return "x" if self.eixo() == "v" else "y"
+
+    def pin_local(self) -> dict[str, tuple[float, float, int]]:
+        """Pin number to its tip AS DRAWN on the sheet, in symbol space.
+
+        Same frame as pin_base() (y up, the same angle codes), but after the
+        instance's rotation and mirror, so that pin_sheet() and everything
+        that asks which side a pin faces see the symbol the way KiCad draws
+        it. The transform is the one measured on 2026-09-26 (see the
+        `rotacao` field): a quarter turn per 90 degrees, counter-clockwise
+        as displayed, then the mirror along the axis the part lies on.
+        """
+        base = self.pin_base()
+        if not self.transformado():
+            return base
+        # the pin's direction on the sheet (y down): where it points, from
+        # the tip into the body
+        rumo = {0: (1, 0), 180: (-1, 0), 90: (0, -1), 270: (0, 1)}
+        codigo = {v: k for k, v in rumo.items()}
+        out: dict[str, tuple[float, float, int]] = {}
+        for n, (px, py, ang) in base.items():
+            dx, dy = px, -py
+            vx, vy = rumo[ang]
+            for _ in range((self.rotacao // 90) % 4):
+                dx, dy = dy, -dx
+                vx, vy = vy, -vx
+            token = self.espelho_token()
+            if token == "x":                # (mirror x): top for bottom
+                dy, vy = -dy, -vy
+            elif token == "y":              # (mirror y): left for right
+                dx, vx = -dx, -vx
+            out[n] = (round(dx, 4), round(-dy, 4), codigo[(vx, vy)])
         return out
 
     def pin_sheet(self) -> dict[str, tuple[float, float]]:
@@ -502,7 +607,8 @@ class Part:
             return self._lib_symbol_kicad()
         w, h = self.size()
         hw, hh = w / 2.0, h / 2.0
-        loc = self.pin_local()
+        # the library holds the BASE drawing: the instance turns or flips it
+        loc = self.pin_base()
         # A two terminal symbol shows neither pin numbers nor pin names:
         # "1" and "2" on a resistor are noise, and the standard symbol already
         # says which end is which where it matters (the cathode bar, the
@@ -546,30 +652,114 @@ class Part:
         out += ['\t\t\t)', '\t\t)']
         return "\n".join(out)
 
+    def textos(self) -> tuple[tuple[tuple[float, float, str], tuple[float, float, str]], int]:
+        """Where the reference and the value go, and the angle they are
+        written at: ((x, y, justify) for each, angle).
+
+        A block: the reference above its top-left corner and the value below
+        its bottom-left corner, left-justified from the corner - or, when
+        pins leave that edge, right-justified so the text ends before the
+        first pin's stub instead of crossing it (the nPM1300's name used to
+        print over PVSS1 and PVSS2). A lying two-terminal part: the
+        reference just above the art and the value just below it, in the
+        2,54 mm to the neighbouring pin line. A stood-up one: both to its
+        right, one above the other, written at 90 because KiCad adds the
+        instance's rotation to the field's angle (a field at 0 on a symbol
+        at 90 prints vertically - measured on 2026-09-26).
+        """
+        cl = classe_do_simbolo(self) if not self.kicad else None
+        if cl is not None:
+            alt = max(alt_da_arte(cl), 0.6)
+            if self.eixo() == "v":
+                x = self.x + alt + 0.6
+                return (((x, self.y - 0.25, "left bottom"),
+                         (x, self.y + 0.25, "left top")),
+                        90 if self.rotacao in (90, 270) else 0)
+            hw = CORPO_2T
+            return (((self.x - hw, self.y - alt - 0.35, "left bottom"),
+                     (self.x - hw, self.y + alt + 0.35, "left top")), 0)
+        bx0, by0, bx1, by1 = self.box()
+        lados = {q.side for q in self.pins} if not self.kicad else set()
+        if self.kicad:
+            # by the pins' angles AS DRAWN (a mirrored connector has them
+            # on the other side), not by what parts.py declared
+            angs = {a for _x, _y, a in self.pin_local().values()}
+            lados = {{0: "L", 180: "R", 90: "B", 270: "T"}.get(a, "L") for a in angs}
+        # before the first stub on that edge: pins start 2 GRID in from the
+        # corner, so the text ends 0,7 mm short of the first one
+        fim = bx0 + 2 * GRID - 0.7
+        ref_at = ((fim, by0 - 0.8, "right bottom") if "T" in lados
+                  else (bx0, by0 - 0.8, "left bottom"))
+        val_at = ((fim, by1 + 0.8, "right top") if "B" in lados
+                  else (bx0, by1 + 0.8, "left top"))
+        return ((ref_at, val_at), 0)
+
+    def caixas_de_texto(self) -> list[tuple[float, float, float, float]]:
+        """The rectangles the reference and the value occupy on the sheet.
+
+        What the block placer keeps other parts off, and what the router
+        does not draw a wire through: a wire under a value is not wrong for
+        KiCad, but it is unreadable, which is what the owner asked to fix
+        on 2026-09-26.
+        """
+        (ref_at, val_at), _ang = self.textos()
+        out = []
+        for (x, y, just), s in ((ref_at, self.ref), (val_at, self.value)):
+            if not s:
+                continue
+            w = len(s) * LARG_CHAR + 0.3
+            hj, vj = just.split()
+            x0 = x if hj == "left" else x - w
+            y0 = y - TEXT if vj == "bottom" else y
+            out.append((x0, y0, x0 + w, y0 + TEXT))
+        return out
+
     def instance(self, project: str, path: str) -> str:
         w, h = self.size()
         hw, hh = w / 2.0, h / 2.0
         u = uid("inst", self.ref)
         pins = "\n".join(f'\t\t(pin "{esc(p.number)}" (uuid "{uid("pin", self.ref, p.number)}"))'
                          for p in self.pins)
-        # KiCad's tokens are named after the coordinate they negate, not the
-        # axis they mirror about - MEASURED on 2026-09-26 with a resistor and
-        # two labels, exported by kicad-cli: (mirror x) swaps left for right,
-        # (mirror y) swaps top for bottom. pin_local() already reports the
-        # flipped tips, so the wires land on them.
-        espelho = ""
-        if self.espelho and not self.kicad and classe_do_simbolo(self):
-            espelho = "\t\t(mirror y)\n" if self.eixo() == "v" else "\t\t(mirror x)\n"
+        # KiCad's tokens are named after the axis they mirror ABOUT: (mirror
+        # y) swaps left for right, (mirror x) swaps top for bottom - MEASURED
+        # on 2026-09-26 on a base library drawing (see the `rotacao` field).
+        # A flipped part swaps its two ends along the axis it lies on AS
+        # DRAWN, after the rotation; pin_local() reports the flipped tips,
+        # so the wires land on them.
+        token = self.espelho_token()
+        espelho = f"\t\t(mirror {token})\n" if token else ""
+        (ref_at, val_at), ang_txt = self.textos()
+        # KiCad applies the instance's transform to the field's
+        # justification as well, MEASURED on 2026-09-26 by plotting: under
+        # (mirror y) "left" prints as "right"; at 90 degrees (field written
+        # at 90) both left/right and top/bottom swap; at 270 nothing swaps.
+        # What is written here is the justification that renders as the
+        # one textos() asked for.
+        troca_h = self.rotacao in (90, 180)
+        troca_v = self.rotacao in (90, 180)
+        if token == "x":
+            troca_v = not troca_v
+        elif token == "y":
+            troca_h = not troca_h
+
+        def _just(j: str) -> str:
+            hj, vj = j.split()
+            if troca_h:
+                hj = {"left": "right", "right": "left"}.get(hj, hj)
+            if troca_v:
+                vj = {"top": "bottom", "bottom": "top"}.get(vj, vj)
+            return f"{hj} {vj}"
+
         return (f'\t(symbol\n\t\t(lib_id "{self.sym_name}")\n'
-                f'\t\t(at {self.x:.3f} {self.y:.3f} 0)\n{espelho}\t\t(unit 1)\n'
+                f'\t\t(at {self.x:.3f} {self.y:.3f} {self.rotacao})\n{espelho}\t\t(unit 1)\n'
                 '\t\t(exclude_from_sim no)\n\t\t(in_bom yes)\n\t\t(on_board yes)\n\t\t(dnp no)\n'
                 f'\t\t(uuid "{u}")\n'
                 f'\t\t(property "Reference" "{esc(self.ref)}"\n'
-                f'\t\t\t(at {self.x - hw:.3f} {self.y - hh - 1.27:.3f} 0)\n'
-                f'\t\t\t(effects (font (size {TEXT} {TEXT})) (justify left bottom))\n\t\t)\n'
+                f'\t\t\t(at {ref_at[0]:.3f} {ref_at[1]:.3f} {ang_txt})\n'
+                f'\t\t\t(effects (font (size {TEXT} {TEXT})) (justify {_just(ref_at[2])}))\n\t\t)\n'
                 f'\t\t(property "Value" "{esc(self.value)}"\n'
-                f'\t\t\t(at {self.x - hw:.3f} {self.y + hh + 1.27:.3f} 0)\n'
-                f'\t\t\t(effects (font (size {TEXT} {TEXT})) (justify left top))\n\t\t)\n'
+                f'\t\t\t(at {val_at[0]:.3f} {val_at[1]:.3f} {ang_txt})\n'
+                f'\t\t\t(effects (font (size {TEXT} {TEXT})) (justify {_just(val_at[2])}))\n\t\t)\n'
                 f'\t\t(property "Footprint" "{esc(self.footprint)}"\n\t\t\t(at {self.x} {self.y} 0)\n'
                 f'\t\t\t(effects (font (size {TEXT} {TEXT})) (hide yes))\n\t\t)\n'
                 f'\t\t(property "Datasheet" "{esc(self.datasheet)}"\n\t\t\t(at {self.x} {self.y} 0)\n'
@@ -592,6 +782,10 @@ class Router:
 
     blocked: set[tuple[int, int]] = field(default_factory=set)
     used: dict[tuple[int, int], set[str]] = field(default_factory=dict)
+    # net -> the nets that are the same node under another name (the two
+    # nets of a pass-through connector's pin): they may share cells, the
+    # way one line carries both names
+    irmas: dict[str, set[str]] = field(default_factory=dict)
     # cell -> net -> the orientations that net occupies there, "H" and/or "V".
     # A cell where a net turns holds both, and no other net may cross there.
     dirs: dict[tuple[int, int], dict[str, set[str]]] = field(default_factory=dict)
@@ -609,11 +803,29 @@ class Router:
         self.blocked.clear()
         for p in self.parts:
             x0, y0, x1, y1 = p.box()
-            kx0, ky0 = self.key(x0 - self.margin, y0 - self.margin)
-            kx1, ky1 = self.key(x1 + self.margin, y1 + self.margin)
+            # a block keeps a full step of air around it; a two-terminal
+            # symbol only a little, because the pin line next to its own
+            # is 2,54 mm away and a wire runs there (with a full step the
+            # cell on that line rounded into the obstacle, and a coil on
+            # SW2 could not get back to its pin past the coil on SW1)
+            margem = 0.5 if (not p.kicad and classe_do_simbolo(p)) else self.margin
+            kx0, ky0 = self.key(x0 - margem, y0 - margem)
+            kx1, ky1 = self.key(x1 + margem, y1 + margem)
             for kx in range(kx0, kx1 + 1):
                 for ky in range(ky0, ky1 + 1):
                     self.blocked.add((kx, ky))
+            # the reference and the value too: only the cells whose centre
+            # lies on the text, so that the neighbouring pin line, 2,54 mm
+            # away, stays open - a wire may graze the top of the letters,
+            # which is what KiCad's own resistor does between two pins
+            for x0, y0, x1, y1 in p.caixas_de_texto():
+                kx0, ky0 = self.key(x0, y0)
+                kx1, ky1 = self.key(x1, y1)
+                for kx in range(kx0, kx1 + 1):
+                    for ky in range(ky0, ky1 + 1):
+                        cx, cy = self.pos((kx, ky))
+                        if x0 <= cx <= x1 and y0 <= cy <= y1:
+                            self.blocked.add((kx, ky))
         # a pin tip must stay reachable even though it sits next to its body,
         # and no other net may pass over it: a wire touching a pin tip
         # connects to that pin, whatever the drawing looks like
@@ -689,19 +901,20 @@ class Router:
                     continue
                 if nxt in self.blocked and nxt not in targets:
                     continue
+                minhas = {net} | self.irmas.get(net, set())
                 if (nxt in self.pin_cells and nxt not in targets
-                        and net not in self.used.get(nxt, set())):
+                        and not (minhas & self.used.get(nxt, set()))):
                     continue
                 step = 1.0
                 owners = self.used.get(nxt, set())
-                if owners and net not in owners:
+                if owners and not (minhas & owners):
                     # only a clean right-angle crossing of another net is
                     # allowed: never a shared run, never their corner, and
                     # never an end of ours on their wire
                     mine = "H" if dy == 0 else "V"
                     alheio = set()
                     for other, ds in self.dirs.get(nxt, {}).items():
-                        if other != net:
+                        if other not in minhas:
                             alheio |= ds
                     if mine in alheio or len(alheio) > 1 or nxt in targets:
                         continue
@@ -745,90 +958,119 @@ class PowerPort:
     KiCad joins every power symbol of the same value into one net across the
     whole design, which is what keeps a ground with eighty pins from being
     drawn as eighty lines to one rail.
+
+    The symbol points AWAY from the pin it serves (`sentido`: U up, D down,
+    L left, R right). On a pin at the side of a chip it lies along the pin's
+    own line, arrow or bars outward and the name inline beyond them, so
+    that nothing of it reaches the pin lines 2,54 mm above and below - a
+    symbol standing on a side pin put its arrow on the line above and its
+    name on the one after that. On a pin at the top or bottom it stands, the
+    way everyone draws it. Since 2026-09-26.
     """
     net: str
     x: float
     y: float
-    ground: bool = False   # graphic points down and the pin faces up
+    ground: bool = False   # bars instead of the arrow
     ref: str = "#PWR"
+    sentido: str = "U"
+
+    # the name's distance from the point, past the 2,54 of art: the text
+    # (1,27) then ends 0,5 mm short of the second pin line
+    NOME = 3.3
 
     @property
     def sym_name(self) -> str:
-        return f"power:{self.net}"
+        base = f"power:{self.net}"
+        return base if self.sentido == "U" else f"{base}_{self.sentido}"
 
     def pin_sheet(self) -> tuple[float, float]:
         return (self.x, self.y)
 
-    def lib_symbol(self) -> str:
+    def _gira(self, x: float, y: float) -> tuple[float, float]:
+        """Canonical art points up (+y in symbol space); turn it outward."""
+        return {"U": (x, y), "D": (x, -y), "L": (-y, x), "R": (y, x)}[self.sentido]
+
+    def _polilinha(self, pts) -> str:
+        p = " ".join("(xy {:.4f} {:.4f})".format(*self._gira(x, y)) for x, y in pts)
+        return (f'\t\t\t\t(polyline (pts {p})'
+                ' (stroke (width 0) (type default)) (fill (type none)))')
+
+    def _arte(self) -> str:
         if self.net == "PWR_FLAG":
-            # A bandeira de alimentacao, que nao carrega rede nenhuma: ela so
-            # DIZ que aquele no esta alimentado. Existe porque o ERC nao tem
-            # como saber que o 3V0_GNSS vem do 3V0 atraves de um ferrite -
-            # ele ve um trilho cujos pinos sao todos de entrada e chama de
-            # erro. O pino dela e `power_out`, e e isso que responde.
-            art = ('\t\t\t\t(polyline (pts (xy 0 0) (xy 0 1.27))'
-                   ' (stroke (width 0) (type default)) (fill (type none)))\n'
-                   '\t\t\t\t(polyline (pts (xy 0 1.27) (xy -1.016 1.905)'
-                   ' (xy 0 2.54) (xy 1.016 1.905) (xy 0 1.27))'
-                   ' (stroke (width 0) (type default)) (fill (type none)))')
-            return (f'\t\t(symbol "{self.sym_name}"\n\t\t\t(power)\n'
-                    '\t\t\t(pin_numbers hide)\n\t\t\t(pin_names (offset 0) hide)\n'
-                    '\t\t\t(exclude_from_sim no)\n\t\t\t(in_bom no)\n'
-                    '\t\t\t(on_board yes)\n'
-                    f'\t\t\t(property "Reference" "{self.ref}"\n\t\t\t\t(at 0 0 0)\n'
-                    '\t\t\t\t(effects (font (size 1.27 1.27)) (hide yes))\n\t\t\t)\n'
-                    '\t\t\t(property "Value" "PWR_FLAG"\n\t\t\t\t(at 0 3.81 0)\n'
-                    '\t\t\t\t(effects (font (size 1.27 1.27)) (justify bottom))\n\t\t\t)\n'
-                    '\t\t\t(property "Footprint" ""\n\t\t\t\t(at 0 0 0)\n'
-                    '\t\t\t\t(effects (font (size 1.27 1.27)) (hide yes))\n\t\t\t)\n'
-                    '\t\t\t(property "Datasheet" ""\n\t\t\t\t(at 0 0 0)\n'
-                    '\t\t\t\t(effects (font (size 1.27 1.27)) (hide yes))\n\t\t\t)\n'
-                    f'\t\t\t(symbol "PWR_FLAG_0_0"\n'
-                    '\t\t\t\t(pin power_out line\n\t\t\t\t\t(at 0 0 90)\n'
-                    '\t\t\t\t\t(length 0)\n'
-                    '\t\t\t\t\t(name "~" (effects (font (size 1.27 1.27))))\n'
-                    '\t\t\t\t\t(number "1" (effects (font (size 1.27 1.27))))\n'
-                    '\t\t\t\t)\n\t\t\t)\n'
-                    f'\t\t\t(symbol "PWR_FLAG_0_1"\n{art}\n\t\t\t)\n\t\t)')
+            return "\n".join([self._polilinha([(0, 0), (0, 1.27)]),
+                              self._polilinha([(0, 1.27), (-1.016, 1.905), (0, 2.54),
+                                               (1.016, 1.905), (0, 1.27)])])
         if self.ground:
-            # the classic three bars, drawn below the connection point
-            art = ('\t\t\t\t(polyline (pts (xy 0 0) (xy 0 -1.27))'
-                   ' (stroke (width 0) (type default)) (fill (type none)))\n'
-                   '\t\t\t\t(polyline (pts (xy -1.905 -1.27) (xy 1.905 -1.27))'
-                   ' (stroke (width 0) (type default)) (fill (type none)))\n'
-                   '\t\t\t\t(polyline (pts (xy -1.143 -1.905) (xy 1.143 -1.905))'
-                   ' (stroke (width 0) (type default)) (fill (type none)))\n'
-                   '\t\t\t\t(polyline (pts (xy -0.508 -2.54) (xy 0.508 -2.54))'
-                   ' (stroke (width 0) (type default)) (fill (type none)))')
-            pin_ang, val_y, val_just = 90, -3.81, "top"
-        else:
-            art = ('\t\t\t\t(polyline (pts (xy 0 0) (xy 0 1.27))'
-                   ' (stroke (width 0) (type default)) (fill (type none)))\n'
-                   '\t\t\t\t(polyline (pts (xy -1.27 1.27) (xy 0 2.54) (xy 1.27 1.27))'
-                   ' (stroke (width 0) (type default)) (fill (type none)))')
-            pin_ang, val_y, val_just = 270, 3.81, "bottom"
+            # the classic three bars, pointing away from the pin
+            return "\n".join([self._polilinha([(0, 0), (0, 1.27)]),
+                              self._polilinha([(-1.905, 1.27), (1.905, 1.27)]),
+                              self._polilinha([(-1.143, 1.905), (1.143, 1.905)]),
+                              self._polilinha([(-0.508, 2.54), (0.508, 2.54)])])
+        return "\n".join([self._polilinha([(0, 0), (0, 1.27)]),
+                          self._polilinha([(-1.27, 1.27), (0, 2.54), (1.27, 1.27)])])
+
+    def _nome(self) -> tuple[float, float, str]:
+        """Offset of the name from the point (symbol space, y up) and its
+        justification: centred over the art when standing, inline when
+        lying."""
+        d = self.NOME
+        return {"U": (0.0, d, "bottom"), "D": (0.0, -d, "top"),
+                "L": (-d, 0.0, "right"), "R": (d, 0.0, "left")}[self.sentido]
+
+    def lib_symbol(self) -> str:
+        nome = self.sym_name.split(":", 1)[1]
+        nx, ny, just = self._nome()
+        flag = self.net == "PWR_FLAG"
+        # A bandeira de alimentacao, que nao carrega rede nenhuma: ela so
+        # DIZ que aquele no esta alimentado. Existe porque o ERC nao tem
+        # como saber que o 3V0_GNSS vem do 3V0 atraves de um ferrite - ele
+        # ve um trilho cujos pinos sao todos de entrada e chama de erro. O
+        # pino dela e `power_out`, e e isso que responde.
+        tipo = "power_out" if flag else "power_in"
+        pin_nome = "~" if flag else esc(self.net)
+        # pin number and pin name hidden, as in KiCad's own power library:
+        # shown, every symbol printed a "1" and the rail's name a second
+        # time, along the pin, on top of whatever was next to it
         return (f'\t\t(symbol "{self.sym_name}"\n\t\t\t(power)\n'
-                '\t\t\t(pin_names (offset 0))\n'
+                '\t\t\t(pin_numbers hide)\n\t\t\t(pin_names (offset 0) hide)\n'
                 '\t\t\t(exclude_from_sim no)\n\t\t\t(in_bom no)\n\t\t\t(on_board yes)\n'
                 f'\t\t\t(property "Reference" "{self.ref}"\n\t\t\t\t(at 0 0 0)\n'
                 '\t\t\t\t(effects (font (size 1.27 1.27)) (hide yes))\n\t\t\t)\n'
-                f'\t\t\t(property "Value" "{esc(self.net)}"\n\t\t\t\t(at 0 {val_y} 0)\n'
-                f'\t\t\t\t(effects (font (size 1.27 1.27)) (justify {val_just}))\n\t\t\t)\n'
+                f'\t\t\t(property "Value" "{esc(self.net)}"\n\t\t\t\t(at {nx:.3f} {ny:.3f} 0)\n'
+                f'\t\t\t\t(effects (font (size 1.27 1.27)) (justify {just}))\n\t\t\t)\n'
                 '\t\t\t(property "Footprint" ""\n\t\t\t\t(at 0 0 0)\n'
                 '\t\t\t\t(effects (font (size 1.27 1.27)) (hide yes))\n\t\t\t)\n'
                 '\t\t\t(property "Datasheet" ""\n\t\t\t\t(at 0 0 0)\n'
                 '\t\t\t\t(effects (font (size 1.27 1.27)) (hide yes))\n\t\t\t)\n'
-                f'\t\t\t(symbol "{self.net}_0_1"\n{art}\n\t\t\t)\n'
-                f'\t\t\t(symbol "{self.net}_1_1"\n'
-                f'\t\t\t\t(pin power_in line\n\t\t\t\t\t(at 0 0 {pin_ang})\n'
+                f'\t\t\t(symbol "{nome}_0_1"\n{self._arte()}\n\t\t\t)\n'
+                f'\t\t\t(symbol "{nome}_1_1"\n'
+                f'\t\t\t\t(pin {tipo} line\n\t\t\t\t\t(at 0 0 90)\n'
                 '\t\t\t\t\t(length 0)\n'
-                f'\t\t\t\t\t(name "{esc(self.net)}" (effects (font (size 1.27 1.27))))\n'
+                f'\t\t\t\t\t(name "{pin_nome}" (effects (font (size 1.27 1.27))))\n'
                 '\t\t\t\t\t(number "1" (effects (font (size 1.27 1.27))))\n'
                 '\t\t\t\t)\n\t\t\t)\n\t\t)')
 
+    def caixa(self) -> tuple[float, float, float, float]:
+        """What the symbol occupies on the sheet: art and name."""
+        larg_nome = len(self.net) * 1.05 + 0.5
+        lado_arte = 2.0 if self.ground else 1.4     # the widest bar, the arrow
+        if self.sentido in ("U", "D"):
+            # standing: the name lies across, above (or below) the art
+            fim = 2.54 + 0.76 + 1.27 + 0.3
+            meio = max(lado_arte, larg_nome / 2.0)
+            y0, y1 = (self.y - fim, self.y + 0.3) if self.sentido == "U" \
+                else (self.y - 0.3, self.y + fim)
+            return (self.x - meio, y0, self.x + meio, y1)
+        # lying: the name runs on along the line, past the art
+        fim = 2.54 + 0.76 + larg_nome
+        x0, x1 = (self.x - fim, self.x + 0.3) if self.sentido == "L" \
+            else (self.x - 0.3, self.x + fim)
+        return (x0, self.y - lado_arte, x1, self.y + lado_arte)
+
     def instance(self, project: str, path: str) -> str:
-        u = uid("pwr", self.net, self.x, self.y)
-        val_y = self.y + (3.81 if self.ground else -3.81)
+        u = uid("pwr", self.net, self.x, self.y, self.sentido)
+        nx, ny, just = self._nome()
+        val_x, val_y = self.x + nx, self.y - ny
         return (f'\t(symbol\n\t\t(lib_id "{self.sym_name}")\n'
                 f'\t\t(at {self.x:.3f} {self.y:.3f} 0)\n\t\t(unit 1)\n'
                 '\t\t(exclude_from_sim no)\n\t\t(in_bom no)\n\t\t(on_board yes)\n\t\t(dnp no)\n'
@@ -836,13 +1078,13 @@ class PowerPort:
                 f'\t\t(property "Reference" "{self.ref}"\n\t\t\t(at {self.x} {self.y} 0)\n'
                 '\t\t\t(effects (font (size 1.27 1.27)) (hide yes))\n\t\t)\n'
                 f'\t\t(property "Value" "{esc(self.net)}"\n'
-                f'\t\t\t(at {self.x:.3f} {val_y:.3f} 0)\n'
-                '\t\t\t(effects (font (size 1.27 1.27)))\n\t\t)\n'
+                f'\t\t\t(at {val_x:.3f} {val_y:.3f} 0)\n'
+                f'\t\t\t(effects (font (size 1.27 1.27)) (justify {just}))\n\t\t)\n'
                 f'\t\t(property "Footprint" ""\n\t\t\t(at {self.x} {self.y} 0)\n'
                 '\t\t\t(effects (font (size 1.27 1.27)) (hide yes))\n\t\t)\n'
                 f'\t\t(property "Datasheet" ""\n\t\t\t(at {self.x} {self.y} 0)\n'
                 '\t\t\t(effects (font (size 1.27 1.27)) (hide yes))\n\t\t)\n'
-                f'\t\t(pin "1" (uuid "{uid("pwrpin", self.net, self.x, self.y)}"))\n'
+                f'\t\t(pin "1" (uuid "{uid("pwrpin", self.net, self.x, self.y, self.sentido)}"))\n'
                 f'\t\t(instances\n\t\t\t(project "{project}"\n'
                 f'\t\t\t\t(path "{path}"\n\t\t\t\t\t(reference "{self.ref}")\n'
                 '\t\t\t\t\t(unit 1)\n\t\t\t\t)\n\t\t\t)\n\t\t)\n\t)')

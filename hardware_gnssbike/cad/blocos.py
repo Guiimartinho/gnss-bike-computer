@@ -79,10 +79,44 @@ BLOCOS: dict[str, list[tuple[str, list[str]]]] = {
     ],
 }
 
-GAP = 2 * GRID            # pin tip to neighbour's pin tip
-FOLGA = 2 * GRID          # between two bodies of the same block
-MARGEM_BLOCO = 5 * GRID   # inside the dashed box, room for power symbols
-ENTRE_BLOCOS = 6 * GRID   # between two dashed boxes
+GAP = 3 * GRID            # pin tip to neighbour's pin tip
+# pin tip to the tip of a part standing past the pin's label: the stub of
+# two steps plus an eight-character name ("DISP_EXTCOMIN" is longer and
+# pushes the part further out by cabe())
+GAP_ROTULO = 10 * GRID
+FOLGA = 2 * GRID          # between two bodies of the same block (blocks)
+# Between two members of one block: two steps between bodies, so that two
+# parts on neighbouring lines are staggered along them rather than stacked
+# (stacked, the far tip of one landed on the wire of the other); a
+# reference or a value keeps clear of everything by a little more than the
+# stroke width.
+FOLGA_CORPO = FOLGA
+FOLGA_TEXTO = 0.4
+MARGEM_BLOCO = 6 * GRID   # inside the dashed box, room for power symbols
+ENTRE_BLOCOS = 8 * GRID   # between two dashed boxes
+# The shelf of stood-up capacitors under the anchors. The pitch holds the
+# body (2,54), the reference and a six-character value to its right
+# ("100 nF": 6,6 mm) and a step of air before the next plate; between two
+# rows there is the rail symbol with its name over the top tips and the
+# ground with its name under the bottom ones. The row is up to 110 mm wide
+# (eight parts) even under a narrow chip, so that twenty-one parts make
+# three rows and the block still fits an A3 next to its neighbours.
+PASSO_PRATELEIRA = 10 * GRID
+ENTRE_LINHAS_PRATELEIRA = 13 * GRID
+LARGURA_PRATELEIRA = 110.0
+
+
+def _trilho_de_cima(ref: str) -> str:
+    """The rail a shelf part hangs from: what its top pin is on, so that
+    the parts of one rail stand side by side. Ground is never it."""
+    p = P.PARTS[ref]
+    redes = []
+    for q in p.pins:
+        for nome, pinos in N.NETS.items():
+            if any(r == ref and (pi == q.name or pi == q.number) for r, pi in pinos):
+                redes.append(nome)
+    outras = [n for n in redes if n != "GND"]
+    return (outras or redes or [""])[0]
 
 
 @dataclass
@@ -205,22 +239,45 @@ def _caixa(ref: str, x: float, y: float) -> tuple[float, float, float, float]:
             by0 = min(by0, y - py)
             by1 = max(by1, y - py)
     else:
-        bx0 -= esq
-        bx1 += dire
         if p.eixo() == "v":
             by0 -= PIN_LEN_V
             by1 += PIN_LEN_V
-            # room for the reference and the value beside a vertical part
-            bx0 -= 1.5 * GRID
-            bx1 += 1.5 * GRID
         else:
-            # ...and above and below a horizontal one: two parts on
-            # neighbouring pins at 2,54 mm of pitch printed their values on
-            # top of each other
-            by0 -= 1.5 * GRID
-            by1 += 1.5 * GRID
+            bx0 -= esq
+            bx1 += dire
+    # ...and the room the reference and the value take, wherever the part
+    # writes them (sch_lib.Part.textos): to the right of a stood-up part,
+    # above and below a lying one, at the corners of a block. Two parts on
+    # neighbouring pins used to print their values on top of each other.
+    for tx0, ty0, tx1, ty1 in p.caixas_de_texto():
+        bx0, by0 = min(bx0, tx0), min(by0, ty0)
+        bx1, by1 = max(bx1, tx1), max(by1, ty1)
     p.x, p.y = old
     return (bx0, by0, bx1, by1)
+
+
+def _retangulos(ref: str, x: float, y: float) -> list[tuple[float, float, float, float]]:
+    """What the part occupies at (x, y), as separate rectangles: the body
+    with its pins, then each text. For the overlap test between parts;
+    _caixa() is the bounding box of these, for the block's extents."""
+    p = P.PARTS[ref]
+    old = (p.x, p.y)
+    p.x, p.y = x, y
+    bx0, by0, bx1, by1 = p.box()
+    esq, dire = p.avanco_dos_pinos()
+    if p.kicad or not __import__("sch_lib").classe_do_simbolo(p):
+        for _n, (px, py, _a) in p.pin_local().items():
+            bx0, bx1 = min(bx0, x + px), max(bx1, x + px)
+            by0, by1 = min(by0, y - py), max(by1, y - py)
+    elif p.eixo() == "v":
+        by0 -= PIN_LEN_V
+        by1 += PIN_LEN_V
+    else:
+        bx0 -= esq
+        bx1 += dire
+    out = [(bx0, by0, bx1, by1)] + list(p.caixas_de_texto())
+    p.x, p.y = old
+    return out
 
 
 PIN_LEN_V = 2.54
@@ -290,10 +347,28 @@ def _colocar_bloco(bloco: Bloco) -> tuple[float, float]:
         p.x, p.y = old
         return saida
 
+    # what each placed part occupies, as SEPARATE rectangles: the body with
+    # its pins, and each text. One bounding box around a connector and its
+    # 26 mm value ("Hirose FH12-10S-0.5SH(55)") walled off every row to the
+    # right of the connector, and the pull-ups on its lines were pushed past
+    # the display.
+    retangulos: dict[str, list[tuple[float, float, float, float]]] = {}
+
     def cabe(ref: str, x: float, y: float) -> bool:
-        c = _caixa(ref, x, y)
-        if any(_sobrepoe(c, o, FOLGA) for r, o in caixas.items() if r != ref):
-            return False
+        meus = _retangulos(ref, x, y)
+        for r, outros in retangulos.items():
+            if r == ref:
+                continue
+            # bodies may touch (two lying parts on neighbouring pin lines
+            # are 2,54 mm apart, like the lines); a text touches nothing -
+            # a value under one part printed over the reference of the
+            # part on the next line, and FOLGA between the bodies pushed
+            # the second part a whole body length down its line instead
+            for i, c in enumerate(meus):
+                for j, o in enumerate(outros):
+                    folga = FOLGA_CORPO if (i == 0 and j == 0) else FOLGA_TEXTO
+                    if _sobrepoe(c, o, folga):
+                        return False
         for (tx, ty), rede in pontas_de(ref, x, y):
             for (ox, oy), outra in pontas.items():
                 if outra != rede and math.hypot(tx - ox, ty - oy) < 2.5 * GRID:
@@ -304,17 +379,99 @@ def _colocar_bloco(bloco: Bloco) -> tuple[float, float]:
         p = P.PARTS[ref]
         p.x, p.y = snap(x), snap(y)
         caixas[ref] = _caixa(ref, p.x, p.y)
+        retangulos[ref] = _retangulos(ref, p.x, p.y)
         for ponta, rede in pontas_de(ref, p.x, p.y):
             pontas[ponta] = rede
 
-    # the anchors, in a row
+    # the anchors, in a row. Two anchors that talk to each other (the FPC
+    # connector and the display it feeds) are set 20 steps apart, room for
+    # the series parts on the lines between them and for the wires; the
+    # others sit 8 steps apart. At 8 the display's ten lines and their
+    # resistors were crammed into 10 mm and three of them did not route.
+    def _conversam(a: str, b: str) -> bool:
+        for nome_n, pinos in N.NETS.items():
+            if nome_n in S.TRILHOS:
+                continue
+            refs_n = {r for r, _p in pinos}
+            if a in refs_n and b in refs_n:
+                return True
+        return False
+
+    # A KiCad-library connector has all its pins on one side. Placed left
+    # of the chip it talks to with the pins facing left, every line had to
+    # loop over the top to reach the chip (the display's FPC did): it is
+    # mirrored so that the pins face the partner.
+    ancoras = list(bloco.ancoras)
+    for i, a in enumerate(ancoras):
+        p = P.PARTS[a]
+        p.espelho = False
+        p.rotacao = 0
+        if not p.kicad:
+            continue
+        lados = {{0: "L", 180: "R", 90: "B", 270: "T"}.get(ang, "L")
+                 for _x, _y, ang in p.pin_base().values()}
+        if i + 1 < len(ancoras) and _conversam(a, ancoras[i + 1]) and lados == {"L"}:
+            p.espelho = True
+        if i > 0 and _conversam(ancoras[i - 1], a) and lados == {"R"}:
+            p.espelho = True
+
     x = 0.0
-    for a in bloco.ancoras:
+    for i, a in enumerate(ancoras):
         w, h = P.PARTS[a].size()
         esq, dire = P.PARTS[a].avanco_dos_pinos()
         dx, dy = P.PARTS[a].desloca_centro()
         por(a, x + esq + w / 2.0 - dx, h / 2.0 - dy)
-        x += esq + w + dire + 8 * GRID
+        if i > 0 and _conversam(ancoras[i - 1], a):
+            # on the rows of the pins it talks to: the anchor slides up or
+            # down by the median offset of the connected pairs, so that
+            # the lines between the two run straight (J401's contacts 6
+            # to 10 reached DS401's rows 1 to 5 by five diagonals)
+            difs = []
+            for nome_n, pinos_n in N.NETS.items():
+                if nome_n in S.TRILHOS:
+                    continue
+                de_a = [p_ for r_, p_ in pinos_n if r_ == a]
+                de_b = [p_ for r_, p_ in pinos_n if r_ == ancoras[i - 1]]
+                for pa in de_a:
+                    for pb in de_b:
+                        difs.append(_lado_e_ponta(ancoras[i - 1], pb)[1][1]
+                                    - _lado_e_ponta(a, pa)[1][1])
+            if difs:
+                difs.sort()
+                por(a, P.PARTS[a].x, P.PARTS[a].y + snap(difs[len(difs) // 2]))
+        passo = 8 * GRID
+        if i + 1 < len(ancoras) and _conversam(a, ancoras[i + 1]):
+            passo = 20 * GRID
+        # from the right edge of what the anchor occupies, its value
+        # included: "JST S4B-ZR-SM4A-TF" ran under the harvester's pins
+        x = max(x + esq + w + dire, caixas[a][2]) + passo
+
+    # The labels come first, like a person draws: every anchor pin whose
+    # net leaves the block gets its label's room reserved - a stub of two
+    # steps and the text along the pin's line, the pentagon's height - as a
+    # rectangle no member's body or text may take. Without it a series part
+    # on the next line put its value under the label, and the label was
+    # then placed wherever the maze found room, on top of something else.
+    def _rotulada_(rede: str) -> bool:
+        return any(r not in bloco.membros for r, _p in N.NETS.get(rede, []))
+
+    for a in ancoras:
+        pa = P.PARTS[a]
+        for n_, (tx_, ty_) in pa.pin_sheet().items():
+            rede_ = rede_do_pino(a, n_)
+            if not rede_ or rede_ in S.TRILHOS or not _rotulada_(rede_):
+                continue
+            lado_, _pt = _lado_e_ponta(a, n_)
+            comp = 2 * GRID + len(rede_) * 1.05 + 2.5
+            if lado_ == "L":
+                r_ = (tx_ - comp, ty_ - 1.0, tx_, ty_ + 1.0)
+            elif lado_ == "R":
+                r_ = (tx_, ty_ - 1.0, tx_ + comp, ty_ + 1.0)
+            elif lado_ == "T":
+                r_ = (tx_ - 1.0, ty_ - comp, tx_ + 1.0 + len(rede_) * 1.05, ty_)
+            else:
+                r_ = (tx_ - 1.0, ty_, tx_ + 1.0 + len(rede_) * 1.05, ty_ + comp)
+            retangulos[f"rotulo:{a}.{n_}"] = [r_]
 
     # the members, each beside the pin it serves
     prateleira: list[str] = []
@@ -340,8 +497,59 @@ def _colocar_bloco(bloco: Bloco) -> tuple[float, float]:
         p = P.PARTS[ref]
         num = next(q.number for q in p.pins if q.name == pin_ref or q.number == pin_ref)
         p.espelho = False
+        p.rotacao = 0
+        cl = __import__("sch_lib").classe_do_simbolo(p)
         rx, ry, _a = p.pin_local()[num]
-        if __import__("sch_lib").classe_do_simbolo(p) and len(p.pins) == 2:
+        # A part between a pin that ALSO leaves the block (it gets a label
+        # on its stub) and a rail - a pull-up, a pull-down, a LED to VSYS -
+        # stands up past the label, its serving tip on the pin's line: the
+        # line runs from the pin, under the label, to the standing part,
+        # and the rail's symbol goes up (or the ground down) from its other
+        # end. Lying on the line at GAP, it sat under the label's text.
+        em_pe = False
+        dist = GAP
+
+        def _rotulada(rede: str) -> bool:
+            return any(r not in bloco.membros for r, _p in N.NETS.get(rede, []))
+
+        if cl and len(p.pins) == 2 and lado in ("L", "R") and p.eixo_base() == "h":
+            outro = next(q.number for q in p.pins if q.number != num)
+            rede_serv = rede_do_pino(ref, num)
+            rede_outro = rede_do_pino(ref, outro)
+            if rede_outro in S.TRILHOS and _rotulada(rede_serv):
+                # A shunt on a line that also leaves the block - a pull-up
+                # or pull-down under a label - stands beside the line past
+                # the label. (Standing EVERY shunt was tried on 2026-09-26:
+                # the far tip of a standing part lands three lines away, on
+                # another pin's wire, and two nets became one.)
+                em_pe = True
+                # the serving tip at the bottom when the other end goes to
+                # a rail (its symbol stands above), at the top when it goes
+                # to ground (the bars hang below); 270 puts pin 1 on top
+                # and 90 puts it at the bottom (measured)
+                serve_pino1 = (num == p.pins[0].number)
+                if S.TRILHOS[rede_outro]:        # ground: serving tip on top
+                    p.rotacao = 270 if serve_pino1 else 90
+                else:
+                    p.rotacao = 90 if serve_pino1 else 270
+                # past the labels when this line or a line within three
+                # pitches on the same side carries one (the standing body
+                # spans three lines); else two steps of air past the pin
+                perto = [n_ for n_, (tx2, ty2) in P.PARTS[colocado].pin_sheet().items()
+                         if abs(tx2 - tx) < 1e-6 and abs(ty2 - ty) <= 3 * 2 * GRID + 1e-6]
+                rotulos = [rede_serv] + [rede_do_pino(colocado, n_) for n_ in perto]
+                rotulos = [r_ for r_ in rotulos if r_ and _rotulada(r_)]
+                if rotulos:
+                    # past the longest of those labels: its stub of two
+                    # steps, the text, the pentagon, and a step of air -
+                    # "GNSS_TIMEPULSE" reaches 20 mm, and a fixed ten steps
+                    # put the pull-ups of the MCU under their labels
+                    maior = max(len(r_) for r_ in rotulos)
+                    dist = max(GAP_ROTULO,
+                               snap(2 * GRID + maior * 1.05 + 3.0 + 1.5 * GRID))
+                else:
+                    dist = GAP + 2 * GRID
+        if cl and len(p.pins) == 2 and not em_pe:
             if p.eixo() == "h" and lado in ("L", "R"):
                 # left of the chip (dvec -1): the serving pin must be at +x
                 if (dvec[0] < 0 and rx < 0) or (dvec[0] > 0 and rx > 0):
@@ -351,20 +559,49 @@ def _colocar_bloco(bloco: Bloco) -> tuple[float, float]:
                 # the lower one, py < 0 in symbol space (y up)
                 if (dvec[1] < 0 and ry > 0) or (dvec[1] > 0 and ry < 0):
                     p.espelho = True
-            rx, ry, _a = p.pin_local()[num]
-        # first try: the part's pin tip GAP away from the placed pin tip
-        base = (tx + dvec[0] * GAP - rx, ty + dvec[1] * GAP + ry)
+        rx, ry, _a = p.pin_local()[num]
+        # first try: the part's pin tip `dist` away from the placed pin tip
+        ty_alvo = ty
+        if em_pe:
+            # When the line goes on to another anchor on that side (the
+            # FPC's contacts to the panel), a body standing on the line
+            # would wall the lines next to it, and they looped around it.
+            # The part then stands clear of the corridor - above the top
+            # line when its other end is a rail, below the bottom one when
+            # it is ground - and the router drops a wire to its line,
+            # crossing the others square, as a person draws a pull-up row.
+            pa = P.PARTS[colocado]
+            segue = any(_conversam(colocado, a2) for a2 in ancoras
+                        if a2 != colocado
+                        and ((P.PARTS[a2].x > pa.x) == (dvec[0] > 0)))
+            if segue and dvec[0] != 0:
+                linhas = [ty2 for _n2, (tx2, ty2) in pa.pin_sheet().items()
+                          if abs(tx2 - tx) < 1e-6]
+                if S.TRILHOS.get(rede_outro, False):     # ground: hangs below
+                    ty_alvo = max(linhas) + 2 * GRID
+                else:                                    # rail: stands above
+                    ty_alvo = min(linhas) - 2 * GRID
+        base = (tx + dvec[0] * dist - rx, ty_alvo + dvec[1] * dist + ry)
         achou = False
-        for passo in range(0, 60):
-            # push outward along the pin's direction, then sideways
-            for lateral in (0, 1, -1, 2, -2, 3, -3, 4, -4):
-                ox = base[0] + dvec[0] * passo * GRID + (dvec[1] * lateral * 2 * GRID)
-                oy = base[1] + dvec[1] * passo * GRID + (dvec[0] * lateral * 2 * GRID)
-                if cabe(ref, snap(ox), snap(oy)):
-                    por(ref, ox, oy)
-                    achou = True
-                    break
-            if achou:
+        # Outward along the pin's own line first, up to twelve steps, and
+        # only then sideways onto the neighbouring lines: a series part
+        # that slid one line up sat under that line's label, and two parts
+        # on neighbouring pins are staggered along their lines, the way a
+        # person draws them, not side by side.
+        # Five steps outward is what staggering two parts on neighbouring
+        # lines takes (their texts clear at about 6 mm); further than that
+        # a part was pushed past the next anchor and its wire never came
+        # back, so from there the search goes sideways as before.
+        tentativas = [(passo, 0) for passo in range(0, 6)]
+        tentativas += [(passo, lateral) for passo in range(0, 60)
+                       for lateral in (0, 1, -1, 2, -2, 3, -3, 4, -4)
+                       if not (lateral == 0 and passo < 6)]
+        for passo, lateral in tentativas:
+            ox = base[0] + dvec[0] * passo * GRID + (dvec[1] * lateral * 2 * GRID)
+            oy = base[1] + dvec[1] * passo * GRID + (dvec[0] * lateral * 2 * GRID)
+            if cabe(ref, snap(ox), snap(oy)):
+                por(ref, ox, oy)
+                achou = True
                 break
         if not achou:
             prateleira.append(ref)
@@ -375,31 +612,68 @@ def _colocar_bloco(bloco: Bloco) -> tuple[float, float]:
         # The shelf wraps: a row is never wider than the anchors above it
         # (or 70 mm), so forty decoupling capacitors do not become a
         # single 400 mm line.
-        y_base = (max(c[3] for c in caixas.values()) + 7 * GRID) if caixas else 0.0
+        y_base = (max(c[3] for c in caixas.values()) + 8 * GRID) if caixas else 0.0
         x_ini = min(c[0] for c in caixas.values()) if caixas else 0.0
-        largura = max(70.0, (max(c[2] for c in caixas.values()) - x_ini) if caixas else 0.0)
+        largura = max(LARGURA_PRATELEIRA,
+                      (max(c[2] for c in caixas.values()) - x_ini) if caixas else 0.0)
         x = x_ini
         alt = 0.0
+        # Same rail side by side: the tops of the 3V0 capacitors are then
+        # one line of tips, and make_sch draws one wire along them with one
+        # symbol at the end, instead of a symbol and a name over every one.
+        # The parts that hang from two rails (the 0 R links) and the test
+        # points come after the capacitors, in the same rows.
+        prateleira.sort(key=lambda r: (_trilho_de_cima(r), r))
         for ref in prateleira:
-            w, h = P.PARTS[ref].size()
-            esq, dire = P.PARTS[ref].avanco_dos_pinos()
-            if x > x_ini and x + esq + w + dire > x_ini + largura:
+            p = P.PARTS[ref]
+            # A two-terminal part in the shelf stands up, the way a row of
+            # decoupling is drawn: rail pin on top, ground pin at the bottom,
+            # so the rail wire runs along the tops and the ground along the
+            # bottoms with one symbol each (make_sch joins the runs). Which
+            # way up: 270 puts pin 1 on top (measured), 90 puts pin 2 there.
+            if __import__("sch_lib").classe_do_simbolo(p) and len(p.pins) == 2 \
+                    and {q.side for q in p.pins} != {"T", "B"}:
+                p.espelho = False
+                rede1 = rede_do_pino(ref, p.pins[0].number)
+                p.rotacao = 90 if rede1 == "GND" else 270
+            elif __import__("sch_lib").classe_do_simbolo(p) == "tp":
+                # a test point stands too, its pad hanging from the rail
+                # line: the pin is on the symbol's right, and 90 takes the
+                # right pin to the top (measured). Lying, its symbol went
+                # 2 steps to the right, onto the next capacitor's name.
+                p.espelho = False
+                p.rotacao = 90
+            w, h = p.size()
+            esq, dire = p.avanco_dos_pinos()
+            if x > x_ini and x + PASSO_PRATELEIRA > x_ini + largura:
                 x = x_ini
-                y_base += alt + 6 * GRID
+                # a row holds the symbol over the top tips and the ground
+                # under the bottom ones, each with its name: 24 mm
+                y_base += alt + ENTRE_LINHAS_PRATELEIRA
                 alt = 0.0
             cx, cy = x + esq + w / 2.0, y_base + h / 2.0
+            if p.eixo() == "v":
+                cy = y_base + PIN_LEN_V + h / 2.0
             k = 0
             while not cabe(ref, snap(cx), snap(cy)) and k < 60:
-                cx += 2 * GRID
+                cx += GRID
                 k += 1
             por(ref, cx, cy)
-            x = caixas[ref][2] + 3 * GRID
+            # the next part: at the shelf pitch from this one's centre when
+            # both stand up (cx = x + esq + w/2), else clear of its box
+            if p.eixo() == "v":
+                x = snap(p.x) + PASSO_PRATELEIRA - esq - w / 2.0
+            else:
+                x = caixas[ref][2] + 2 * GRID
             alt = max(alt, caixas[ref][3] - caixas[ref][1])
 
-    x0 = min(c[0] for c in caixas.values())
-    y0 = min(c[1] for c in caixas.values())
-    x1 = max(c[2] for c in caixas.values())
-    y1 = max(c[3] for c in caixas.values())
+    # the block's extents: the parts and the room kept for the labels
+    tudo = list(caixas.values()) + [r for k, rs in retangulos.items()
+                                    if k.startswith("rotulo:") for r in rs]
+    x0 = min(c[0] for c in tudo)
+    y0 = min(c[1] for c in tudo)
+    x1 = max(c[2] for c in tudo)
+    y1 = max(c[3] for c in tudo)
     # normalise to the origin
     for ref in caixas:
         P.PARTS[ref].x = snap(P.PARTS[ref].x - x0 + MARGEM_BLOCO)
@@ -415,8 +689,18 @@ def posicionar(blocos: list[Bloco], papel: tuple[float, float],
     x_lim = w_pag - margem
     x, y = margem, topo
     alt_linha = 0.0
-    for b in blocos:
-        bw, bh = _colocar_bloco(b)
+    # Rows are packed tallest block first (the order among blocks of one
+    # row is the reading order of BLOCOS): the two tall blocks of the power
+    # sheet - the nPM1300 and the solar harvester - then share one row and
+    # the four short ones the next, and the sheet is an A3. In the reading
+    # order the tall ones fell in different rows, each row grew to the
+    # taller of them, and only an A2 held it.
+    tamanhos = {id(b): _colocar_bloco(b) for b in blocos}
+    ordem = sorted(range(len(blocos)),
+                   key=lambda i: (-tamanhos[id(blocos[i])][1], i))
+    for i in ordem:
+        b = blocos[i]
+        bw, bh = tamanhos[id(b)]
         if x + bw > x_lim and alt_linha > 0.0:
             x = margem
             y += alt_linha + ENTRE_BLOCOS
