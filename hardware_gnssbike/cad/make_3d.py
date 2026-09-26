@@ -534,6 +534,13 @@ def caixas_das_pecas() -> tuple[np.ndarray, np.ndarray]:
                                          str(FPS.LIB3D)).replace("${KIPRJMOD}",
                                                              str(HERE))
             arq = pathlib.Path(alvo.replace("\\", "/"))
+            # kicad-cli's --subst-models swaps a library .wrl for the .step
+            # that sits beside it, so that part is ALREADY in the GLB: drawing
+            # the .wrl too puts two bodies in the same place. Only a library
+            # model with no .step - the SOT-523 has none installed here - is
+            # drawn from here.
+            if arq.with_suffix(".step").exists() or arq.with_suffix(".STEP").exists():
+                continue
         formas = ler_wrl(arq) if (arq.exists() and arq.suffix.lower() == ".wrl") \
             else []
         if formas:
@@ -559,6 +566,54 @@ def caixas_das_pecas() -> tuple[np.ndarray, np.ndarray]:
     if not tris:
         return np.zeros((0, 3, 3)), np.zeros((0, 3))
     return np.array(tris), np.array(cols)
+
+
+def corpos(j: dict, bina: bytes) -> list[tuple[np.ndarray, np.ndarray]]:
+    """Every primitive on its own: (triangles in world space, colour).
+
+    triangulos() flattens the scene, which is what a renderer wants. A rule
+    that asks "where are the solder tails of this connector" needs the
+    bodies one by one: a tail is a small thin body that touches the board,
+    the housing is a big one, and only the first says which way the part is
+    turned. Same coordinates as triangulos(): metres, Z up.
+    """
+    cores = []
+    for mat in j.get("materials", []):
+        pbr = mat.get("pbrMetallicRoughness", {})
+        cores.append(np.array(pbr.get("baseColorFactor", [0.7, 0.7, 0.7, 1.0])[:3]))
+    if not cores:
+        cores = [np.array([0.7, 0.7, 0.7])]
+    saida: list[tuple[np.ndarray, np.ndarray]] = []
+    cena = j.get("scenes", [{}])[j.get("scene", 0)]
+
+    def andar(i_no: int, pai: np.ndarray) -> None:
+        no = j["nodes"][i_no]
+        m = pai @ matriz(no)
+        if "mesh" in no:
+            for prim in j["meshes"][no["mesh"]].get("primitives", []):
+                if prim.get("mode", 4) != 4 or "POSITION" not in prim.get("attributes", {}):
+                    continue
+                pos = acessor(j, bina, prim["attributes"]["POSITION"])
+                if "indices" in prim:
+                    idx = acessor(j, bina, prim["indices"]).reshape(-1)
+                else:
+                    idx = np.arange(len(pos))
+                n_tri = len(idx) // 3
+                if n_tri == 0:
+                    continue
+                p = np.concatenate([pos, np.ones((len(pos), 1))], axis=1)
+                p = (m @ p.T).T[:, :3]
+                t = p[idx[:n_tri * 3]].reshape(n_tri, 3, 3)
+                t = np.stack([t[..., 0], -t[..., 2], t[..., 1]], axis=-1)
+                c = cores[prim.get("material", 0)] if prim.get("material") is not None \
+                    else cores[0]
+                saida.append((t, c))
+        for f in no.get("children", []):
+            andar(f, m)
+
+    for i_no in cena.get("nodes", []):
+        andar(i_no, np.eye(4))
+    return saida
 
 
 def _glb_atual() -> pathlib.Path | None:

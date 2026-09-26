@@ -745,12 +745,18 @@ def modelo_de_verdade(base: str) -> str | None:
 # no referencial do MODELO, aplicado depois do giro.
 MODELO_GIRADO = {
     "USB_C_Receptacle_HRO_TYPE-C-31-M-12": (180, 0.0, -1.05),
-    # O JST ZH tem a mesma doenca: como vem, o corpo cai em X -5,97
-    # a +2,75 e uma das duas ilhas de fixacao fica de fora. O F.Fab
-    # do footprint do KiCad poe o corpo em X -4,50..+4,50 e
-    # Y -2,00..+4,00; girado 180 graus o Y bate exatamente, e o X
-    # pede 1,61 mm de volta.
-    "JST_ZH_S4B-ZR-SM4A-TF_1x04-1MP_P1.50mm_Horizontal": (180, -1.61, 0.0),
+    # O JST ZH NAO vem girado, e o 180 que ficou aqui de 2026-09-25 a
+    # 2026-09-26 foi erro meu: a caixa do corpo batia com o F.Fab girada
+    # ou nao (ela e simetrica em X e o desvio em Y foi absorvido pelo
+    # deslocamento), e a ME4 so mede se as ilhas ficam SOB o corpo. O dono
+    # viu no 3D as pernas de solda apontando para a borda e as ilhas para
+    # dentro. A regra ME5 mede isso agora - o que sai do corpo junto da
+    # placa tem de sair pelo lado das ilhas - e o deslocamento abaixo foi
+    # resolvido por medida, nao por conta: com (2,25; -2,00) o corpo bege
+    # do modelo cai em x 27,00..33,00 e y 27,50..36,50 na placa, que e
+    # exatamente o F.Fab do footprint, e os rabichos ficam a 3,3 mm do
+    # centro pelo lado das ilhas.
+    "JST_ZH_S4B-ZR-SM4A-TF_1x04-1MP_P1.50mm_Horizontal": (0, 2.25, -2.0),
 }
 
 
@@ -1449,10 +1455,16 @@ PACOTE: dict[str, tuple] = {
          "0,83, A1 0,13, e 0,50 BSC nos dois eixos; os oito pads laterais sao "
          "0,475 x 0,250 e os seis de topo 0,250 x 0,475, recuados L1 0,100 da "
          "aresta (metallized pad detail, mesma pagina)"),
+    # (w, h) are in the FOOTPRINT's frame: w along its x, h along its y. The
+    # datasheet's D (1,60) runs along the row of pins, and in KiCad's SOT-523
+    # footprint the pins are spaced along Y (pads at x = -0,55 for 1 and 2,
+    # x = +0,55 for 3): D is the y size. This entry had (1,60; 0,80) and the
+    # four MOSFETs were drawn lying across their pads, 90 degrees off - the
+    # owner saw it in the 3D on 2026-09-26, and rule ME6 measures it now.
     "Package_TO_SOT_SMD:SOT-523":
-        (1.60, 0.80, 0.75, 0.05, None, 0.22, 0.33, 0.50,
-         "Diodes DS31783 Rev.8, SOT523: D 1,60, E1 0,80, A2 0,75, A1 0,05, "
-         "b 0,22, e 0,50 BSC"),
+        (0.80, 1.60, 0.75, 0.05, None, 0.22, 0.33, 0.50,
+         "Diodes DS31783 Rev.8, SOT523: E1 0,80 (x), D 1,60 (y, ao longo da "
+         "fileira de pinos), A2 0,75, A1 0,05, b 0,22, e 0,50 BSC"),
 }
 
 

@@ -86,6 +86,8 @@ trilhas de uma colocação que pode já ter mudado.
 | ME1 | a placa **cabe** dentro da caixa. Não é o que define o tamanho dela — placa e caixa são independentes —, é só a conferência de que uma entra na outra | [04](04-pcb-e-caixa.md) |
 | ME2 | altura dos componentes dentro da sombra da bateria e do display | [04](04-pcb-e-caixa.md#as-duas-sombras-display-e-bateria) |
 | ME4 | as ilhas de solda de uma peça ficam **sob o corpo** do modelo 3D do fabricante | um rabicho de solda fica em cima da sua ilha: se o corpo não as cobre, o modelo está fora de posição ou fora de orientação |
+| ME5 | o que **sai do corpo** do modelo junto da placa — os rabichos de solda — sai pelo **lado das ilhas de sinal**, não pelo oposto | um corpo simétrico passa na ME4 girado 180°: o JST ZH do `J103` passou, e o dono viu no 3D as pernas para a borda e as ilhas para dentro. Medido nas faces do GLB acima do cobre, fora do F.Fab, ao longo do eixo corpo → ilhas |
+| ME6 | o corpo 3D de **cada** peça tem o eixo do F.Fab (comprimento onde o footprint tem comprimento) e, onde as fileiras de ilhas são desiguais, as pernas saem pelos mesmos lados | a pergunta do dono sobre passivos e CIs "girados", peça a peça: um 0402 é duas vezes mais comprido que largo, e a troca de eixo não passa despercebida. Foi assim que os quatro SOT-523 apareceram deitados sobre as ilhas |
 
 > [!CAUTION]
 > **Este documento já errou duas vezes sobre a mesma ficha, nos dois
@@ -173,11 +175,13 @@ lado de cada número — sem ela a largura seria um chute.
 ## Resultado da posição
 
 Medido em 2026-09-26, na placa de **34 × 90 mm** com 155 peças, 114 redes,
-1.506 segmentos e 544 vias — **18 regras cumpridas, 5 violadas, 4 sem
+1.506 segmentos e 544 vias — **24 medidas cumpridas, 5 violadas, 4 sem
 medida**. A tabela de 2026-09-25 (145 peças, 22 regras, 21 cumpridas) está
-no histórico do git; três coisas mudaram nela e vale dizer quais: a `ME2`
+no histórico do git; cinco coisas mudaram nela e vale dizer quais: a `ME2`
 passou a medir de verdade (tinha sombra nenhuma para medir), a `RT1`
-nasceu, e a `US1` fechou.
+nasceu, a `US1` fechou, e a `ME5` e a `ME6` nasceram do que o dono viu no
+3D — um conector e quatro MOSFET desenhados girados sobre as próprias
+ilhas, que a `ME4` não pegava.
 
 | Id | Medida | Situação |
 |---|---|---|
@@ -199,6 +203,8 @@ nasceu, e a `US1` fechou.
 | **ME2** | **5 peças mais altas que o teto da sombra em que estão**: `J102` 4,25 e `LS601` 3,00 e `U502` 1,86 contra 1,2 mm sob a célula; `J103` 3,75 e `U301` 2,70 contra 2,6 mm sob o display ([04](04-pcb-e-caixa.md#as-duas-sombras-display-e-bateria)) | **violada** |
 | ME3 | os **17** encapsulamentos com cota de ficha cabem no footprint desenhado para eles e batem com o contorno | cumprida |
 | ME4 | as ilhas de `J101` (16), `J103` (6) e `J402` (7) ficam sob o corpo do modelo do fabricante | cumprida |
+| ME5 | os rabichos de `J101`, `J102`, `J103`, `J401` e `J402` saem do corpo pelo lado das ilhas de sinal (a 4,0, 2,7, 3,3, 3,4 e 0,8 mm do centro do corpo). O `J103` **reprovou na primeira medida** — o modelo estava girado 180° por um giro que eu mesmo tinha posto em 2026-09-25 — e foi corrigido por medida: com deslocamento (2,25; −2,00) e sem giro, o corpo cai exatamente no F.Fab | cumprida |
+| ME6 | os **132 corpos 3D** medidos têm o eixo do F.Fab e as pernas do lado das ilhas; 1 peça sem corpo ou sem F.Fab. Os quatro **SOT-523** (`Q401`, `Q601` a `Q603`) **reprovaram na primeira medida**: o corpo saía 1,60 × 0,66 onde o F.Fab tem 0,80 × 1,60, porque a cota da ficha estava com D e E1 trocados de eixo em `footprints.PACOTE` | cumprida |
 | OP1 | nenhuma peça de altura conhecida a menos de duas alturas do sensor de luz | cumprida |
 | US1 | o par `USB_DP`/`USB_DM` está roteado, a 0,150 mm nos pescoços dos dois conectores de 0,5 mm de passo e a **0,207 mm** no resto, que é o que dá 90 Ω nesta pilha | cumprida |
 | **RT1** | **44 itens desconectados em 30 redes** no DRC completo (`SRC` 8, `VBAT_SYS` 7, `3V0_SENS` 6, `NTC_SOLAR` 6, `GND` 6, `3V0` 5, `VSYS` 5, `PWR_SCL` 4); e **4 violações de isolamento** de 0,125 contra 0,127 mm (2 µm, arredondamento da grade de 0,15) entre `PWR_SCL` e `VBAT` junto do nPM1300, mais 20 avisos de biblioteca | **violada** |

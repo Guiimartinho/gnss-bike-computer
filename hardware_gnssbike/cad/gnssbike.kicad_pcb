@@ -16801,13 +16801,13 @@
 		)
 		(model "${KIPRJMOD}/3d/real/JST_ZH_S4B-ZR-SM4A-TF_1x04-1MP_P1.50mm_Horizontal.step"
 			(offset
-				(xyz -1.61 0 0)
+				(xyz 2.25 -2 0)
 			)
 			(scale
 				(xyz 1 1 1)
 			)
 			(rotate
-				(xyz 0 0 180)
+				(xyz 0 0 0)
 			)
 		)
 	)

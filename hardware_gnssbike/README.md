@@ -29,7 +29,7 @@ componente.
 > **Nada disto foi montado, medido ou fabricado.** A placa existe como
 > arquivo de CAD — 155 peças, 114 redes, 1.506 segmentos, 544 vias, **204
 > ligações roteadas e 59 sem trilha**, 4 violações de isolamento de 2 µm e
-> 18 das 23 regras das fichas cumpridas ([09](09-dry-run-da-pcb.md),
+> 24 das 29 medidas das fichas cumpridas ([09](09-dry-run-da-pcb.md),
 > 2026-09-26) —, mas nenhuma foi feita e nenhum componente passou por
 > bancada. Este aviso já disse "0 ligações sem trilha" com 47 em aberto:
 > o DRC rodava só com erros, e os não roteados são aviso. Todo valor

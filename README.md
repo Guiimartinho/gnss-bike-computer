@@ -60,8 +60,8 @@ Conceito em escala, a partir da caixa da V3: 62 × 104 × 19 mm; a PCB, dimensio
 
 A placa existe como **arquivo de CAD**, gerado por programa: 155 peças, 114
 redes, 1.506 segmentos, 544 vias, **204 ligações roteadas e 59 ainda sem
-trilha**, 4 violações de isolamento de 2 µm, e 18 das 23 regras que as
-fichas dos componentes e a IPC-2221B impõem, medidas uma a uma
+trilha**, 4 violações de isolamento de 2 µm, e 24 das 29 medidas que as
+fichas dos componentes e a IPC-2221B impõem, feitas uma a uma
 ([dry-run de 2026-09-26](hardware_gnssbike/10-dry-run-2026-09-26.md)). Nenhuma
 placa foi fabricada e nenhum componente passou por bancada. O esquemático,
 a placa e como se confere cada etapa estão em
