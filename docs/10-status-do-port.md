@@ -212,6 +212,12 @@ Tomada em 2026-09-23:
 |---|---|---|
 | Display | **JDI LPM027M128C**, peça única de 2,7", 400 × 240, MIP de 8 cores e **com luz frontal integrada**, no lugar do par Sharp LS027B7DH01A + filme Azumo 11103-06_A1; a Sharp fica como plano B no mesmo conector | peça única, **sem etapa de laminação**, mesma resolução (a interface não muda), consumo menor e cor. A placa declara `jdi,lpm027m128c` e **o defeito do COM em 1 Hz deixou de existir** (o driver aceita 140 Hz no JDI contra 20 Hz na Sharp). No hardware saem o REG710, o trilho de 5 V, o filme e o conector dele, e o `DISP_PWR_EN` (P3.07) **fica livre** ([esquemático, folha 4](../hardware_gnssbike/01-esquematico.md#folha-4--display)). **Custa mais**: R$ 776 contra US$ 90,06 do par, cerca de **US$ 54 a mais por placa**, **sem canal autorizado e sem garantia** ([19 · Custo](19-lista-de-compras.md#custo)). E custa **RAM**: o quadro do JDI ocupa 36.482 B contra 12.482 B da Sharp, **24.000 B a mais** ([05](05-arquitetura-zephyr.md#tela)); os números de memória do [resumo](#resumo) foram remedidos com a troca, em 2026-09-23, com build do zero. A pendência que ela abriu **estreitou no mesmo dia**: a ficha do C dá duas interfaces, 10 vias de sinal e **5 vias só para a luz**, e confirma os 2,67 V e 16 mA da conta do resistor; falta só a ordem das cinco vias, porque os PDF da JDI respondem 404 |
 
+Tomada em 2026-09-26:
+
+| Decisão | Escolha | Consequência |
+|---|---|---|
+| Licença do projeto | **CC BY-NC 4.0**, a mesma do stravaV10, de que o port deriva ([`LICENSE`](../LICENSE) na raiz, com o texto legal) | código aberto **sem uso comercial**; não é licença OSI (a OSI não admite restrição de uso); tudo o que é obra do projeto nasce sob ela, e o que é de terceiros mantém a licença de origem ([12](12-ferramentas-testes.md#bibliotecas-e-licenças)) |
+
 Ainda em aberto:
 
 | Decisão | Opções | Consequência |
@@ -219,4 +225,3 @@ Ainda em aberto:
 | Componentes da placa nova | proposta em [13](13-placa-nova.md), especificação em [14](14-hardware-placa-nova.md), avaliação em [15](15-avaliacao-componentes.md) e lista de compras validada em [19](19-lista-de-compras.md): nRF54LM20A no módulo Fanstel BM20C, display **JDI LPM027M128C** de 8 cores com luz integrada (decidido em 2026-09-23, acima; a Sharp LS027B7DH01A com o filme Azumo fica de plano B no mesmo conector), GNSS u-blox MAX-F10S de banda dupla (o MAX-M10N-10B no mesmo footprint, como alternativa econômica) com antena linear L1/L5 na borda de cima, nPM1300 com MAX17262 e carregador solar AEM10900, BMP585, BMI270, MMC5633NJL e OPT3001 | o dono aprova ou troca cada item; amostras e placas de avaliação antes do esquemático |
 | Hardware de teste | nRF54LM20 DK para desenvolver até a placa própria existir, e as placas de avaliação da [proposta](13-placa-nova.md#próximos-passos) | sem placa, nada roda de verdade: hoje só há build e testes de host |
 | Formatos no SD | compatíveis com o legacy (segmentos em texto com nome base36, `.PAR`, `@DDMMYY.txt`) ou formatos novos com conversor | há 138 segmentos e 2 percursos de exemplo em `tools/TDD/DB` no formato do legacy |
-| Licença do projeto | o legacy é CC BY-NC 4.0; o port deriva dele | afeta uso comercial e a escolha da licença do repositório |
