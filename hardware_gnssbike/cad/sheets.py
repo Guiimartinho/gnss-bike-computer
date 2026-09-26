@@ -47,8 +47,8 @@ def sheet_of(ref: str) -> str:
 TRILHOS: dict[str, bool] = {   # name -> is it a ground
     "GND": True,
     "VBUS": False, "VBUSOUT": False, "VBAT_CELULA": False, "VBAT": False,
-    "VBAT_SYS": False, "VSYS": False, "1V8": False, "1V8_BLOCO": False,
-    "1V8_GNSS": False, "3V0": False, "3V0_MOD": False, "3V0_SENS": False,
+    "VBAT_SYS": False, "VSYS": False, "1V8": False, "3V0_BLOCO": False,
+    "3V0_GNSS": False, "3V0": False, "3V0_MOD": False, "3V0_SENS": False,
     "SD3V0": False, "SD3V0_FLASH": False, "3V3BL": False, "VBCKP": False,
     "VINT": False,
 }

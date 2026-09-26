@@ -745,7 +745,7 @@ class PowerPort:
         if self.net == "PWR_FLAG":
             # A bandeira de alimentacao, que nao carrega rede nenhuma: ela so
             # DIZ que aquele no esta alimentado. Existe porque o ERC nao tem
-            # como saber que o 1V8_GNSS vem do 1V8 atraves de um ferrite -
+            # como saber que o 3V0_GNSS vem do 3V0 atraves de um ferrite -
             # ele ve um trilho cujos pinos sao todos de entrada e chama de
             # erro. O pino dela e `power_out`, e e isso que responde.
             art = ('\t\t\t\t(polyline (pts (xy 0 0) (xy 0 1.27))'

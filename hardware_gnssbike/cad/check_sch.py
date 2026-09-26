@@ -291,8 +291,11 @@ def main() -> int:
         # the sheet the generator would choose for these parts. It takes the
         # refs, not a count: the size comes from laying them out, not from a
         # budget per part.
-        w_pag, h_pag = MK.PAPEIS[MK.escolher_papel(
-            refs, len(kids(arv, "hierarchical_label")))]
+        # the sheet's OWN paper, read from the file: the energy sheet is
+        # generated on a forced A2 (make_sch.main), and recomputing the size
+        # here chose A3 and reported three labels "outside" that were inside
+        papel = kid(arv, "paper")
+        w_pag, h_pag = MK.PAPEIS[papel[1]] if papel and papel[1] in MK.PAPEIS             else MK.PAPEIS[MK.escolher_papel(refs, len(kids(arv, "hierarchical_label")))]
         fora = []
         for ref in refs:
             x0, y0, x1, y1 = P.PARTS[ref].box()
@@ -302,7 +305,11 @@ def main() -> int:
             at = kid(lb, "at")
             if not (0 < float(at[1]) < w_pag and 0 < float(at[2]) < h_pag):
                 fora.append(lb[1])
-        check(not fora, f"{nome}: nada fora da folha {MK.escolher_papel(refs, 0)} "
+        if fora:
+            print("      fora da folha: " + ", ".join(
+                f"{r} {tuple(round(v, 1) for v in P.PARTS[r].box())}"
+                if r in P.PARTS else str(r) for r in fora[:6]))
+        check(not fora, f"{nome}: nada fora da folha {papel[1] if papel else '?'} "
                         f"({len(fora)})")
 
         sobrepostas = []

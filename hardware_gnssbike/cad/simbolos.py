@@ -113,4 +113,4 @@ _p(["Q401", "Q601", "Q602", "Q603"], "Device:Q_NMOS_GSD")
 # Fora estes, faltam os que a biblioteca do KiCad nao tem e que precisam de
 # simbolo desenhado: o nPM1300 (ha um de terceiros em CERN-OHL-P-2.0, em
 # hlord2000/nordic-lib-kicad, com os 33 pinos batendo), o modulo ME54BS13, o
-# MAX17262, o TPS7A02, o TXU0204, o BMP585, o OPT3001 e o display.
+# MAX17262, o TPS7A02, o BMP585, o OPT3001 e o display.

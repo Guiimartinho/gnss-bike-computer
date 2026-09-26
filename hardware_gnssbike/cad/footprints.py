@@ -42,7 +42,7 @@ C0402 = "Capacitor_SMD:C_0402_1005Metric"
 C0603 = "Capacitor_SMD:C_0603_1608Metric"
 
 _fp(["R102", "R103", "R104", "R105", "R106", "R107", "R108", "R109", "R110",
-     "R111", "R112", "R401", "R402", "R403", "R404", "R405", "R501", "R502",
+     "R112", "R402", "R124", "R125", "R406", "R407", "R408", "R409", "R403", "R404", "R405", "R501", "R502",
      "R503", "R504", "R505", "R506", "R507", "R508", "R601", "R602", "R603",
      "R604", "R605", "R606", "R607", "R608", "R609", "R610", "R611",
      "R113", "R114", "R115", "C305", "C306",
@@ -57,7 +57,7 @@ _fp("RT101", R0402, "ENCAPSULAMENTO", "NTC 10 k B3380 em 0402")
 _fp(["C110", "C111", "C113", "C114", "C115", "C116", "C118", "C201", "C304",
      "C404", "C503"], C0402, "ENCAPSULAMENTO", "")
 _fp(["C101", "C102", "C103", "C104", "C105", "C106", "C107", "C108", "C109",
-     "C112", "C117", "C210", "C303", "C501", "C502",
+     "C122", "C123", "C124", "C125", "C126", "C129", "C117", "C210", "C303", "C501", "C502",
      "C601", "C602", "C603"], C0603, "ENCAPSULAMENTO", "")
 
 _fp(["L101", "L102"], "Inductor_SMD:L_0805_2012Metric", "ENCAPSULAMENTO",
@@ -66,7 +66,7 @@ _fp("L103", "Inductor_SMD:L_1008_2520Metric", "ENCAPSULAMENTO",
     "TDK VLS252012HBX, 2,5 x 2,0 mm")
 _fp("L301", "Inductor_SMD:L_0402_1005Metric", "ENCAPSULAMENTO", "")
 _fp(["C301", "C302"], C0402, "ENCAPSULAMENTO", "")
-_fp("FB301", "Inductor_SMD:L_0402_1005Metric", "ENCAPSULAMENTO",
+_fp("FB301", "Inductor_SMD:L_0603_1608Metric", "ENCAPSULAMENTO",
     "ferrite Murata BLM15PX601SN1D")
 
 # ---------------------------------------------------------------- CIs
@@ -126,6 +126,10 @@ _fp("U103", "Package_CSP:LFCSP-24-1EP_4x4mm_P0.5mm_EP2.3x2.3mm", "EXATO",
 _fp("E301", "gnssbike:Antena_Unictron_H2UJ4U1H2Q0100_5x3mm", "GERADO",
     "antena de chip L1+L5 soldada na borda; land pattern do guia de "
     "layout da ficha rev. E")
+_fp("U105", "Package_TO_SOT_SMD:SOT-353_SC-70-5", "ENCAPSULAMENTO",
+    "TLV7031 em SC70-5")
+_fp("D106", "Diode_SMD:D_SOD-323", "ENCAPSULAMENTO", "BAT54WS em SOD-323")
+_fp("D107", "Diode_SMD:D_SOD-323", "ENCAPSULAMENTO", "BAT54WS em SOD-323")
 _fp("D105", "Diode_SMD:D_SOD-523", "ENCAPSULAMENTO",
     "grampo do SRC; a peca ainda nao foi escolhida, o SOD-523 e so o "
     "encapsulamento mais provavel de um TVS pequeno de fuga baixa")
@@ -198,7 +202,6 @@ CORPO: dict[str, tuple[float, float, float]] = {
     "gnssbike:OPT3001_USON-6_2x2mm_P0.65mm": (2.00, 2.00, 0.65),
     "gnssbike:ESD761_X1SON-2_1x0.6mm": (1.00, 0.60, 0.45),
     "gnssbike:TPD4E05U06_USON-10_1x2.5mm_P0.5mm": (1.00, 2.50, 0.55),
-    "gnssbike:TXU0204_WQFN-14_3x2.5mm_P0.5mm": (3.00, 2.50, 0.80),
     # the spring contacts: the two 2.0 x 2.0 pads at 3.0 mm of pitch that
     # contato_mola() draws, so 5.0 mm across the pair. The 1.5 mm of leaf is
     # ALTURA's, and ALTURA says there where it does NOT come from.
@@ -444,9 +447,12 @@ def antena_unictron(nome):
     #
     # Entao a serigrafia marca esse lado: uma seta curta fora do contorno,
     # do lado +x, que e para onde o "U" tem de apontar.
+    # Ao LADO do corpo, nao acima: a peca fica a 0,3 mm da borda de cima da
+    # placa, e a seta acima do corpo saia 0,1 mm da placa (silk_edge_clearance
+    # no DRC) enquanto o "U" ficava inteiro fora dela.
     seta = (
         '\t(fp_poly\n'
-        '\t\t(pts (xy 3.10 -1.90) (xy 4.00 -1.40) (xy 3.10 -0.90))\n'
+        '\t\t(pts (xy 3.10 -0.50) (xy 4.00 0.00) (xy 3.10 0.50))\n'
         '\t\t(stroke (width 0.12) (type solid))\n'
         '\t\t(fill solid)\n'
         '\t\t(layer "F.SilkS")\n'
@@ -454,7 +460,7 @@ def antena_unictron(nome):
         '\t)')
     texto = (
         '\t(fp_text user "U"\n'
-        '\t\t(at 2.20 -2.40 0)\n'
+        '\t\t(at 3.55 1.30 0)\n'
         '\t\t(layer "F.SilkS")\n'
         '\t\t(uuid "' + _uid(nome, "txtU") + '")\n'
         '\t\t(effects (font (size 0.6 0.6) (thickness 0.12)))\n'
@@ -546,11 +552,6 @@ def _gerar():
     GERADOS["gnssbike:BMP585_LGA-8_3.25x3.25mm"] = son(
         "gnssbike:BMP585_LGA-8_3.25x3.25mm", 8, 0.65, 0.5, 0.35, 2.5,
         3.25, 3.25, "Bosch BMP585, LGA-8; land pattern aproximado")
-    # TXU0204 WQFN-14, 3.0 x 2.5 mm, 0.5 mm pitch, thermal pad.
-    GERADOS["gnssbike:TXU0204_WQFN-14_3x2.5mm_P0.5mm"] = son(
-        "gnssbike:TXU0204_WQFN-14_3x2.5mm_P0.5mm", 14, 0.5, 0.45, 0.28, 2.6,
-        3.0, 2.5, "TI TXU0204 em BQA, WQFN-14 com pad termico; "
-                  "land pattern aproximado", ep=("PAD", 1.6, 1.6))
     # MAX form factor, 9,7 x 10,1 mm, 18 pads, 9 per edge, LCC with half
     # vias on the two long edges. It carries EITHER receiver: the MAX-F10S
     # and the MAX-M10S have the same 18 pins, the same names, the same
@@ -1335,10 +1336,6 @@ PACOTE: dict[str, tuple] = {
         (1.00, 1.00, 0.48, 0.03, None, 0.28, 0.30, 0.65,
          "TI SBVS277C, desenho do DQN0004A: 1,05/0,95 x 1,05/0,95, "
          "altura 0,48 +0,12/-0,10"),
-    "gnssbike:TXU0204_WQFN-14_3x2.5mm_P0.5mm":
-        (3.00, 2.50, 0.75, 0.03, (1.50, 1.00), 0.25, 0.40, 0.50,
-         "TI SCES936A, desenho do BQA0014A: 3,1/2,9 x 2,6/2,4, altura 0,8/0,7, "
-         "pad exposto 1,6/1,4 x 1,1/0,9"),
     "gnssbike:OPT3001_USON-6_2x2mm_P0.65mm":
         (2.00, 2.00, 0.60, 0.03, (0.65, 1.35), 0.30, 0.30, 0.65,
          "TI SBOS681B, desenho do DNP0006A: 2,1/1,9 quadrado, altura 0,65/0,55, "
@@ -1651,7 +1648,6 @@ _fp("U505", "gnssbike:OPT3001_USON-6_2x2mm_P0.65mm", "GERADO", "")
 _fp("D101", "gnssbike:ESD761_X1SON-2_1x0.6mm", "GERADO", "")
 _fp("D102", "gnssbike:TPD4E05U06_USON-10_1x2.5mm_P0.5mm", "GERADO", "")
 _fp("U502", "gnssbike:BMP585_LGA-8_3.25x3.25mm", "GERADO", "")
-_fp("U302", "gnssbike:TXU0204_WQFN-14_3x2.5mm_P0.5mm", "GERADO", "")
 _fp("U301", "gnssbike:u-blox_MAX_LCC-18_9.7x10.1mm", "GERADO", "")
 _fp("D601", "gnssbike:LED_RGB_3528_3.5x2.8mm", "GERADO",
     "TUOZHAN S4-3528RGBTA-A: o sufixo do APTF1616 do projeto nao existe "

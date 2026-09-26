@@ -265,6 +265,17 @@ add("U104", "TPS7A0218PDQN", [
     (5, "PAD", "power_in", B),
 ], confirmed=True, lcsc="C2862166", note="LDO de 1,8 V do VBCKP do receptor; pad termico ao GND")
 
+# A alimentacao do receptor GNSS, decidida duas vezes em 2026-09-26. De
+# manha: o BUCK1 do nPM1300 e de +-5 % (1,71-1,89 V) e a tabela 35 do manual
+# do MAX-F10S pede +-2 % para o projeto de 1,8 V, entao entrou um segundo
+# TPS7A02 de 1,8 V +-1 % (U106) alimentado do 3V0. De tarde a conta do
+# consumo mostrou que o LDO custava 35 mW na bateria (o receptor passava a
+# ser pago a 3,0 V com 1,2 V queimados no LDO) e a opcao 1 da mesma tabela
+# custa menos: VCC e V_IO no 3V0, VIO_SEL aberto, 19 mA a 3,0 V (57 mW, 10 a
+# mais que a 1,8 V; docs/15) e sem tradutor de nivel. O dono escolheu a
+# opcao 1; sairam o U106 com os seus dois capacitores e o TXU0204 (U302)
+# com os seus dois. O BUCK1 fica montado e sem carga (nets.py explica).
+
 # KXOB25-05X3F: the datasheet does NOT number the terminals. The silkscreen on
 # the back marks + on one pad and - on the other, and 1 and 2 below follow the
 # usual convention; if the footprint numbers them the other way, this follows.
@@ -300,7 +311,7 @@ add("D104", "APT1608SURCK", [(1, "K", "passive", L), (2, "A", "passive", R)],
 passive("R102", "47 k", "VSET1: BUCK1 em 1,8 V")
 passive("R103", "150 k", "VSET2: BUCK2 em 3,0 V")
 passive("R104", "100 k", "serie do DIS_SW, de VBUSOUT")
-passive("R105", "1 M", "do DIS_SW ao AGND; sem ele o pino flutua sem USB")
+passive("R105", "180 k", "do DIS_SW ao AGND; sem ele o pino flutua sem USB")
 
 # A rede de resistores do ADP5091. Todos os divisores somam mais de 6 MOhm,
 # que e o que a equacao 7 da ficha exige para nao comer corrente de repouso.
@@ -324,14 +335,14 @@ passive("R117", "4,3 M", "ROC2 do MPPT, de VIN ao pino MPPT")
 # Nao e perda: o AEM10900 ja estava configurado para 3,90 V, o perfil Li-ion
 # long life, e o nPM1300 continua fazendo a carga fina pelo USB. Assim o
 # solar nunca decide o topo da celula.
-passive("R118", "4,32 M", "RTERM1, de BAT ao pino TERM")
+passive("R118", "4,32 M", "RTERM1, do pino REF ao pino TERM (figura 42 da ficha)")
 passive("R119", "2,67 M", "RTERM2, do pino TERM ao AGND")
 
 # SETSD (equacao 8): VSETSD = VINT_REF x (1 + RSD1/RSD2). 3,00 V nominais,
 # pior caso de 2,87 a 3,20 V - seguro nos dois extremos. Sao os valores da
 # linha de 3 V da tabela 8 da propria ADI. A histerese e INTERNA (115 kOhm
 # tipicos) e da cerca de 112 mV com estes divisores.
-passive("R120", "6,65 M", "RSD1, de BAT ao pino SETSD")
+passive("R120", "6,65 M", "RSD1, do pino REF ao pino SETSD (figura 42 da ficha)")
 passive("R121", "3,32 M", "RSD2, do pino SETSD ao AGND")
 
 # MINOP: R = V_MINOP / 2,00 uA. 402 k da 0,804 V, ou seja o boost para quando
@@ -347,19 +358,18 @@ passive("R123", "111 k", "VID: estado definido do regulador desabilitado")
 # O divisor de temperatura do comparador: o NTC RT101 e o R106 que ja
 # estavam na placa para o TH_MON do AEM10900. VALORES A CONFERIR contra o
 # limiar de 45 graus e a referencia do comparador.
-passive("R106", "22 k", "par do RT101 no divisor de temperatura; a peca "
+passive("R106", "4,87 k", "limiar de 45 graus do corte termico: o NTC 10 k B3380 vale 4,90 k a 45 graus, e com este resistor embaixo o meio do divisor cruza VIN/2 exatamente ai"
                         "que le esse divisor ainda nao existe - ver o "
                         "defeito aberto do corte termico, acima")
 passive("R107", "4,7 k", "pull-up do PWR_SDA")
 passive("R108", "4,7 k", "pull-up do PWR_SCL")
 passive("R109", "10 k", "pull-up do PMIC_INT")
 passive("R110", "10 k", "pull-up do ALRT do MAX17262")
-passive("R111", "10 k", "pull-up do IRQ do AEM10900")
 passive("R112", "10 k", "pull-up do INT do OPT3001")
 
 for n, v in (("C101", "10 uF"), ("C102", "10 uF"), ("C103", "10 uF"), ("C104", "10 uF"),
              ("C105", "10 uF"), ("C106", "10 uF"), ("C107", "10 uF"), ("C108", "10 uF"),
-             ("C109", "10 uF"), ("C110", "1 uF"), ("C111", "1 uF"), ("C112", "2,2 uF"),
+             ("C109", "10 uF"), ("C110", "1 uF"), ("C111", "1 uF"),
              ("C113", "1 uF"), ("C114", "1 uF"), ("C115", "22 uF"), ("C116", "22 uF"),
              ("C117", "22 uF"), ("C118", "0,47 uF")):
     passive(n, v)
@@ -531,15 +541,79 @@ for _n in ("R113", "R114", "R115"):
 # O grampo da entrada do colhedor. O conector certo impede o engano de plugar
 # a bateria no painel; este impede o prejuizo quando o engano vier de outro
 # lugar - fio invertido no crimp, painel trocado, fonte de bancada. O MPPT do
-# AEM10900 vai ate 2,73 V e o arranjo em aberto da 2,07 V, entao um grampo de
-# 3,0 V fica acima do sinal util e abaixo dos 4,2 V de uma celula.
-# VALOR AINDA NAO ESCOLHIDO: falta conferir a corrente de fuga a 2,1 V, que
-# entra direto no orcamento solar, e o maximo absoluto do pino SRC na ficha.
-add("D105", "TVS 3,0 V", [
+# ADP5091 vai ate 3,3 V e o arranjo em aberto da 2,07 V, entao um grampo com
+# 3,3 V de trabalho fica acima do sinal util. Contra 4,2 V de uma celula ele
+# NAO protege - grampo nao segura fonte sustentada; a familia do conector e
+# que segura. Contra polaridade trocada protege, por ser unidirecional.
+add("D105", "PESD3V3S1UB-N", [
     (1, "IO", "passive", L), (2, "GND", "passive", B),
-], confirmed=False,
-    note="grampo do SRC contra ligar a bateria ou uma fonte na entrada solar. "
-         "ESCOLHER a peca: fuga baixa a 2,1 V e maximo absoluto do SRC")
+], confirmed=False, lcsc="C920299",
+    note="grampo do SRC: ESD unidirecional de 3,3 V em SOD-523, 1 uA de fuga "
+         "no maximo a 3,3 V (bem menos nos 2,07 V de circuito aberto do "
+         "painel), 160 pF, 100 W a 8/20 us. UNIDIRECIONAL de proposito: o "
+         "diodo direto grampeia a entrada em -0,7 V se o chicote vier com a "
+         "polaridade trocada. Nao protege de fonte errada sustentada (uma "
+         "celula de 4,2 V no J103): quem impede isso e a familia do conector. "
+         "Escolhida em 2026-09-25; o maximo absoluto do VIN do ADP5091 nao "
+         "pode ser conferido - a ficha dele nao esta no repositorio")
+
+# ---- corte termico do caminho solar. Decidido pelo dono em 2026-09-25, a
+# opcao (b) das quatro registradas acima: o divisor do NTC e o divisor de
+# referencia sao alimentados pelo VIN do painel (SRC), nao pela bateria.
+# No escuro VIN e zero e o consumo e zero; ao sol os ~180 uA saem do painel,
+# que da ~88 mA. O comparador compara as duas razoes, entao o limiar nao
+# depende da tensao do painel. A saida push-pull sobe ao VSYS quando esta
+# quente e, por um Schottky, poe o DIS_SW em alto - o OU com o divisor do
+# USB, que continua funcionando porque com a saida em baixo o diodo fica
+# reverso. O ADP5091 nao tem entrada de temperatura; carregar Li-ion acima
+# de 45 graus e questao de seguranca.
+#
+#   SRC ---[RT101 10k NTC]---+---[R106 4,87k]--- GND     IN+ = VIN/2 a 45 C
+#   SRC ---[R124 100k]-------+---[R125 100k]---- GND     IN- = VIN/2
+#   U105 OUT ---|>|--- DIS_SW                             D106
+add("U105", "TLV7031DCKR", [
+    (1, "IN+", "input", L), (2, "GND", "power_in", B), (3, "IN-", "input", L),
+    (4, "OUT", "output", R), (5, "V+", "power_in", T),
+], confirmed=False, lcsc="C2869832",
+    note="comparador de 315 nA com saida push-pull, SC70-5; alimentado pelo "
+         "VSYS. A PINAGEM E A DO SC70 PADRAO DE COMPARADOR (IN+, GND, IN-, "
+         "OUT, V+) e tem de ser CONFERIDA na ficha SNOSD54 antes de fabricar; "
+         "o comentario antigo desta lista o dava como dreno aberto, e e o "
+         "TLV7041 que e dreno aberto")
+passive("R124", "100 k", "referencia do corte termico: metade do VIN do painel")
+passive("R125", "100 k", "referencia do corte termico, ao GND")
+add("D106", "BAT54WS-7-F", [
+    (1, "K", "passive", L), (2, "A", "passive", R),
+], confirmed=False, lcsc="C124205",
+    note="Schottky do OU no DIS_SW: anodo na saida do comparador, catodo no "
+         "DIS_SW. SOD-323; catodo no terminal 1 CONFERIR pela marca do desenho")
+
+# A tecla central. Decidido pelo dono em 2026-09-26: o P1.27 do MCU le o
+# no da tecla por um Schottky, anodo no MCU (pull-up interno) e catodo no
+# no. O no e o SHPHLD do nPM1300, que tem pull-up interno de 50 k para VBAT
+# OU VBUS, o que for maior (ficha, p. 120): com cabo ele vai a 5,5 V, acima
+# do maximo absoluto do pino do MCU (VDD + 0,3 V); e em ship mode, com o
+# 3V0 em zero, o diodo de protecao do P1.27 grampeava o SHPHLD em 0,6 V e o
+# PMIC lia tecla pressionada - o aparelho nao ficava desligado.
+add("D107", "BAT54WS-7-F", [
+    (1, "K", "passive", L), (2, "A", "passive", R),
+], confirmed=False, lcsc="C124205",
+    note="Schottky que isola o P1.27 do no da tecla central; catodo no no, "
+         "anodo no MCU. SOD-323; catodo no terminal 1 CONFERIR pela marca")
+
+# ---- desacoplamento que as fichas pedem e faltava (revisao de 2026-09-26)
+passive("C122", "100 nF", "bypass do BATT do MAX17262, junto do CI (ficha, p. 12)")
+passive("C123", "100 nF", "desacoplamento do VDD do BMI270, junto do pino 8 (ficha, p. 136)")
+passive("C124", "100 nF", "desacoplamento do VDDIO do BMI270, junto do pino 5 (ficha, p. 136)")
+passive("C125", "100 nF", "desacoplamento do VDD/VDDIO do BMP585, junto do CI")
+passive("C126", "100 nF", "desacoplamento do VDD do OPT3001, junto do CI")
+passive("C129", "100 nF", "desacoplamento do VDDIO do nPM1300: o C13 da referencia (tabela 40)")
+
+# ---- luz do display: um resistor por catodo. Os quatro LEDs em paralelo
+# num resistor so repartiam os 16 mA pela dispersao de V_F; com um por
+# catodo, cada um leva (3,3 - 2,68 - 0,05) / 4 mA = 143 ohm -> 150 ohm, 4 mA.
+for _n in ("R406", "R407", "R408", "R409"):
+    passive(_n, "150 R", "R_BL, um por catodo da luz: 4 mA cada, 16 mA no total")
 
 # ---------------------------------------------------------------- folha 3
 # MAX-F10S data sheet UBXDOC-963802114-12732 R03, table 10, page 9.
@@ -554,22 +628,12 @@ add("U301", "u-blox MAX-F10S", [
     (16, "SDA", "bidirectional", L), (17, "SCL", "input", L),
     (18, "SAFEBOOT_N", "input", L),
 ], confirmed=True,
-    note="receptor L1+L5; com VIO_SEL no GND o V_IO tem maximo absoluto de 1,98 V, "
-         "com ele aberto sobe para 3,6 V e o tradutor deixa de ser preciso")
+    note="receptor L1+L5 no 3V0, VCC e V_IO juntos e VIO_SEL aberto (opcao 1 da "
+         "tabela 35 do manual de integracao): V_IO de 2,7 a 3,6 V, e as quatro "
+         "linhas digitais vao direto ao MCU, que tambem e de 3,0 V")
 
-# TXU0204 SCES936A, figure 6-2 and table 6-1. The part ordered is the BQA,
-# WQFN-14: the DYY and DQM packages this project once assumed do not exist for
-# this device. The Y in A3Y, A4Y, B1Y and B2Y marks the output of its channel.
-add("U302", "TI TXU0204BQAR", [
-    (1, "VCCA", "power_in", T), (2, "A1", "input", L), (3, "A2", "input", L),
-    (4, "A3Y", "output", L), (5, "A4Y", "output", L), (6, "NC1", "no_connect", L),
-    (7, "GND", "power_in", B), (8, "OE", "input", L), (9, "NC2", "no_connect", R),
-    (10, "B4", "input", R), (11, "B3", "input", R), (12, "B2Y", "output", R),
-    (13, "B1Y", "output", R), (14, "VCCB", "power_in", T),
-    ("PAD", "PAD", "passive", B),
-], confirmed=True, lcsc="C5187479",
-    note="direcao FIXA: A1 e A2 vao de A para B; B3 e B4 vao de B para A. "
-         "Pad termico ao GND, recomendado pela TI")
+# O tradutor de nivel TXU0204 (U302) saiu em 2026-09-26, quando o receptor
+# passou a 3,0 V: MCU e receptor no mesmo trilho nao precisam de tradutor.
 
 # A antena de chip mudou de peca em 2026-09-24, e a nova resolve de vez o
 # problema que a antiga criava.
@@ -654,19 +718,19 @@ add("J302", "Hirose U.FL-R-SMT-1", [
 # DEFEITO ABERTO, achado em 2026-09-24. As duas fichas do receptor - MAX-F10S
 # UBXDOC-963802114-12732 R03 e MAX-M10S UBX-20035208 R08 - proibem mais de
 # 0,2 ohm em serie na linha de alimentacao, e pedem 1,8 V +-2 %, que sao
-# 36 mV. O BLM15PX601SN1D tem 230 mOhm de DCR: no pico de partida de 100 mA
+# 36 mV. O BLM15PX601SN1D tinha 230 mOhm de DCR: no pico de partida de 100 mA
 # isso da 23 mV, dois tercos da tolerancia inteira, so no ferrite.
 #
-# Em regime o consumo e 26 mA a 1,8 V e a queda e 6 mV, entao nao e um erro
-# que impeca funcionar - e uma folga que sumiu. ESCOLHER um ferrite de DCR
-# menor (provavelmente 0603, porque em 0402 impedancia alta e DCR alta andam
-# juntas) ou aceitar e registrar a conta. O levantamento da LCSC tambem
-# corrigiu um numero da lista de compras: esta peca e de 900 mA, nao de 1 A,
-# e nao existe 0402 de 600 ohm com 1 A no catalogo.
-passive("FB301", "600 R @100 MHz", "ferrite do 1V8 junto do receptor; DCR de "
-                                   "230 mOhm CONTRA o limite de 200 da ficha "
-                                   "do receptor - defeito aberto",
-        lcsc="C160977")
+# FECHADO em 2026-09-25: BLM18KG601SN1D (LCSC C85833), 0603, 600 ohm a
+# 100 MHz, 1,3 A, 150 mOhm - 15 mV no pico de 100 mA e 3,9 mV nos 26 mA de
+# regime. Em 0402 nao existe 600 ohm com DCR abaixo de 200 mOhm no catalogo,
+# que e por que o encapsulamento subiu; 371 mil pecas em estoque na consulta.
+passive("FB301", "600 R @100 MHz", "ferrite do 3V0 junto do receptor: Murata "
+                                   "BLM18KG601SN1D, 0603, 1,3 A, DCR 150 mOhm "
+                                   "- dentro dos 0,2 ohm do manual (4.1.1). "
+                                   "Fechado em 2026-09-25; era o BLM15PX601SN1D "
+                                   "de 0402 e 230 mOhm",
+        lcsc="C85833")
 passive("C301", "1,5 pF", "shunt [1] da rede de casamento. O valor depende "
                           "de QUAL antena for montada: 1,5 pF e o que a "
                           "Unictron recomenda para a antena de chip; com "
@@ -740,7 +804,6 @@ add("Q401", "DMG1012T-7", [
     note="chave de canal N da luz. A Diodes NAO publica numero de pino: o "
          "diagrama so mostra a posicao, e a numeracao vem do padrao SOT-523")
 
-passive("R401", "39 R", "R_BL: 16 mA a 2,67 V no trilho de 3,3 V")
 passive("R402", "100 k", "pull-down da porta do Q401")
 passive("R403", "100 k", "pull-down do DISP_PWR_EN")
 passive("R404", "100 k", "pull-down do DISP_ON")
@@ -875,8 +938,8 @@ passive("R606", "100 R", "serie da tecla direita")
 passive("C601", "1 nF", "da tecla esquerda ao GND")
 passive("C602", "1 nF", "da tecla central ao GND")
 passive("C603", "1 nF", "da tecla direita ao GND")
-passive("R607", "330 R", "serie do BUZ_A")
-passive("R608", "330 R", "serie do BUZ_B")
+passive("R607", "1 k", "serie do BUZ_A")
+passive("R608", "1 k", "serie do BUZ_B")
 passive("R609", "100 k", "pull-down da porta do Q601")
 passive("R610", "100 k", "pull-down da porta do Q602")
 passive("R611", "100 k", "pull-down da porta do Q603")

@@ -146,9 +146,12 @@ Quatro sinais, em seis vias:
 - **`VBAT+`** e **`GND`**, o par de potência;
 - **`NTC_BAT`**, o NTC do pack, que vai ao pino `NTC` do nPM1300 e serve
   ao perfil JEITA de 0, 10, 45 e 60 °C;
-- **`TH_MON`**, um **segundo NTC**, que vai ao AEM10900 e corta a carga
-  solar fora de 0 a 45 °C ([14](../docs/14-hardware-placa-nova.md#ligações-fixas-dos-cis),
-  [15](../docs/15-avaliacao-componentes.md#bateria)).
+- **`TH_MON`**, um **segundo NTC**, que corta a carga solar fora de 0 a
+  45 °C. Desde 2026-09-26 quem o lê é o comparador `U105` (TLV7031), porque
+  o ADP5091 que substituiu o AEM10900 não tem entrada de temperatura: o
+  divisor `RT101`/`R106` é alimentado pelo próprio painel e a saída do
+  comparador leva o `DIS_SW` para cima pelo `D106`
+  ([01](01-esquematico.md#folha-1--energia), [03](03-netlist.md#nós-de-alimentação)).
 
 ### Proposta
 

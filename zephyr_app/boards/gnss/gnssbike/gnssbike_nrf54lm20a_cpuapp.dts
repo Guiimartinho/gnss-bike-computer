@@ -224,12 +224,19 @@ temp_sensor: &temp {
 /*
  * ---- GNSS ----
  *
- * u-blox MAX-F10S, L1 and L5 at the same time (docs/15). The receiver runs
- * at 1.8 V and the MCU at 3.0 V, so a TXU0204 sits between them with its OE
- * tied to VCCA. The part leaves the factory at 38400 baud; the driver turns
- * NMEA off and asks for one UBX-NAV-PVT and one UBX-NAV-SAT a second. The
- * footprint also takes the MAX-M10N-10B, which has LEAP; the compatible is
- * what tells the two apart.
+ * u-blox MAX-F10S, L1 and L5 at the same time (docs/15). Since 2026-09-26
+ * the receiver runs at 3.0 V on the same rail as the MCU (VCC and V_IO
+ * tied, VIO_SEL open: option 1 of table 35 of the integration manual), so
+ * the UART, EXTINT, TIMEPULSE and RESET_N go pin to pin, without the
+ * TXU0204 level shifter of the 1.8 V design. The part leaves the factory at
+ * 38400 baud; the driver turns NMEA off and asks for one UBX-NAV-PVT and
+ * one UBX-NAV-SAT a second. The footprint also takes the MAX-M10N-10B,
+ * which has LEAP; the compatible is what tells the two apart.
+ *
+ * vcc-supply points at BUCK2, which is always on: the driver's
+ * regulator_disable() in standby becomes a no-op and the receiver only
+ * sleeps by software (UBX-RXM-PMREQ, 46 uA on V_IO). The rail cannot be
+ * cut without cutting the MCU (hardware_gnssbike/02, "O receptor no 3V0").
  *
  * P1.08 (EXTINT) and P1.09 (TIMEPULSE) are wired on the board and left out
  * of this node: the driver has no property for either, and a pin that the
@@ -254,7 +261,7 @@ temp_sensor: &temp {
 		 * the line and never pulses it on its own.
 		 */
 		reset-gpios = <&gpio1 6 (GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN)>;
-		vcc-supply = <&npm1300_buck1>;
+		vcc-supply = <&npm1300_buck2>;
 	};
 };
 
@@ -351,16 +358,20 @@ temp_sensor: &temp {
 			compatible = "nordic,npm1300-regulator";
 
 			/*
-			 * 1V8: the GNSS VCC and its V_IO. The V_IO absolute
-			 * maximum is 1.98 V, so the voltage is locked.
+			 * 1V8: fitted and unloaded since 2026-09-26, when the
+			 * GNSS receiver moved to the 3V0 rail (hardware_gnssbike/02,
+			 * "O receptor no 3V0"). The inductor, the capacitors and
+			 * RVSET1 stay on the board, as in configuration 1 of the
+			 * nPM1300 datasheet, and the regulator core switches it off
+			 * at boot. The voltage stays what RVSET1 selects.
 			 */
 			npm1300_buck1: BUCK1 {
 				regulator-min-microvolt = <1800000>;
 				regulator-max-microvolt = <1800000>;
-				regulator-boot-on;
+				regulator-boot-off;
 			};
 
-			/* 3V0: the MCU, the display and the sensors */
+			/* 3V0: the MCU, the display, the sensors and the GNSS */
 			npm1300_buck2: BUCK2 {
 				regulator-min-microvolt = <3000000>;
 				regulator-max-microvolt = <3000000>;

@@ -370,7 +370,8 @@ def montar_folha(nome: str, arquivo: str, pagina: str, root_uuid: str,
     #    nenhuma esta aberto, e ponto.
     # Uma rede de UM pino so nao liga nada: e um pino aberto com nome. O
     # R111, que era o pull-up do IRQ do colhedor antigo, virou isso quando a
-    # peca mudou - e o ERC, com razao, chama de pino sem ligacao.
+    # peca mudou - e o ERC, com razao, chamou de pino sem ligacao. Em
+    # 2026-09-26 o R111 saiu da lista; a regra fica, para o proximo.
     com_no = {(r, q.number) for rede, pinos_r in N.NETS.items()
               if len(pinos_r) > 1
               for r, p in pinos_r if S.sheet_of(r) == nome
@@ -390,7 +391,7 @@ def montar_folha(nome: str, arquivo: str, pagina: str, root_uuid: str,
                 ligados.add(xy)      # um so por ponto, nunca dois empilhados
 
     # 2. Trilho alimentado atraves de peca passiva nao tem fonte que o ERC
-    #    enxergue: o 1V8_GNSS vem do 1V8 por um ferrite, o SD3V0_FLASH vem
+    #    enxergue: o 3V0_GNSS vem do 3V0 por um ferrite, o SD3V0_FLASH vem
     #    do SD3V0 por um jumper, o VIN do colhedor vem do painel. O PWR_FLAG
     #    e o simbolo que existe para dizer "esta alimentado, eu respondo por
     #    isso".
@@ -574,7 +575,7 @@ def main() -> int:
         # Um trilho SEMPRE tem entrada de alimentacao, mesmo quando todos os
         # pinos de peca nele sao passivos: o proprio simbolo de alimentacao
         # que o carrega e um pino `power_in`. Era o caso do VBAT_CELULA, que
-        # so toca o conector da bateria e um jumper, e do 1V8_BLOCO, entre o
+        # so toca o conector da bateria e um jumper, e do 3V0_BLOCO, entre o
         # jumper e o ferrite.
         if "power_in" not in tipos and rede not in S.TRILHOS:
             continue

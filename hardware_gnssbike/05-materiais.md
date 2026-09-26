@@ -48,35 +48,44 @@ Três entradas (USB, painel e célula), quatro trilhos de saída
 | U101 | PMIC, carregador e conversores | Nordic nPM1300-QEAA-R (QFN32) | 1 | [Energia](../docs/19-lista-de-compras.md#energia) |
 | L101, L102 | Indutores do BUCK1 e do BUCK2 | Murata DFE201610E-2R2M=P2, 2,2 µH | 2 | [Energia](../docs/19-lista-de-compras.md#energia) |
 | U102 | Medidor de carga, **com o sensor de 7 mΩ dentro do CI** | Analog Devices MAX17262REWL+T | 1 | [Energia](../docs/19-lista-de-compras.md#energia) |
-| U103 | Colhedor solar com MPPT | e-peas AEM10900 (10AEM10900C0002, QFN28) | 1 | [Energia](../docs/19-lista-de-compras.md#energia) — a DigiKey não vende |
-| L103 | Indutor do `SWDCDC` | TDK VLS252012HBX-4R7M-1, 4,7 µH | 1 | [Energia](../docs/19-lista-de-compras.md#energia) |
+| U103 | Colhedor solar com MPPT | Analog Devices ADP5091ACPZ-2-R7, LFCSP-24 de 4 × 4 mm (LCSC C579259) — no lugar do e-peas AEM10900 desde 2026-09-25 | 1 | [Energia](../docs/19-lista-de-compras.md#energia) — **a lista de compras ainda traz o AEM10900**; acertar |
+| L103 | Indutor do boost do ADP5091, entre `VIN` e `SW` | 22 µH, Isat ≥ 390 mA, **peça a escolher na LCSC** | 1 | — |
+| U105 | Comparador do corte térmico da carga solar | TI TLV7031DCKR, SC-70-5 (LCSC C2869832) — **pinagem por confirmar na SNOSD54** | 1 | — |
+| R124, R125 | Referência do corte térmico: a metade do `SRC` | 100 kΩ | 2 | [Passivos](../docs/19-lista-de-compras.md#passivos) |
+| D106 | OU de diodos do comparador no `DIS_SW` | Diodes BAT54WS-7-F, SOD-323 (LCSC C124205) | 1 | — |
+| R104, R105 | Divisor do `VBUSOUT` ao `DIS_SW`: o USB bloqueia a carga solar | 100 kΩ em série, 180 kΩ ao `AGND` | 2 | [Passivos](../docs/19-lista-de-compras.md#passivos) |
+| R116, R117 | Divisor do MPPT: 18 ÷ 22,3 = 81 % da tensão em aberto | 18 MΩ ao `AGND`, 4,3 MΩ do `VIN` | 2 | — |
+| R118, R119 | Divisor do `TERM`, do `REF`: fim de carga em 3,97 V | 4,32 MΩ, 2,67 MΩ | 2 | — |
+| R120, R121 | Divisor do `SETSD`, do `REF`: corte de descarga em 3,04 V | 6,65 MΩ, 3,32 MΩ | 2 | — |
+| R122, R123 | `MINOP` (boost parado abaixo de 1,0 V) e `VID` (regulador desabilitado) | 402 kΩ, 111 kΩ | 2 | — |
+| C119, C121 | `CBP` (amostra da tensão em aberto) e `REG_OUT` do regulador desabilitado | 10 nF C0G; 4,7 µF | 2 | — |
 | U104 | LDO do `VBCKP` do receptor | TI TPS7A0218PDQNR | 1 | [Energia](../docs/19-lista-de-compras.md#energia) |
 | PV101 a PV106 | Módulos solares de 3 células, 23 × 8 mm | ANYSOLAR KXOB25-05X3F-TR | 6 | [Energia](../docs/19-lista-de-compras.md#energia) |
+| D105 | Grampo ESD da entrada solar, unidirecional | Nexperia PESD3V3S1UB-N, SOD-523 | 1 | [Energia](../docs/19-lista-de-compras.md#energia) |
 | BT101 | Célula LiPo 1S, 2000 mAh, com PCM e NTC | sob encomenda, 60 × 36 × 7 mm | 1 | [Compras fora da DigiKey](../docs/19-lista-de-compras.md#compras-fora-da-digikey) |
 | J102 | Conector da bateria na placa | JST SM06B-GHS-TB | 1 | [Energia](../docs/19-lista-de-compras.md#energia) |
 | — | Carcaça e terminais do cabo da célula | JST GHR-06V-S e 6 × SSHL-002T-P0.2 | 1 + 6, fora da placa | [Energia](../docs/19-lista-de-compras.md#energia) |
 | — | Carcaça e terminais do chicote do painel | JST ZHR-4 e 4 × SZH-002T-P0.5, mais cerca de 1 m de AWG 28 | 1 + 4, fora da placa | [Energia](../docs/19-lista-de-compras.md#energia), [J103](06-conectores-e-pontos-de-teste.md#j103--painel-solar) |
-| RT101 | NTC do `TH_MON` do AEM10900, **na face de trás da placa, sob a célula** | TDK NTCG103JF103FT1, 10 kΩ B3380 | 1 | [Energia](../docs/19-lista-de-compras.md#energia). **Este é o caminho escolhido**: montá-lo **e** o segundo NTC do pack põe 10 kΩ em paralelo com 10 kΩ e mata a carga solar ([01](01-esquematico.md#folha-1--energia)) |
+| RT101 | NTC do corte térmico da carga solar (comparador `U105`), **na face de trás da placa, sob a célula** | TDK NTCG103JF103FT1, 10 kΩ B3380 | 1 | [Energia](../docs/19-lista-de-compras.md#energia). **Este é o caminho escolhido**: montá-lo **e** o segundo NTC do pack põe 10 kΩ em paralelo com 10 kΩ e o comparador corta a carga solar a 25,7 °C ([01](01-esquematico.md#folha-1--energia)) |
 | RT102 | NTC do pack, para o JEITA do nPM1300 | 10 kΩ B3380, **dentro da bateria** | 1 | [Compras fora da DigiKey](../docs/19-lista-de-compras.md#compras-fora-da-digikey) |
 | D103 | LED de carga, no `LED1` | Kingbright APT1608SURCK | 1 | [Energia](../docs/19-lista-de-compras.md#energia) |
 | D104 | LED de erro, no `LED0` | Kingbright APT1608SURCK | 1 (**a lista compra 1 LED por placa**) | [Energia](../docs/19-lista-de-compras.md#energia) |
 | R102 | `RVSET1`, BUCK1 em 1,8 V | 47 kΩ ([02](02-calculos.md#conversores-do-npm1300)) | 1 | [Passivos](../docs/19-lista-de-compras.md#passivos) |
 | R103 | `RVSET2`, BUCK2 em 3,0 V | 150 kΩ ([02](02-calculos.md#conversores-do-npm1300)) | 1 | [Passivos](../docs/19-lista-de-compras.md#passivos) |
-| R104, R105 | Divisor do `DIS_STO_CH`, do `VBUSOUT` | 100 kΩ e 1 MΩ | 1 + 1 | [Passivos](../docs/19-lista-de-compras.md#passivos) |
-| R106 | `RDIV` do AEM10900 | 22 kΩ | 1 | [Passivos](../docs/19-lista-de-compras.md#passivos) |
+| R106 | Resistor de baixo do divisor do NTC: com o NTC a 4,90 kΩ a 45 °C, o meio do divisor cruza a metade do `SRC` exatamente aí | 4,87 kΩ | 1 | [Passivos](../docs/19-lista-de-compras.md#passivos) — era o `RDIV` de 22 kΩ do AEM10900 |
 | R107, R108 | Pull-ups do `i2c30` (`PWR_SDA`, `PWR_SCL`) | **4,7 kΩ** ([02](02-calculos.md#pull-ups-do-i²c)) | 2 | [Passivos](../docs/19-lista-de-compras.md#passivos), Panasonic ERJ-2RKF4701X |
 | R109 | Pull-up do `PMIC_INT` | 10 kΩ | 1 | [Passivos](../docs/19-lista-de-compras.md#passivos) |
 | C101 a C109 | Entradas e saídas do nPM1300, `VBUS` | 10 µF, 25 V, X5R, 0603 (lista de referência da Nordic) | 9 | [Passivos](../docs/19-lista-de-compras.md#passivos) |
 | C110, C111 | nPM1300, referência da Nordic | 1 µF, 25 V, X5R, 0402 | 2 | [Passivos](../docs/19-lista-de-compras.md#passivos) |
 | C112 | `C6` da referência do nPM1300 | 2,2 µF, 16 V, X7R, 0603 | 1 | [Passivos](../docs/19-lista-de-compras.md#passivos) |
 | C113, C114 | Entrada e saída do TPS7A02 | 1 µF, 25 V, X5R, 0402 | 2 | [Passivos](../docs/19-lista-de-compras.md#passivos) |
-| C115, C116 | `CSRC` e `CINT` do AEM10900 | 22 µF, 6,3 V, X5R, 0402 | 2 | [Passivos](../docs/19-lista-de-compras.md#passivos) |
-| C117 | `CSTO` do AEM10900 | 22 µF, 10 V, X5R, 0603 | 1 | [Passivos](../docs/19-lista-de-compras.md#passivos) |
+| C115 | Entrada do boost do ADP5091, entre `VIN` e `PGND`, o mais perto possível (a ficha pede pelo menos 10 µF) | 22 µF, 6,3 V, X5R, 0402 | 1 | [Passivos](../docs/19-lista-de-compras.md#passivos) |
+| C116, C117 | Volume do `VBAT_SYS`, junto dos pinos `BAT` e `SYS` do ADP5091 (a ficha pede pelo menos 4,7 µF no `SYS`) | 22 µF, 6,3 V, X5R, 0402; 22 µF, 10 V, X5R, 0603 | 2 | [Passivos](../docs/19-lista-de-compras.md#passivos) — herança do `CINT` e do `CSTO` do AEM10900; um dos dois pode sair |
 | C118 | `REG` do MAX17262 | 0,47 µF, 10 V, X5R, 0402 | 1 | [Passivos](../docs/19-lista-de-compras.md#passivos) |
 | JP101 | Jumper de medição de corrente, no caminho da célula | 0 Ω, 1206, ≥ 2 A, ≤ 50 mΩ | 1 | **a definir**: o `ERJ-2GE0R00X` 0402 da lista não serve ([06](06-conectores-e-pontos-de-teste.md#jp101--jumper-de-medição-de-corrente)) |
 | JP102 a JP106 | Jumpers de corrente por bloco: módulo de rádio, GNSS, display, sensores e armazenamento | 0 Ω, 0402 | 5 | [Passivos](../docs/19-lista-de-compras.md#passivos), `ERJ-2GE0R00X`; pedidos por [14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso) e esquecidos até 2026-09-23 |
-| R105, R106, R110 | Pull-up do `ALRT` do MAX17262, do `IRQ` do AEM10900 e do `INT` do OPT3001 | 10 kΩ | 3 | [Passivos](../docs/19-lista-de-compras.md#passivos); nenhum dos três vai a pino do MCU, e o pull-up existe para não ficarem flutuando |
-| C119 em diante | Desacoplamento dos quatro CIs desta folha | 100 nF, 10 V, X7R, 0402 | a fechar no layout | [Passivos](../docs/19-lista-de-compras.md#passivos) |
+| R110, R112 | Pull-up do `ALRT` do MAX17262 e do `INT` do OPT3001 | 10 kΩ | 2 | [Passivos](../docs/19-lista-de-compras.md#passivos); nenhum dos dois vai a pino do MCU, e o pull-up existe para não ficarem flutuando. O terceiro, `R111`, era o pull-up do `IRQ` do AEM10900 e saiu em 2026-09-26: o ADP5091 não tem interrupção |
+| C122, C129 | Desacoplamento do `VBAT` do MAX17262 e do `VDDIO` do nPM1300 (o `C13` da referência) | 100 nF, 10 V, X7R, 0603 | 2 | [Passivos](../docs/19-lista-de-compras.md#passivos) |
 
 **Não existe resistor de medida nesta folha.** O sensor de 7 mΩ entre
 `BATT` e `SYS` é **interno ao CI**: o `R` do código `MAX17262REWL+T` é
@@ -127,19 +136,19 @@ até 12/11/2026.
 |---|---|---|---|---|
 | U301 | Receptor GNSS L1 + L5 | u-blox MAX-F10S-00B | 1 | [GNSS](../docs/19-lista-de-compras.md#gnss) |
 | U301 (alternativa) | Receptor L1, mesmo footprint | u-blox MAX-M10N-10B | — | [GNSS](../docs/19-lista-de-compras.md#gnss) — 2 peças para o teste A/B |
-| U302 | Tradutor de nível de 4 canais, 3V0 ⇄ 1V8 | TI TXU0204BQAR | 1 | [GNSS](../docs/19-lista-de-compras.md#gnss) |
 | E301 | Antena linear L1/L5, na borda de cima | TE L000670-01 | 1 | [GNSS](../docs/19-lista-de-compras.md#gnss) — aprovada **com a ressalva de L5** |
-| FB301 | Ferrite do `1V8` junto do receptor | Murata BLM15PX601SN1D, 600 Ω a 100 MHz | 1 | [GNSS](../docs/19-lista-de-compras.md#gnss) |
+| FB301 | Ferrite do `3V0` junto do receptor (nós `3V0_BLOCO` e `3V0_GNSS`) | Murata BLM18KG601SN1D, 600 Ω a 100 MHz, 150 mΩ, 0603 | 1 | [GNSS](../docs/19-lista-de-compras.md#gnss) |
 | C301, C302 | Paralelos da rede em π | Murata GJM1555C1H2R2BB01D, 2,2 pF C0G (**valor de partida**) | 2 posições | [GNSS](../docs/19-lista-de-compras.md#gnss) |
 | L301 | Série da rede em π | Murata LQW15AN3N9C00D, 3,9 nH, ou 0 Ω (**valor de partida**) | 1 posição | [GNSS](../docs/19-lista-de-compras.md#gnss) |
-| C303 | Volume do `1V8` depois do ferrite | 10 µF, 25 V, X5R, 0603 | 1 | [Passivos](../docs/19-lista-de-compras.md#passivos) |
-| C304 em diante | Desacoplamento do receptor e do tradutor | 100 nF, 10 V, X7R, 0402 | a fechar no layout | [Passivos](../docs/19-lista-de-compras.md#passivos) |
+| C303 | Volume do `3V0_GNSS` depois do ferrite | 10 µF, 25 V, X5R, 0603 | 1 | [Passivos](../docs/19-lista-de-compras.md#passivos) |
+| C304 | Desacoplamento do receptor | 100 nF, 10 V, X7R, 0402 | 1 | [Passivos](../docs/19-lista-de-compras.md#passivos) |
 
-Os quatro canais do TXU0204 atendem os quatro sinais que precisam de
-tradução, **dois em cada sentido**: `TX` e `EXTINT` do MCU para o receptor
-(`A1` e `A2`), `RX` e `TIMEPULSE` do receptor para o MCU (`B3` e `B4`).
-O `RESET_N` **não passa pelo tradutor** — o pino do MCU é dreno aberto e o
-pull-up é interno ao módulo ([03](03-netlist.md#gnss--uart21)).
+Não há tradutor de nível nesta folha desde 2026-09-26: receptor e MCU
+ficam no mesmo `3V0` (`VCC` e `V_IO` juntos, `VIO_SEL` aberto), e as
+cinco linhas digitais vão de pino a pino ([03](03-netlist.md#gnss--uart21)).
+O TXU0204 que estava aqui, com os seus dois capacitores, saiu da lista
+junto com o LDO de 1,8 V ±1 % que o substituiria por umas horas
+([01](01-esquematico.md#folha-3--gnss)).
 
 > [!NOTE]
 > Uma versão anterior desta página dizia que "o quinto sinal não coube nos
@@ -252,6 +261,19 @@ tiram só 23 mV do nível baixo ([02](02-calculos.md#proteção-das-teclas)).
 O nível alto continua vindo do pull-up interno, sem resistor externo.
 
 ## Contagem
+
+> [!NOTE]
+> **A contagem que vale é a do CAD.** `cad/parts.py` tem, em 2026-09-26,
+> **162 posições** — 91 na folha 1, 7 na 2, 12 na 3, 14 na 4, 16 na 5 e
+> 22 na 6 —, contando o que a tabela abaixo deixa de fora de propósito
+> (os 100 nF, os pontos de teste, os jumpers, o Tag-Connect, a célula e
+> os módulos solares). A tabela e a nota que a seguem são a conta de
+> **itens de material** de 2026-09-23, e ficam como história; o que mudou
+> desde então, em posições: entraram `U105`, `R124`, `R125` e `D106` (o
+> corte térmico), `D107` (o Schottky da tecla central), `R406` a `R409`
+> (um resistor por LED da luz) e os 100 nF `C122` a `C126` e `C129`; saíram
+> `U302`, `C127` e `C128` (o tradutor de nível), `U106`, `C132` e `C133`
+> (o LDO de 1,8 V que existiu por umas horas), `R401`, `C112` e `R111`.
 
 Posições de componente por placa, sem contar os 100 nF de desacoplamento
 (que ficam para o layout) nem o cabo da célula.
