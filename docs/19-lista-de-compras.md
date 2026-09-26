@@ -62,6 +62,7 @@ Todas as peças passam na integração, com as ressalvas de cada linha. Na compr
 | Murata NCP15XH103J03RC | não recomendado para projetos novos | TDK NTCG103JF103FT1 | o mesmo B3380 e 10 kΩ ±1 % |
 | TI ESD751DYAR | sem estoque até 27/11/2026 | TI ESD761DPYR | a mesma família em X1SON de 1,0 × 0,6 mm |
 | JST SH de 4 vias | 1 A por contato e trava por atrito | JST GH de 6 vias | VBAT e GND em dois contatos; trava positiva; 4,25 mm de altura |
+| JST GH de 6 vias (SM06B-GHS-TB) | 4,25 mm de altura: a caixa desenhada em 2026-09-26 deixa 4,2 mm entre a face da placa e a tampa fora do display, e no verso a faixa livre não o segura ([04](../hardware_gnssbike/04-pcb-e-caixa.md#a-placa-de-hoje-dentro-da-caixa-do-conceito)) | JST SH de 6 vias (SM06B-SRSS-TB, 2,9 mm), carcaça SHR-06V-S-B e terminais SSH-003T-P0.2 | volta a trava por atrito: o cabo da célula é preso à caixa com fita. A alternativa é a caixa 0,5 mm mais alta com o GH; **decisão do dono** |
 | Indutor de 6,8 µH do AEM10900 | a tabela 6 da ficha dá 65,5 mA de entrada, abaixo dos 88 mA do painel ao meio-dia | TDK VLS252012HBX-4R7M-1 (4,7 µH) | de 95 a 123 mA; o de 6,8 µH vai para a bancada |
 | Amphenol 12402484E512A | o desenho não abriu (403): o anel de vedação incluso não foi confirmado | Molex 2036150003 | o desenho confirma o anel e o IPX8; pede placa de 0,8 mm |
 | Chaves táteis comuns (E-Switch TL3340, Panasonic EVP-AA, Omron B3FS) | sem grau IP | Omron B3S-1002P | IP67 pela ficha; a E-Switch TL3780AF240QG, IP67 e mais baixa, fica de alternativa |
@@ -74,7 +75,7 @@ Todas as peças passam na integração, com as ressalvas de cada linha. Na compr
 Achados da segunda passagem que mudam o circuito ou o firmware. A especificação já traz todos; as ligações fixas de cada CI estão em [14](14-hardware-placa-nova.md#ligações-fixas-dos-cis).
 
 1. **Trilhos dos bucks trocados.** O resistor do VSET1 só escolhe de 1,0 a 2,7 V e o do VSET2, de 1,8 a 3,3 V (tabelas 18 e 19 do nPM1300): o 3,0 V, de que o MCU depende para ligar, só sai do BUCK2. Fica BUCK2 em 3,0 V com 150 kΩ e BUCK1 em 1,8 V com 47 kΩ, a mesma configuração 1 da referência da Nordic (tabela 39). Nenhum VSET pode ficar aberto.
-2. **1V8 travado.** Com o VIO_SEL em GND, o V_IO do MAX-F10S tem máximo absoluto de 1,98 V (tabela 12 da UBXDOC-963802114-12732 R03, igual à do M10N-10B), e o registrador do BUCK1 aceita até 3,3 V: o devicetree fixa o mínimo e o máximo do BUCK1 em 1,8 V.
+2. **1V8 travado — superado em 2026-09-26.** Com o VIO_SEL em GND, o V_IO do MAX-F10S tem máximo absoluto de 1,98 V (tabela 12 da UBXDOC-963802114-12732 R03, igual à do M10N-10B), e o registrador do BUCK1 aceita até 3,3 V: o devicetree fixava o mínimo e o máximo do BUCK1 em 1,8 V. Desde 2026-09-26 o receptor está no 3V0 com o VIO_SEL **aberto** (opção 1 da tabela 35 do manual de integração), o BUCK1 ficou sem carga e o tradutor de nível saiu ([hardware_gnssbike/02](../hardware_gnssbike/02-calculos.md#o-receptor-no-3v0-e-o-1v8-sem-carga)).
 3. **Luz da tela pela LDSW2.** A LDSW2 do nPM1300 vira LDO de 3,3 V alimentado pelo VSYS (até 50 mA, entrada de 2,6 V ao VSYS), com resistor e N-MOSFET no PWM. O 3,0 V deixaria só 0,33 V para o resistor do LED de 2,67 V do JDI.
 4. **Pinos do AEM10900:** STO_CFG[2] e STO_CFG[0] no VINT e STO_CFG[1] no GND (carga até 3,90 V, corte em 3,01 V); R_MPP[2:0] e T_MPP[1:0] no VINT; KEEP_ALIVE no VINT; I2C_ADDR no I2C_VDD (0x41); DIS_STO_CH pelo divisor de 100 kΩ e 1 MΩ do VBUSOUT.
 5. **Indutor do AEM10900 em 4,7 µH.** A tabela 6 e a fórmula da seção 6.7.2 da ficha discordam (65,5 contra 85 mA com 6,8 µH); a pergunta vai para a e-peas, e a bancada compara 4,7 e 6,8 µH.
@@ -117,6 +118,7 @@ Plano B, se o BM20C atrasar: MinewSemi ME54BS13-1Y20TI (6024-ME54BS13-1Y20TITR-N
 | LDO do backup do GNSS | TI TPS7A0218PDQNR | 296-TPS7A0218PDQNRCT-ND | 5.793 | 0,84 / 0,601 | 1 | 6 | aprovada |
 | NTC do AEM10900 | TDK NTCG103JF103FT1 | 445-2550-1-ND | 1.668.979 | 0,11 / 0,075 | 1 | 10 | aprovada; na face de trás, sob a célula |
 | Painéis solares | ANYSOLAR KXOB25-05X3F-TR | KXOB25-05X3FCT-ND | 5.038 | 3,23 / 2,64 | 6 | 36 | aprovada |
+| Grampo da entrada solar (`D105`) | Nexperia PESD3V3S1UB-N | — | LCSC C920299: 14.270 | 0,023 | 1 | 10 | **escolhido em 2026-09-25**: ESD unidirecional 3,3 V em SOD-523, 1 µA de fuga máx., grampeia polaridade trocada em −0,7 V; não protege de fonte errada sustentada |
 | Conector do painel | JST S4B-ZR-SM4A-TF | — | — | — | 1 | 6 | **a conferir na LCSC**; ZH de 1,5 mm, 4 vias, SMD lateral ([J103](../hardware_gnssbike/06-conectores-e-pontos-de-teste.md#j103--painel-solar)) |
 | Carcaça do cabo do painel | JST ZHR-4 | — | — | — | 1 | 6 | **faltava na lista**; a contraparte do `J103` |
 | Terminais do cabo do painel | JST SZH-002T-P0.5 | — | — | — | 4 | 50 | **faltava na lista**; AWG 32 a 28, crimpagem com o alicate da JST |
@@ -133,9 +135,9 @@ Plano B, se o BM20C atrasar: MinewSemi ME54BS13-1Y20TI (6024-ME54BS13-1Y20TITR-N
 |---|---|---|---|---|---|---|---|
 | Módulo GNSS | u-blox MAX-F10S-00B | 672-MAX-F10S-00BCT-ND | 10.818 | 13,14 / — | 1 | 6 | aprovada; L1 + L5; MSL 4: secar antes do forno se a embalagem ficou aberta |
 | Módulo do teste A/B | u-blox MAX-M10N-10B | 672-MAX-M10N-10BCT-ND | 1.571 | 14,52 / — | — | 2 | mesmo footprint; a alternativa econômica, só L1 |
-| Tradutor de nível | TI TXU0204BQAR | 296-TXU0204BQARCT-ND | 3.776 | 1,17 / 0,846 | 1 | 6 | aprovada; alternativa TXU0204RUTR (UQFN-12, 767) |
+| ~~Tradutor de nível~~ | ~~TI TXU0204BQAR~~ | 296-TXU0204BQARCT-ND | 3.776 | 1,17 / 0,846 | **0** | **0** | **saiu em 2026-09-26**: o receptor passou a 3,0 V, no trilho do MCU; não comprar |
 | Antena | TE L000670-01 | 343-L000670-01CT-ND | 2.738 | 1,50 / — | 1 | 6 | aprovada; com o F10S a sintonia tem de fechar **L1 e L5** na mesma rede em π, e não só L1: a TE mede com 0 Ω em série e paralelos vazios, e a sintonia na caixa escolhe os valores |
-| Ferrite do 1V8 | Murata BLM15PX601SN1D | 490-9657-1-ND | 370.529 | 0,10 / 0,07 | 1 | 10 | aprovada; 600 Ω a 100 MHz, 900 mA |
+| Ferrite do 1V8 | Murata BLM18KG601SN1D | — | LCSC C85833: 371.955 | 0,019 | 1 | 10 | **trocada em 2026-09-25**: 600 Ω a 100 MHz, 1,3 A, **DCR 150 mΩ** (a BLM15PX601SN1D de 0402 tinha 230 mΩ, acima dos 0,2 Ω que o manual do MAX-F10S, 4.1.1, permite em série no VCC); 0603 |
 | Sintonia da antena | Murata GJM1555C1H2R2BB01D (2,2 pF C0G) e LQW15AN3N9C00D (3,9 nH) | — | 86.930 e 60.715 | 0,11 / 0,057 e 0,11 / — | — | 10 de cada | valores de partida para a rede em π; o VNA decide os valores finais |
 
 ### Sensores
@@ -241,6 +243,7 @@ As quantidades por placa saem do esquemático; a compra sugerida cobre 5 placas 
 | u-blox EVK-M102-00 | MAX-M10N-10B, o A/B de autonomia (LEAP e potência plena) | — | 9 | 183,75 |
 | TE L000670-80 | antena GNSS num plano de referência | — | 12 | 37,80 |
 | Tag-Connect TC2030-CTX-NL e TC2030-CLIP | SWD pelo footprint TC2030-NL | na loja da Tag-Connect | — | 42,95 (cabo) |
+| SEGGER J-Link 9-pin Cortex-M Adapter (ou um cabo IDC de 10 vias a 1,27 mm) | SWD pelo `J202`, o conector Cortex de 10 vias que o dono pediu em 2026-09-26; o J-Link já está na máquina | SEGGER, DigiKey ou Mouser | — | a cotar |
 
 O J-Link da SEGGER já está na máquina de desenvolvimento ([CLAUDE.md](../CLAUDE.md)). Um Nordic PPK2, para medir consumo por trilho, não foi conferido hoje.
 

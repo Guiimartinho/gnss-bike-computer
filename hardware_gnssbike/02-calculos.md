@@ -22,16 +22,20 @@ depende de medida está dito como tal.
 | Buzzer piezo | cerca de 5 mA | estimativa |
 | Flash NOR apagando um setor, no modo de baixo consumo | 3,1 mA | ficha da MX25R6435F |
 | Display (JDI, 1 quadro/s) | 10 µA | 30 µW ÷ 3,0 V, **conta** |
-| TXU0204 `VCCA` e `I2C_VDD` do AEM10900 | dezenas de µA | ficha |
+| `I2C_VDD` do AEM10900 | dezenas de µA | ficha |
 | REG710, **não montado**; só volta no plano B com a Sharp | cerca de 0,2 mA | 65 µA parado mais o dobro da corrente da tela |
-| **Soma** | **cerca de 23 mA** | **conta** |
+| **Soma sem o receptor** | **cerca de 23 mA** | **conta** |
+| MAX-F10S `VCC` + `V_IO`, a 3,0 V (**desde 2026-09-26**) | 24 mA na aquisição, 19 em rastreio, **100 mA de pico na partida** | ficha, tabelas 15 e 16: `VCC` 21/16 mA e `V_IO` 3 mA |
+| **Soma com o receptor** | **cerca de 47 mA; 123 mA no pico de partida** | **conta** |
 
 A troca de 2026-09-23 para o **JDI LPM027M128C** tirou o REG710 da placa
 montada ([01](01-esquematico.md#folha-4--display)), e com ele os 0,2 mA da
 linha acima: a soma cai para cerca de 22,8 mA, que continua sendo os mesmos
 **cerca de 23 mA** e não muda nada do que este documento dimensiona.
 
-**Ocupação: 23 mA de 200 mA, 11,5 %** — ou seja, folga de 177 mA, quase 9×.
+**Ocupação: 47 mA de 200 mA, 23,5 %** em regime, e **123 mA, 61,5 %** no
+pico de partida do receptor — folga de 1,6× no pico e de 4× em regime. Até
+2026-09-26 o receptor tinha trilho próprio e este ficava em 23 mA (11,5 %).
 
 > [!NOTE]
 > O [`docs/14`](../docs/14-hardware-placa-nova.md#alimentação) estima "perto
@@ -42,29 +46,45 @@ linha acima: a soma cai para cerca de 22,8 mA, que continua sendo os mesmos
 > 23 mA. Os 100 mA da `LDSW1` deixaram de ser o que dimensiona qualquer
 > coisa.
 
-### `1V8`, do BUCK1 (limite de 200 mA, **ficha**)
+### O receptor no `3V0`, e o `1V8` sem carga
 
-| Carga | Aquisição | Rastreio | Origem |
+Até 2026-09-26 o receptor tinha o BUCK1 só para ele, em 1,8 V, porque a
+1,8 V o MAX-F10S gasta menos: 46,8 mW em rastreio contra 57 mW a 3,0 V
+(ficha, tabelas 15 e 16: a 3,0 V, `VCC` 21 mA na aquisição e 16 em
+rastreio, `V_IO` 3 mA; a 1,8 V, 34 e 26 mA). O que derrubou o arranjo foi
+a tolerância, não o consumo: o BUCK1 é de **±5 %** (1,71 a 1,89 V) e a
+tabela 35 do manual de integração pede **1,8 V ±2 %** para o projeto de
+1,8 V. As duas saídas, com a conta de cada uma (**conta**, bateria a 3,7 V
+e buck a 90 %):
+
+| Opção | Receptor | O que sai da bateria | Peças |
 |---|---|---|---|
-| MAX-F10S `VCC`, medido a 3,0 V | 21 mA | 16 mA | ficha, tabelas 15 e 16 |
-| MAX-F10S `V_IO`, medido a 3,0 V | 3 mA | 3 mA | ficha |
-| TXU0204 `VCCB` | dezenas de µA | idem | ficha |
-| **Total no trilho de 1,8 V** | **34 mA** | **26 mA** | [14](../docs/14-hardware-placa-nova.md#gnss) |
+| LDO de 1,8 V ±1 % alimentado do 3V0 (existiu por umas horas) | 26 mA a 1,8 V = 46,8 mW, mas o 3V0 paga 26 mA × 3,0 V = 78 mW | 78 ÷ 0,9 = **87 mW** | tradutor de nível, LDO, 4 capacitores |
+| **Receptor a 3,0 V, sem tradutor (opção 1 da tabela 35; a escolhida)** | 19 mA a 3,0 V = 57 mW | 57 ÷ 0,9 = **63 mW** | nenhuma a mais; saem 6 |
+| O que era: BUCK1 a ±5 % | 46,8 mW | 46,8 ÷ 0,9 = 52 mW | fora da tolerância da ficha |
 
-A última linha **não é a soma das de cima**, e a razão não é equivalência
-de potência: o receptor **gasta menos** a 1,8 V do que a 3,0 V — 46,8 mW
-contra 57 mW em rastreio, cerca de 18 % menos. Os 26 mA saem de
-46,8 mW ÷ 1,8 V, e os 34 mA da aquisição vêm da mesma fonte
-([14](../docs/14-hardware-placa-nova.md#gnss)), não de uma conta feita aqui.
+A opção escolhida custa **11 mW** a mais que o arranjo que a ficha não
+aceitava, e 24 mW a menos que o LDO. No aparelho, os cerca de 58 mW de
+[15](../docs/15-avaliacao-componentes.md#efeito-no-aparelho) passam a
+cerca de 69 mW, e as cerca de 115 h sem sol a **cerca de 97 h**
+(115 × 58 ÷ 69, **conta**).
 
-> [!NOTE]
-> Quem aplicar equivalência de potência crua chega a outro número:
-> (21 + 3) mA × 3,0 V = 72 mW, e 72 ÷ 1,8 = 40 mA. **Está errado**, porque
-> supõe que o consumo não muda com a tensão, e a ficha diz que muda. O
-> mesmo erro em rastreio daria 31,7 mA em vez de 26.
+O BUCK1 fica **montado e sem carga** (`L101`, `C104`, `C109` e o `RVSET1`
+continuam), e o firmware o desliga. A ficha do nPM1300 só mostra buck sem
+uso para o BUCK2 (configuração 2, figura 56: `VOUT2` no `VSYS`, `SW2`
+aberto, `VSET2` no GND), e este documento não copia para o BUCK1 o que ela
+não mostrou: fica como na configuração 1, com os dois bucks montados.
 
-**Pico de partida: até 100 mA** (ficha). Folga de 2× contra os 200 mA do
-BUCK1 no pico, e de quase 8× em regime.
+Uma consequência que a conta acima não mostra: **o receptor deixou de ter
+um trilho que se desliga.** O `3V0` alimenta o MCU e não pode cair com o
+aparelho ligado, de modo que o standby do receptor passa a ser só o de
+software (`UBX-RXM-PMREQ`): **46 µA** no `V_IO` e 120 nA no `VCC` (ficha,
+a 3,3 V), em vez de zero com o BUCK1 cortado. Em ship mode o `3V0` cai com
+o resto e nada muda: o `V_BCKP` continua vindo do TPS7A02. O driver, que
+hoje desliga e religa o trilho do receptor pelo regulador do devicetree
+(`vcc-supply`), passa a apontar para o BUCK2, que é sempre ligado, e o
+pedido de desligar vira um nada: **firmware por ajustar**, registrado em
+[10](../docs/10-status-do-port.md).
 
 ### `VSYS`, a entrada de tudo
 
@@ -72,11 +92,11 @@ Com a bateria a 3,7 V e reguladores a 90 % (**conta**):
 
 | Fonte | Conta | Corrente do `VSYS` |
 |---|---|---|
-| BUCK2 | 23 mA × 3,0 V ÷ 3,7 V ÷ 0,9 | 20,7 mA |
-| BUCK1 | 34 mA × 1,8 V ÷ 3,7 V ÷ 0,9 | 18,4 mA |
+| BUCK2, com o receptor na aquisição | 47 mA × 3,0 V ÷ 3,7 V ÷ 0,9 | 42,3 mA |
+| BUCK1 | sem carga desde 2026-09-26 | 0 |
 | `LDSW2` como LDO, para a luz | 16 mA (LDO não transforma corrente) | 16 mA |
 | LED RGB e LED de carga | 3 canais de até 3,6 mA, mais 5 mA | até 16 mA |
-| **Pior caso somado** | | **cerca de 71 mA** |
+| **Pior caso somado** | | **cerca de 74 mA** (era 71 com o receptor no BUCK1) |
 
 ## Orçamento do USB e tempo de carga
 
@@ -149,8 +169,8 @@ a partir das seções acima):
 | `VBUS` | até 1500 mA | **larga** | com uma fonte de 1,5 A |
 | `VSYS` | 671 mA | **larga** | sistema mais carga |
 | `VBAT` | 600 mA | **larga** | carga |
-| `1V8` | 100 mA | média | pico de partida do receptor |
-| `3V0` | 23 mA | sinal | — |
+| `1V8` | 0 | sinal | montado, sem carga, desde 2026-09-26 |
+| `3V0` | 47 mA; 123 mA no pico de partida do receptor | média | o receptor está aqui desde 2026-09-26 |
 | `3V3BL` | 16 mA | sinal | luz acesa |
 | `SD3V0` | 3,1 mA | sinal | apagando um setor |
 | `VBCKP` | 28 µA | sinal | backup do receptor |
@@ -383,10 +403,12 @@ O [calor do carregador](#calor-do-carregador) é a junção de um chip. A
 outra pergunta é o que acontece com a **caixa**, que é vedada e fica no
 guidão.
 
-Área externa (**conta**, caixa de 62 × 104 × 19 mm):
+Área externa (**conta**, caixa de 62 × 106 × 17 mm, a proposta de
+[`caixa/make_caixa.py`](caixa/make_caixa.py); o conceito de 62 × 104 × 19 dava
+192 cm²):
 
 ```
-2×(62×104) + 2×(62×19) + 2×(104×19) = 19.204 mm² = 192 cm² = 0,0192 m²
+2×(62×106) + 2×(62×17) + 2×(106×17) = 18.856 mm² = 189 cm² = 0,0189 m²
 ```
 
 Dissipação no pior caso, que é **carregando**. E aqui a conta não é "o
@@ -404,12 +426,12 @@ Com convecção natural em ar parado, cujo coeficiente fica entre 5 e
 
 | `h` | Elevação da caixa | Caixa a 25 °C de ambiente |
 |---|---|---|
-| 5 W/m²·K (pior) | 19,7 °C | **44,7 °C** |
-| 7 W/m²·K | 14,1 °C | 39,1 °C |
-| 10 W/m²·K (melhor) | 9,8 °C | 34,8 °C |
+| 5 W/m²·K (pior) | 20,1 °C | **45,1 °C** |
+| 7 W/m²·K | 14,3 °C | 39,3 °C |
+| 10 W/m²·K (melhor) | 10,0 °C | 35,0 °C |
 
 **Pedalando, o problema não existe:** sem carga o aparelho dissipa 263 mW
-no pior caso, e a caixa sobe de 1,4 a 2,7 °C. O calor é inteiramente do
+no pior caso, e a caixa sobe de 1,4 a 2,8 °C. O calor é inteiramente do
 caminho de carga, e só com o cabo ligado.
 
 > [!CAUTION]
@@ -556,10 +578,11 @@ As tensões saem de resistores, não de firmware:
 
 > [!CAUTION]
 > **Nenhum `VSET` pode ficar aberto** (ficha), e é o BUCK2 que alimenta o
-> MCU: se o `RVSET2` estiver errado ou ausente, o aparelho não liga. O
-> BUCK1 está travado em 1,8 V também no devicetree, porque o `V_IO` do
-> receptor tem máximo absoluto de **1,98 V** e o registrador aceitaria até
-> 3,3 V.
+> MCU **e, desde 2026-09-26, o receptor**: se o `RVSET2` estiver errado ou
+> ausente, o aparelho não liga. O `RVSET1` fica mesmo com o BUCK1 sem
+> carga, pela mesma regra; a trava de 1,8 V que o devicetree punha no
+> BUCK1 por causa do `V_IO` do receptor deixou de ter motivo, e o que o
+> firmware tem a fazer com o BUCK1 é desligá-lo.
 
 **A ondulação dos conversores não foi recalculada aqui**: depende da
 frequência de chaveamento interna do nPM1300, que a ficha traz e que não
@@ -575,7 +598,7 @@ de cada CI**, mais o volume que a ficha de cada peça pede.
 |---|---|---|
 | Cada pino de alimentação de CI | 100 nF, 0402, X7R | prática, e a lista da Nordic |
 | `VBUS` | 10 µF, 25 V | ficha do nPM1300 (o CI tolera 22 V em transitório) |
-| `1V8`, junto do módulo GNSS | ferrite + 10 µF | ficha do MAX-F10S, ondulação abaixo de 50 mV |
+| `3V0_GNSS`, junto do módulo GNSS | ferrite + 10 µF | ficha do MAX-F10S, ondulação abaixo de 50 mV; o ferrite tem 150 mΩ, dentro dos 0,2 Ω que o manual (4.1.1) permite em série com o `VCC` |
 | `MMC5633NJL` `VDD` | pelo menos 2,2 µF | ficha |
 | `SD3V0`, junto da flash | 22 µF | [14](../docs/14-hardware-placa-nova.md#alimentação) |
 | `CSRC` e `CINT` do AEM10900 | 22 µF, 6,3 V, 0402 | lista mínima da e-peas |
@@ -602,7 +625,7 @@ C = I × t / ΔV = 10,9 mA × 10 µs / 50 mV = 2,2 µF
 ser o degrau E-series acima de 2,2 µF (não é; E12 dá 2,7 e E6 dá 3,3), mas
 porque **a lista de compras já traz essa linha** (4,7 µF, 16 V, X5R, 0603,
 para o `VDD` do MMC5633NJL) e ela cobre os dois usos. Os outros trilhos já tinham volume declarado (22 µF
-no `SD3V0`, 10 µF no `1V8` e, no plano B, 10 µF na saída do REG710) e o
+no `SD3V0`, 10 µF no `3V0_GNSS` e, no plano B, 10 µF na saída do REG710) e o
 `3V0` do MCU não tinha.
 
 ## Proteção das teclas
@@ -705,13 +728,15 @@ medida do espectro na banda (`UBX-MON-SPAN`) com a flash trabalhando.
 O `V_IO` do MAX-F10S aceita rampa entre **25 e 35.000 µs/V** (máximo
 absoluto, tabela 12 da ficha). Fora disso, a ficha diz que o módulo pode
 ser danificado — é restrição de partida, e quem a cumpre é a partida suave
-do BUCK1 (**conta**):
+do BUCK2, que desde 2026-09-26 alimenta o `V_IO` com 3,0 V de excursão
+(**conta**; com 1,8 V, quando era o BUCK1, os números eram 278, 556 e
+2.778 µs/V):
 
-| Partida do BUCK1 | Rampa | Dentro da faixa? |
+| Partida do BUCK2 | Rampa | Dentro da faixa? |
 |---|---|---|
-| 0,5 ms | 278 µs/V | sim |
-| 1 ms | 556 µs/V | sim |
-| 5 ms | 2.778 µs/V | sim |
+| 0,5 ms | 167 µs/V | sim |
+| 1 ms | 333 µs/V | sim |
+| 5 ms | 1.667 µs/V | sim |
 
 Qualquer partida entre meio milissegundo e cinco milissegundos cabe com
 folga nas duas pontas. E o valor real **está na ficha e já tinha sido
@@ -740,6 +765,67 @@ total:              cerca de 100 µA, de 30.000 µA
 ```
 
 Folga de 300×. A luz **não** sai daqui: ela vem do `3V3BL`, pela `LDSW2`.
+
+## Quantos parafusos a placa precisa
+
+Feito em 2026-09-25 e **corrigido em 2026-09-26**: a primeira versão desta
+conta usou como braço de alavanca a distância do parafuso até a boca do
+USB-C, 40,8 mm, e concluiu "vinte vezes". Estava errada. O momento de uma
+força sobre um ponto é a força vezes a distância do ponto à **linha de ação**
+da força, não ao ponto onde ela é aplicada. A inserção do plugue empurra o
+conector ao longo de y; a linha de ação é a reta x = 6,9 (o centro do
+receptáculo), e o furo único, em (3,2; 45,0), fica a **3,7 mm** dela.
+
+**A força.** Inserção do plugue USB-C no pior caso da norma: **20 N**; comum,
+cerca de 5 N. A tecla `TS-1088R-02026` pede 2,6 N, mas em z, contra o apoio
+da placa — não é caso de atrito de parafuso.
+
+**Um parafuso só.** Um M2 apertado num pilar de plástico impresso aguenta
+cerca de 0,05 N·m; pela regra `T = K·d·F` com `K = 0,2`:
+
+```
+pré-carga        F = 0,05 / (0,2 × 0,002 m)          = 125 N
+atrito (translação)  μ·F = 0,2 × 125                  = 25 N
+atrito (rotação)     μ·F·r = 0,2 × 125 × 1,6 mm       = 40 N·mm
+
+inserção pior caso, translação   20 N contra 25 N      folga de 1,25×
+inserção pior caso, momento      20 N × 3,7 mm = 74 N·mm contra 40    1,85× ACIMA
+inserção comum, momento           5 N × 3,7 mm = 19 N·mm contra 40    cabe
+```
+
+**A conclusão.** Com um parafuso só, a inserção comum cabe e a de norma
+não: o momento passa em 1,85× do que o atrito segura, e com 12 mm de folga
+até a parede da cavidade a placa **gira** antes de esbarrar em algo. É
+margem zero num aperto que depende de plástico impresso — e não os "vinte
+vezes" da primeira versão.
+
+**Dois parafusos.** Com o primeiro em (3,2; 7,0), na borda de cima, e o
+segundo em (14,4; 91,7), na borda de baixo entre o USB-C e o módulo de rádio
+(o dry run da caixa de 2026-09-26 tirou os dois de cima da célula e o
+segundo do lugar do sensor de luz), o momento vira binário sobre os
+**85,4 mm** entre eles (**conta**: √(11,2² + 84,7²)):
+
+```
+F_por_parafuso = 74 N·mm / 85,4 mm = 0,87 N de cisalhamento
+```
+
+0,87 N num M2 é nada: a área de tensão de um M2 tem 2,07 mm² e o aço 4.8
+rompe ao cisalhamento por volta de **500 N** (0,6 × 420 MPa). O parafuso
+deixa de trabalhar por atrito, onde ele é ruim, e passa a trabalhar por
+cisalhamento, onde ele é bom — e o elo fraco passa a ser o pilar impresso,
+não o parafuso.
+
+**Por que o segundo furo não foi para o canto livre da direita.** Coube lá
+com folga, mas caiu a **3,2 mm da área da antena** do módulo de rádio, e a
+seção 7.4 da ficha do ME54BS13 quer 5 mm livres de metal em volta dela. A
+regra `RF3` do [dry-run](09-dry-run-da-pcb.md) acusou na primeira rodada.
+
+> [!NOTE]
+> **O que isto não resolve.** Dois parafusos impedem a placa de girar, mas a
+> espessura das paredes, a altura em que a placa é presa e onde ficam os
+> parafusos **da caixa** continuam sem definição em arquivo nenhum deste
+> projeto. O cálculo acima é o requisito que o projeto mecânico tem de
+> cumprir, não a prova de que ele o cumpre.
 
 ## O que não foi calculado
 

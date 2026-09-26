@@ -88,11 +88,13 @@ flowchart LR
 
 ## Como fica o aparelho
 
-![Proposta do aparelho: frente, lateral direita, traseira e arranjo interno](img/placa-nova-caixa.svg)
+![A caixa proposta em 2026-09-26, aberta: a concha com a placa, o display e a célula dentro](img/hardware/gnssbike-3d-caixa-aberta.png)
 
-Conceito em escala a partir da caixa impressa da V3 ([foto](img/front1.png)), gerado por `tools/docs/case_drawing.py`; não há projeto mecânico nem layout ainda.
+![A mesma caixa em vista explodida: tampa com o display colado, teclas, módulos solares nos chanfros e na faceta, a porta do USB-C](img/hardware/gnssbike-3d-caixa-explodida.png)
 
-- **Caixa:** 62 × 104 × 19 mm, mais 3 mm do engate de quarto de volta; a V3 tem cerca de 60 × 85 mm. A frente mantém a moldura elevada, os três botões e o furo de luz da V3.
+O conceito de 2026-09-20 era um desenho em escala a partir da caixa impressa da V3 ([foto](img/front1.png)), com a placa antiga de 55 × 97; foi retirado em 2026-09-26, quando a proposta desenhada em volta da placa real e medida por um dry run próprio o substituiu ([`hardware_gnssbike/caixa/`](../hardware_gnssbike/caixa/README.md), [04](../hardware_gnssbike/04-pcb-e-caixa.md#a-placa-de-hoje-dentro-da-caixa-do-conceito)). As vistas acima são dela. Nada foi impresso.
+
+- **Caixa:** 62 × 104 × 19 mm, mais 3 mm do engate de quarto de volta; a V3 tem cerca de 60 × 85 mm. A frente mantém a moldura elevada, os três botões e o furo de luz da V3. A proposta desenhada em volta da placa real, em 2026-09-26, ficou em **62 × 106 × 17** (2 mm a mais para o berço de uma antena GNSS externa; 17 porque 19 sobrava) e é medida por [`hardware_gnssbike/caixa/dry_run_caixa.py`](../hardware_gnssbike/caixa/dry_run_caixa.py) ([04](../hardware_gnssbike/04-pcb-e-caixa.md#a-placa-de-hoje-dentro-da-caixa-do-conceito)).
 - **Tela:** JDI LPM027M128C com a interface em 8 cores e a luz frontal integrada, decidida em 2026-09-23; a janela é a mesma do LS027. A Sharp LS027B7DH01A com o filme Azumo continua como plano B, no mesmo conector e na mesma janela ([lista de compras](19-lista-de-compras.md#display)).
 - **Painéis:** 6 módulos de 3 células de 23 × 8 mm, 2 numa face inclinada abaixo da tela e 2 em cada chanfro de 45° das bordas longas ([painel solar](#painel-solar)).
 - **Antenas:** GNSS L1 e L5 na parede de cima, longe dos painéis; o módulo BM20C (BLE e ANT+) no canto de baixo à direita, com a antena fora da área dos painéis.
@@ -295,7 +297,7 @@ flowchart LR
     NODE --> FG["MAX17262<br/>sensor interno de 7 mΩ"]
     FG --> CELL["LiPo 1S 2000 a 2500 mAh<br/>proteção e NTC de 10 k"]
     NPM -->|"BUCK2 3,0 V"| MCU["nRF54LM20A, display,<br/>sensores, microSD"]
-    NPM -->|"BUCK1 1,8 V"| GNSSR["GNSS<br/>(tradutor de nível na UART)"]
+    NPM -->|"BUCK2 3,0 V, por ferrite<br/>(desde 2026-09-26; o BUCK1 ficou sem carga)"| GNSSR["GNSS<br/>UART direta, sem tradutor"]
     MCU -.-|I2C| NPM
     MCU -.-|I2C| AEM
     MCU -.-|I2C| FG
@@ -309,7 +311,7 @@ flowchart LR
 | Carregador solar | não tem | **e-peas AEM10900** (QFN28 de 4 × 4 mm) | boost com MPPT de 120 mV a 2,73 V, partida a frio com 250 mV, até 175,5 mA de entrada, limiares da bateria por pino ou por I2C, monitor de temperatura próprio que corta a carga fora de 0 a 45 °C mesmo com o MCU desligado, medidor de energia e pino para bloquear a carga; sem driver no Zephyr (poucos registradores por I2C) |
 | Bateria | Li-ion de 1 célula; o port supõe 1500 mAh (`zephyr_app/src/main.c`) | **LiPo de 1 célula com proteção (PCM) e NTC de 10 k**, de 2000 mAh (60 × 36 × 7 mm) a 2500 mAh (50 × 60 × 7,3 mm) | carga de 0 a 45 °C, descarga de −20 a 60 °C; pack sob encomenda (as células de catálogo não trazem NTC); UN38.3 para transporte |
 
-Trilhos: o BUCK2, em 3,0 V, alimenta o MCU, o display (que pede as entradas no nível do seu VDD), os sensores e o microSD por uma chave de carga; o BUCK1, em 1,8 V, alimenta só o GNSS (a proposta inicial invertia os dois, mas o resistor do VSET1 não escolhe 3,0 V: ver [19](19-lista-de-compras.md#correções-de-integração)), que a 1,8 V gasta cerca de 17 % menos que a 3,0 V, com filtro LC para o ripple ficar abaixo de 50 mV e tradutor de nível nos sinais com o MCU. Os dois bucks dão 200 mA cada. Os drivers de LED do nPM1300 dão só 5 mA: a luz do display (16 mA) vai por um transistor, alimentada pela LDSW2 como LDO de 3,3 V.
+Trilhos: o BUCK2, em 3,0 V, alimenta o MCU, o display (que pede as entradas no nível do seu VDD), os sensores, a flash por uma chave de carga e, **desde 2026-09-26, o GNSS** por um ferrite (VCC e V_IO juntos, VIO_SEL aberto: opção 1 da tabela 35 do manual de integração), sem tradutor de nível. O BUCK1, em 1,8 V, alimentava só o GNSS, que a 1,8 V gasta cerca de 18 % menos que a 3,0 V — mas o buck é de ±5 % e o projeto de 1,8 V do MAX-F10S pede ±2 %, e um LDO de ±1 % custava mais na bateria do que o receptor a 3,0 V ([hardware_gnssbike/02](../hardware_gnssbike/02-calculos.md#o-receptor-no-3v0-e-o-1v8-sem-carga)); o BUCK1 fica montado, sem carga (a proposta inicial invertia os dois bucks, mas o resistor do VSET1 não escolhe 3,0 V: ver [19](19-lista-de-compras.md#correções-de-integração)). Os dois bucks dão 200 mA cada. Os drivers de LED do nPM1300 dão só 5 mA: a luz do display (16 mA) vai por um transistor, alimentada pela LDSW2 como LDO de 3,3 V.
 
 O nPM1304 não serve: o binding do NCS limita a carga a 4 a 100 mA e a descarga a 125 mA fixos. O medidor interno do nPM1300 (nRF Fuel Gauge) também não: ele só enxerga a corrente que passa pelo próprio PMIC, então não vê a carga solar, e não mede nada em ship mode.
 

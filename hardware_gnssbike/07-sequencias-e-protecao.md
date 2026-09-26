@@ -47,7 +47,7 @@ registrador:
 | Trilho | Resistor | Tensão | O que depende dele |
 |---|---|---|---|
 | `3V0` (BUCK2) | `RVSET2`, 150 kΩ | 3,0 V | **o MCU**: sem este trilho o aparelho não liga |
-| `1V8` (BUCK1) | `RVSET1`, 47 kΩ | 1,8 V | `VCC` e `V_IO` do MAX-F10S, lado B do TXU0204 |
+| `1V8` (BUCK1) | `RVSET1`, 47 kΩ | 1,8 V | **nada**, desde 2026-09-26: o receptor passou ao `3V0`. O buck fica montado e o firmware o desliga; o `RVSET1` continua, porque nenhum `VSET` pode ficar aberto |
 
 > [!CAUTION]
 > **Nenhum `VSET` pode ficar aberto** (ficha do nPM1300), e é o BUCK2 que
@@ -107,17 +107,23 @@ folga nas duas pontas. E a partida real do nPM1300 **está na ficha**: cerca de
 **2 · O `V_IO` nunca pode ficar acima do `VCC`.** É regra da
 [ficha](../docs/14-hardware-placa-nova.md#gnss): "`V_IO` nunca acima do
 `VCC`". **Nesta placa o problema não existe**, e vale dizer por quê em vez
-de deixar implícito: os dois saem do **mesmo BUCK1**, são o mesmo nó `1V8`
-([03](03-netlist.md#nós-de-alimentação)), sobem juntos e descem juntos, e
-não há ordem possível entre eles.
+de deixar implícito: os dois saem do **mesmo BUCK2**, são o mesmo nó
+`3V0_GNSS` ([03](03-netlist.md#nós-de-alimentação)), sobem juntos e descem
+juntos, e não há ordem possível entre eles. A tabela 35 do manual de
+integração não impõe ordem nem o `UBX-RXM-PMREQ` à opção 1 (`VCC` e
+`V_IO` juntos, com ou sem backup) — impõe às opções de 1,8 V; o driver
+manda o `UBX-RXM-PMREQ` antes de cortar mesmo assim, porque fecha a BBR
+de forma ordenada.
 
 > [!CAUTION]
 > **Isto quebra na primeira revisão que separar os trilhos.** Alguém que
-> ponha o `VCC` em 3,0 V para ganhar sensibilidade e deixe o `V_IO` em
-> 1,8 V, ou que alimente o `V_IO` de um LDO próprio, passa a ter duas
-> rampas e **precisa garantir a ordem**. Com o `VIO_SEL` no GND o `V_IO`
-> tem máximo absoluto de **1,98 V**, de modo que o erro inverso — `V_IO`
-> antes ou acima do `VCC` — não avisa: queima.
+> volte o `V_IO` a 1,8 V para economizar, ou que o alimente de um LDO
+> próprio, passa a ter duas rampas e **precisa garantir a ordem** (opção 3
+> da tabela 35: `V_IO` desligado 100 ms antes do `VCC`, ou o
+> `UBX-RXM-PMREQ` antes dos dois). E o `VIO_SEL` tem de acompanhar: **no
+> GND, o máximo absoluto do `V_IO` cai para 1,98 V, e o `3V0` desta placa
+> queima o módulo sem avisar**. Ele fica aberto aqui de propósito
+> ([03](03-netlist.md#pinos-de-configuração-amarrados-em-cobre)).
 
 **3 · O `CSB` do BMP585 alto na partida.** O barômetro escolhe I²C ou SPI
 **no instante em que a alimentação sobe**, e com o `CSB` baixo nesse
@@ -329,11 +335,43 @@ Custa **seis passivos 0402** e nenhum pino. Os seis entraram na [contagem](05-ma
 > disputa** com a especificação ([03](03-netlist.md#interface)): resolver
 > uma coisa muda a outra.
 
+## O corte térmico da carga solar
+
+O ADP5091 não tem entrada de temperatura, e o AEM10900 que ele substituiu
+cortava sozinho fora de 0 a 45 °C. Desde 2026-09-26 o lado quente é um
+comparador em cobre, sem firmware no caminho
+([01](01-esquematico.md#folha-1--energia)):
+
+```mermaid
+flowchart LR
+    SRC(("SRC · painel")) --> RT["RT101 NTC 10 kΩ<br/>sobre R106 4,87 kΩ"]
+    SRC --> REF["R124 / R125<br/>metade do SRC"]
+    RT -->|"IN+"| CMP["U105 TLV7031"]
+    REF -->|"IN−"| CMP
+    CMP -->|"quente: alto"| D106["D106 BAT54WS"] --> DIS(("DIS_SW do ADP5091"))
+    VBUSOUT(("VBUSOUT")) -->|"R104 / R105"| DIS
+    DIS -->|"alto"| OFF["boost parado:<br/>a célula não recebe do painel"]
+```
+
+| Situação | O que acontece | Quem decide |
+|---|---|---|
+| Célula acima de 45 °C, com sol | o divisor passa da metade do `SRC`, o comparador sobe, o `D106` leva o `DIS_SW` acima de 1 V e o boost para | cobre |
+| Célula abaixo de 45 °C | o comparador fica baixo, o `D106` fica em corte e o `DIS_SW` só responde ao divisor do USB | cobre |
+| Cabo USB ligado | o `VBUSOUT` leva o `DIS_SW` para cima pelo `R104`/`R105` e o solar para, com ou sem calor | cobre |
+| Sem sol | `SRC` em zero: o divisor e o comparador não gastam nada, e não há o que cortar | — |
+| **Célula abaixo de 0 °C, com sol** | **nada corta**: só o lado quente tem comparador. O carregador do nPM1300 no USB continua protegido pelo JEITA; o painel, não | **em aberto** ([01](01-esquematico.md#folha-1--energia)) |
+
+O comparador é alimentado pelo `VSYS`, e as entradas, alimentadas pelo
+painel, ficam entre 0 e 2,07 V. A faixa de alimentação, a de modo comum
+das entradas e a pinagem do TLV7031 estão **por conferir na ficha
+SNOSD54** antes de fabricar: o `cad/parts.py` o marca como não confirmado
+de propósito ([05](05-materiais.md)).
+
 ## O que só a bancada decide
 
 | Em aberto | Por quê | Como fechar |
 |---|---|---|
-| Rampa real do BUCK1 na partida | a ficha dá cerca de 1,2 ms (360 µs/V), dentro da faixa, mas isso é com 10 µF e 3,3 V, e aqui são 1,8 V com outro capacitor | osciloscópio no `1V8` na primeira energização, **antes** de soldar o receptor |
+| Rampa real do BUCK2 na partida, que desde 2026-09-26 é o trilho do `V_IO` do receptor | a ficha dá cerca de 1,2 ms (360 µs/V), dentro da faixa, mas isso é com 10 µF e 3,3 V, e aqui são 3,0 V com outro capacitor e mais carga | osciloscópio no `3V0_GNSS` na primeira energização, **antes** de soldar o receptor |
 | Brown-out do nRF54LM20A e `VSYSPOF` do nPM1300 | fichas não lidas nesta rodada | ler as duas e medir a ordem de corte com fonte programável |
 | O que o MCU vê depois do toque longo de 10 s | `RESET_POWER_ON` ou `RESET_PIN` | ler o `LPRESETCONFIG` na ficha e conferir no console |
 | Se o POF chega a tempo de fechar uma gravação | o apagamento de um setor leva 58 ms (**ficha**) | provocar queda de tensão gravando, e conferir o arquivo |

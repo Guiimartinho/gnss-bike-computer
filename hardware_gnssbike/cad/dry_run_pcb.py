@@ -31,6 +31,14 @@ import make_pcb as MP  # noqa: E402
 import nets as N  # noqa: E402
 import parts as P  # noqa: E402
 
+_PLACA_PATH = pathlib.Path(__file__).resolve().parent / "gnssbike.kicad_pcb"
+
+
+def redes_do_arquivo() -> dict[str, int]:
+    """Net name -> number, from the board file itself (fp_load explains why)."""
+    return fp_load.redes_da_placa(
+        fp_load.parse(_PLACA_PATH.read_text(encoding="utf-8")))
+
 PCB = HERE / "gnssbike.kicad_pcb"
 
 # --- the rules, with their source -------------------------------------------
@@ -112,6 +120,17 @@ REGRAS = [
     ("OP1", "nenhum componente a menos de duas vezes a propria altura do "
             "sensor de luz: reflexao optica secundaria",
      "TI OPT3001 SBOS681B, layout guidelines"),
+    ("ME6", "o corpo 3D de cada peca tem o eixo do footprint (comprimento "
+            "onde o F.Fab tem comprimento) e, onde as fileiras de pinos sao "
+            "desiguais, as pernas saem pelos mesmos lados que as ilhas: uma "
+            "peca desenhada 90 ou 180 graus fora das ilhas e o que o dono "
+            "viu nos MOSFET",
+     "o dono, no 3D, em 2026-09-26; o F.Fab e as ilhas do footprint"),
+    ("ME5", "os rabichos de solda do modelo 3D de cada conector ficam sobre "
+            "as ilhas de sinal do footprint, e nao do lado oposto: um corpo "
+            "simetrico passa na ME4 girado 180 graus, e o dono viu o J103 "
+            "com as pernas para a borda e as ilhas para dentro",
+     "o dono, no 3D, em 2026-09-26; as ilhas do footprint do KiCad"),
     ("ME3", "o corpo que a ficha de cada peca cota cabe no footprint que "
             "foi desenhado para ela, e bate com o contorno dele",
      "desenho mecanico de cada ficha, em footprints.PACOTE"),
@@ -119,6 +138,11 @@ REGRAS = [
      "hardware_gnssbike/04-pcb-e-caixa.md"),
     ("ME2", "altura dos componentes dentro da sombra da bateria e do display",
      "hardware_gnssbike/04-pcb-e-caixa.md#as-duas-sombras"),
+    ("RT1", "toda ligacao da lista de nos existe em cobre: zero itens "
+            "desconectados no DRC completo do KiCad",
+     "kicad-cli pcb drc --severity-all. E a unica contagem que vale: o "
+     "roteador daqui relata o que tentou, e um DRC so de erros esconde os "
+     "desconectados, que sao aviso"),
     ("ME4", "as ilhas de solda de uma peca ficam sob o corpo do modelo 3D "
             "do fabricante",
      "um rabicho de solda fica em cima da sua ilha: se o corpo nao as cobre, "
@@ -139,8 +163,9 @@ CORRENTE = {
     "VBAT_CELULA": (0.8, "idem, do conector da celula"),
     "VBAT_SYS": (0.8, "idem, para o sistema"),
     "VSYS": (0.5, "consumo de pico do aparelho"),
-    "3V0": (0.4, "trilho de 3,0 V: display, sensores, flash"),
-    "1V8": (0.2, "trilho de 1,8 V"),
+    "3V0": (0.4, "trilho de 3,0 V: modulo, display, sensores, flash e, desde "
+                 "2026-09-26, o receptor GNSS (100 mA de pico na partida)"),
+    "1V8": (0.2, "trilho de 1,8 V do BUCK1, montado e sem carga"),
     "SD3V0": (0.2, "trilho comutado do display"),
     "BUCK1_SW": (0.5, "no de chaveamento do buck 1"),
     "BUCK2_SW": (0.5, "no de chaveamento do buck 2"),
@@ -196,7 +221,7 @@ ISOLACAO = (
 )
 # and the display itself, which is not a part on the board but a rectangle
 # over it - the 25 mm row applies to it more than to its connector
-ZONA_DISPLAY = "SOMBRA_DISPLAY_JDI_MAX_2-6MM"
+ZONA_DISPLAY = "SOMBRA_DISPLAY_JDI_MAX_3-0MM"
 PI_GNSS = ["L301", "C301", "C302"]
 MODULO = "U201"          # the radio module
 GNSS = "U301"            # the GNSS receiver
@@ -250,22 +275,33 @@ def ler(caminho: pathlib.Path):
             if pr[1] == "Reference":
                 ref = pr[2]
         atras = (fp_load.kid(f, "layer") or ["", "F.Cu"])[1].startswith("B.")
+        # two outlines, both in the footprint's own frame: the courtyard
+        # (what the placer keeps clear) and the fabrication body (where the
+        # part itself is; the ME5 rule measures the model's solder tails
+        # against it, because a tail is what sticks OUT of the body)
         xs, ys = [], []
+        xs_f, ys_f = [], []
         for chave in ("fp_line", "fp_rect", "fp_poly", "fp_circle"):
             for g in fp_load.kids(f, chave):
                 lay = fp_load.kid(g, "layer")
-                if not lay or "CrtYd" not in lay[1]:
+                if not lay:
+                    continue
+                if "CrtYd" in lay[1]:
+                    lx, ly = xs, ys
+                elif "Fab" in lay[1]:
+                    lx, ly = xs_f, ys_f
+                else:
                     continue
                 for tag in ("start", "end", "center"):
                     q = fp_load.kid(g, tag)
                     if q:
-                        xs.append(float(q[1]))
-                        ys.append(float(q[2]))
+                        lx.append(float(q[1]))
+                        ly.append(float(q[2]))
                 pts = fp_load.kid(g, "pts")
                 if pts:
                     for q in fp_load.kids(pts, "xy"):
-                        xs.append(float(q[1]))
-                        ys.append(float(q[2]))
+                        lx.append(float(q[1]))
+                        ly.append(float(q[2]))
         meus = []
         for p in fp_load.kids(f, "pad"):
             a = fp_load.kid(p, "at")
@@ -275,22 +311,28 @@ def ler(caminho: pathlib.Path):
             gy = fy - px * math.sin(r) + py * math.cos(r)
             rede = fp_load.kid(p, "net")
             camadas = list(fp_load.kid(p, "layers")[1:])
+            sz = fp_load.kid(p, "size")
             item = {"ref": ref, "pad": p[1], "x": gx, "y": gy,
                     "rede": rede[2] if rede else "",
+                    "hw": float(sz[1]) / 2 if sz else 0.0,
+                    "hh": float(sz[2]) / 2 if sz else 0.0,
                     "smd": p[2] == "smd",
                     "camada": "B.Cu" if any("B.Cu" in c for c in camadas)
                               else "F.Cu"}
             pads.append(item)
             meus.append(item)
-        if xs:
+        def _caixa(lx, ly):
+            if not lx:
+                return (fx, fy, fx, fy)
             r = math.radians(ang)
-            cx = [x * math.cos(r) + y * math.sin(r) for x, y in zip(xs, ys)]
-            cy = [-x * math.sin(r) + y * math.cos(r) for x, y in zip(xs, ys)]
-            caixa = (fx + min(cx), fy + min(cy), fx + max(cx), fy + max(cy))
-        else:
-            caixa = (fx, fy, fx, fy)
+            cx = [x * math.cos(r) + y * math.sin(r) for x, y in zip(lx, ly)]
+            cy = [-x * math.sin(r) + y * math.cos(r) for x, y in zip(lx, ly)]
+            return (fx + min(cx), fy + min(cy), fx + max(cx), fy + max(cy))
+
+        caixa = _caixa(xs, ys)
         pecas[ref] = {"x": fx, "y": fy, "ang": ang, "atras": atras,
-                      "caixa": caixa, "pads": meus}
+                      "caixa": caixa, "fab": _caixa(xs_f, ys_f) if xs_f else None,
+                      "pads": meus}
     seg = []
     for s in fp_load.kids(arv, "segment"):
         a, b = fp_load.kid(s, "start"), fp_load.kid(s, "end")
@@ -358,16 +400,19 @@ def zona(nome: str):
 
 # --- IPC-2221 ---------------------------------------------------------------
 def largura_ipc(corrente: float, subida: float = 10.0,
-                espessura_um: float = 35.0) -> float:
-    """Minimum external-layer width, in mm, by IPC-2221B 6.2.
+                espessura_um: float = 35.0, interna: bool = False) -> float:
+    """IPC-2221B, 6.2: the width a current needs for a given temperature rise.
 
-    A = (I / (k * dT^b))^(1/c) in mils squared, with k 0.048, b 0.44, c 0.725
-    for an external conductor; the width is A divided by the thickness.
+    I = k * dT^0.44 * A^0.725, with A in square mils. k is 0.048 for an
+    OUTER conductor and 0.024 for an INNER one: an inner track has no air to
+    give its heat to, and the standard asks it to be about 2.6 times wider
+    for the same rise. Until 2026-09-26 this applied the outer curve to every
+    segment, and VBUS runs 37 mm on In2.Cu.
     """
-    k, b, c = 0.048, 0.44, 0.725
-    area_mils2 = (corrente / (k * subida ** b)) ** (1 / c)
-    esp_mils = espessura_um / 25.4
-    return area_mils2 / esp_mils * 0.0254
+    k = 0.024 if interna else 0.048
+    area_mil2 = (corrente / (k * subida ** 0.44)) ** (1 / 0.725)
+    esp_mil = espessura_um / 25.4
+    return area_mil2 / esp_mil * 0.0254
 
 
 def _ilhas_sob_o_corpo(ref: str, pecas: dict):
@@ -405,10 +450,17 @@ def _ilhas_sob_o_corpo(ref: str, pecas: dict):
     H = tris[..., 2] * 1000.0
     x0, y0, x1, y1 = pe["caixa"]
     # so o que esta INTEIRO dentro da envoltoria da peca mais 1 mm: assim a
-    # caixa medida e a do corpo dela, e nao a do vizinho
+    # caixa medida e a do corpo dela, e nao a do vizinho - e na FACE dela:
+    # ate 2026-09-26 a regra so olhava z > 0,95, e para o J103, que foi para
+    # o verso nesse dia, mediu o sensor de luz e o diodo da frente por cima
+    # dele e acusou uma ilha fora de um corpo que nao era o seu
+    if pe.get("atras", False):
+        na_face = H.max(axis=1) < -0.05
+    else:
+        na_face = H.min(axis=1) > 0.95
     c = ((X.min(axis=1) > x0 - 1.0) & (X.max(axis=1) < x1 + 1.0)
          & (Y.min(axis=1) > y0 - 1.0) & (Y.max(axis=1) < y1 + 1.0)
-         & (H.min(axis=1) > 0.95))
+         & na_face)
     if not c.any():
         return None
     caixa = (float(X[c].min()), float(Y[c].min()),
@@ -417,6 +469,286 @@ def _ilhas_sob_o_corpo(ref: str, pecas: dict):
             if not (caixa[0] - 0.05 <= px <= caixa[2] + 0.05
                     and caixa[1] - 0.05 <= py <= caixa[3] + 0.05)]
     return (fora, len(ilhas), caixa)
+
+
+# Os conectores cujos rabichos de solda a ME5 confere: os que tem modelo do
+# fabricante ou da biblioteca do KiCad no GLB e ilhas de sinal numa fileira.
+RABICHOS_CONFERIDOS = ("J101", "J102", "J103", "J401", "J402")
+_GLB_CACHE: dict = {}
+
+
+def _glb_lido():
+    """The GLB parsed once per run: five connectors, one file."""
+    sys.path.insert(0, str(HERE))
+    import make_3d as M3
+    glb = M3._glb_atual()
+    if glb is None:
+        return None
+    if _GLB_CACHE.get("caminho") != glb:
+        j, bina = M3.ler_glb(glb)
+        _GLB_CACHE.update(caminho=glb, corpos=M3.corpos(j, bina))
+    return _GLB_CACHE["corpos"]
+
+
+def _rabichos_sobre_as_ilhas(ref: str, pecas: dict):
+    """Os rabichos de solda do modelo 3D ficam sobre as ilhas de sinal?
+
+    A ME4 pergunta se as ilhas ficam sob o corpo. Um corpo simetrico cobre
+    as ilhas nos dois sentidos, e foi assim que o JST ZH do J103 passou na
+    ME4 girado 180 graus: o dono viu no 3D as pernas apontando para a borda
+    enquanto as ilhas ficavam do lado de dentro. Um rabicho de solda e um
+    corpo pequeno e fino que encosta na placa, e o centro dos rabichos tem
+    de cair sobre o centro das ilhas de sinal - nao do lado oposto.
+
+    Devolve (distancia, n_rabichos, centro_rabichos, centro_ilhas), ou
+    None quando nao ha corpo ou rabicho para medir.
+    """
+    if ref not in pecas:
+        return None
+    pe = pecas[ref]
+
+    def mecanica(nome: str) -> bool:
+        return nome in ("", "MP") or nome.startswith("S")
+
+    ilhas = [(q["x"], q["y"]) for q in pe.get("pads", [])
+             if q["smd"] and not mecanica(q["pad"])]
+    fixacao = [(q["x"], q["y"]) for q in pe.get("pads", []) if mecanica(q["pad"])]
+    if not ilhas:
+        return None
+    corpos = _glb_lido()
+    if corpos is None:
+        return None
+    x0, y0, x1, y1 = pe["caixa"]
+    fab = pe.get("fab")
+    if fab is None:
+        return None
+    atras = pe.get("atras", False)
+    # The GLB that KiCad exports is one primitive per FACE, not per solid,
+    # so "a small thin body" is not something it can tell apart: a housing
+    # is thousands of small faces too. What a tail IS, geometrically, is
+    # material that touches the board OUTSIDE the fabrication outline of
+    # the footprint - the outline is where the housing stands, and the
+    # tails stick out of it over the pads. So: every face near the board
+    # whose centre is outside the F.Fab box and inside the courtyard,
+    # weighted by its area.
+    import numpy as np
+    ci = (sum(p[0] for p in ilhas) / len(ilhas), sum(p[1] for p in ilhas) / len(ilhas))
+    # The axis that matters: from the centre of the body to the centre of
+    # the signal pads. The tails stick out of the body ALONG it, on the pad
+    # side; a housing whose ends poke 0,2 mm past the F.Fab box pokes out
+    # ACROSS it, and must not count - it did, and pulled the centre of the
+    # "tails" into the middle of the body.
+    fc = ((fab[0] + fab[2]) / 2.0, (fab[1] + fab[3]) / 2.0)
+    ux, uy = ci[0] - fc[0], ci[1] - fc[1]
+    norma = math.hypot(ux, uy)
+    if norma < 0.3:
+        return None
+    ux, uy = ux / norma, uy / norma
+    meio = abs(ux) * (fab[2] - fab[0]) / 2.0 + abs(uy) * (fab[3] - fab[1]) / 2.0
+    soma = 0.0
+    peso = 0.0
+    n_faces = 0
+    for tris, _cor in corpos:
+        X = tris[..., 0] * 1000.0 - MP.ORIGEM[0]
+        Y = -tris[..., 1] * 1000.0 - MP.ORIGEM[1]
+        H = tris[..., 2] * 1000.0
+        # a quick reject on the primitive, then face by face: inside the
+        # COURTYARD (no margin - the neighbours' courtyards do not overlap
+        # ours, so their faces stay out), near the board, and past the body
+        # along the pad axis
+        if X.max() < x0 or X.min() > x1 or Y.max() < y0 or Y.min() > y1:
+            continue
+        cx = X.mean(axis=1)
+        cy = Y.mean(axis=1)
+        dentro = (cx > x0) & (cx < x1) & (cy > y0) & (cy < y1)
+        # ON the board, but NOT the board: the GLB carries the substrate
+        # (z 0 to 0,82) and the copper (0,82 to 0,85 on top, -0,04 to 0
+        # underneath), and a pad is a flat gold face lying exactly where a
+        # tail lies. Measured in the file on 2026-09-26: the tails of the
+        # JST ZH start at z 0,91, the copper ends at 0,85. So a tail is a
+        # face that starts above the top copper and within a millimetre of
+        # it; on the back face, one that ends below the bottom copper.
+        if atras:
+            toca = (H.min(axis=1) < -0.08) & (H.max(axis=1) < 0.001) & (H.max(axis=1) > -1.2)
+        else:
+            toca = (H.max(axis=1) > 0.9) & (H.min(axis=1) > 0.80) & (H.min(axis=1) < 2.0)
+        proj = (cx - fc[0]) * ux + (cy - fc[1]) * uy
+        fora = np.abs(proj) > meio + 0.15
+        sel = dentro & toca & fora
+        if fixacao:
+            perto = np.zeros(len(cx), dtype=bool)
+            for fx_, fy_ in fixacao:
+                perto |= np.hypot(cx - fx_, cy - fy_) < 1.2
+            sel &= ~perto
+        if not sel.any():
+            continue
+        a = tris[sel]
+        area = 0.5 * np.linalg.norm(np.cross(a[:, 1] - a[:, 0], a[:, 2] - a[:, 0]), axis=1)
+        soma += float((proj[sel] * area).sum())
+        peso += float(area.sum())
+        n_faces += int(sel.sum())
+    if peso <= 0.0:
+        return None
+    # the signed position of the tails along the pad axis, from the body
+    # centre: positive is the pad side, negative the opposite one
+    media = soma / peso
+    return (media, n_faces, ci, meio)
+
+
+def _corpos_mm():
+    """Every body on the board, in board millimetres: (triangles, source).
+
+    Two sources. The GLB that kicad-cli exports carries the STEP models -
+    the library's and the three from the LCSC - together with the board's
+    own copper. The parts drawn from a .wrl (the ones footprints.py made
+    from the datasheet cotes, and the library packages that have no STEP,
+    like the SOT-523) are not in it: they are placed by make_3d.py the
+    same way it draws them, so a rule sees exactly what the picture shows.
+    """
+    import numpy as np
+    if "mm" in _GLB_CACHE:
+        return _GLB_CACHE["mm"]
+    saida = []
+    corpos = _glb_lido()
+    if corpos:
+        for tris, _cor in corpos:
+            T = np.stack([tris[..., 0] * 1000.0 - MP.ORIGEM[0],
+                          -tris[..., 1] * 1000.0 - MP.ORIGEM[1],
+                          tris[..., 2] * 1000.0], axis=-1)
+            saida.append((T, "glb"))
+    sys.path.insert(0, str(HERE))
+    import make_3d as M3
+    t, _c = M3.caixas_das_pecas()
+    if len(t):
+        T = np.stack([t[..., 0] - MP.ORIGEM[0], t[..., 1] - MP.ORIGEM[1],
+                      t[..., 2]], axis=-1)
+        saida.append((T, "wrl"))
+    _GLB_CACHE["mm"] = saida
+    return saida
+
+
+def _faces_da_peca(pe: dict, corpos=None):
+    """The model faces of one part: inside its courtyard and off the copper.
+
+    Returns (cx, cy, area, hmin, hmax) as arrays, or None. Same frame as
+    the rest of this file: board millimetres, y downward, z up with the
+    top copper ending at 0,855 and the bottom copper starting at -0,035.
+    """
+    import numpy as np
+    x0, y0, x1, y1 = pe["caixa"]
+    atras = pe.get("atras", False)
+    cxs, cys, ars, h0s, h1s = [], [], [], [], []
+    for T, fonte in _corpos_mm():
+        X, Y, H = T[..., 0], T[..., 1], T[..., 2]
+        if X.max() < x0 or X.min() > x1 or Y.max() < y0 or Y.min() > y1:
+            continue
+        cx = X.mean(axis=1)
+        cy = Y.mean(axis=1)
+        dentro = (cx > x0) & (cx < x1) & (cy > y0) & (cy < y1)
+        # the GLB carries the copper: a face lying flat on it (0,82 to
+        # 0,855 on top, -0,035 to 0 underneath) is the board, not the part.
+        # A leg standing on the copper starts AT 0,855 and rises above 0,9.
+        if fonte == "glb":
+            if atras:
+                fora_do_cobre = (H.min(axis=1) < -0.08) & (H.max(axis=1) < 0.001)
+            else:
+                fora_do_cobre = (H.max(axis=1) > 0.9) & (H.min(axis=1) > 0.80)
+        else:
+            # the bodies make_3d draws from a .wrl stand on FRENTE_Z (0,855)
+            # or hang from VERSO_Z (-0,035). A back part under a front one
+            # shares its courtyard in plan - the buzzer under the SWD header
+            # - and until 2026-09-26 its faces were counted as the front
+            # part's: ME6 called J202 "girado 90" with the buzzer's box.
+            if atras:
+                fora_do_cobre = H.max(axis=1) < 0.001
+            else:
+                fora_do_cobre = H.min(axis=1) > 0.80
+        sel = dentro & fora_do_cobre
+        if not sel.any():
+            continue
+        a = T[sel]
+        area = 0.5 * np.linalg.norm(np.cross(a[:, 1] - a[:, 0], a[:, 2] - a[:, 0]), axis=1)
+        cxs.append(cx[sel]); cys.append(cy[sel]); ars.append(area)
+        h0s.append(H.min(axis=1)[sel]); h1s.append(H.max(axis=1)[sel])
+    if not cxs:
+        return None
+    return (np.concatenate(cxs), np.concatenate(cys), np.concatenate(ars),
+            np.concatenate(h0s), np.concatenate(h1s))
+
+
+def _corpo_bate_com_o_footprint(ref: str, pecas: dict):
+    """Does the 3D body have the footprint's shape and orientation?
+
+    Two measurements, for every part that has a fabrication outline and a
+    model in the GLB:
+
+      1. the body's box against the F.Fab box. A part turned 90 degrees
+         has its length where the footprint has its width, and a 0402 is
+         twice as long as it is wide: the swap is unmistakable. This is
+         the owner's question about the resistors, answered by measure.
+      2. for a part whose pads sit in two facing rows of DIFFERENT counts
+         (a SOT-23 has two on one side and one on the other), the legs of
+         the model must stick out of the body on the same sides, in the
+         same proportion. A part turned 180 degrees fails this and passes
+         the first.
+
+    Returns a dict with the verdicts and the numbers, or None.
+    """
+    import numpy as np
+    if ref not in pecas:
+        return None
+    pe = pecas[ref]
+    fab = pe.get("fab")
+    if fab is None:
+        return None
+    corpos = _glb_lido()
+    if corpos is None:
+        return None
+    faces = _faces_da_peca(pe, corpos)
+    if faces is None:
+        return None
+    cx, cy, area, h0, h1 = faces
+    # 1. the box of the body: the faces of the model, area-weighted 2nd and
+    #    98th percentiles so that a stray sliver does not stretch it
+    def _faixa(v):
+        ordem = np.argsort(v)
+        acum = np.cumsum(area[ordem]) / area.sum()
+        return (float(v[ordem][np.searchsorted(acum, 0.02)]),
+                float(v[ordem][min(np.searchsorted(acum, 0.98), len(v) - 1)]))
+    bx0, bx1 = _faixa(cx)
+    by0, by1 = _faixa(cy)
+    w_m, h_m = bx1 - bx0, by1 - by0
+    w_f, h_f = fab[2] - fab[0], fab[3] - fab[1]
+    out = {"modelo": (w_m, h_m), "fab": (w_f, h_f), "eixo": "ok"}
+    if abs(w_f - h_f) > 0.4 and abs(w_m - h_m) > 0.4:
+        if (w_m > h_m) != (w_f > h_f):
+            out["eixo"] = "girado 90"
+    # 2. legs per side, only where the pad rows are asymmetric
+    ilhas = [(q["x"], q["y"]) for q in pe.get("pads", []) if q["smd"]]
+    out["lados"] = "sem medida"
+    if len(ilhas) >= 3:
+        xs = sorted(set(round(p[0], 2) for p in ilhas))
+        ys = sorted(set(round(p[1], 2) for p in ilhas))
+        for eixo, vals, coord in (("x", xs, 0), ("y", ys, 1)):
+            if len(vals) != 2:
+                continue
+            lo, hi = vals
+            n_lo = sum(1 for p in ilhas if round(p[coord], 2) == lo)
+            n_hi = sum(1 for p in ilhas if round(p[coord], 2) == hi)
+            if n_lo == n_hi:
+                out["lados"] = "simetrico"
+                continue
+            c = cx if coord == 0 else cy
+            f0, f1 = (fab[0], fab[2]) if coord == 0 else (fab[1], fab[3])
+            a_lo = float(area[c < f0 - 0.05].sum())
+            a_hi = float(area[c > f1 + 0.05].sum())
+            if a_lo + a_hi < 1e-6:
+                out["lados"] = "sem perna fora do corpo"
+                continue
+            out["lados"] = ("ok" if (a_lo > a_hi) == (n_lo > n_hi)
+                            else "girado 180")
+            out["lados_n"] = (n_lo, n_hi, round(a_lo, 3), round(a_hi, 3), eixo)
+    return out
 
 
 def main() -> int:
@@ -635,7 +967,8 @@ def main() -> int:
     # at the wrong width is not a pair - it is two tracks - and nothing else
     # in the chain would ever say so.
     import route as _R
-    _numeros, _ = MP.redes()
+    # from the board's own net table, never from nets.py at run time
+    _numeros = redes_do_arquivo()
     _por_num = {n: r for r, n in _numeros.items()}
     par = {}
     for r in ("USB_DP", "USB_DM"):
@@ -761,7 +1094,7 @@ def main() -> int:
                   f"pior de reserva a {piores[0][0]:.2f} mm")
 
     # -- AL2: largura por IPC-2221 -------------------------------------------
-    numeros, _ = MP.redes()
+    numeros = redes_do_arquivo()
     por_num = {n: r for r, n in numeros.items()}
     estreitas = []
     necks = 0
@@ -770,7 +1103,7 @@ def main() -> int:
         if rede not in CORRENTE:
             continue
         i, _fonte = CORRENTE[rede]
-        pedida = largura_ipc(i)
+        pedida = largura_ipc(i, interna=s["c"] in ("In1.Cu", "In2.Cu"))
         if s["w"] >= pedida - 1e-6:
             continue
         # A short stretch next to a pad is a neck-down, not an undersized
@@ -878,13 +1211,18 @@ def main() -> int:
     # numbers last and connects to ground, and the two that matter here say
     # so by name.
     TERMICOS = {("U104", "5"), ("U103", "25"), ("U101", "33"),
-                ("U505", "7"), ("U302", "15")}
+                ("U505", "7")}
     sobre_termico = []
     for q in pads:
         if (q["ref"], q["pad"]) not in TERMICOS:
             continue
         for v in vias:
-            if abs(v["x"] - q["x"]) < 1.2 and abs(v["y"] - q["y"]) < 1.2:
+            # "sob o pad" e o pad mais 0,5 mm de margem, nao 1,2 mm fixos:
+            # com 1,2 a regra acusou uma via de terra a 1,3 mm do centro de
+            # um pad de 0,58, que esta a 1 mm do cobre dele. A ponte de
+            # mascara entre via e pad e assunto do DRC, que a mede
+            if (abs(v["x"] - q["x"]) < q["hw"] + 0.5
+                    and abs(v["y"] - q["y"]) < q["hh"] + 0.5):
                 sobre_termico.append((q["ref"], q["pad"],
                                       round(math.hypot(v["x"] - q["x"],
                                                        v["y"] - q["y"]), 2)))
@@ -905,20 +1243,31 @@ def main() -> int:
             elif nome_fp in _F.ALTURA:
                 alt_de[r] = _F.ALTURA[nome_fp][0]
         perto_luz = []
+        sensor = pecas["U505"]
+        alt_sensor = alt_de.get("U505", 0.0)
         for r, p in pecas.items():
             if r == "U505" or r not in alt_de:
                 continue
-            d = dist_caixas(p["caixa"], pecas["U505"]["caixa"])
+            # a part on the other face cannot shade the sensor's window,
+            # and one no taller than the sensor casts no shadow on its top
+            # (the guideline is about TALLER neighbours): until 2026-09-26
+            # the rule counted the barometer on the back and every 0402
+            if p.get("atras", False) != sensor.get("atras", False):
+                continue
+            if alt_de[r] <= alt_sensor + 1e-9:
+                continue
+            d = dist_caixas(p["caixa"], sensor["caixa"])
             if d < 2 * alt_de[r]:
                 perto_luz.append((r, round(d, 2), alt_de[r]))
         if perto_luz:
-            falhou("OP1", f"{len(perto_luz)} pecas a menos de duas alturas do "
-                   "sensor de luz: " +
+            falhou("OP1", f"{len(perto_luz)} pecas mais altas que o sensor de luz "
+                   f"({alt_sensor:g}) a menos de duas vezes a propria altura: " +
                    ", ".join(f"{r} a {d} mm, alta {h}" for r, d, h in
                              sorted(perto_luz, key=lambda t: t[1])[:5]))
         else:
-            ok.append("OP1: nenhuma peca de altura conhecida a menos de duas "
-                      "alturas do sensor de luz")
+            ok.append(f"OP1: nenhuma peca da mesma face mais alta que o sensor "
+                      f"de luz ({alt_sensor:g} mm) a menos de duas vezes a "
+                      "propria altura dele")
 
     # -- ME3: o 2D e o 3D contam a mesma historia ------------------------
     import footprints as _FP
@@ -937,14 +1286,17 @@ def main() -> int:
                   "o contorno")
 
     # -- ME2: cabe sob o display e sob a bateria? ------------------------
-    # 04-pcb-e-caixa.md gives two ceilings: 2.6 mm on the front, under the
-    # display, and 1.2 mm on the back, under the battery. A part taller than
-    # the shadow it stands in does not fit, and no DRC will ever say so -
-    # which is the whole reason the heights had to come from the datasheets.
-    TETOS = (("SOMBRA_DISPLAY_JDI_MAX_2-6MM", 2.6, False),
+    # 04-pcb-e-caixa.md gives two ceilings: 3.0 mm on the front, under the
+    # display (2.6 until 2026-09-26: the receiver's 2.7 maximum did not fit,
+    # and the case lowered the board 0.4 mm instead - make_caixa.DISPLAY_VAO),
+    # and 1.2 mm on the back, under the battery. A part taller than the
+    # shadow it stands in does not fit, and no DRC will ever say so - which
+    # is the whole reason the heights had to come from the datasheets.
+    TETOS = ((ZONA_DISPLAY, 3.0, False),
              ("SOMBRA_BATERIA_MAX_1-2MM", 1.2, True))
     altos = []
     sem_altura = []
+    sem_zona: set = set()
     for ref, pe in sorted(pecas.items()):
         nome_fp = FPS.FP[ref][0] if ref in FPS.FP else None
         if nome_fp is None:
@@ -958,6 +1310,11 @@ def main() -> int:
             try:
                 z = zona(znome)
             except KeyError:
+                # A zona nao existe: ate 2026-09-26 isto era um `continue`
+                # mudo e a regra saia "ok" sem medir peca nenhuma - as
+                # sombras foram tiradas do make_dxf de proposito, porque a
+                # caixa nao esta definida, e a regra continuou passando.
+                sem_zona.add(znome)
                 continue
             if pe["atras"] != atras:
                 continue
@@ -965,14 +1322,18 @@ def main() -> int:
                 continue                      # not under this shadow
             if h > teto + 1e-9:
                 altos.append((ref, h, teto, znome))
-    if altos:
+    if sem_zona:
+        falhou("ME2", "nao mede nada: as zonas " + ", ".join(sorted(sem_zona))
+                      + " nao existem no make_dxf - a posicao do display e da "
+                      "celula sobre a placa nao esta definida em arquivo nenhum")
+    elif altos:
         falhou("ME2", f"{len(altos)} pecas mais altas que o teto da sombra em "
                "que estao: " +
                ", ".join(f"{r} {h:.2f} contra {t:.1f} mm"
                          for r, h, t, _z in altos[:6]))
     else:
         ok.append(f"ME2: nenhuma peca passa do teto da sombra em que esta "
-                  f"(2,6 mm sob o display, 1,2 mm sob a bateria); "
+                  f"({TETOS[0][1]:.1f} mm sob o display, {TETOS[1][1]:.1f} mm sob a bateria); "
                   f"{len(sem_altura)} pecas sem altura conhecida")
 
     # -- ME4: a boca do conector de borda aponta para fora? ------------------
@@ -1001,6 +1362,99 @@ def main() -> int:
         else:
             ok.append(f"ME4: as {total} ilhas de {ref} ficam sob o corpo do "
                       f"modelo do fabricante")
+
+    # -- ME5: os rabichos do modelo ficam sobre as ilhas de sinal? ----------
+    # A pergunta que a ME4 nao responde: de que lado esta a peca. Medido nos
+    # corpos pequenos e finos do GLB que encostam na placa, contra o centro
+    # das ilhas de sinal do footprint.
+    for ref in sorted(RABICHOS_CONFERIDOS):
+        achado = _rabichos_sobre_as_ilhas(ref, pecas)
+        if achado is None:
+            falhou("ME5", f"{ref}: nao achei rabichos de solda no modelo 3D "
+                          "para conferir")
+            continue
+        media, n_rab, ci, meio = achado
+        if media < 0.0:
+            falhou("ME5", f"{ref}: o que sai do corpo do modelo junto da placa "
+                          f"(os rabichos, {n_rab} faces) esta a {-media:.1f} mm "
+                          "do centro do corpo pelo lado OPOSTO ao das ilhas de "
+                          f"sinal (({ci[0]:.1f}; {ci[1]:.1f})): o modelo esta "
+                          "girado 180 graus em relacao ao footprint")
+        else:
+            ok.append(f"ME5: os rabichos de {ref} saem do corpo pelo lado das "
+                      f"ilhas de sinal ({media:.1f} mm do centro, corpo de "
+                      f"{meio:.1f} de meia largura; {n_rab} faces)")
+
+    # -- ME6: cada corpo 3D com o eixo e os lados do seu footprint ----------
+    # Toda peca que tem modelo, do 0402 ao modulo: a caixa do corpo contra
+    # o F.Fab, e as pernas contra as fileiras de ilhas. E a pergunta do dono
+    # sobre os passivos e os CIs "girados", respondida peca a peca.
+    girados = []
+    n_medidos = 0
+    sem_corpo = []
+    for ref in sorted(pecas):
+        if ref.startswith(("TP", "REF", "JP")):
+            continue
+        achado = _corpo_bate_com_o_footprint(ref, pecas)
+        if achado is None:
+            sem_corpo.append(ref)
+            continue
+        n_medidos += 1
+        if achado["eixo"] != "ok" or achado["lados"] == "girado 180":
+            girados.append((ref, achado))
+    if girados:
+        falhou("ME6", f"{len(girados)} de {n_medidos} corpos fora do eixo ou "
+                      "do lado das ilhas: " +
+                      "; ".join(f"{r} {a['eixo'] if a['eixo'] != 'ok' else a['lados']} "
+                                f"(corpo {a['modelo'][0]:.2f} x {a['modelo'][1]:.2f}, "
+                                f"F.Fab {a['fab'][0]:.2f} x {a['fab'][1]:.2f})"
+                                for r, a in girados[:6]))
+    else:
+        ok.append(f"ME6: os {n_medidos} corpos 3D medidos tem o eixo do F.Fab "
+                  f"e as pernas do lado das ilhas; {len(sem_corpo)} pecas sem "
+                  "corpo ou sem F.Fab para medir")
+
+    # -- RT1: a placa esta inteira? ------------------------------------------
+    # O DRC do KiCad com TODAS as severidades. Ate 2026-09-25 as rodadas a
+    # mao usavam --severity-error, e "0 itens desconectados" saiu impresso
+    # em documento e em pull request enquanto havia 55: item desconectado e
+    # aviso, e o filtro de erros o esconde.
+    import subprocess
+    sys.path.insert(0, str(HERE))
+    import make_3d as _M3
+    rel = HERE / "_drc.json"
+    r = subprocess.run([str(_M3.KICAD_CLI), "pcb", "drc", "--severity-all",
+                        "--format", "json", "--output", str(rel), str(PCB)],
+                       capture_output=True, text=True)
+    if not rel.exists():
+        falhou("RT1", "o kicad-cli nao rodou o DRC: " + r.stderr.strip()[:120])
+    else:
+        import json as _json
+        d = _json.loads(rel.read_text(encoding="utf-8"))
+        soltos = d.get("unconnected_items", [])
+        por_rede: dict[str, int] = {}
+        for u in soltos:
+            for it in u.get("items", []):
+                s = it.get("description", "")
+                if "[" in s and "]" in s:
+                    n = s[s.index("[") + 1:s.index("]")]
+                    por_rede[n] = por_rede.get(n, 0) + 1
+        viol = d.get("violations", [])
+        tipos: dict[str, int] = {}
+        for v in viol:
+            tipos[v.get("type", "?")] = tipos.get(v.get("type", "?"), 0) + 1
+        if soltos:
+            piores = ", ".join(f"{k} {v}" for k, v in
+                               sorted(por_rede.items(), key=lambda kv: -kv[1])[:8])
+            falhou("RT1", f"{len(soltos)} itens desconectados em "
+                          f"{len(por_rede)} redes ({piores}); e o DRC completo "
+                          f"tem {len(viol)} violacoes: "
+                          + ", ".join(f"{k} {v}" for k, v in sorted(tipos.items())))
+        else:
+            ok.append(f"RT1: 0 itens desconectados no DRC completo; "
+                      f"{len(viol)} violacoes de qualquer severidade"
+                      + (" (" + ", ".join(f"{k} {v}" for k, v in sorted(tipos.items())) + ")"
+                         if viol else ""))
 
     # -- resultado -------------------------------------------------------------
     for linha in ok:

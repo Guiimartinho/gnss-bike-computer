@@ -9,10 +9,10 @@ it.
 Every part is at TRUE SIZE at its panel's own scale, and every dimension comes
 from a file in this repository:
 
-  * case 62 x 104 x 19 mm, corner radius 7          tools/docs/case_drawing.py
-  * cavity 58 x 100 mm (rule ME1: the 34 x 90 board leaves 12 mm each side
-    and 5 mm top and bottom)                        cad/dry_run_pcb.py
-  * board 34 x 90 x 0.8 mm, one M2 hole at (3.2; 45.0)      gnssbike.kicad_pcb
+  * case 62 x 106 x 17 mm, corner radius 7        hardware_gnssbike/caixa/make_caixa.py
+  * cavity 58 x 102 mm (the 34 x 95 board leaves 12 mm each side, 6,5 at the
+    top for the antenna cradle and 0,5 at the bottom)   caixa/dry_run_caixa.py
+  * board 34 x 95 x 0.8 mm, two M2 holes                     gnssbike.kicad_pcb
   * every connector's position and face                     gnssbike.kicad_pcb
   * display LPM027M128C, outline 40.08 x 61.8, active 35.28 x 58.8
                                                     hardware_gnssbike/04
@@ -36,26 +36,30 @@ OUT = (pathlib.Path(sys.argv[1]) if len(sys.argv) > 1
 CANVAS_W, CANVAS_H = 2480, 4560
 FONT = "Inter, 'Segoe UI', Roboto, Arial, sans-serif"
 
-CAIXA_W, CAIXA_H, CAIXA_T = 62.0, 104.0, 19.0
-CAV_W, CAV_H = 58.0, 100.0
-PCB_W, PCB_H, PCB_T = 34.0, 90.0, 0.8
+# the case of cad/make_caixa.py (2026-09-26): 62 x 106 x 17, cavity 58 x 102
+CAIXA_W, CAIXA_H, CAIXA_T = 62.0, 106.0, 17.0
+CAV_W, CAV_H = 58.0, 102.0
+PCB_W, PCB_H, PCB_T = 34.0, 95.0, 0.8
 TELA_W, TELA_H = 40.08, 61.8
 ATIVA_W, ATIVA_H = 35.28, 58.8
 BAT_W, BAT_H, BAT_T = 36.0, 60.0, 7.0
 MOD_W, MOD_H = 23.0, 8.0
-FURO = (3.2, 45.0)
+FUROS = ((3.2, 7.0), (14.4, 91.7))
 
-# ref -> (x, y, angulo, face, rotulo)
+# ref -> (x, y, angulo, face, rotulo). Typed from cad/make_pcb.py
+# (BORDA_FIXA), not read from the board file: when a connector moves in the
+# CAD, this table moves by hand (last done 2026-09-26).
 CONEC = {
     "J401": (5.10, 26.50, -90, "frente", "FPC do display · 10 vias"),
     "J402": (5.10, 37.00, -90, "frente", "FPC da luz · 5 vias"),
-    "J103": (29.00, 32.00, 90, "frente", "painel solar · 4 vias"),
-    "J102": (4.00, 62.00, -90, "verso", "bateria · 6 vias"),
-    "J101": (6.20, 85.71, 0, "frente", "USB-C"),
-    "J201": (11.50, 78.00, 0, "frente", "gravação SWD"),
+    "J103": (4.90, 75.20, 270, "verso", "painel solar · 4 vias"),
+    "J102": (13.50, 80.40, 270, "frente", "bateria · 6 vias"),
+    "J101": (6.50, 90.71, 0, "frente", "USB-C"),
+    "J202": (14.20, 71.60, 0, "frente", "gravação SWD · 2 × 5"),
     "E301": (13.25, 1.80, 0, "frente", "antena GNSS"),
 }
-TECLAS = ((6.20, 58.0), (16.40, 58.0), (26.60, 58.0))
+TECLAS = ((3.6, 66.0), (17.0, 66.0), (30.4, 66.0))
+BUZZER = (18.0, 76.2, 12.5)          # back face, centre and diameter
 
 C = {
     "papel": "#ffffff", "campo": "#f5f6f8", "borda": "#d7dae0",
@@ -135,8 +139,9 @@ def desenha_placa(v, x, y, verso=False, destaque=()):
 
     v.rect(x, y, PCB_W, PCB_H, 2.5, fill=C["placa"], stroke=C["placa_borda"],
            stroke_width=0.4)
-    v.circle(x + mx(FURO[0]), y + FURO[1], 1.1, fill=C["campo"],
-             stroke=C["placa_borda"], stroke_width=0.3)
+    for fx, fy in FUROS:
+        v.circle(x + mx(fx), y + fy, 1.1, fill=C["campo"],
+                 stroke=C["placa_borda"], stroke_width=0.3)
     for ref, (cx, cy, _a, face, _r) in CONEC.items():
         se_ve = (face == "verso") if verso else (face == "frente")
         if not se_ve:
@@ -159,7 +164,8 @@ def desenha_placa(v, x, y, verso=False, destaque=()):
             v.circle(x + mx(tx), y + ty, 1.8, fill="#d8dce1",
                      stroke="#9aa0a8", stroke_width=0.3)
     else:
-        v.rect(x + mx(17.0) - 6.0, y + 67.5 - 6.0, 12.0, 12.0, 6.0,
+        bx, by, bd = BUZZER
+        v.rect(x + mx(bx) - bd / 2, y + by - bd / 2, bd, bd, bd / 2,
                fill="#c9ced4", stroke="#9aa0a8", stroke_width=0.3)
 
 
@@ -236,7 +242,7 @@ moldura(PX, PY, PW, PH, 0, "As peças",
 SP = 4.2
 pv = View(PX + 60, PY + 150, SP)
 desenha_caixa(pv, 0, 0, com_modulos=False)
-pv.text(CAIXA_W / 2, CAIXA_H + 7, "caixa · 62 × 104 × 19", 16, C["texto"], "middle", 700)
+pv.text(CAIXA_W / 2, CAIXA_H + 7, f"caixa · {CAIXA_W:g} × {CAIXA_H:g} × {CAIXA_T:g}", 16, C["texto"], "middle", 700)
 pv.text(CAIXA_W / 2, CAIXA_H + 12, "1 peça", 15, C["fraco"], "middle")
 
 pv2 = View(PX + 400, PY + 150, SP)
@@ -325,33 +331,40 @@ SS = 8.4
 av = View(MX + 700, MY + 175, SS)
 av.text(0, -8.0, "Corte A-A · pela largura", 19, C["titulo"], "start", 700)
 av.text(0, -3.0, "os dois chanfros de 45°, com um módulo em cada", 15, C["fraco"])
-# o contorno da secao: retangulo de 62 x 19 com os dois cantos da frente cortados
-av.poly([(6.2, 0), (55.8, 0), (62, 6.2), (62, 19), (0, 19), (0, 6.2), (6.2, 0)],
+# o contorno da secao: retangulo de 62 x 17 com os dois cantos da frente
+# cortados a 45 graus por 7,5 (cad/make_caixa.py: CHANFRO, T_C)
+CH, TT = 7.5, CAIXA_T
+av.poly([(CH, 0), (62 - CH, 0), (62, CH), (62, TT), (0, TT), (0, CH), (CH, 0)],
         fill=C["caixa"], stroke=C["caixa_borda"], stroke_width=0.35)
-for x1, y1, x2, y2 in ((0.0, 6.2, 6.2, 0.0), (55.8, 0.0, 62.0, 6.2)):
+for x1, y1, x2, y2 in ((0.0, CH, CH, 0.0), (62.0 - CH, 0.0, 62.0, CH)):
     av.poly([(x1, y1), (x2, y2)], fill="none", stroke=C["caixa_borda"],
             stroke_width=0.45)
-# os modulos, deitados no chanfro (8 mm de largura na face de 45°)
-av.poly([(0.55, 6.75), (5.65, 1.65)], fill="none", stroke=C["modulo"],
+# os modulos, deitados no chanfro (8 mm de largura na face de 45°, que tem
+# 10,6 mm; centrados nela)
+d = (CH / 2) - 4.0 / 1.4142
+e = (CH / 2) + 4.0 / 1.4142
+av.poly([(d, CH - d), (e, CH - e)], fill="none", stroke=C["modulo"],
         stroke_width=1.6, stroke_linecap="round")
-av.poly([(56.35, 1.65), (61.45, 6.75)], fill="none", stroke=C["modulo"],
+av.poly([(62 - e, CH - e), (62 - d, CH - d)], fill="none", stroke=C["modulo"],
         stroke_width=1.6, stroke_linecap="round")
 av.text(3.0, 10.6, "PV104", 15, C["fio_p"], "middle", 700)
 av.text(59.0, 10.6, "PV106", 15, C["fio_p"], "middle", 700)
-# display, placa e bateria, pela espessura
-av.rect(10.96, 1.2, TELA_W, 1.0, 0.2, fill=C["tela"], stroke="#8f959d",
+# display, placa e bateria, pela espessura: tampa 1,5, fita 0,2, vidro 1,0,
+# 3,0 de teto, placa 0,8, 1,2 de teto mais 0,5, celula 7,0
+Z_DISP, Z_PLACA, Z_CEL = 1.7, 5.7, 8.2
+av.rect(10.96, Z_DISP, TELA_W, 1.0, 0.2, fill=C["tela"], stroke="#8f959d",
         stroke_width=0.25)
-av.rect(14.0, 7.0, PCB_W, PCB_T, 0.15, fill=C["placa"], stroke=C["placa_borda"],
+av.rect(14.0, Z_PLACA, PCB_W, PCB_T, 0.15, fill=C["placa"], stroke=C["placa_borda"],
         stroke_width=0.25)
-av.rect(13.0, 10.0, BAT_W, BAT_T, 0.4, fill=C["bateria"], stroke="#6f7a86",
+av.rect(13.0, Z_CEL, BAT_W, BAT_T, 0.4, fill=C["bateria"], stroke="#6f7a86",
         stroke_width=0.25)
-av.text(63.5, 2.4, "display", 16, C["texto"], "start", 700)
-av.text(63.5, 8.2, "placa · 0,8", 16, C["texto"], "start", 700)
-av.text(63.5, 14.4, "célula · 7", 16, C["texto"], "start", 700)
-av.text(31.0, 5.6, "2,6 mm de teto", 14, C["fraco"], "middle")
-av.text(31.0, 9.4, "1,2 mm de teto", 14, C["fraco"], "middle")
-cota_v(av, -2.6, 0, 19, "19")
-cota_h(av, 21.5, 0, 62, "62")
+av.text(63.5, Z_DISP + 1.2, "display", 16, C["texto"], "start", 700)
+av.text(63.5, Z_PLACA + 1.2, "placa · 0,8", 16, C["texto"], "start", 700)
+av.text(63.5, Z_CEL + 4.2, "célula · 7", 16, C["texto"], "start", 700)
+av.text(31.0, 4.7, "3,0 mm de teto", 14, C["fraco"], "middle")
+av.text(31.0, 7.9, "1,2 mm de teto", 14, C["fraco"], "middle")
+cota_v(av, -2.6, 0, TT, f"{TT:g}")
+cota_h(av, TT + 2.5, 0, 62, "62")
 
 # --- corte B-B: pelo comprimento, mostra a frente inclinada e a pilha
 bv2 = View(MX + 700, MY + 480, SS)
@@ -496,54 +509,66 @@ linhas(x + 60, y + 530, [
     "do canto superior esquerdo da placa.",
 ])
 
-# 5 ------------------------------------------------------------ bateria
-x, y = passo(5, 0, 2, "Ligue a bateria", "J102 fica no VERSO da placa")
+# 5 ------------------------------------------------------- chicote na placa
+x, y = passo(5, 0, 2, "Ligue o chicote solar", "J103 fica no VERSO da placa")
 v = View(x + 420, y + 130, 3.6)
-desenha_placa(v, 0, 0, verso=True, destaque=("J102",))
+desenha_placa(v, 0, 0, verso=True, destaque=("J103",))
+# the board is mirrored here: J103's mouth, which points to the board's
+# LEFT edge on the front, is on the right of this view
+v.poly([(PCB_W - 4.9 + 3.0, 75.2), (PCB_W - 4.9 + 16.0, 75.2)], fill="none",
+       stroke=C["fio_p"], stroke_width=1.4)
+v.text(PCB_W - 4.9 + 17.0, 73.7, "4 vias", 16, C["texto"], "start", 700)
+linhas(x + 60, y + 530, [
+    "A placa está virada aqui: J103 e o buzzer ficam no verso.",
+    "J103 fica em (4,9; 75,2), em pé na borda esquerda, com a",
+    "boca para a parede da caixa; o chicote sobe pela lateral",
+    "da placa até os módulos na tampa. O conector da bateria é",
+    "de outra família de propósito, JST SH de 1,0 mm contra o",
+    "ZH de 1,5 mm: os dois não entram um no outro, e 4,2 V na",
+    "entrada do colhedor, que aguenta 2,73 V, o queimaria.",
+])
+
+# 6 ------------------------------------------------------------ bateria
+x, y = passo(6, 1, 2, "Ligue a bateria", "J102 fica na FRENTE da placa")
+v = View(x + 380, y + 130, 3.6)
+desenha_placa(v, 0, 0, destaque=("J102",))
 v.rect(-46.0, 20.0, BAT_W, BAT_H, 2.0, fill=C["bateria"], stroke="#6f7a86",
        stroke_width=0.4)
-v.poly([(-10.0, 62.0), (PCB_W - 4.0, 62.0)], fill="none", stroke="#6f7a86",
+v.poly([(-10.0, 80.4), (13.5 - 3.0, 80.4)], fill="none", stroke="#6f7a86",
        stroke_width=1.2)
 v.text(-28.0, 18.0, "célula LiPo", 16, C["texto"], "middle", 700)
 linhas(x + 60, y + 530, [
-    "A placa está virada aqui: J102 e o buzzer ficam no verso,",
-    "e a célula fica atrás da placa.",
+    "J102 fica em (13,5; 80,4), em pé, com a boca para a",
+    "esquerda: a célula fica debaixo da placa e o cabo dela dá a",
+    "volta pela lateral esquerda. Pode ligar com a placa já",
+    "assentada; o cabo curto é preso à caixa com fita (o SH não",
+    "tem trava positiva).",
     "!A pinagem do conector da bateria é proposta deste",
     "!projeto e tem de ser combinada com o fabricante do pack.",
 ])
 
-# 6 ------------------------------------------------------- chicote na placa
-x, y = passo(6, 1, 2, "Ligue o chicote solar",
-             "J103, na borda direita da placa")
-v = View(x + 380, y + 130, 3.6)
-desenha_placa(v, 0, 0, destaque=("J103",))
-v.poly([(PCB_W + 16.0, 32.0), (PCB_W + 3.0, 32.0)], fill="none",
-       stroke=C["fio_p"], stroke_width=1.4)
-v.text(PCB_W + 17.0, 30.5, "4 vias", 16, C["texto"], "start", 700)
-linhas(x + 60, y + 530, [
-    "J103 fica em (29,0; 32,0). O conector da bateria é de",
-    "outra família de propósito, JST GH de 1,25 mm contra o ZH",
-    "de 1,5 mm: os dois não entram um no outro, e 4,2 V na",
-    "entrada do colhedor, que aguenta 2,73 V, o queimaria.",
-])
-
 # 7 -------------------------------------------------------- placa na caixa
 x, y = passo(7, 0, 3, "Assente a placa na cavidade",
-             "um parafuso M2, em (3,2; 45,0)")
+             "dois parafusos M2, em (3,2; 7,0) e (14,4; 91,7)")
 v = View(x + 320, y + 130, 3.6)
 desenha_caixa(v, 0, 0, com_modulos=False)
 v.rect(2.0, 2.0, CAV_W, CAV_H, 2.0, fill="none", stroke=C["fraco"],
        stroke_width=0.3, stroke_dasharray="1.2 1.2")
-desenha_placa(v, 14.0, 7.0)
+# the board 0,5 mm off the bottom wall, so that the USB-C reaches the notch
+PY0 = CAIXA_H - 2.0 - 0.5 - PCB_H
+desenha_placa(v, 14.0, PY0)
 cota_h(v, 4.8, 2.0, 14.0, "12")
 cota_h(v, 4.8, 48.0, 60.0, "12")
-cota_v(v, 61.0, 2.0, 7.0, "5")
+cota_v(v, 61.0, 2.0, PY0, f"{PY0 - 2.0:g}".replace(".", ","))
 linhas(x + 60, y + 530, [
-    "A cavidade é 58 × 100 e a placa é 34 × 90: sobram 12 mm",
-    "de cada lado e 5 mm em cima e embaixo (regra ME1).",
-    "A boca do USB-C fica a 0,64 mm da borda de baixo: ela",
-    "precisa de furo na parede, alinhado.",
-    "!Onde ficam os parafusos da caixa não está definido.",
+    "A cavidade é 58 × 102 e a placa é 34 × 95: sobram 12 mm",
+    "de cada lado, 6,5 em cima (o berço da antena externa) e",
+    "0,5 embaixo, para a boca do USB-C chegar ao entalhe da",
+    "parede, que tem uma porta por fora.",
+    "Dois parafusos M2: um na borda de cima e um na de baixo,",
+    "entre o USB-C e o módulo, que é onde a força do cabo entra",
+    "(02-calculos.md); quatro pilares nos cantos.",
+    "Os parafusos da CAIXA: quatro M2 nos cantos (proposta).",
 ])
 
 # 8 ------------------------------------------------------------- fechar
@@ -567,9 +592,9 @@ linhas(x + 60, y + 400, [
     "furo da parede, as três teclas alinhadas com os botões,",
     "e nenhum fio prensado entre a placa e a caixa.",
     "",
-    "Os tetos de altura da placa saem daí: 2,6 mm sob o",
+    "Os tetos de altura da placa saem daí: 3,0 mm sob o",
     "display e 1,2 mm sob a bateria. A conferência ME2 mede",
-    "isso no CAD e passa.",
+    "isso no CAD; o dry run da caixa mede a pilha inteira.",
 ])
 
 rotulo(40, CANVAS_H - 40,

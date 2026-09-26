@@ -25,6 +25,9 @@ import numpy as np
 from PIL import Image
 
 HERE = pathlib.Path(__file__).resolve().parent
+# the rendered views live with the documentation's images, not with the
+# CAD sources (the repository's reorganisation of 2026-09-26)
+IMG = HERE.parents[1] / "docs" / "img" / "hardware"
 
 TIPOS = {5120: ("b", 1), 5121: ("B", 1), 5122: ("h", 2), 5123: ("H", 2),
          5125: ("I", 4), 5126: ("f", 4)}
@@ -381,12 +384,20 @@ def ler_wrl(caminho: pathlib.Path) -> list[tuple[np.ndarray, tuple]]:
 # is the clearance the board has to respect, not the part's own thickness.
 MONTAGEM = (
     # nome, x0, y0, x1, y1, vao ate a placa, espessura, atras, cor, fonte
-    ("display JDI LPM027M128B", 7.46, 5.10, 47.54, 66.90, 2.60, 1.00, False,
-     (0.16, 0.17, 0.20), "04-pcb-e-caixa.md, tabela de zonas: contorno "
-     "40,08 x 61,8 em x 7,46-47,54 e y 5,1-66,9, teto de 2,6 mm"),
-    ("celula LiPo 36 x 60 x 7", 9.50, 22.50, 45.50, 82.50, 1.20, 7.00, True,
-     (0.30, 0.31, 0.34), "04-pcb-e-caixa.md: bolsa de 36 x 60 x 7 mm na face "
-     "de tras, em x 9,5-45,5 e y 22,5-82,5, teto de 1,2 mm"),
+    #
+    # On the 34 x 90 board (2026-09-26) both parts are WIDER than the board:
+    # the display's 40,08 mm outline overhangs it by 3,04 mm a side and the
+    # cell's 36 mm by 1 mm; they are centred on its width. The y ranges are
+    # make_dxf.ZONES', the same the ME2 rule measures against. Until
+    # 2026-09-26 this table still held the 55 mm board's numbers.
+    ("display JDI LPM027M128C, contorno 40,08 x 61,8", 17.0 - 20.04, 2.7,
+     17.0 + 20.04, 64.5, 2.60, 1.00, False, (0.16, 0.17, 0.20),
+     "04-pcb-e-caixa.md, tabela das sombras: y 2,7-64,5, teto de 2,6 mm; "
+     "make_dxf.ZONES SOMBRA_DISPLAY"),
+    ("celula LiPo 36 x 60 x 7", 17.0 - 18.0, 9.9, 17.0 + 18.0, 69.9, 1.20, 7.00,
+     True, (0.30, 0.31, 0.34),
+     "04-pcb-e-caixa.md: bolsa de 36 x 60 x 7 mm na face de tras, y 9,9-69,9, "
+     "teto de 1,2 mm; make_dxf.ZONES SOMBRA_BATERIA"),
 )
 # The six 23 x 8 mm solar modules are deliberately NOT here. They live in the
 # case walls - two on the sloped face and two on each chamfer - and nothing
@@ -534,6 +545,13 @@ def caixas_das_pecas() -> tuple[np.ndarray, np.ndarray]:
                                          str(FPS.LIB3D)).replace("${KIPRJMOD}",
                                                              str(HERE))
             arq = pathlib.Path(alvo.replace("\\", "/"))
+            # kicad-cli's --subst-models swaps a library .wrl for the .step
+            # that sits beside it, so that part is ALREADY in the GLB: drawing
+            # the .wrl too puts two bodies in the same place. Only a library
+            # model with no .step - the SOT-523 has none installed here - is
+            # drawn from here.
+            if arq.with_suffix(".step").exists() or arq.with_suffix(".STEP").exists():
+                continue
         formas = ler_wrl(arq) if (arq.exists() and arq.suffix.lower() == ".wrl") \
             else []
         if formas:
@@ -559,6 +577,54 @@ def caixas_das_pecas() -> tuple[np.ndarray, np.ndarray]:
     if not tris:
         return np.zeros((0, 3, 3)), np.zeros((0, 3))
     return np.array(tris), np.array(cols)
+
+
+def corpos(j: dict, bina: bytes) -> list[tuple[np.ndarray, np.ndarray]]:
+    """Every primitive on its own: (triangles in world space, colour).
+
+    triangulos() flattens the scene, which is what a renderer wants. A rule
+    that asks "where are the solder tails of this connector" needs the
+    bodies one by one: a tail is a small thin body that touches the board,
+    the housing is a big one, and only the first says which way the part is
+    turned. Same coordinates as triangulos(): metres, Z up.
+    """
+    cores = []
+    for mat in j.get("materials", []):
+        pbr = mat.get("pbrMetallicRoughness", {})
+        cores.append(np.array(pbr.get("baseColorFactor", [0.7, 0.7, 0.7, 1.0])[:3]))
+    if not cores:
+        cores = [np.array([0.7, 0.7, 0.7])]
+    saida: list[tuple[np.ndarray, np.ndarray]] = []
+    cena = j.get("scenes", [{}])[j.get("scene", 0)]
+
+    def andar(i_no: int, pai: np.ndarray) -> None:
+        no = j["nodes"][i_no]
+        m = pai @ matriz(no)
+        if "mesh" in no:
+            for prim in j["meshes"][no["mesh"]].get("primitives", []):
+                if prim.get("mode", 4) != 4 or "POSITION" not in prim.get("attributes", {}):
+                    continue
+                pos = acessor(j, bina, prim["attributes"]["POSITION"])
+                if "indices" in prim:
+                    idx = acessor(j, bina, prim["indices"]).reshape(-1)
+                else:
+                    idx = np.arange(len(pos))
+                n_tri = len(idx) // 3
+                if n_tri == 0:
+                    continue
+                p = np.concatenate([pos, np.ones((len(pos), 1))], axis=1)
+                p = (m @ p.T).T[:, :3]
+                t = p[idx[:n_tri * 3]].reshape(n_tri, 3, 3)
+                t = np.stack([t[..., 0], -t[..., 2], t[..., 1]], axis=-1)
+                c = cores[prim.get("material", 0)] if prim.get("material") is not None \
+                    else cores[0]
+                saida.append((t, c))
+        for f in no.get("children", []):
+            andar(f, m)
+
+    for i_no in cena.get("nodes", []):
+        andar(i_no, np.eye(4))
+    return saida
 
 
 def _glb_atual() -> pathlib.Path | None:
@@ -622,8 +688,9 @@ def main() -> int:
                                ("gnssbike-3d-angulo.png", 28.0, 38.0, 1600, 1300),
                                ("gnssbike-3d-tras.png", 180.0, -90.0, 1100, 1800)):
         img = render(tris, cols, w, h, az, el)
-        img.save(HERE / nome)
-        print(f"  {nome}: {w} x {h}")
+        IMG.mkdir(parents=True, exist_ok=True)
+        img.save(IMG / nome)
+        print(f"  {IMG.relative_to(HERE.parents[1]) / nome}: {w} x {h}")
 
     # and the stack: display, board, cell, pulled apart so the three are all
     # visible at once. The board alone never showed what it has to fit
@@ -634,7 +701,7 @@ def main() -> int:
     montagem_t = np.concatenate([tris, caixa_t])
     montagem_c = np.concatenate([cols, caixa_c])
     img = render(montagem_t, montagem_c, 1500, 1500, 24.0, 26.0)
-    img.save(HERE / "gnssbike-3d-montagem.png")
+    img.save(IMG / "gnssbike-3d-montagem.png")
     print(f"  gnssbike-3d-montagem.png: 1500 x 1500 "
           f"({len(MONTAGEM)} pecas da caixa)")
     return 0

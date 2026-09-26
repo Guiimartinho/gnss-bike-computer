@@ -34,7 +34,8 @@ Avaliação de engenharia, bloco a bloco, dos componentes principais da placa no
 | USB-C | receptáculo IPX8 Molex 2036150003 | dispensa a tampa de borracha; o desenho confirma o anel de vedação | Amphenol 12402484E512A, depois do desenho; GCT USB4105-GF-A com tampa |
 | Proteção do USB | TI ESD761 no VBUS, TI TPD4E05U06 no D+, D−, CC1 e CC2 | o TVS do VBUS não conduz até 24 V e preserva os 22 V do nPM1300 | TI TVS2200 no VBUS |
 | Bateria | LiPo de 1 célula, 2000 mAh, com PCM e 2 NTC | 60 × 36 × 7 mm; o PCM é obrigatório (o nPM1300 não tem UVLO) | 2500 mAh se a caixa crescer |
-| Tradutor e backup do GNSS | TI TXU0204 e TI TPS7A02 | 2 canais em cada sentido e isolação com o 1V8 desligado; 25 nA no backup | GNSS em 3,0 V, sem tradutor (3 mW a mais) |
+| Backup do GNSS | TI TPS7A02 | 25 nA no backup | — |
+| Tradutor de nível | **nenhum, desde 2026-09-26**: o receptor passou a 3,0 V, no trilho do MCU (opção 1 da tabela 35 do manual de integração) | o BUCK1 é de ±5 % e o projeto de 1,8 V pede ±2 %; o LDO de ±1 % custava 35 mW na bateria, a opção 1 custa 11 | TI TXU0204 com o receptor a 1,8 V, o que era |
 
 ## Critérios
 
@@ -265,13 +266,13 @@ Não avaliado: o ST Teseo-LIV4F, da mesma classe de tamanho. A busca do dia se e
 
 Valem para o MAX-F10S e para o MAX-M10N-10B: as duas peças têm a mesma pinagem e as mesmas faixas de tensão. Onde o número muda, os dois estão na linha.
 
-- **Alimentação:** VCC e V_IO em 1,8 V pelo BUCK1 (VIO_SEL em GND), travado em 1,8 V no devicetree: com o VIO_SEL em GND, o V_IO e os pinos digitais têm máximo absoluto de 1,98 V. A 3,0 V o F10S gasta 57 mW em rastreio contra 46,8 mW a 1,8 V (o M10N em LEAP, 16,8 contra 13,7 mW), mas dispensaria o tradutor de nível e o BUCK1.
+- **Alimentação:** VCC e V_IO em **3,0 V pelo BUCK2, com o VIO_SEL aberto** (decisão do dono em 2026-09-26; opção 1 da tabela 35 do manual de integração UBXDOC-963802114-12892, V_IO de 2,7 a 3,6 V), sem tradutor de nível. A 3,0 V o F10S gasta 57 mW em rastreio contra 46,8 mW a 1,8 V (o M10N em LEAP, 16,8 contra 13,7 mW): o arranjo de 1,8 V pelo BUCK1 caiu porque o buck é de ±5 % e a tabela 35 pede ±2 % para o projeto de 1,8 V, e a alternativa com LDO de ±1 % do 3V0 custava 35 mW na bateria contra 11 mW da opção 1 ([02](../hardware_gnssbike/02-calculos.md#o-receptor-no-3v0-e-o-1v8-sem-carga)).
 - **Corrente do BUCK1:** o F10S puxa 26 mA em rastreio e 34 mA na aquisição, contra 7,6 mA do M10N em LEAP, e os dois podem puxar 100 mA de pico na partida (nota das tabelas 15 e 16). O BUCK1 entrega 200 mA: cabe, mas o trilho deixa de ser desprezível no orçamento ([Efeito no aparelho](#efeito-no-aparelho)).
 - **Subida do V_IO:** a ficha limita a rampa entre 25 µs/V e 35.000 µs/V (tabela 12), de 45 µs a 63 ms para 1,8 V; uma rampa fora disso pode danificar o módulo. O buck do nPM1300 parte em cerca de 1,2 ms (3,3 V com 10 µF, na ficha), perto de 360 µs/V, dentro da faixa; confirme com o osciloscópio.
 - **Ripple:** a carga do BUCK1 sobe de 7,6 mA (M10N em LEAP) para 26 mA. Em modo automático o buck do nPM1300 vai do histerético, com até 50 mVpp, ao PWM, com cerca de 5 mVpp; **em que corrente ele troca não foi levantado na ficha**, e nada foi medido. O filtro LC junto do módulo (ferrite e 10 µF) continua obrigatório no esquemático, e forçar o BUCK1 em PWM segue como saída se o ripple atrapalhar o C/N0.
 - **Desligar com o backup ligado:** com V_IO em 1,8 V e V_BCKP alimentado, a ficha pede desligar o V_IO 100 ms antes do VCC ou mandar `UBX-RXM-PMREQ` antes de cortar os dois. Como VCC e V_IO saem do mesmo BUCK1, o firmware manda o `UBX-RXM-PMREQ` antes de desligar o trilho ou de entrar em ship mode.
 - **Backup:** V_BCKP de 1,65 a 3,6 V pelo TPS7A02; **28 µA** em backup de hardware no F10S (tabela 17, com V_BCKP em 3,3 V), contra 34 µA do M10N-10B. Em standby de software, 46 µA no V_IO a 3,3 V e 120 nA no VCC.
-- **TIMEPULSE:** divide o pino com o SAFEBOOT_N por 1 kΩ interno, e o módulo entra em safeboot se o pino estiver baixo na partida. O pull-down de 5 MΩ do TXU0204 não vence o pull-up do módulo (6 a 72 kΩ), mas um resistor externo para o GND venceria: não coloque nenhum.
+- **TIMEPULSE:** divide o pino com o SAFEBOOT_N por 1 kΩ interno, e o módulo entra em safeboot se o pino estiver baixo na partida. Um resistor externo para o GND venceria o pull-up do módulo (6 a 72 kΩ): não coloque nenhum, e o pino do MCU fica em entrada até o receptor subir.
 - **Potência na entrada de RF:** a ficha do 10B dá máximo absoluto de 0 dBm dentro da banda e +15 dBm fora dela (tabela 12). O BLE e o ANT+ a +8 dBm, em 2,4 GHz, ficam fora da banda e não danificam a entrada nem com isolação nenhuma; o risco é o bloqueio. Meça o S21 em 2,44 GHz e o C/N0 com o rádio transmitindo no protótipo, e limite a potência de transmissão se o C/N0 cair.
 - **Antena:** com o F10S, o L5 também precisa casar. A TE L000670 cobre L1 e L5 com uma alimentação só, mas tem 56 % de eficiência em L5 contra 66 % em L1 num plano de 90 × 41 mm, e a placa tem 55 mm. Meça o C/N0 por banda na caixa real.
 
@@ -494,14 +495,14 @@ O nRF54LM20A tem um só VDD, de 1,7 a 3,6 V, para todos os pinos (não há domí
 
 | Item | Escolha | Detalhe |
 |---|---|---|
-| Tradutor | TI TXU0204 | 4 canais de direção fixa, 2 em cada sentido (A1 e A2 para o lado B; B3 e B4 para o lado A); cada lado de 1,1 a 5,5 V; 2,5 µA no máximo a 25 °C |
+| Tradutor | nenhum desde 2026-09-26 | o TI TXU0204 (4 canais de direção fixa, 2 em cada sentido) existia para o receptor a 1,8 V; a 3,0 V o receptor está no domínio do MCU |
 | Isolação | Ioff-float | com qualquer VCC abaixo de 100 mV, as saídas ficam em alta impedância: com o BUCK1 desligado, o tradutor não alimenta o GNSS pelos pinos, o que a ficha do módulo proíbe em backup de hardware |
 | Pull-downs | 5 MΩ internos em cada entrada | fracos demais para vencer os pull-ups do módulo (6 a 72 kΩ): o TIMEPULSE, que divide o pino com o SAFEBOOT_N, continua alto na partida |
 | Encapsulamento | VQFN-14 de 3,0 × 2,5 mm no protótipo | há também UQFN-12 de 2,0 × 1,7 mm, X2SON-12 de 1,7 × 1,0 mm e TSSOP-14 |
 | Ligação | lado A no 3V0 e lado B no 1V8 | RXD e EXTINT de A para B; TXD e TIMEPULSE de B para A. O OE pode ficar fixo no VCCA, porque o Ioff-float já isola o módulo desligado, e o MCU ganha um pino. O RESET_N não passa pelo tradutor: pino do MCU em dreno aberto, com o pull-up de 7 a 13 kΩ do próprio módulo |
 | Backup | TI TPS7A02 de 1,8 V | 25 nA de consumo próprio, entrada de 1,5 a 6,0 V: liga o V_BCKP ao VBAT sem custo. O backup do módulo gasta de 28 a 34 µA (fichas, a 3,3 V), cerca de 25 mAh por mês com o aparelho desligado |
 
-Alternativa sem tradutor: o GNSS inteiro em 3,0 V pelo BUCK2 (VIO_SEL aberto). Custa 10 mW com o F10S (3 mW com o M10N em LEAP) e libera o BUCK1; em compensação, a ficha permite desligar VCC e V_IO juntos, sem o `UBX-RXM-PMREQ` antes.
+**A escolhida, desde 2026-09-26:** o GNSS inteiro em 3,0 V pelo BUCK2 (VIO_SEL aberto), sem tradutor. Custa 10 mW no receptor com o F10S (11 na bateria; 3 mW com o M10N em LEAP) e deixa o BUCK1 sem carga; em compensação, a tabela 35 não impõe ordem de desligamento entre VCC e V_IO à opção 1 (o driver manda o `UBX-RXM-PMREQ` antes de cortar mesmo assim). O que decidiu foi a tolerância do BUCK1, ±5 % contra os ±2 % que a tabela 35 pede a 1,8 V ([02](../hardware_gnssbike/02-calculos.md#o-receptor-no-3v0-e-o-1v8-sem-carga)).
 
 ## Interface
 

@@ -43,13 +43,15 @@ flowchart LR
         SONDA["J-Link<br/>cabo TC2030-CTX-NL"]
     end
     CABO --> J101["J101 · USB-C<br/>Molex 2036150003<br/>16 contatos"]
-    PACK --> J102["J102 · bateria<br/>JST SM06B-GHS-TB<br/>6 vias"]
+    PACK --> J102["J102 · bateria<br/>JST SM06B-SRSS-TB<br/>6 vias"]
     PAINEL --> J401["J401 · display<br/>Hirose FH28-10S<br/>10 vias"]
     PAINEL -.->|"por onde?"| LUZ["conector da luz<br/>não definido"]
     SONDA --> J201["J201 · SWD<br/>Tag-Connect TC2030-NL<br/>6 pads, sem peça"]
+    SONDA --> J202["J202 · SWD<br/>Cortex Debug 2 × 5, 1,27 mm<br/>adaptador de 9 vias do J-Link"]
     J101 --> F1["folha 1 · energia"]
     J102 --> F1
     J201 --> F2["folha 2 · MCU"]
+    J202 --> F2
     J401 --> F4["folha 4 · display"]
     LUZ -.-> F4
 ```
@@ -61,6 +63,7 @@ flowchart LR
 | `J101` USB-C | **padrão da indústria**: USB Type-C, receptáculo de 16 contatos (USB 2.0) | a norma define os sinais; o desenho da Molex dá o número do pad no footprint |
 | `J102` bateria | **escolha deste projeto** — não existe padrão para isto | o fabricante do pack, antes de fechar o pedido |
 | `J201` depuração | **conferido em 2026-09-25** na ficha `TC2030-CTX_1.pdf` da Tag-Connect: 1 `VCC`, 2 `SWDIO`, 3 `nRESET`, 4 `SWCLK`, 5 `GND`, 6 `SWO`. O projeto tinha o reset no 6 e foi corrigido | ficha oficial da Tag-Connect |
+| `J202` depuração, conector | **padrão da ARM** (Cortex Debug Connector, 10 vias): 1 `VTref`, 2 `SWDIO`, 3 `GND`, 4 `SWDCLK`, 5 `GND`, 6 `SWO`, 7 chave, 8 TDI, 9 `GNDDetect`, 10 `nRESET`; é a pinagem do adaptador Cortex-M de 9 vias do J-Link | a norma; a peça (Samtec FTSH-105-01-L-DV-K ou equivalente) ainda não foi escolhida |
 | `J401` display | **ficha do fabricante**, e a mesma ordem nas duas telas | fichas JDI LPM027M128B Ver.01 e Sharp LS027B7DH01A (LD-28305A) |
 | Conector da luz do JDI | **falta tudo**: não se sabe sequer se ele existe como conector separado ou se o C traz um FPC maior | ficha do **LPM027M128C**, ou uma amostra |
 | `JP401` tensão do display | **escolha deste projeto** | este documento |
@@ -126,11 +129,18 @@ seriam saída contra terra.
 
 ## J102 · Bateria
 
-**JST SM06B-GHS-TB** na placa e **GHR-06V-S** no cabo, com terminais
-SSHL-002T-P0.2. Série GH, passo de 1,25 mm, 6 vias, **1 A por contato**,
-com trava positiva — que é a razão de a série GH ter substituído a SH
-([14](../docs/14-hardware-placa-nova.md#componentes-principais),
-[19](../docs/19-lista-de-compras.md#trocas)).
+**JST SM06B-SRSS-TB** na placa e **SHR-06V-S-B** no cabo, com terminais
+SSH-003T-P0.2 (a conferir no catálogo eSH ao fechar o pedido). Série SH,
+passo de 1,0 mm, 6 vias, **1 A por contato**, entrada lateral, **2,9 mm de
+altura**. Até 2026-09-26 era o GH SM06B-GHS-TB, escolhido pela trava
+positiva ([19](../docs/19-lista-de-compras.md#trocas)); a caixa desenhada
+nesse dia deixa **4,2 mm** entre a face da placa e a tampa fora do display,
+e o GH tem 4,25. O SH cabe e perde a trava: o cabo da célula, curto, é preso
+à caixa com fita (a alternativa é a caixa 0,5 mm mais alta, com o GH:
+decisão do dono). Fica **na frente**, em pé na borda esquerda do bolso entre
+o SWD `J202` e o USB-C, a 270°: o footprint do KiCad tem as ilhas de sinal em
+y −2 e a boca do lado oposto, e a rotação manda a boca para a esquerda, para
+a parede da caixa, por cima do diodo `D102`; a célula fica debaixo da placa.
 
 > [!IMPORTANT]
 > **A pinagem abaixo é escolha deste projeto.** Não existe padrão de
@@ -146,9 +156,12 @@ Quatro sinais, em seis vias:
 - **`VBAT+`** e **`GND`**, o par de potência;
 - **`NTC_BAT`**, o NTC do pack, que vai ao pino `NTC` do nPM1300 e serve
   ao perfil JEITA de 0, 10, 45 e 60 °C;
-- **`TH_MON`**, um **segundo NTC**, que vai ao AEM10900 e corta a carga
-  solar fora de 0 a 45 °C ([14](../docs/14-hardware-placa-nova.md#ligações-fixas-dos-cis),
-  [15](../docs/15-avaliacao-componentes.md#bateria)).
+- **`TH_MON`**, um **segundo NTC**, que corta a carga solar fora de 0 a
+  45 °C. Desde 2026-09-26 quem o lê é o comparador `U105` (TLV7031), porque
+  o ADP5091 que substituiu o AEM10900 não tem entrada de temperatura: o
+  divisor `RT101`/`R106` é alimentado pelo próprio painel e a saída do
+  comparador leva o `DIS_SW` para cima pelo `D106`
+  ([01](01-esquematico.md#folha-1--energia), [03](03-netlist.md#nós-de-alimentação)).
 
 ### Proposta
 
@@ -359,6 +372,37 @@ de depuração.
 é o motivo de existir o clipe: a placa precisa da área livre em volta dos
 pads e dos três furos de alinhamento, nos dois lados, para o clipe
 encaixar ([04](04-pcb-e-caixa.md#posicionamento)).
+
+## J202 · Depuração SWD, o conector
+
+Em 2026-09-26 o dono pediu o conector pequeno de SWD do J-Link, e ele entrou
+**ao lado** do Tag-Connect, nas mesmas redes: o **Cortex Debug Connector**
+de 10 vias, 2 × 5 a 1,27 mm, SMD, **sem carcaça** (2,5 mm de altura; o
+blindado, Samtec FTSH-105-01-L-DV-K com 4,83 mm, não cabe sob a tampa da
+caixa proposta, que deixa 3,6 mm da face da placa). **A peça ainda não foi
+escolhida**, e o footprint é o genérico do KiCad, a conferir contra a ficha
+dela. É nele que o adaptador Cortex-M de 9 vias do J-Link encaixa, sem
+clipe (sem carcaça não há chave: o pino 7 fica sem pino, como manda a
+pinagem). Só um dos dois é usado de cada vez.
+
+| Pino | Sinal | Rede | Nota |
+|---|---|---|---|
+| 1 | `VTref` | `3V0` | o mesmo aviso do `J201`: o `3V0` sai do BUCK2, desligado em ship mode |
+| 2 | `SWDIO` | `SWDIO` | pad 5 do ME54BS13 |
+| 3 | `GND` | `GND` | — |
+| 4 | `SWDCLK` | `SWDCLK` | pad 6; `passive` no ERC, porque o `J201` já declara a saída |
+| 5 | `GND` | `GND` | — |
+| 6 | `SWO` | aberto | a mesma pendência do `J201`: qual pad do módulo expõe o `SWO` |
+| 7 | chave | não existe | o conector blindado tem o pino 7 removido |
+| 8 | TDI | aberto | só JTAG; o nRF54LM20A é SWD |
+| 9 | `GNDDetect` | aberto | a sonda o lê para saber se há alvo; aberto, como nas placas de referência da Nordic |
+| 10 | `nRESET` | `MOD_RESET` | pad 4; `passive` no ERC pelo mesmo motivo do 4 |
+
+**Custa 8 × 6 mm de placa** (pads mais courtyard) e, montado, 2,5 mm de
+altura, mais o cabo com o aparelho aberto — é o que
+[01](01-esquematico.md#folha-2--mcu) chamava de volume gasto por
+uma coisa de protótipo, e é o que o dono quis. Onde ficou na placa está em
+[04](04-pcb-e-caixa.md#posicionamento).
 
 ## J401 · Display
 
@@ -644,7 +688,7 @@ Honesto, item a item:
 | **`J102`: a pinagem inteira** | é proposta deste documento, e o fabricante do pack é quem monta o cabo. **Conferir antes de fechar o pedido** ([19](../docs/19-lista-de-compras.md#antes-de-fechar-o-pedido)) | fabricante do pack |
 | **`J102`: os dois NTC referenciados ao negativo da célula** | é o que faz quatro sinais caberem em seis vias; com termistores isolados o conector muda para oito | especificação do pack |
 | **`J102`: NTC do pack ou NTC de placa** | os dois juntos dão 5 kΩ, que o AEM10900 lê como 44,4 °C contra um limite de 45 °C, e a carga solar morre | decisão do dono |
-| **`J102`: entrada lateral ou superior** | pela nomenclatura da JST o prefixo `SM` é de entrada lateral e `BM`, de topo; o desenho **não foi lido aqui** e é ele que decide para que lado o cabo sai | catálogo GH da JST |
+| **`J102`: para que lado sai o cabo** | o prefixo `SM` da JST é entrada lateral; no footprint do KiCad as ilhas de sinal ficam em y −2 e as de fixação em y +1,875, e a boca é do lado das de fixação (+y). Com 270° na placa a boca aponta para a esquerda. O desenho da JST **não foi lido aqui**: conferir a boca no catálogo eSH antes de fabricar | catálogo SH da JST |
 | **`TH_MON`: ordem do divisor** | [14](../docs/14-hardware-placa-nova.md#ligações-fixas-dos-cis) registra "`RDIV` de 22 kΩ" e o NTC, mas não diz qual perna fica no `TH_REF` e qual no `GND`. Trocar inverte o sentido da leitura de temperatura | ficha do AEM10900 |
 | **`J201`: a que pad do ME54BS13 levar o `SWO`** | o contato 6 do TC2030 é o `SWO` e hoje está sem ligação. Levá-lo a um pad de trace daria `printf` por ITM no bring-up, e qual pad do módulo expõe o `SWO` não está na ficha dele | ficha do ME54BS13 |
 | **Por onde a luz do LPM027M128C se liga** | **alta prioridade, e bloqueia o layout**: o FPC de 10 vias não tem par de LED, e nenhum documento do projeto diz se o C traz um FPC maior ou um rabicho próprio. A ficha lida é a do **B**, que não tem luz ([acima](#j402--luz-do-lpm027m128c)) | ficha do **LPM027M128C**, ou uma amostra |

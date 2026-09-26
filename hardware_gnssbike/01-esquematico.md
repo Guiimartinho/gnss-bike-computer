@@ -8,8 +8,39 @@ estão na [lista de nós](03-netlist.md) e os valores, nos
 **Nesta página:** [Folha 1 · Energia](#folha-1--energia) · [Folha 2 · MCU](#folha-2--mcu) · [Folha 3 · GNSS](#folha-3--gnss) · [Folha 4 · Display](#folha-4--display) · [Folha 5 · Memória e sensores](#folha-5--memória-e-sensores) · [Folha 6 · Interface](#folha-6--interface)
 
 > [!WARNING]
-> Nada aqui foi montado. Não existe placa, não existe layout, nenhum
+> Nada aqui foi montado. A placa existe como arquivo de CAD
+> ([09](09-dry-run-da-pcb.md)), nenhuma foi fabricada e nenhum
 > componente passou por bancada.
+
+## Como as folhas são desenhadas
+
+Desde 2026-09-26 o gerador (`cad/make_sch.py` com `cad/blocos.py`) desenha
+cada folha no padrão que o dono pediu, e as regras e a origem de cada uma
+estão em [`cad/README.md`](cad/README.md#desenhado-por-bloco-funcional-desde-2026-09-26):
+
+- **blocos funcionais** na ordem em que o sinal flui, cada um numa caixa
+  tracejada com título — na folha 1: USB-C e proteção, nPM1300, medidor e
+  célula, backup do receptor, colheita solar, corte térmico;
+- dentro do bloco, o **passivo ao lado do pino que serve**, do lado para
+  onde o pino aponta, e o desacoplamento numa prateleira sob o CI;
+- **alimentação e terra por símbolo**; pinos vizinhos do mesmo trilho no
+  mesmo lado do CI ganham um fio pelas pontas e um símbolo só;
+- sinal que sai do bloco vira **rótulo local**; sinal que sai da folha,
+  **rótulo hierárquico**, os dois num toco curto saído do pino — nenhum fio
+  atravessa a página;
+- folha 1 em **A3**, as outras em **A4**, o tamanho medido pelo próprio
+  desenho; grade de 50 mil em tudo.
+
+O `check_sch.py` confere o resultado contra a [lista de nós](03-netlist.md)
+pino a pino, pelo ERC do KiCad e pela geometria (fio sobre componente, peça
+fora da folha). Três coisas foram **medidas** no KiCad no caminho e valem
+para quem mexer no gerador: numa instância cuja biblioteca é o desenho
+base, `(mirror y)` troca esquerda por direita e `(at x y 90)` manda o pino
+da esquerda para baixo (a primeira medição, feita através do gerador com a
+biblioteca já espelhada, saiu invertida); a justificação do texto de um
+campo é transformada junto com a instância; e um rótulo local com o nome de
+um trilho é outra rede, não o trilho. A tabela completa está no
+[`cad/README.md`](cad/README.md).
 
 ## Folha 1 · Energia
 
@@ -22,9 +53,11 @@ flowchart LR
     USB -->|"VBUS"| TVS --> NPM
     USB -->|"CC1, CC2"| NPM
 
-    PV["6 × KXOB25-05X3F<br/>3 células cada"] -->|"SRC"| AEM["AEM10900"]
-    AEM -->|"SWDCDC · 4,7 µH"| AEM
-    AEM -->|"STO"| VBAT(("VBAT"))
+    PV["6 × KXOB25-05X3F<br/>3 células cada"] -->|"SRC"| AEM["ADP5091<br/>colhedor solar com MPPT"]
+    AEM -->|"SW · 22 µH"| AEM
+    AEM -->|"BAT"| VBAT(("VBAT"))
+    PV -.->|"divisor RT101 / R106"| CMP["TLV7031<br/>corte térmico a 45 °C"]
+    CMP -->|"D106 → DIS_SW"| AEM
 
     CELL["LiPo 1S<br/>2000 mAh"] --> RS["sensor<br/>7 mΩ"] --> VBAT
     CELL -.->|"NTC 10 kΩ B3380"| NPM
@@ -35,7 +68,7 @@ flowchart LR
 
     NPM -->|"VBUSOUT"| VOUT(("VBUSOUT"))
     NPM -->|"BUCK2 · 2,2 µH"| R3V0(("3V0"))
-    NPM -->|"BUCK1 · 2,2 µH"| R1V8(("1V8"))
+    NPM -->|"BUCK1 · 2,2 µH · sem carga"| R1V8(("1V8"))
     NPM -->|"LDSW1"| RSD(("SD3V0"))
     NPM -->|"LDSW2 como LDO"| RBL(("3V3BL"))
     VOUT -->|"divisor 100 k / 1 M"| AEM
@@ -43,9 +76,10 @@ flowchart LR
 
 ### As decisões desta folha
 
-**O USB bloqueia o painel em hardware.** O divisor de 100 kΩ e 1 MΩ leva
-o `VBUSOUT` ao `DIS_STO_CH` do AEM10900, de modo que enquanto houver cabo
-o colhedor não carrega. Não passa por pino do MCU nem por firmware: se o
+**O USB bloqueia o painel em hardware.** O `R104` de 100 kΩ leva o
+`VBUSOUT` ao `DIS_SW` do ADP5091, com o `R105` de 180 kΩ ao `AGND`: com o
+cabo o pino vê 3,5 V (**conta**), acima do 1 V de nível alto, e enquanto
+houver cabo o colhedor não carrega. Não passa por pino do MCU nem por firmware: se o
 firmware travar com as duas fontes ativas, as duas disputariam a mesma
 célula. É a decisão de [15](../docs/15-avaliacao-componentes.md#convivência-das-duas-cargas).
 
@@ -66,7 +100,7 @@ proíbe: ele é saída do power path e parece uma entrada, o que torna o
 engano fácil.
 
 No `VBAT` a regra é outra e mais estreita do que "nada pendura nele". Ali
-estão, além do `VBAT` do nPM1300, o `STO` do AEM10900, o `IN` do TPS7A02 e
+estão, além do `VBAT` do nPM1300, o `BAT` do ADP5091, o `IN` do TPS7A02 e
 o `SYS` do medidor — e é assim de propósito: o colhedor **carrega** a
 célula por esse nó e o LDO do `V_BCKP` precisa da célula direto, para
 sobreviver ao ship mode. O que não pode é carga da aplicação pendurada
@@ -88,27 +122,52 @@ quando alguém quer saber se está carregando.
 **A tecla central liga o aparelho.** Ela vai ao `SHPHLD`, que tem pull-up
 interno de 50 kΩ, e **também** a um GPIO, porque o firmware precisa ler a
 mesma tecla enquanto o aparelho está ligado. Segurar por mais de 10 s
-religa o sistema inteiro, e isso vem ligado de fábrica.
+religa o sistema inteiro, e isso vem ligado de fábrica. As duas ligações
+não se falam diretamente: o `D107` (BAT54WS) fica entre a tecla e o
+P1.27, decisão do dono em 2026-09-26, porque o pull-up do `SHPHLD` vai ao
+maior entre `VBAT` e `VBUS` — até 5,5 V com o cabo — e um pino de 3,0 V
+amarrado a esse nó ficaria com o diodo de proteção polarizado. Com o
+Schottky, a tecla apertada puxa os dois nós para baixo e, solta, o P1.27
+sobe pelo pull-up interno do MCU e nunca vê o nó do PMIC
+([folha 6](#folha-6--interface)).
+
+**O corte térmico da carga solar é um comparador, porque o ADP5091 não
+tem entrada de temperatura.** O AEM10900 que ele substituiu cortava
+sozinho fora de 0 a 45 °C; o ADP5091 só tem o `DIS_SW`, que desliga o
+boost quando puxado para cima. Decisão do dono em 2026-09-26: o divisor
+`RT101` (NTC 10 kΩ, B3380, na face de trás, sob a célula) sobre `R106`
+(4,87 kΩ) é alimentado pelo **próprio painel** (`SRC`), o `U105`
+(TLV7031, 335 nA) o compara com a metade do `SRC` (`R124`/`R125`, 100 kΩ
+cada) e, quente, leva o `DIS_SW` para cima pelo `D106` (BAT54WS): o mesmo
+pino que o divisor do `VBUSOUT` (`R104`/`R105`) já usa para bloquear a
+carga solar com o cabo ligado, agora em OU de diodos. A conta do limiar
+(**conta**, B = 3380): a 45 °C o NTC vale
+10 kΩ × e^(3380 × (1/318,15 − 1/298,15)) = 4,90 kΩ, e
+4,87 ÷ (4,90 + 4,87) = 0,498 do `SRC` — o comparador vira exatamente
+onde a metade está. Alimentar o divisor pelo painel, e não pelo `VSYS`, é
+o que faz o circuito não gastar nada sem sol; o painel em vazio dá 2,07 V
+([04](04-pcb-e-caixa.md)), dentro do que o `DIS_SW` aceita (6,0 V de
+máximo absoluto) e do `VIN` do ADP5091 (3,6 V).
 
 > [!CAUTION]
-> **Um termistor para o AEM10900, nunca dois.** A fonte oferece duas
-> saídas e a palavra é **ou**: o segundo NTC vem do pack, pelo conector,
-> **ou** é um TDK NTCG103JF103FT1 na face de trás da placa, sob a célula
-> ([15](../docs/15-avaliacao-componentes.md#detalhes-para-o-esquemático)).
-> Montar os dois põe 10 kΩ em paralelo com 10 kΩ no `TH_MON`, e a conta é
-> feia (**conta**, com B = 3380):
->
-> ```
-> 10 kΩ ∥ 10 kΩ = 5 kΩ
-> 5 kΩ com B3380 equivale a 44,4 °C
-> ```
->
-> O corte do AEM10900 é **45 °C**. Com os dois montados, o colhedor
-> enxerga 44,4 °C com a célula a 25 °C e **desliga a carga solar com o
-> ambiente pouco acima da temperatura de uma sala** — sem nada passar por
-> firmware, sem erro, sem aviso. A lista de compras aprova a peça de placa
-> e o conector tem via para a do pack: os dois caminhos existem no
-> material, e é a montagem que tem de escolher um.
+> **Um termistor para o corte, nunca dois.** O conector da célula tem a
+> via 4 reservada ao NTC do pack (`TH_MON`, [06](06-conectores-e-pontos-de-teste.md#j102--bateria)),
+> mas ela fica **sem montar**: o NTC do corte é o `RT101` da placa. Montar
+> os dois põe 10 kΩ em paralelo com 10 kΩ no mesmo nó, e a conta é feia
+> (**conta**, B = 3380): 5 kΩ a 25 °C, e o comparador vira quando o
+> paralelo cai abaixo de 4,87 kΩ, ou seja, com **cada NTC a 25,7 °C** —
+> o colhedor **desliga a carga solar com o ambiente pouco acima da
+> temperatura de uma sala**, sem nada passar por firmware, sem erro, sem
+> aviso.
+
+> [!WARNING]
+> **O comparador só corta o lado quente.** O AEM10900 também recusava
+> carga abaixo de 0 °C, e uma célula de lítio carregada abaixo de zero
+> deposita lítio metálico. Com um comparador só, o painel carrega a célula
+> numa manhã de inverno abaixo de zero; o carregador do nPM1300, no USB,
+> continua protegido pelo JEITA. Registrado em aberto abaixo: a saída é um
+> segundo comparador (a outra metade de um TLV7032) com a referência do
+> frio, ou aceitar o risco pelo clima em que o aparelho vai rodar.
 
 ### Em aberto nesta folha
 
@@ -132,7 +191,7 @@ flowchart TB
     R3V0(("3V0")) -->|"VDD, pad 19, 100 nF por pino"| MOD
     VOUT(("VBUSOUT")) -->|"VBUS, pad 9"| MOD
     USBD["USB-C D+ / D−"] ---|"par de 90 Ω, pads 8 e 7"| MOD
-    TC["Tag-Connect TC2030-NL"] ---|"SWDIO 5, SWDCLK 6, reset 4"| MOD
+    TC["Tag-Connect TC2030-NL<br/>e J202, Cortex de 10 vias"] ---|"SWDIO 5, SWDCLK 6, reset 4"| MOD
     TP["TP201 e TP202<br/>pads do console"] ---|"uart20 · P1.00, P1.31"| MOD
     MOD --- BUSES["spi00 · spi22 · uart21<br/>i2c23 · i2c30 · pwm20/21/22"]
 ```
@@ -165,10 +224,15 @@ lado do `i2c30` da energia, o que **o silício recusa**: cada bloco serial
 do nRF54LM20A tem um periférico só, e `uart30` e `i2c30` são o mesmo
 bloco.
 
-**A depuração é sem conector.** O footprint Tag-Connect TC2030-NL só tem
-furos e pads; o cabo se encosta com um clipe. Numa placa de 34 × 90 mm
-dentro de uma caixa vedada, um conector de dez vias seria volume gasto
-para sempre por uma coisa que se usa no protótipo.
+**A depuração tem os dois caminhos.** O footprint Tag-Connect TC2030-NL só
+tem furos e pads; o cabo se encosta com um clipe. Em 2026-09-26 o dono pediu
+o conector pequeno de SWD que o J-Link usa, e ele entrou **ao lado** do
+Tag-Connect: o `J202`, Cortex Debug de 10 vias (2 × 5, passo 1,27 mm, SMD),
+nas mesmas redes (`SWDIO`, `SWDCLK`, `MOD_RESET`, `3V0` no `VTref`, `GND`),
+com a pinagem da ARM (`nRESET` no pino 10, `SWO` no 6 sem ligação, 7 chave,
+8 TDI e 9 `GNDDetect` abertos). É volume gasto na placa por uma coisa de
+protótipo, e é o que o dono quis; o `SWDCLK` e o `nRESET` dele são
+`passive` no ERC, para não haver duas saídas na mesma rede.
 
 ### Em aberto nesta folha
 
@@ -190,22 +254,29 @@ para sempre por uma coisa que se usa no protótipo.
 
 ```mermaid
 flowchart LR
-    R1V8(("1V8")) -->|"ferrite + 10 µF"| MAXF
-    VBCKP(("VBCKP")) -->|"V_BCKP"| MAXF["u-blox MAX-F10S<br/>L1 + L5"]
-    ANT["antena linear L1/L5<br/>borda de cima"] ---|"rede em π"| MAXF
-    MCU["MCU 3,0 V"] --- TXU["TXU0204<br/>VCCA 3V0 · VCCB 1V8"]
-    TXU --- MAXF
-    MAXF -.->|"TIMEPULSE"| TXU
+    R3V0(("3V0")) -->|"JP103 · ferrite + 10 µF"| MAXF
+    VBCKP(("VBCKP")) -->|"V_BCKP"| MAXF["u-blox MAX-F10S<br/>L1 + L5<br/>VCC = V_IO = 3,0 V · VIO_SEL aberto"]
+    ANT["antena de chip L1/L5<br/>borda de cima"] ---|"rede em π"| MAXF
+    MCU["MCU 3,0 V"] ---|"TX · RX · EXTINT · TIMEPULSE · RESET_N<br/>direto, sem tradutor"| MAXF
 ```
 
 ### As decisões desta folha
 
-**O receptor roda a 1,8 V e o MCU a 3,0 V.** A 1,8 V o MAX-F10S gasta
-cerca de 17 % menos que a 3,0 V, e o MCU não pode descer porque o display
-pede as entradas no nível do VDD dele. O preço é um tradutor de nível no
-meio, e uma regra que não perdoa: o `V_IO` do receptor tem **máximo
-absoluto de 1,98 V**, de modo que o BUCK1 fica travado em 1,8 V também no
-devicetree, embora o registrador aceitasse até 3,3 V.
+**O receptor roda a 3,0 V, no mesmo trilho do MCU** (decisão do dono em
+2026-09-26, opção 1 da tabela 35 do manual de integração UBXDOC-963802114-12892:
+`VCC` e `V_IO` juntos, `VIO_SEL` aberto, `V_IO` de 2,7 a 3,6 V). Até esse
+dia o receptor era de 1,8 V pelo BUCK1, com um tradutor de nível TXU0204
+entre ele e o MCU, porque a 1,8 V o MAX-F10S gasta cerca de 18 % menos
+(46,8 mW contra 57 mW em rastreio). O que derrubou o arranjo foi a
+tolerância: o BUCK1 é de ±5 % e a mesma tabela 35 pede **1,8 V ±2 %** para
+o projeto de 1,8 V. A saída pela precisão, um LDO de 1,8 V ±1 % alimentado
+do 3V0, custava 35 mW na bateria (o receptor passava a ser pago a 3,0 V,
+com 1,2 V queimados no LDO) — mais do que os 10 mW que o receptor a 3,0 V
+custa a mais, e ainda com o tradutor. A 3,0 V o receptor gasta 19 mA em
+rastreio (57 mW) e 24 mA na aquisição, o BUCK2 (±5 %, 2,85 a 3,15 V) fica
+dentro da faixa de 2,7 a 3,6 V do `V_IO`, e saem quatro peças: o tradutor,
+o LDO e os dois capacitores de cada um. O BUCK1 fica montado, sem carga, e
+o firmware o desliga ([02](02-calculos.md#3v0-do-buck2-limite-de-200-ma-ficha)).
 
 **O `V_BCKP` vem de um LDO próprio, não do BUCK1.** O TPS7A02 tira 1,8 V
 direto da célula e gasta 25 nA. É ele que mantém as efemérides e o relógio
@@ -217,36 +288,31 @@ o aparelho apagaria a memória do receptor.
 memória de backup, que é exatamente o que o `V_BCKP` existe para preservar.
 O driver só segura a linha.
 
-### O tradutor, e um erro que este documento cometeu
+### As cinco linhas digitais, direto
 
-O TXU0204 tem **direção fixa**: `A1` e `A2` do lado de 3,0 V para o de
-1,8 V, `B3` e `B4` no sentido contrário. Os quatro canais atendem
-exatamente os quatro sinais que precisam de tradução:
+Receptor e MCU no mesmo 3V0, as linhas vão de pino a pino, sem tradutor:
 
-| Canal | Sinal | Direção |
-|---|---|---|
-| `A1` → `B1` | `TX` do MCU, `RXD` do módulo | MCU → receptor |
-| `A2` → `B2` | `EXTINT` | MCU → receptor |
-| `B3` → `A3` | `TXD` do módulo, `RX` do MCU | receptor → MCU |
-| `B4` → `A4` | `TIMEPULSE` | receptor → MCU |
+| Sinal | Pino do MCU | Pino do receptor | Direção |
+|---|---|---|---|
+| `GNSS_TX` | P1.04 | `RXD` | MCU → receptor |
+| `GNSS_EXTINT` | P1.08 | `EXTINT` | MCU → receptor |
+| `GNSS_RX` | P1.05 | `TXD` | receptor → MCU |
+| `GNSS_TIMEPULSE` | P1.09 | `TIMEPULSE` | receptor → MCU |
+| `GNSS_RESET_N` | P1.06, dreno aberto | `RESET_N` | MCU → receptor; o pull-up de 7 a 13 kΩ é interno ao módulo |
 
-O **`RESET_N` não passa pelo tradutor**: o pino do MCU é dreno aberto, só
-puxa para baixo, e o pull-up de 7 a 13 kΩ é interno ao módulo. O `OE` fica
-fixo no `VCCA`, porque o Ioff-float já isola o módulo desligado e o MCU
-ganha um pino.
+O `TIMEPULSE` divide o pino com o `SAFEBOOT_N` por 1 kΩ interno, e o
+módulo entra em safeboot se o pino estiver baixo na partida: **nenhum
+pull-down** nessa linha, e o pino do MCU fica em entrada até o receptor
+subir.
 
 > [!NOTE]
-> **Um rascunho anterior desta folha errou isto de três maneiras ao mesmo
-> tempo**, e vale registrar porque é o tipo de erro que só aparece com a
-> placa na mão: passou o `RESET_N` pelo tradutor, concluiu daí que "cinco
-> sinais não cabem em quatro canais" e deixou o `EXTINT` sem componente; e
-> ainda pôs o `RX` num canal que vai do MCU para o receptor e o `RESET_N`
-> num que vai do receptor para o MCU — **saída contra saída nos dois
-> pares**, de modo que o receptor nunca teria mandado um byte. A
-> [especificação](../docs/14-hardware-placa-nova.md#gnss) e a
-> [avaliação](../docs/15-avaliacao-componentes.md#gnss) já traziam o
-> arranjo certo, sinal por sinal. Inventar o problema custou mais do que
-> ler a fonte teria custado.
+> **O tradutor de nível existiu de 2026-09-23 a 2026-09-26**, e um
+> rascunho anterior desta folha errou a direção dele de três maneiras ao
+> mesmo tempo (passou o `RESET_N` por ele, concluiu daí que "cinco sinais
+> não cabem em quatro canais" e pôs o `RX` num canal que ia do MCU para o
+> receptor: **saída contra saída**, e o receptor nunca teria mandado um
+> byte). O registro fica no [README](README.md#o-primeiro-em-2026-09-22),
+> como história; o componente não existe mais.
 
 ### Em aberto nesta folha
 
@@ -438,7 +504,7 @@ firmware.
 ```mermaid
 flowchart LR
     K1["tecla esquerda"] -->|"P1.26"| MCU
-    K2["tecla central"] -->|"P1.27"| MCU
+    K2["tecla central"] -->|"D107 Schottky · R605 · P1.27"| MCU
     K2 -->|"SHPHLD"| NPM["nPM1300"]
     K3["tecla direita"] -->|"P1.30"| MCU["MCU"]
     MCU -->|"pwm21 · P1.25 e P1.28"| BUZ["buzzer piezo<br/>em contrafase"]
@@ -454,6 +520,17 @@ flowchart LR
 (a C&K PTS526 é a tecla da V3; a lista de compras trocou). Todas ativas em
 nível baixo, com pull-up interno do MCU: menos três resistores e o
 comportamento certo com o pino em alta impedância.
+
+**A tecla central chega ao P1.27 por um Schottky.** Ela é também a tecla
+do `SHPHLD` do nPM1300, cujo pull-up de 50 kΩ vai ao maior entre `VBAT` e
+`VBUS`: com o cabo ligado o nó fica em até 5,5 V, e um pino de 3,0 V
+amarrado nele estaria com o diodo de proteção conduzindo o tempo todo. O
+`D107` (BAT54WS, decisão do dono em 2026-09-26) fica com o anodo do lado
+do MCU (depois do `R605` de 100 Ω) e o catodo no nó da tecla: apertada, a
+tecla leva os dois nós ao GND e o MCU lê baixo, com 0,3 a 0,4 V de queda
+do Schottky, abaixo dos 0,9 V de `V_IL` a 3,0 V; solta, o catodo fica
+acima do anodo e o P1.27 só vê o próprio pull-up. O firmware continua
+lendo a tecla pelo GPIO ([10](../docs/10-status-do-port.md#defeitos-abertos)).
 
 **O buzzer é acionado em contrafase.** Dois canais de PWM opostos dobram a
 tensão sobre o piezo sem nenhuma fonte a mais. Custa um pino.

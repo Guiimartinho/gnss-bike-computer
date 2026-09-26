@@ -1,7 +1,7 @@
 # Projeto KiCad da placa
 
 Este diretório é o projeto de CAD do GNSS Bike Computer: **esquemático
-hierárquico em sete folhas** e **placa com as 116 peças posicionadas e
+hierárquico em sete folhas** e **placa com as 156 peças posicionadas e
 roteadas**, em KiCad 8, gerados a partir dos documentos de
 [`hardware_gnssbike/`](../README.md) e conferidos contra eles por programa.
 
@@ -20,25 +20,64 @@ roteadas**, em KiCad 8, gerados a partir dos documentos de
 | `folha1-energia.kicad_sch` … `folha6-interface.kicad_sch` | as seis folhas |
 | `gnssbike.kicad_pcb` | a placa |
 | `gnssbike.kicad_dru` | as duas regras locais de folga |
-| `gnssbike-esquematico.pdf` | as 7 páginas do esquemático |
-| `gnssbike-pcb.pdf` | a placa em 2D, **uma página por camada de cobre** e uma quinta com as quatro juntas |
-| `gnssbike-2d.svg` | as quatro camadas numa folha só, para olhar rápido |
-| `gnssbike-3d-frente.png`, `-tras.png`, `-angulo.png` | a placa em 3D |
-| `gnssbike-3d-montagem.png` | a pilha aberta: display em cima, placa, célula embaixo |
-| `gnssbike-montagem.pdf` | **o desenho de montagem**: cada peça com o seu designador, frente e verso |
+| `zonas.dxf`, `contorno-r3.dxf`, `contorno-r4.dxf` | as zonas e o contorno da placa em DXF, gerados pelo `make_dxf.py` (entradas da placa, não saídas) |
+
+O que se **lê** sai daqui para as pastas do assunto (reorganização de 2026-09-26): o esquemático em PDF para [`../esquematico/`](../esquematico/), a placa em PDF e SVG e o desenho de montagem para [`../placa/`](../placa/), a proposta de caixa (PDF, STL e os dois scripts dela) para [`../caixa/`](../caixa/README.md), e as vistas 3D da placa e da caixa para [`../../docs/img/hardware/`](../../docs/img/hardware/). A tabela de [`../README.md`](../README.md#o-cad-e-o-que-sai-dele) lista cada arquivo. O `gnssbike.glb` que o `kicad-cli` exporta fica aqui e fora do git (45 MB, regenerado quando a placa muda).
 
 ## O esquemático
 
 ```mermaid
 flowchart TB
-    RAIZ["folha raiz · A3<br/>diagrama de blocos<br/>as 36 linhas entre as folhas"]
-    RAIZ --> F1["1 Energia · A3<br/>69 pecas"]
-    RAIZ --> F2["2 MCU e depuracao · A4<br/>7 pecas"]
-    RAIZ --> F3["3 GNSS · A4<br/>10 pecas"]
-    RAIZ --> F4["4 Display e luz · A4<br/>11 pecas"]
-    RAIZ --> F5["5 Memoria e sensores · A4<br/>16 pecas"]
-    RAIZ --> F6["6 Interface · A4<br/>22 pecas"]
+    RAIZ["folha raiz · A3<br/>diagrama de blocos<br/>as linhas entre as folhas"]
+    RAIZ --> F1["1 Energia · A3<br/>79 posicoes em 6 blocos"]
+    RAIZ --> F2["2 MCU e depuracao · A4<br/>14 posicoes em 2 blocos"]
+    RAIZ --> F3["3 GNSS · A4<br/>13 posicoes em 2 blocos"]
+    RAIZ --> F4["4 Display e luz · A4<br/>15 posicoes em 2 blocos"]
+    RAIZ --> F5["5 Memoria e sensores · A4<br/>18 posicoes em 5 blocos"]
+    RAIZ --> F6["6 Interface · A4<br/>23 posicoes em 3 blocos"]
 ```
+
+### Desenhado por bloco funcional, desde 2026-09-26
+
+Até esse dia cada folha era a lista de nós desenhada em fios: as peças numa
+grade por ordem de ligação e o roteador de labirinto puxando um fio de cada
+pino até o outro extremo, fosse ele do outro lado da página. O dono pediu o
+padrão industrial — ligações e rótulos, A4 ou A3, peças certas, fácil de
+ler, os circuitos subdivididos em caixas tracejadas —, e o `blocos.py` é
+isso:
+
+| Regra | Como | De onde vem |
+|---|---|---|
+| Cada folha é uma fila de **blocos funcionais**, na ordem em que o sinal flui, cada um numa **caixa tracejada com título** | a tabela `BLOCOS` de `blocos.py` diz as âncoras de cada bloco (o CI ou o conector); os passivos seguem `make_pcb.DECOPLA` e `JUNTO` (as tabelas que já dizem de quem é cada capacitor na placa), depois `sheets.SEGUE`, depois a lista de nós sem os trilhos (o vizinho mais próximo por saltos) | SparkFun, "How to read a schematic": "truly expansive schematics should be split into functional blocks", "following the flow of circuit from input to output" |
+| Dentro do bloco, o passivo fica **ao lado do pino que serve**, do lado para onde o pino aponta; o desacoplamento vai numa **prateleira** sob o CI | `_colocar_bloco()`: a âncora no meio, cada membro a dois passos da ponta do pino que compartilha com ela, empurrado para fora até caber sem sobrepor nem encostar ponta de outra rede; o que só toca trilho vai para a prateleira, que quebra linha na largura da âncora | prática corrente; a razão é o roteador: um fio curto sempre passa |
+| Um passivo de dois terminais é **espelhado** quando o pino que serve ao CI é o de trás, e **posto em pé** (90° ou 270°) na prateleira e quando é pull-up ou pull-down de uma linha rotulada | `Part.espelho` e `Part.rotacao`. A **biblioteca** guarda sempre o desenho base (`pin_base()`); a instância leva o giro e o espelho, e `pin_local()` diz onde as pontas ficam depois deles. **Medido** no KiCad 8 em 2026-09-26, com treze resistores de biblioteca base e um rótulo colado em cada ponta (`kicad-cli sch export netlist`): `(mirror y)` troca esquerda por direita, `(mirror x)` troca cima por baixo; `(at x y 90)` manda o pino da esquerda para **baixo**, `270` para cima; a rotação vem antes do espelho. E, pelo `sch export pdf`: a justificação do campo de texto também é transformada (sob `(mirror y)` "left" imprime como "right"; a 90° trocam os dois eixos; a 270° nada), e `instance()` escreve a justificação que **renderiza** como a pedida | a primeira "medição" saiu invertida porque foi feita através do gerador, que escrevia a biblioteca já espelhada e ainda punha o `(mirror ...)` na instância: transformação duas vezes. Foi assim que todos os capacitores em pé saíram com as duas pontas no ar em 2026-09-26 |
+| Alimentação e terra por **símbolo**, apontando **para longe do pino**: deitado ao longo da linha num pino lateral (seta ou barras para fora, o nome na linha, depois delas), em pé num pino de cima ou de baixo; pinos vizinhos do mesmo trilho no mesmo lado, ou os topos de uma fileira de capacitores em pé, ganham **um fio pela ponta deles e um símbolo só** | `PowerPort.sentido` (U, D, L, R); o nome fica a 3,3 mm do ponto, entre duas linhas de pino. Em pé num pino lateral, o símbolo punha a seta na linha de cima e o nome na seguinte. O fio da corrida é um por par de vizinhos: "wires connect with other wires or pins only if their ends coincide exactly" — um pino no meio de um fio comprido **não** está nele; e cada célula do fio é marcada no roteador (só as pontas e o meio deixavam um rótulo de outra rede pousar no meio dele) | manual do Eeschema 8; prática corrente nos esquemáticos densos |
+| A **prateleira** é uma fileira de capacitores em pé, agrupados por trilho, com passo de 12,7 mm; o trilho corre pelos topos e o terra pelos pés, um símbolo por fileira; os pontos de teste ficam em pé com o pad pendurado da linha | `_colocar_bloco()` (prateleira), `PASSO_PRATELEIRA`, `ENTRE_LINHAS_PRATELEIRA`, `LARGURA_PRATELEIRA`; a referência e o valor à direita da peça, escritos a 90° (o KiCad soma o giro da instância ao ângulo do campo) | é como toda folha de desacoplamento é desenhada |
+| Pull-up ou pull-down de uma linha que **sai do bloco** fica **em pé, depois do rótulo**; quando a linha segue para outra âncora (os contatos do FPC ao painel), fica **fora do corredor** das linhas, acima (trilho) ou abaixo (terra), e o roteador desce um fio até a linha cruzando as outras em ângulo reto | `_colocar_bloco()`: `em_pe`, distância pelo comprimento do maior rótulo vizinho (`GAP_ROTULO` no mínimo). Deitado na linha, ficava debaixo do texto do rótulo; em pé sobre a linha, era um muro para as linhas ao lado | é como uma fileira de pull-ups é desenhada |
+| Os **rótulos têm o lugar reservado antes** das peças: cada pino de âncora cuja rede sai do bloco ganha um retângulo (toco de dois passos, texto, pentágono) que nenhum corpo nem texto de membro toma; e o que cada peça ocupa é testado como retângulos **separados** (corpo com pinos, cada texto), nunca uma caixa envolvente só | `retangulos` em `_colocar_bloco()`; `Part.caixas_de_texto()`. Uma caixa só em volta do conector FPC e do seu valor de 26 mm murava todas as linhas à direita dele | — |
+| Sinal que sai do bloco vira **rótulo local**; sinal que sai da folha vira **rótulo hierárquico**, os dois num toco curto saído do pino; o texto do rótulo não pousa sobre peça, valor nem nome de símbolo | `_rotulo()`: toco reto de 2 a 12 passos se o caminho está livre **e** o texto cabe, senão o labirinto leva o toco à célula livre mais próxima onde o texto caiba (e, em último caso, a qualquer célula livre, para o pino nunca ficar aberto). As duas células em frente de todo pino são da rede dele (`dono_da_celula`): nenhuma outra rede passa ali. Num conector **de passagem** (`nets.PASSA_DIRETO`: o pino está em duas redes que são um nó só) o fio do painel continua do ponto do rótulo, e as duas redes podem partilhar células no roteador (`Router.irmas`) | manual do Eeschema 8: "local labels connect items located in the same sheet"; SparkFun: "give a net a name and label it, rather than routing a wire all over the schematic" |
+| Um conector de biblioteca do KiCad com os pinos todos de um lado é **espelhado** para encarar a âncora com quem fala, e **alinhado** com ela pela mediana das linhas dos pares de pinos ligados, para as linhas correrem retas | `_colocar_bloco()` (âncoras); `Part.espelho_token()` devolve `y` para símbolo do KiCad. Com os pinos virados para fora, as dez linhas do FPC davam a volta por cima | — |
+| Um pino de trilho sem lugar para o símbolo ganha o símbolo no fim de um toco roteado — **nunca um rótulo local com o nome do trilho** | **medido** na lista de nós do KiCad: um rótulo local `3V0` é a rede `/folha/3V0`, outra rede, e não se junta ao `3V0` dos símbolos de alimentação | medida de 2026-09-26 |
+| Tudo na **grade de 50 mil** (1,27 mm) | `snap()` em toda coordenada | manual do Eeschema 8: "always use a 50 mil grid" |
+| O tamanho da folha continua **medido**: a menor de A4, A3, A2 em que os blocos cabem | `escolher_papel()` coloca os blocos na candidata e aceita quando a última prateleira termina acima da margem | ver abaixo |
+
+O `check_sch.py` é quem diz se deu certo: a lista de nós que o KiCad extrai
+tem de bater com a de `nets.py` pino a pino, o ERC não pode acusar erro novo,
+nenhum fio pode cruzar componente e nada pode sair da folha. Em 2026-09-26,
+depois da passada de legibilidade que o dono pediu (símbolos de alimentação
+deitados nos pinos laterais, nome e número do pino escondidos neles, texto
+horizontal nas peças em pé, prateleira por trilho, pull-ups em pé depois
+dos rótulos, lugar dos rótulos reservado, conector do FPC espelhado e
+alinhado com o painel), ele passa com a folha 1 em **A3** e as outras em
+A4; oito redes fecham por rótulo em vez de fio porque o labirinto não achou
+caminho dentro do bloco (sete na folha 1, uma na 6: o gerador lista quais),
+e dois símbolos ficaram onde couberam, com o nome encostado em alguma coisa
+(`VBAT_SYS` no `SYS` do medidor, `3V0_GNSS` no ferrite). O que ainda não está
+bom: o bloco da colheita solar (os seis módulos em série e paralelo, com
+três laços de 0 R, e o lado esquerdo do ADP5091, com os divisores) e a
+esquerda do medidor de bateria, que continuam apertados. `SCH_DEBUG=1
+python make_sch.py` imprime por que cada símbolo ou rótulo não achou lugar
+reto e onde um fio não achou caminho.
 
 ### O tamanho da folha é medido, não escolhido
 
@@ -99,17 +138,18 @@ tamanho: o capacitor de desacoplamento cai ao lado do CI que ele desacopla.
 
 | Item | Valor |
 |---|---|
-| Contorno | **34 × 90 mm**, canto de 3 mm, 0,8 mm de espessura — **derivado das regras**, não escrito à mão |
+| Contorno | **34 × 95 mm**, canto de 3 mm, 0,8 mm de espessura — **derivado das regras**, não escrito à mão; os 5 mm além dos 90 de 2026-09-24 são das três teclas no passo de 13,4 (a área da antena do módulo desce com ele; `GNSSBIKE_H` troca a altura) |
 | Camadas | **4**: `F.Cu`, `In1.Cu` (terra), `In2.Cu` (alimentação), `B.Cu` |
 | Por que esse tamanho | a 7.2 do ME54BS13 pede **50 mm entre dois módulos de rádio**, e esta placa tem dois. Varrendo cada milímetro que cumpre isso e ainda cabe a fila de teclas, 34 × 90 é o menor contorno com folga — **3.060 mm² contra os 5.335 do 55 × 97, 43 % menos** |
 | Relação com a caixa | **nenhuma.** A placa sai do circuito; a caixa sai do display, da bateria e da mão. Encolher uma não encolhe a outra |
-| Peças na placa | **116**, com rotação; 3 na face de trás |
-| Fora da placa | 8 (o painel, a antena e os seis módulos solares moram na caixa e chegam por contato de mola) |
-| Redes | **100** |
-| Furo de fixação | **1**, M2, em (3,9; 48,5) |
-| Planos de terra | **3**, em `In1.Cu` e nas duas faces, preenchidos |
-| Roteamento | **127 ligações**, 680 segmentos, 266 vias; `RF_IN` e `RF_ANT` ficam de fora de propósito |
-| Ligações sem trilha | **101** (o DRC do KiCad, com as malhas preenchidas) |
+| Peças na placa | **156**, com rotação (2026-09-26); as de trás (`U502`, `RT101`, `LS601`, `J103`) estão em `make_pcb.ATRAS` |
+| Fora da placa | 7 (o painel, a célula e os seis módulos solares moram na caixa; a antena GNSS passou a morar na placa) |
+| Redes | **114** |
+| Furos de fixação | **2**, M2, em (3,2; 7,0) e (14,4; 91,7) — decisão do dono em 2026-09-25 (dois furos), depois da conta de [02](../02-calculos.md#quantos-parafusos-a-placa-precisa); as posições são do dry run da caixa de 2026-09-26: nenhum sobre a célula, o segundo entre o USB-C (que andou 0,4 para a esquerda por ele) e o módulo, fora do lugar do sensor de luz e da faixa do verso que segura o `J103` |
+| Planos de terra | **3**, em `In1.Cu` e nas duas faces, preenchidos pelo `fill_zones.py` (com o Python do KiCad) |
+| Roteamento | **196 ligações**, 1.417 segmentos, 549 vias (2026-09-26, à tarde, na placa de 95 mm); o par USB à mão, num corredor reservado de `D102` a `J101`; `RF_IN`, `RF_ANT`, `RF_CHIP` e `RF_UFL` ficam de fora de propósito |
+| Ligações sem trilha | **75**, em 33 redes, pelo roteador; **58 itens desconectados** em 37 redes pelo DRC completo (`--severity-all`) com as malhas preenchidas — a regra `RT1` do `dry_run_pcb.py` |
+| Erros de DRC | **0** (20 avisos, todos de biblioteca de footprint); os 3 do par USB contra o ponto de teste `TP101`, que o furo M2 novo empurrou para o caminho do par, saíram com o corredor |
 
 ### O que decide a posição de cada peça
 
@@ -140,7 +180,7 @@ Com 34 mm de largura, três decisões deixaram de ser gosto:
 
 ```sh
 python hardware_gnssbike/cad/check_sch.py                 # regera e confere o esquematico
-"D:/KiCAD/bin/kicad-cli.exe" sch export pdf --output hardware_gnssbike/cad/gnssbike-esquematico.pdf hardware_gnssbike/cad/gnssbike.kicad_sch
+"D:/KiCAD/bin/kicad-cli.exe" sch export pdf --output hardware_gnssbike/esquematico/gnssbike-esquematico.pdf hardware_gnssbike/cad/gnssbike.kicad_sch
 python hardware_gnssbike/cad/make_pcb.py                  # 1. coloca as pecas
 python hardware_gnssbike/cad/route.py                     # 2. roteia o que consegue
 "D:/KiCAD/bin/python.exe" hardware_gnssbike/cad/fill_zones.py   # 3. preenche as malhas de terra
@@ -165,9 +205,11 @@ Depois, as vistas:
 ```sh
 python hardware_gnssbike/cad/make_dxf.py     # contorno e zonas em DXF
 "D:/KiCAD/bin/kicad-cli.exe" pcb export glb --output hardware_gnssbike/cad/gnssbike.glb     --include-tracks --include-zones --subst-models hardware_gnssbike/cad/gnssbike.kicad_pcb
-python hardware_gnssbike/cad/make_3d.py      # as quatro vistas 3D em PNG
-"D:/KiCAD/bin/kicad-cli.exe" pcb export svg --output hardware_gnssbike/cad/gnssbike-2d.svg     --layers "F.Cu,In1.Cu,In2.Cu,B.Cu,F.SilkS,Edge.Cuts,F.Fab"     --page-size-mode 2 --exclude-drawing-sheet hardware_gnssbike/cad/gnssbike.kicad_pcb
-python hardware_gnssbike/cad/make_2d.py      # o PDF, uma pagina por camada
+python hardware_gnssbike/cad/make_3d.py      # as quatro vistas 3D em PNG, em docs/img/hardware/
+python hardware_gnssbike/caixa/dry_run_caixa.py   # a caixa medida contra a placa: 13 regras (falha = codigo 1)
+python hardware_gnssbike/caixa/make_caixa.py   # a caixa: PDF e STL em caixa/, tres vistas em docs/img/hardware/
+"D:/KiCAD/bin/kicad-cli.exe" pcb export svg --output hardware_gnssbike/placa/gnssbike-2d.svg     --layers "F.Cu,In1.Cu,In2.Cu,B.Cu,F.SilkS,Edge.Cuts,F.Fab"     --page-size-mode 2 --exclude-drawing-sheet hardware_gnssbike/cad/gnssbike.kicad_pcb
+python hardware_gnssbike/cad/make_2d.py      # o PDF em placa/, uma pagina por camada
 ```
 
 O `make_2d.py` existe por causa do preenchimento. As quatro camadas numa
@@ -196,7 +238,7 @@ componente** em folha nenhuma; nada fora da folha; nenhuma peça sobre outra;
 e todo rótulo hierárquico tem o pino de folha que responde por ele.
 
 **Placa** — o KiCad abre e roda o **DRC, que fecha em zero erro**, com as
-malhas preenchidas e 101 ligações ainda sem trilha; as **116 peças** estão lá,
+malhas preenchidas e 58 itens ainda sem trilha (2026-09-26); as **156 peças** estão lá,
 uma vez cada; **todo pad leva a rede da lista de nós** e nenhuma ligação ficou
 sem pad; nenhum contorno sobre outro; nada passa da borda; nada dentro das
 áreas de antena; a placa cabe na caixa; os três planos de terra existem.
@@ -349,7 +391,7 @@ flowchart LR
     DOCS --> PARTS["parts.py<br/>pecas e pinagem"]
     DOCS --> NETS["nets.py<br/>ligacoes"]
     DOCS --> DXF["make_dxf.py<br/>contorno e zonas"]
-    PARTS --> SCH["make_sch.py + sheets.py"]
+    PARTS --> SCH["make_sch.py + blocos.py + sheets.py"]
     NETS --> SCH
     PARTS --> PCB["make_pcb.py + make_pro.py"]
     NETS --> PCB

@@ -141,11 +141,11 @@ rotulo(40, 84, "GNSS Bike Computer · placa gnssbike · conector J103 · desenho
 # ============================================================== A · a caixa
 AX, AY, AW, AH = 40, 112, 500, 1156
 moldura(AX, AY, AW, AH, "A · Onde fica cada módulo",
-        "a caixa vista de frente, 62 × 104 mm")
+        "a caixa vista de frente, 62 × 106 mm")
 
 SA = 5.4
 cv = View(AX + (AW - 62 * SA) / 2, AY + 150, SA)
-cv.rect(0, 0, 62, 104, 7, fill="#eceef1", stroke="#aab0b8", stroke_width=0.5)
+cv.rect(0, 0, 62, 106, 7, fill="#eceef1", stroke="#aab0b8", stroke_width=0.5)
 cv.rect(0.6, 17.5, 6.2, 55.0, 2.8, fill="#e0e3e8", stroke="#b6bcc4", stroke_width=0.35)
 cv.rect(55.2, 17.5, 6.2, 55.0, 2.8, fill="#e0e3e8", stroke="#b6bcc4", stroke_width=0.35)
 cv.rect(9.0, 12.0, 44.0, 60.0, 1.2, fill="#d3d7dc", stroke="#aab0b8", stroke_width=0.35)
@@ -279,18 +279,22 @@ rotulo(BX + 40, BY + BH - 16,
 # ============================================================== C · a placa
 CX, CY, CW, CH = 1730, 112, 610, 1156
 moldura(CX, CY, CW, CH, "C · Onde entra na placa",
-        "placa 34 × 90 mm · J103 na borda direita")
+        "placa 34 × 95 mm · J103 no verso, em pé na borda esquerda")
 
 SC = 5.6
 bv = View(CX + 40, CY + 150, SC)
-bv.rect(0, 0, 34, 90, 2.5, fill=COR["placa"], stroke="#1f4a28", stroke_width=0.4)
-bv.text(17, -4.0, "vista de cima", 16, COR["fraco"], "middle")
+bv.rect(0, 0, 34, 95, 2.5, fill=COR["placa"], stroke="#1f4a28", stroke_width=0.4)
+bv.text(17, -4.0, "vista por tras (a placa virada)", 16, COR["fraco"], "middle")
 
-JX, JY = 29.0, 32.0                       # posicao real do J103 na placa
+# J103 sits at (4,9; 75,2) of the board, on the BACK, mouth to the board's
+# left edge (make_pcb.BORDA_FIXA, 2026-09-26). Seen from the back the board
+# is mirrored: the connector shows at x = 34 - 4,9 and its mouth points to
+# the right of this view, which is the board's left edge.
+JX, JY = 34.0 - 4.9, 75.2
 bv.rect(JX - 3.5, JY - ZH_L / 2, 7.0, ZH_L, 0.6, fill="#e9e4d7", stroke="#9a9488",
         stroke_width=0.35)
 for i, cor in enumerate((COR["pv_a"], COR["pv_b"], COR["pv_c"], COR["gnd"])):
-    bv.circle(JX + 1.0, JY - 2.25 + i * ZH_PASSO, 0.45, fill=cor)
+    bv.circle(JX - 1.0, JY - 2.25 + i * ZH_PASSO, 0.45, fill=cor)
 bv.text(JX, JY - 6.0, "J103", 17, "#f0f4f0", "middle", 700)
 # por onde o cabo entra
 bv.poly([(37.4, JY), (34.0, JY)], fill="none", stroke="#2b2b2b", stroke_width=0.3)

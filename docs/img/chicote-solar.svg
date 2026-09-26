@@ -4,8 +4,8 @@
 <text x="40" y="84" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="17" fill="#6b7178" text-anchor="start" font-weight="400">GNSS Bike Computer · placa gnssbike · conector J103 · desenho em escala, medidas em mm · nada montado nem medido</text>
 <rect x="40" y="112" width="500" height="1156" rx="14" fill="#f5f6f8" stroke="#d7dae0" stroke-width="1.5"/>
 <text x="62" y="148" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="24" fill="#111" text-anchor="start" font-weight="700">A · Onde fica cada módulo</text>
-<text x="62" y="172" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" fill="#6b7178" text-anchor="start" font-weight="400">a caixa vista de frente, 62 × 104 mm</text>
-<rect x="122.6" y="262" width="334.8" height="561.6" rx="37.8" ry="37.8" fill="#eceef1" stroke="#aab0b8" stroke-width="0.5"/>
+<text x="62" y="172" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" fill="#6b7178" text-anchor="start" font-weight="400">a caixa vista de frente, 62 × 106 mm</text>
+<rect x="122.6" y="262" width="334.8" height="572.4" rx="37.8" ry="37.8" fill="#eceef1" stroke="#aab0b8" stroke-width="0.5"/>
 <rect x="125.84" y="356.5" width="33.48" height="297" rx="15.12" ry="15.12" fill="#e0e3e8" stroke="#b6bcc4" stroke-width="0.35"/>
 <rect x="420.68" y="356.5" width="33.48" height="297" rx="15.12" ry="15.12" fill="#e0e3e8" stroke="#b6bcc4" stroke-width="0.35"/>
 <rect x="171.2" y="326.8" width="237.6" height="324" rx="6.48" ry="6.48" fill="#d3d7dc" stroke="#aab0b8" stroke-width="0.35"/>
@@ -139,29 +139,29 @@
 <text x="610" y="1252" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="17" fill="#cc2b2b" text-anchor="start" font-weight="700">Confira a polaridade no multímetro, com os módulos no sol, ANTES de plugar.</text>
 <rect x="1730" y="112" width="610" height="1156" rx="14" fill="#f5f6f8" stroke="#d7dae0" stroke-width="1.5"/>
 <text x="1752" y="148" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="24" fill="#111" text-anchor="start" font-weight="700">C · Onde entra na placa</text>
-<text x="1752" y="172" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" fill="#6b7178" text-anchor="start" font-weight="400">placa 34 × 90 mm · J103 na borda direita</text>
-<rect x="1770" y="262" width="190.4" height="504" rx="14" ry="14" fill="#2f6b3a" stroke="#1f4a28" stroke-width="0.4"/>
-<text x="1865.2" y="239.6" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" fill="#6b7178" text-anchor="middle" font-weight="400">vista de cima</text>
-<rect x="1912.8" y="421.04" width="39.2" height="40.32" rx="3.36" ry="3.36" fill="#e9e4d7" stroke="#9a9488" stroke-width="0.35"/>
-<circle cx="1938" cy="428.6" r="2.52" fill="#cc2b2b"/>
-<circle cx="1938" cy="437" r="2.52" fill="#e08020"/>
-<circle cx="1938" cy="445.4" r="2.52" fill="#9b3fa8"/>
-<circle cx="1938" cy="453.8" r="2.52" fill="#1a1a1a"/>
-<text x="1932.4" y="407.6" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="17" fill="#f0f4f0" text-anchor="middle" font-weight="700">J103</text>
-<polyline points="1979.44,441.2 1960.4,441.2" fill="none" stroke="#2b2b2b" stroke-width="0.3"/>
-<polyline points="1960.4,441.2 1968.24,436.16 1968.24,446.24 1960.4,441.2" fill="#2b2b2b" stroke="none"/>
-<text x="1983.92" y="438.96" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15" fill="#2b2b2b" text-anchor="start" font-weight="700">o cabo do</text>
-<text x="1983.92" y="460.24" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15" fill="#2b2b2b" text-anchor="start" font-weight="700">painel entra</text>
-<text x="1983.92" y="481.52" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15" fill="#2b2b2b" text-anchor="start" font-weight="700">por aqui</text>
-<polyline points="1911.68,428.6 1898.8,428.6" fill="none" stroke="#cc2b2b" stroke-width="0.35"/>
-<rect x="1888.72" y="425.8" width="10.08" height="5.6" rx="0.84" ry="0.84" fill="#d2d6dc" stroke="#cc2b2b" stroke-width="0.2"/>
-<polyline points="1911.68,437 1898.8,437" fill="none" stroke="#e08020" stroke-width="0.35"/>
-<rect x="1888.72" y="434.2" width="10.08" height="5.6" rx="0.84" ry="0.84" fill="#d2d6dc" stroke="#e08020" stroke-width="0.2"/>
-<polyline points="1911.68,445.4 1898.8,445.4" fill="none" stroke="#9b3fa8" stroke-width="0.35"/>
-<rect x="1888.72" y="442.6" width="10.08" height="5.6" rx="0.84" ry="0.84" fill="#d2d6dc" stroke="#9b3fa8" stroke-width="0.2"/>
-<text x="1893.76" y="489.36" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15" fill="#e4efe4" text-anchor="middle" font-weight="700">R113 · R114 · R115</text>
-<text x="1893.76" y="509.52" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="14" fill="#bdd3be" text-anchor="middle" font-weight="400">0 Ω, um por face</text>
-<polyline points="1886.48,441.2 1865.2,441.2 1865.2,374 1846.16,374" fill="none" stroke="#c8a12a" stroke-width="0.55" stroke-linejoin="round"/>
+<text x="1752" y="172" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" fill="#6b7178" text-anchor="start" font-weight="400">placa 34 × 95 mm · J103 no verso, em pé na borda esquerda</text>
+<rect x="1770" y="262" width="190.4" height="532" rx="14" ry="14" fill="#2f6b3a" stroke="#1f4a28" stroke-width="0.4"/>
+<text x="1865.2" y="239.6" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="16" fill="#6b7178" text-anchor="middle" font-weight="400">vista por tras (a placa virada)</text>
+<rect x="1913.36" y="662.96" width="39.2" height="40.32" rx="3.36" ry="3.36" fill="#e9e4d7" stroke="#9a9488" stroke-width="0.35"/>
+<circle cx="1927.36" cy="670.52" r="2.52" fill="#cc2b2b"/>
+<circle cx="1927.36" cy="678.92" r="2.52" fill="#e08020"/>
+<circle cx="1927.36" cy="687.32" r="2.52" fill="#9b3fa8"/>
+<circle cx="1927.36" cy="695.72" r="2.52" fill="#1a1a1a"/>
+<text x="1932.96" y="649.52" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="17" fill="#f0f4f0" text-anchor="middle" font-weight="700">J103</text>
+<polyline points="1979.44,683.12 1960.4,683.12" fill="none" stroke="#2b2b2b" stroke-width="0.3"/>
+<polyline points="1960.4,683.12 1968.24,678.08 1968.24,688.16 1960.4,683.12" fill="#2b2b2b" stroke="none"/>
+<text x="1983.92" y="680.88" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15" fill="#2b2b2b" text-anchor="start" font-weight="700">o cabo do</text>
+<text x="1983.92" y="702.16" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15" fill="#2b2b2b" text-anchor="start" font-weight="700">painel entra</text>
+<text x="1983.92" y="723.44" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15" fill="#2b2b2b" text-anchor="start" font-weight="700">por aqui</text>
+<polyline points="1912.24,670.52 1898.8,670.52" fill="none" stroke="#cc2b2b" stroke-width="0.35"/>
+<rect x="1888.72" y="667.72" width="10.08" height="5.6" rx="0.84" ry="0.84" fill="#d2d6dc" stroke="#cc2b2b" stroke-width="0.2"/>
+<polyline points="1912.24,678.92 1898.8,678.92" fill="none" stroke="#e08020" stroke-width="0.35"/>
+<rect x="1888.72" y="676.12" width="10.08" height="5.6" rx="0.84" ry="0.84" fill="#d2d6dc" stroke="#e08020" stroke-width="0.2"/>
+<polyline points="1912.24,687.32 1898.8,687.32" fill="none" stroke="#9b3fa8" stroke-width="0.35"/>
+<rect x="1888.72" y="684.52" width="10.08" height="5.6" rx="0.84" ry="0.84" fill="#d2d6dc" stroke="#9b3fa8" stroke-width="0.2"/>
+<text x="1893.76" y="731.28" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15" fill="#e4efe4" text-anchor="middle" font-weight="700">R113 · R114 · R115</text>
+<text x="1893.76" y="751.44" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="14" fill="#bdd3be" text-anchor="middle" font-weight="400">0 Ω, um por face</text>
+<polyline points="1886.48,683.12 1865.2,683.12 1865.2,374 1846.16,374" fill="none" stroke="#c8a12a" stroke-width="0.55" stroke-linejoin="round"/>
 <rect x="1823.76" y="362.8" width="22.4" height="22.4" rx="1.68" ry="1.68" fill="#1b1d21" stroke="#454b53" stroke-width="0.25"/>
 <text x="1834.96" y="349.36" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="15" fill="#e4efe4" text-anchor="middle" font-weight="700">ADP5091</text>
 <text x="1834.96" y="405.36" font-family="Inter, 'Segoe UI', Roboto, Arial, sans-serif" font-size="14" fill="#bdd3be" text-anchor="middle" font-weight="400">colhedor</text>

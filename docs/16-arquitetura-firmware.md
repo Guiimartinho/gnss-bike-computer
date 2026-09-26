@@ -92,7 +92,7 @@ Os módulos do modelo que não estavam no plano de 2026-09-18 e entraram depois,
 | Serviço | Responsável por | Publica | Hardware |
 |---|---|---|---|
 | Energia | ligar e desligar, ship mode, trilhos, carga pelo USB e pelo painel, estado de carga, desligamento automático, botão de ligar | estado da bateria e da carga, pedido de desligar | nPM1300, AEM10900, MAX17262 |
-| GNSS | configuração por UBX, sinais de L1 e L5, AssistNow, backup, reinício por falta de dado (LEAP e potência plena só com o M10N) | uma posição por época (NAV-PVT), satélites | u-blox MAX-F10S pelo TXU0204 |
+| GNSS | configuração por UBX, sinais de L1 e L5, AssistNow, backup, reinício por falta de dado (LEAP e potência plena só com o M10N) | uma posição por época (NAV-PVT), satélites | u-blox MAX-F10S, direto na UART (a 3,0 V desde 2026-09-26) |
 | Sensores | barômetro a 10 Hz (como o legacy), IMU por FIFO, magnetômetro, luz ambiente | amostras filtradas | BMP585, BMI270, MMC5633NJL, OPT3001 |
 | Rádio | BLE central (sensores e celular), ANT+ (HRM, BSC, FE-C), pareamento, religação | dados de cada sensor, estado de cada ligação | nRF54LM20A |
 | Armazenamento | FatFs, formatos do legacy, lotes de gravação, carga de segmentos, percursos e treinos, comandos `$LOC`, `$DWN`, `$QRY` | resultados de carga, estado do armazenamento | flash NOR **MX25R6435F** de 8 MB soldada, sozinha no `spi00` (CS P2.05, 8 MHz), com `zephyr,flash-disk` montado em `/SD:` |

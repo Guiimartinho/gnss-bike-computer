@@ -73,13 +73,22 @@ def main() -> int:
         soltos = d.get("unconnected_items", [])
         graves = [v for v in viol if v.get("severity") == "error"]
         print(f"        DRC: {len(viol)} violacoes, {len(graves)} de erro, "
-              f"{len(soltos)} ligacoes sem trilha (nada foi roteado)")
+              f"{len(soltos)} itens desconectados")
         tipos: dict[str, int] = {}
         for v in graves:
             tipos[v.get("type", "?")] = tipos.get(v.get("type", "?"), 0) + 1
         for t, n in sorted(tipos.items(), key=lambda kv: -kv[1]):
             print(f"          {t}: {n}")
         check(not graves, f"o DRC nao acusa erro de projeto ({len(graves)})")
+        # Desconectado e AVISO no KiCad, e por isso ficou meses fora desta
+        # conta: a placa passava aqui com dezenas de ligacoes sem cobre.
+        # This script regenerates the board before checking it, so at this
+        # point there is never any copper beyond the pads: the count is
+        # information about the netlist, not a verdict. The verdict on the
+        # ROUTED board is rule RT1 of dry_run_pcb.py, which runs after
+        # route.py and fill_zones.py.
+        print(f"        {len(soltos)} itens desconectados na placa recem-gerada, "
+              "sem trilhas: quem julga isso e a RT1 do dry_run_pcb.py")
 
     # ---- the parts ----
     fps = fp_load.kids(arv, "footprint")
@@ -152,8 +161,11 @@ def main() -> int:
     fora = []
     dentro_keepout = []
     for ref, (x, y, _ang, _b) in lugar.items():
-        w, h = tam[ref]
-        x0, y0, x1, y1 = x - w / 2, y - h / 2, x + w / 2, y + h / 2
+        # the courtyard sits where the placer put it, relative to the
+        # footprint origin - NOT centred on it. Centring it here said the
+        # USB-C crossed the edge by 0,42 mm when its box ends 0,14 mm inside.
+        bx = cx[ref]
+        x0, y0, x1, y1 = x + bx[0], y + bx[1], x + bx[2], y + bx[3]
         if x0 < 0 or y0 < 0 or x1 > M.W or y1 > M.H:
             fora.append(ref)
         for nome, (kx0, ky0, kx1, ky1), _c, _s in M.ZONES:
@@ -163,6 +175,10 @@ def main() -> int:
                     and x1 > kx0 and kx1 > x0 and y1 > ky0 and ky1 > y0:
                 dentro_keepout.append((ref, nome))
     check(not fora, f"nenhuma peca passa da borda ({len(fora)})")
+    for ref in fora[:5]:
+        x, y, _ang, _b = lugar[ref]
+        w, h = tam[ref]
+        print(f"      {ref} em ({x:.2f}; {y:.2f}), contorno de {w:.2f} x {h:.2f}")
     check(not dentro_keepout,
           f"nenhuma peca dentro de area de antena ({len(dentro_keepout)})")
     for ref, z in dentro_keepout[:5]:
@@ -205,7 +221,10 @@ def main() -> int:
     furos = [f for f in fps
              if next((p[2] for p in fp_load.kids(f, "property")
                       if p[1] == "Reference"), "") == "REF**"]
-    check(len(furos) == 1, f"um furo de fixacao ({len(furos)})")
+    # As many holes as make_dxf declares: one until 2026-09-25, two since
+    # (the owner's decision after the screw calculation in 02).
+    check(len(furos) == len(M.FUROS_DOC),
+          f"{len(M.FUROS_DOC)} furos de fixacao ({len(furos)})")
 
     # --- a serigrafia, medida no que o KiCad DESENHA ---------------------
     # Not in what this project believes it drew. make_pcb has a model of how

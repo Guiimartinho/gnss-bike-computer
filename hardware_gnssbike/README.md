@@ -4,16 +4,18 @@
 
 **Placa `gnssbike`, nRF54LM20A no módulo MinewSemi ME54BS13**
 
-![Estado](https://img.shields.io/badge/estado-esquem%C3%A1tico%20e%20placa%20em%20CAD-EF6C00)
-![Placa](https://img.shields.io/badge/placa-34%20%C3%97%2090%20mm%20%C2%B7%204%20camadas-0082FC)
+![Estado](https://img.shields.io/badge/estado-esquem%C3%A1tico%2C%20placa%20e%20caixa%20em%20CAD-EF6C00)
+![Placa](https://img.shields.io/badge/placa-34%20%C3%97%2095%20mm%20%C2%B7%204%20camadas-0082FC)
+![Caixa](https://img.shields.io/badge/caixa-62%20%C3%97%20106%20%C3%97%2017%20mm-0082FC)
 ![MCU](https://img.shields.io/badge/MCU-nRF54LM20A-00A9CE)
-![DRC](https://img.shields.io/badge/DRC-0%20viola%C3%A7%C3%B5es-2E7D32)
-![Regras](https://img.shields.io/badge/regras%20de%20ficha-21%20de%2022-2E7D32)
+![DRC](https://img.shields.io/badge/DRC-0%20erros-2E7D32)
+![Regras](https://img.shields.io/badge/regras%20de%20ficha-25%20de%2029%20medidas-2E7D32)
+![Caixa medida](https://img.shields.io/badge/dry%20run%20da%20caixa-12%20de%2012-2E7D32)
 ![Montada](https://img.shields.io/badge/montada-n%C3%A3o-C62828)
 
 </div>
 
-![A placa vista em ângulo, com o USB-C na borda de cima, o módulo de rádio à esquerda e o receptor GNSS à direita](cad/gnssbike-3d-angulo.png)
+![A placa vista em ângulo, com o USB-C na borda de cima, o módulo de rádio à esquerda e o receptor GNSS à direita](../docs/img/hardware/gnssbike-3d-angulo.png)
 
 O hardware completo do aparelho: cada folha do esquemático, cada ligação, a
 conta que justifica cada valor — e a placa, com as peças postas, o cobre
@@ -27,28 +29,37 @@ componente.
 
 > [!WARNING]
 > **Nada disto foi montado, medido ou fabricado.** A placa existe como
-> arquivo de CAD — 144 peças, 112 redes, 915 segmentos, 430 vias, **0
-> violações de regra de projeto e 0 ligações sem trilha** —, mas nenhuma foi
-> feita e nenhum componente passou por bancada. Todo valor abaixo vem de
-> ficha ou de conta feita aqui, e está marcado como tal. O que depende de
-> decisão, de ficha por ler ou de medida está na lista de
+> arquivo de CAD — 156 peças, 114 redes, 1.417 segmentos, 549 vias, **196
+> ligações roteadas e 75 sem trilha** (58 itens desconectados no DRC
+> completo, 0 erros) e 25 das 33 regras das fichas cumpridas
+> ([09](09-dry-run-da-pcb.md), [10](10-dry-run-2026-09-26.md), 2026-09-26)
+> —, e a caixa existe como proposta medida por um dry run próprio (12
+> regras cumpridas, 0 violadas, [04](04-pcb-e-caixa.md#a-placa-de-hoje-dentro-da-caixa-do-conceito));
+> mas nenhuma foi feita e nenhum componente passou por bancada. Este aviso já disse "0 ligações sem trilha" com 47 em aberto:
+> o DRC rodava só com erros, e os não roteados são aviso. Todo valor
+> abaixo vem de ficha ou de conta feita aqui, e está marcado como tal. O
+> que depende de decisão, de ficha por ler ou de medida está na lista de
 > [Antes de mandar fabricar](#antes-de-mandar-fabricar).
 
-## O CAD
+## O CAD e o que sai dele
 
 Tudo em [`cad/`](cad/) é **gerado por programa**, não desenhado à mão: o
 esquemático, o footprint de cada peça, a colocação, o roteamento e as
 vistas. A cadeia inteira e os comandos estão em
-[`cad/README.md`](cad/README.md).
+[`cad/README.md`](cad/README.md). Os arquivos que se leem ficam fora das
+fontes, cada um na sua pasta (2026-09-26):
 
-| Arquivo | O que é |
-|---|---|
-| `gnssbike-esquematico.pdf` | as seis folhas, com símbolo de peça de verdade |
-| `gnssbike-pcb.pdf` | sete páginas: uma por camada de cobre, mais a de conjunto |
-| `gnssbike-montagem.pdf` | o desenho de montagem, 144 peças com linha de chamada |
-| `gnssbike-3d-frente.png`, `-tras.png`, `-angulo.png` | a placa vista de cima, de baixo e em ângulo |
-| `gnssbike-3d-montagem.png` | a pilha: display, placa e célula |
-| [`docs/img/manual-de-montagem.svg`](../docs/img/manual-de-montagem.svg) | o **manual de montagem**: as peças em escala e os oito passos |
+| Pasta | Arquivo | O que é |
+|---|---|---|
+| [`esquematico/`](esquematico/) | [`gnssbike-esquematico.pdf`](esquematico/gnssbike-esquematico.pdf) | as sete páginas do esquemático, com símbolo de peça de verdade |
+| [`placa/`](placa/) | [`gnssbike-pcb.pdf`](placa/gnssbike-pcb.pdf) | sete páginas: uma por camada de cobre, mais a de conjunto |
+| | [`gnssbike-2d.svg`](placa/gnssbike-2d.svg) | as quatro camadas numa folha só, para olhar rápido |
+| | [`gnssbike-montagem.pdf`](placa/gnssbike-montagem.pdf) | o desenho de montagem, 156 peças com linha de chamada |
+| [`caixa/`](caixa/README.md) | [`gnssbike-caixa.pdf`](caixa/gnssbike-caixa.pdf) e os `caixa-*.stl` | a proposta de caixa, medida pelo `dry_run_caixa.py`, e as peças para a primeira prova impressa |
+| [`docs/img/hardware/`](../docs/img/hardware/) | `gnssbike-3d-frente.png`, `-tras.png`, `-angulo.png` | a placa vista de cima, de baixo e em ângulo |
+| | `gnssbike-3d-montagem.png` | a pilha: display, placa e célula |
+| | `gnssbike-3d-caixa-aberta.png`, `-frente.png`, `-explodida.png` | a caixa com a placa, a célula e o display dentro |
+| [`docs/img/`](../docs/img/) | [`manual-de-montagem.svg`](../docs/img/manual-de-montagem.svg) | o **manual de montagem**: as peças em escala e os oito passos |
 | [`docs/img/chicote-solar.svg`](../docs/img/chicote-solar.svg) | como ligar os seis módulos solares na placa |
 
 ## Índice
@@ -64,7 +75,9 @@ vistas. A cadeia inteira e os comandos estão em
 | [07 · Sequências e proteção](07-sequencias-e-protecao.md) | em que ordem os trilhos sobem e descem, e o que protege o que sai da caixa |
 | [08 · Plano de layout](08-layout.md) | regras de projeto, ordem de roteamento, terra e retorno, os nós críticos e a subida da primeira placa |
 | [09 · Dry-run da placa](09-dry-run-da-pcb.md) | as regras das fichas e da IPC-2221 medidas no arquivo de CAD, com o que passa, o que falha e o que ninguém mediu |
+| [10 · Dry-run de 2026-09-26](10-dry-run-2026-09-26.md) | placa roteada, esquemático, mecânica e contas, em três análises independentes: o que foi corrigido no dia e o que fica para o dono |
 | [CAD](cad/README.md) | como o esquemático e a placa são gerados, e como se confere cada etapa |
+| [Caixa](caixa/README.md) | a proposta de caixa em volta da placa: o gerador, o dry run de 13 regras, o PDF e os STL |
 
 ## O aparelho em blocos
 
@@ -76,18 +89,18 @@ flowchart TB
         GAUGE --> NPM
         PV["6 módulos solares<br/>KXOB25-05X3F"] --> AEM["ADP5091<br/>colheita solar"]
         AEM --> GAUGE
-        NPM --> RAILS(("3V0 · 1V8<br/>SD3V0 · 3V3BL"))
+        NPM --> RAILS(("3V0 · SD3V0 · 3V3BL<br/>1V8 montado, sem carga"))
         CELL --> TPS["TPS7A02 1,8 V"] --> VBCKP(("VBCKP"))
     end
 
     subgraph F2["Folha 2 · MCU"]
         MOD["MinewSemi ME54BS13<br/>nRF54LM20A"]
-        SWD["Tag-Connect TC2030-NL"] --- MOD
+        SWD["Tag-Connect TC2030-NL<br/>e J202, Cortex de 10 vias"] --- MOD
         PADS["pads do console<br/>uart20"] --- MOD
     end
 
     subgraph F3["Folha 3 · GNSS"]
-        TXU["TXU0204<br/>3V0 ⇄ 1V8"] --- MAXF["u-blox MAX-F10S<br/>L1 + L5"]
+        MAXF["u-blox MAX-F10S<br/>L1 + L5 · a 3,0 V, sem tradutor"]
         ANT1["antena L1/L5<br/>Unictron H2UJ4U1H2Q0100"] --- MAXF
     end
 
@@ -200,8 +213,9 @@ caso que mata a carga solar.
 
 E quatro contas estavam erradas, com a pior no calor: dentro da caixa não é
 "o carregador mais a perda dos reguladores", é **tudo o que entra pelo cabo
-e não vira química na célula** — 1,89 W, que põem a caixa em **44,7 °C** a
-25 °C de ambiente, empate com o corte do JEITA **antes de qualquer sol**.
+e não vira química na célula** — 1,89 W, que põem a caixa em **45,1 °C** a
+25 °C de ambiente (44,7 na caixa do conceito, de 192 cm²; a proposta de
+62 × 106 × 17 tem 189), empate com o corte do JEITA **antes de qualquer sol**.
 
 ### O que os dry-runs deixaram para trás
 
@@ -221,7 +235,11 @@ esquemático não está pronto para virar layout**.
 
 ### Decisões que são do dono
 
-- [ ] **Ligação da tecla central** — só ao `SHPHLD`, como manda a especificação, ou também a P1.27, como está o devicetree. Resolver muda o firmware ([03](03-netlist.md#interface)).
+- [x] **Ligação da tecla central** — **decidido em 2026-09-26: ao `SHPHLD` e ao P1.27, com o Schottky `D107` isolando o pino do MCU** do nó do PMIC, que sobe até 5,5 V com o cabo. O firmware continua lendo a tecla pelo GPIO ([01](01-esquematico.md#folha-6--interface)).
+- [x] **Alimentação do receptor GNSS** — **decidido em 2026-09-26: 3,0 V, no trilho do MCU**, `VIO_SEL` aberto (opção 1 da tabela 35 do manual de integração). O BUCK1 é de ±5 % e o projeto de 1,8 V pede ±2 %; o LDO de ±1 % custava 35 mW na bateria contra 11 mW da opção 1. Saíram o tradutor de nível e o LDO; o BUCK1 fica montado, sem carga ([02](02-calculos.md#o-receptor-no-3v0-e-o-1v8-sem-carga)).
+- [x] **Corte térmico da carga solar** — **decidido em 2026-09-26: comparador TLV7031 com o divisor do NTC alimentado pelo painel**, saída em OU de diodos no `DIS_SW`. Só o lado quente; o frio está logo abaixo ([07](07-sequencias-e-protecao.md#o-corte-térmico-da-carga-solar)).
+- [ ] **Carga solar abaixo de 0 °C** — o comparador só corta o lado quente, e uma célula de lítio carregada abaixo de zero deposita lítio metálico. Segundo comparador (a outra metade de um TLV7032) com a referência do frio, ou aceitar o risco pelo clima de uso ([01](01-esquematico.md#folha-1--energia)).
+- [ ] **Célula de 60 mm numa placa com 58,1 mm entre as duas antenas** — a célula de 36 × 60 não cabe atrás da placa sem entrar 1,9 mm na área da antena GNSS ou na do módulo, que recusam metal; e o display de 61,8 mm cobre 7,2 mm da antena GNSS. Célula de até 58 mm, ou outra caixa ([04](04-pcb-e-caixa.md#as-duas-sombras-display-e-bateria)).
 - [x] **Qual painel** — **decidido em 2026-09-23: o JDI LPM027M128C**, peça única de 2,7", 400 × 240, MIP de 8 cores e **com luz frontal integrada**, no lugar do par Sharp LS027B7DH01A + filme Azumo. Sem etapa de laminação, mesma resolução, consumo menor e cor. A Sharp continua sendo o **plano B** no mesmo conector. O que a decisão custa: R$ 776 contra US$ 90,06 do par, **sem canal autorizado e sem garantia** ([01](01-esquematico.md#folha-4--display), [19](../docs/19-lista-de-compras.md#display)).
 - [x] **Qual antena** — **resolvida no CAD**: a **Unictron H2UJ4U1H2Q0100**, de 5 × 3 mm, no lugar da TE L000670 de 10,75 mm que não cabia na zona reservada. A zona da antena caiu de 40,5 × 14,5 para 15,0 × 9,35 mm e a peça passou a morar **na placa**, e não fora dela ([04](04-pcb-e-caixa.md#zonas-proibidas)).
 - [ ] **Acertar `docs/15` e `docs/19` ao módulo montado** — este esquemático e o CAD já usam o **MinewSemi ME54BS13**, mas a [avaliação](../docs/15-avaliacao-componentes.md#módulo-do-mcu) e a [lista de compras](../docs/19-lista-de-compras.md#mcu-e-rádio) ainda dão o Fanstel BM20C como escolhido e o ME54BS13 como plano B a US$ 9,00, quando a loja da MinewSemi o vende a **US$ 6,00**. Os dois documentos só mudam com a decisão do dono.
@@ -238,8 +256,10 @@ esquemático não está pronto para virar layout**.
 - [ ] **Espelhamento do mapa de pads do ME54BS13** — a V1.0.0 e a V0.5.0 discordam de qual lado é qual. Conferir **num módulo real** que os `GND` `D0`, `E0` e `F0` ficam do lado do `VDD` (pad 19) antes de mandar fabricar.
 - [ ] **Certificação do ME54BS13** — a ficha V0.5.0 não traz nenhuma e a V1.0.0 não foi lida quanto a isso. O módulo que este esquemático descrevia antes, o Fanstel BM20C, trazia FCC, ISED, TELEC e conformidade europeia; **esse aval não vale para o ME54BS13 até alguém ler a ficha**.
 - [ ] **Tolerância do cristal de 32,768 kHz do módulo** — o ANT+ pede ±50 ppm e essa tolerância **não está levantada para o ME54BS13**. Perguntar à MinewSemi, e medir o LFCLK contra o 1 PPS do receptor no protótipo.
-- [ ] **Um termistor para o AEM10900, não dois** — o do pack pelo conector **ou** o SMD na face de trás, nunca os dois: em paralelo dão 5 kΩ, que o colhedor lê como 44,4 °C contra o corte de 45 °C ([01](01-esquematico.md#folha-1--energia)).
-- [ ] **Indutor do AEM10900** — a tabela 6 e a fórmula da seção 6.7.2 da ficha não batem; 4,7 µH é a escolha e 6,8 µH é o valor das curvas publicadas ([02](02-calculos.md#indutor)).
+- [ ] **Um termistor para o corte térmico, não dois** — o `RT101` da placa é o do comparador; a via 4 do `J102` (`TH_MON`) fica sem montar. Em paralelo dão 5 kΩ e o comparador corta a carga solar com cada NTC a 25,7 °C ([01](01-esquematico.md#folha-1--energia)).
+- [ ] **Pinagem e faixas do TLV7031 na ficha SNOSD54** — o `U105` está em `cad/parts.py` como **não confirmado**: conferir pino a pino, e a faixa de modo comum das entradas, antes de fabricar ([07](07-sequencias-e-protecao.md#o-corte-térmico-da-carga-solar)).
+- [ ] **Indutor do ADP5091** — o `L103` está em 22 µH, Isat ≥ 390 mA, **sem peça escolhida na LCSC** (`cad/parts.py`); o AEM10900 e o seu 4,7 µH saíram em 2026-09-25 ([02](02-calculos.md#colheita-solar)).
+- [ ] **Os seis pinos do ADP5091 sem nó** — `REF` ganhou nó em 2026-09-26 (os divisores do `TERM` e do `SETSD` penduram nele, figura 42 da ficha, e não no `BAT` como estava); ficam abertos `SETPG`, `SETHYST`, `PGOOD` e `LLD` (saídas e ajustes do `PGOOD`, que ninguém lê) e `BACK_UP` (sem célula primária; `SETBK` ao `AGND` como a ficha manda). Conferir na Rev. A se `SETPG`/`SETHYST` abertos são aceitos ([03](03-netlist.md#pinos-de-configuração-amarrados-em-cobre)).
 - [ ] **O filme Azumo na LS027B7DH01A** — só no plano B: ele foi feito para a LS027B7DH01 sem o A ([19](../docs/19-lista-de-compras.md#display)).
 
 ### O que precisa de bancada
@@ -253,7 +273,7 @@ esquemático não está pronto para virar layout**.
 
 - [ ] **Pilha de camadas do fabricante** — sem ela não há largura de trilha, nem 50 Ω da antena, nem 90 Ω do USB ([02](02-calculos.md#corrente-por-trilho-e-largura-de-trilha)).
 - [ ] **Atribuição das quatro vias do conector do filme de luz** — só no plano B: o número de vias é 4, mas **qual contato leva o quê não está em arquivo nenhum do projeto**; sai do desenho 12369-01_T4 da Azumo ([06](06-conectores-e-pontos-de-teste.md#no-plano-b-o-filme-e-o-conector-de-4-vias)).
-- [ ] **Pinagem do conector da bateria, com o fabricante do pack** ([06](06-conectores-e-pontos-de-teste.md)).
+- [ ] **Pinagem do conector da bateria, com o fabricante do pack** — o cobre segue a proposta de [06](06-conectores-e-pontos-de-teste.md#j102--bateria) desde 2026-09-26 (1 e 6 `VBAT+`, 2 e 5 `GND`, 3 `NTC_BAT`, 4 reservada); até então tinha 1, 4 e 6 com os outros soltos, e um cabo feito como o documento pedia punha o positivo no `GND`. Falta o fabricante do pack confirmar.
 - [ ] **Ordem das quatro vias do chicote do painel** — a tabela de [J103](06-conectores-e-pontos-de-teste.md#j103--painel-solar) segue a ordem dos pinos do footprint; confirmar o contato 1 na marca da carcaça `ZHR-4` antes de crimpar.
 
 ## Verificação

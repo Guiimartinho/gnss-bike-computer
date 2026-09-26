@@ -42,7 +42,7 @@ C0402 = "Capacitor_SMD:C_0402_1005Metric"
 C0603 = "Capacitor_SMD:C_0603_1608Metric"
 
 _fp(["R102", "R103", "R104", "R105", "R106", "R107", "R108", "R109", "R110",
-     "R111", "R112", "R401", "R402", "R403", "R404", "R405", "R501", "R502",
+     "R112", "R402", "R124", "R125", "R406", "R407", "R408", "R409", "R403", "R404", "R405", "R501", "R502",
      "R503", "R504", "R505", "R506", "R507", "R508", "R601", "R602", "R603",
      "R604", "R605", "R606", "R607", "R608", "R609", "R610", "R611",
      "R113", "R114", "R115", "C305", "C306",
@@ -57,7 +57,7 @@ _fp("RT101", R0402, "ENCAPSULAMENTO", "NTC 10 k B3380 em 0402")
 _fp(["C110", "C111", "C113", "C114", "C115", "C116", "C118", "C201", "C304",
      "C404", "C503"], C0402, "ENCAPSULAMENTO", "")
 _fp(["C101", "C102", "C103", "C104", "C105", "C106", "C107", "C108", "C109",
-     "C112", "C117", "C210", "C303", "C501", "C502",
+     "C122", "C123", "C124", "C125", "C126", "C129", "C117", "C210", "C303", "C501", "C502",
      "C601", "C602", "C603"], C0603, "ENCAPSULAMENTO", "")
 
 _fp(["L101", "L102"], "Inductor_SMD:L_0805_2012Metric", "ENCAPSULAMENTO",
@@ -66,7 +66,7 @@ _fp("L103", "Inductor_SMD:L_1008_2520Metric", "ENCAPSULAMENTO",
     "TDK VLS252012HBX, 2,5 x 2,0 mm")
 _fp("L301", "Inductor_SMD:L_0402_1005Metric", "ENCAPSULAMENTO", "")
 _fp(["C301", "C302"], C0402, "ENCAPSULAMENTO", "")
-_fp("FB301", "Inductor_SMD:L_0402_1005Metric", "ENCAPSULAMENTO",
+_fp("FB301", "Inductor_SMD:L_0603_1608Metric", "ENCAPSULAMENTO",
     "ferrite Murata BLM15PX601SN1D")
 
 # ---------------------------------------------------------------- CIs
@@ -88,10 +88,17 @@ _fp("J101", "Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12", "EXATO",
     "USB-C de 16 contatos do HRO TYPE-C-31-M-12, que e a peca da lista: o "
     "footprint do KiCad tem o nome da peca. Os nomes de pad batem com o "
     "padrao USB-IF e o S1 da blindagem agora tem pino no esquematico")
-_fp("J102", "Connector_JST:JST_GH_SM06B-GHS-TB_1x06-1MP_P1.25mm_Horizontal",
-    "EXATO", "JST GH de 6 vias, entrada lateral")
+_fp("J102", "Connector_JST:JST_SH_SM06B-SRSS-TB_1x06-1MP_P1.00mm_Horizontal",
+    "EXATO", "JST SH de 6 vias, entrada lateral, 2,9 mm de altura, na FRENTE "
+    "(2026-09-26; era o GH SM06B-GHS-TB no verso). A biblioteca de modelos "
+    "instalada com o KiCad nao traz o dele; o STEP do kicad-packages3D esta "
+    "em cad/3d/real/ (fora do git), e as regras ME4, ME5 e ME6 o medem")
 _fp("J201", "Connector:Tag-Connect_TC2030-IDC-NL_2x03_P1.27mm_Vertical", "EXATO",
     "TC2030-NL, so furos e pads")
+_fp("J202", "Connector_PinHeader_1.27mm:PinHeader_2x05_P1.27mm_Vertical_SMD", "ENCAPSULAMENTO",
+    "conector Cortex Debug de 10 vias, 2 x 5, passo 1,27 mm, SMD, sem carcaca "
+    "(2,5 mm de altura: o blindado de 4,83 nao cabe sob a tampa); o footprint "
+    "e o generico do KiCad, a conferir contra a ficha da peca escolhida")
 _fp("J401", "Connector_FFC-FPC:Hirose_FH12-10S-0.5SH_1x10-1MP_P0.50mm_Horizontal",
     "ENCAPSULAMENTO",
     "10 vias, passo 0,5 mm, CONTATO INFERIOR: a cauda do display entra com "
@@ -126,6 +133,10 @@ _fp("U103", "Package_CSP:LFCSP-24-1EP_4x4mm_P0.5mm_EP2.3x2.3mm", "EXATO",
 _fp("E301", "gnssbike:Antena_Unictron_H2UJ4U1H2Q0100_5x3mm", "GERADO",
     "antena de chip L1+L5 soldada na borda; land pattern do guia de "
     "layout da ficha rev. E")
+_fp("U105", "Package_TO_SOT_SMD:SOT-353_SC-70-5", "ENCAPSULAMENTO",
+    "TLV7031 em SC70-5")
+_fp("D106", "Diode_SMD:D_SOD-323", "ENCAPSULAMENTO", "BAT54WS em SOD-323")
+_fp("D107", "Diode_SMD:D_SOD-323", "ENCAPSULAMENTO", "BAT54WS em SOD-323")
 _fp("D105", "Diode_SMD:D_SOD-523", "ENCAPSULAMENTO",
     "grampo do SRC; a peca ainda nao foi escolhida, o SOD-523 e so o "
     "encapsulamento mais provavel de um TVS pequeno de fuga baixa")
@@ -198,7 +209,6 @@ CORPO: dict[str, tuple[float, float, float]] = {
     "gnssbike:OPT3001_USON-6_2x2mm_P0.65mm": (2.00, 2.00, 0.65),
     "gnssbike:ESD761_X1SON-2_1x0.6mm": (1.00, 0.60, 0.45),
     "gnssbike:TPD4E05U06_USON-10_1x2.5mm_P0.5mm": (1.00, 2.50, 0.55),
-    "gnssbike:TXU0204_WQFN-14_3x2.5mm_P0.5mm": (3.00, 2.50, 0.80),
     # the spring contacts: the two 2.0 x 2.0 pads at 3.0 mm of pitch that
     # contato_mola() draws, so 5.0 mm across the pair. The 1.5 mm of leaf is
     # ALTURA's, and ALTURA says there where it does NOT come from.
@@ -444,9 +454,12 @@ def antena_unictron(nome):
     #
     # Entao a serigrafia marca esse lado: uma seta curta fora do contorno,
     # do lado +x, que e para onde o "U" tem de apontar.
+    # Ao LADO do corpo, nao acima: a peca fica a 0,3 mm da borda de cima da
+    # placa, e a seta acima do corpo saia 0,1 mm da placa (silk_edge_clearance
+    # no DRC) enquanto o "U" ficava inteiro fora dela.
     seta = (
         '\t(fp_poly\n'
-        '\t\t(pts (xy 3.10 -1.90) (xy 4.00 -1.40) (xy 3.10 -0.90))\n'
+        '\t\t(pts (xy 3.10 -0.50) (xy 4.00 0.00) (xy 3.10 0.50))\n'
         '\t\t(stroke (width 0.12) (type solid))\n'
         '\t\t(fill solid)\n'
         '\t\t(layer "F.SilkS")\n'
@@ -454,7 +467,7 @@ def antena_unictron(nome):
         '\t)')
     texto = (
         '\t(fp_text user "U"\n'
-        '\t\t(at 2.20 -2.40 0)\n'
+        '\t\t(at 3.55 1.30 0)\n'
         '\t\t(layer "F.SilkS")\n'
         '\t\t(uuid "' + _uid(nome, "txtU") + '")\n'
         '\t\t(effects (font (size 0.6 0.6) (thickness 0.12)))\n'
@@ -546,11 +559,6 @@ def _gerar():
     GERADOS["gnssbike:BMP585_LGA-8_3.25x3.25mm"] = son(
         "gnssbike:BMP585_LGA-8_3.25x3.25mm", 8, 0.65, 0.5, 0.35, 2.5,
         3.25, 3.25, "Bosch BMP585, LGA-8; land pattern aproximado")
-    # TXU0204 WQFN-14, 3.0 x 2.5 mm, 0.5 mm pitch, thermal pad.
-    GERADOS["gnssbike:TXU0204_WQFN-14_3x2.5mm_P0.5mm"] = son(
-        "gnssbike:TXU0204_WQFN-14_3x2.5mm_P0.5mm", 14, 0.5, 0.45, 0.28, 2.6,
-        3.0, 2.5, "TI TXU0204 em BQA, WQFN-14 com pad termico; "
-                  "land pattern aproximado", ep=("PAD", 1.6, 1.6))
     # MAX form factor, 9,7 x 10,1 mm, 18 pads, 9 per edge, LCC with half
     # vias on the two long edges. It carries EITHER receiver: the MAX-F10S
     # and the MAX-M10S have the same 18 pins, the same names, the same
@@ -608,6 +616,15 @@ ALTURA: dict[str, tuple[float, str]] = {
     "gnssbike:SW_TS-1088R_3.9x3mm": (2.00, "XunPu TS-1088R-02026, desenho "
         "rev A: altura total 2,00, tampa de aco ate 1,50, embolo de o1,80 "
         "saindo 0,50 acima dela. Curso de 0,2 +-0,1"),
+    "Connector_JST:JST_SH_SM06B-SRSS-TB_1x06-1MP_P1.00mm_Horizontal": (2.90,
+        "JST SH de entrada lateral, SM06B-SRSS-TB: 2,9 mm de altura sobre a "
+        "placa (ficha da serie SH da JST) - CONFERIR no desenho da peca"),
+    "Connector_PinHeader_1.27mm:PinHeader_2x05_P1.27mm_Vertical_SMD": (2.50,
+        "altura corrente de um cabecalho SMD de 2 x 5 a 1,27 mm SEM carcaca "
+        "(o modelo do KiCad), 2,5 mm sobre a placa - CONFERIR na ficha da peca "
+        "escolhida. O blindado (Samtec FTSH-105-01-L-DV-K, 4,83) NAO cabe: sob "
+        "a tampa da caixa proposta sobram 3,6 mm da face da placa "
+        "(make_caixa.py, 2026-09-26)"),
     "Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12": (3.26, "altura "
         "corrente de um receptaculo USB-C de montagem em superficie - "
         "CONFERIR na ficha do HRO TYPE-C-31-M-12 (LCSC C165948)"),
@@ -744,13 +761,58 @@ def modelo_de_verdade(base: str) -> str | None:
 # no referencial do MODELO, aplicado depois do giro.
 MODELO_GIRADO = {
     "USB_C_Receptacle_HRO_TYPE-C-31-M-12": (180, 0.0, -1.05),
-    # O JST ZH tem a mesma doenca: como vem, o corpo cai em X -5,97
-    # a +2,75 e uma das duas ilhas de fixacao fica de fora. O F.Fab
-    # do footprint do KiCad poe o corpo em X -4,50..+4,50 e
-    # Y -2,00..+4,00; girado 180 graus o Y bate exatamente, e o X
-    # pede 1,61 mm de volta.
-    "JST_ZH_S4B-ZR-SM4A-TF_1x04-1MP_P1.50mm_Horizontal": (180, -1.61, 0.0),
+    # O JST ZH NAO vem girado, e o 180 que ficou aqui de 2026-09-25 a
+    # 2026-09-26 foi erro meu: a caixa do corpo batia com o F.Fab girada
+    # ou nao (ela e simetrica em X e o desvio em Y foi absorvido pelo
+    # deslocamento), e a ME4 so mede se as ilhas ficam SOB o corpo. O dono
+    # viu no 3D as pernas de solda apontando para a borda e as ilhas para
+    # dentro. A regra ME5 mede isso agora - o que sai do corpo junto da
+    # placa tem de sair pelo lado das ilhas - e o deslocamento abaixo foi
+    # resolvido por medida, nao por conta: com (2,25; -2,00) o corpo bege
+    # do modelo cai em x 27,00..33,00 e y 27,50..36,50 na placa, que e
+    # exatamente o F.Fab do footprint, e os rabichos ficam a 3,3 mm do
+    # centro pelo lado das ilhas.
+    "JST_ZH_S4B-ZR-SM4A-TF_1x04-1MP_P1.50mm_Horizontal": (0, 2.25, -2.0),
 }
+
+# The same model on the BACK face needs another turn AND another offset, and
+# both were measured, not deduced (2026-09-26, J103 standing at the left
+# edge of the back at 270 degrees). kicad-cli mirrors the footprint's pads
+# for the back face but does not mirror the model with them: with the front
+# entry as it is, the body sat 2,14 mm off the F.Fab and its solder legs
+# pointed away from the pads. Exporting the board's GLB with test values
+# and reading the body back gave the facts: turning the model 180 degrees
+# puts the legs on the pads' side (ME5, ME6), and the offset is applied in
+# the footprint's frame whatever the turn - one unit of the model's x moves
+# the body +1 in the board's y, one unit of its y moves it -1 in x, for
+# both turns -, so from the body's centre at (5,76; 77,45) with no offset
+# to the F.Fab's centre (3,90; 75,20) it takes (-2,25; +1,86). Checked on
+# the exported GLB: ME4 finds the six pads under the body (x 1,04..7,54,
+# y 70,7..79,7 against a F.Fab of 0,9..6,9 x 70,7..79,7), ME5 finds the
+# legs on the pads' side, ME6 the axis and the sides right. Whoever puts a
+# model of this table on the other face measures it again the same way.
+MODELO_GIRADO_VERSO = {
+    "JST_ZH_S4B-ZR-SM4A-TF_1x04-1MP_P1.50mm_Horizontal": (180, -2.25, 1.86),
+}
+
+
+def modelo_no_verso(corpo: str) -> str:
+    """The footprint's text for a BACK face instance: the model offset of
+    MODELO_GIRADO_VERSO in place of the front one, when the table has it."""
+    import re as _re
+
+    m = _re.search(r'\(model "([^"]+)"', corpo)
+    if not m:
+        return corpo
+    base = m.group(1).rsplit("/", 1)[-1].rsplit(".", 1)[0]
+    if base not in MODELO_GIRADO_VERSO:
+        return corpo
+    giro, ox, oy = MODELO_GIRADO_VERSO[base]
+    inicio = m.start()
+    trecho = corpo[inicio:]
+    trecho = _re.sub(r"\(offset\s*\(xyz [^)]*\)\s*\)", "(offset (xyz %g %g 0))" % (ox, oy), trecho, count=1)
+    trecho = _re.sub(r"\(rotate\s*\(xyz [^)]*\)\s*\)", "(rotate (xyz 0 0 %d))" % giro, trecho, count=1)
+    return corpo[:inicio] + trecho
 
 
 def linha_de_modelo(rel: str) -> str:
@@ -1335,10 +1397,6 @@ PACOTE: dict[str, tuple] = {
         (1.00, 1.00, 0.48, 0.03, None, 0.28, 0.30, 0.65,
          "TI SBVS277C, desenho do DQN0004A: 1,05/0,95 x 1,05/0,95, "
          "altura 0,48 +0,12/-0,10"),
-    "gnssbike:TXU0204_WQFN-14_3x2.5mm_P0.5mm":
-        (3.00, 2.50, 0.75, 0.03, (1.50, 1.00), 0.25, 0.40, 0.50,
-         "TI SCES936A, desenho do BQA0014A: 3,1/2,9 x 2,6/2,4, altura 0,8/0,7, "
-         "pad exposto 1,6/1,4 x 1,1/0,9"),
     "gnssbike:OPT3001_USON-6_2x2mm_P0.65mm":
         (2.00, 2.00, 0.60, 0.03, (0.65, 1.35), 0.30, 0.30, 0.65,
          "TI SBOS681B, desenho do DNP0006A: 2,1/1,9 quadrado, altura 0,65/0,55, "
@@ -1452,10 +1510,16 @@ PACOTE: dict[str, tuple] = {
          "0,83, A1 0,13, e 0,50 BSC nos dois eixos; os oito pads laterais sao "
          "0,475 x 0,250 e os seis de topo 0,250 x 0,475, recuados L1 0,100 da "
          "aresta (metallized pad detail, mesma pagina)"),
+    # (w, h) are in the FOOTPRINT's frame: w along its x, h along its y. The
+    # datasheet's D (1,60) runs along the row of pins, and in KiCad's SOT-523
+    # footprint the pins are spaced along Y (pads at x = -0,55 for 1 and 2,
+    # x = +0,55 for 3): D is the y size. This entry had (1,60; 0,80) and the
+    # four MOSFETs were drawn lying across their pads, 90 degrees off - the
+    # owner saw it in the 3D on 2026-09-26, and rule ME6 measures it now.
     "Package_TO_SOT_SMD:SOT-523":
-        (1.60, 0.80, 0.75, 0.05, None, 0.22, 0.33, 0.50,
-         "Diodes DS31783 Rev.8, SOT523: D 1,60, E1 0,80, A2 0,75, A1 0,05, "
-         "b 0,22, e 0,50 BSC"),
+        (0.80, 1.60, 0.75, 0.05, None, 0.22, 0.33, 0.50,
+         "Diodes DS31783 Rev.8, SOT523: E1 0,80 (x), D 1,60 (y, ao longo da "
+         "fileira de pinos), A2 0,75, A1 0,05, b 0,22, e 0,50 BSC"),
 }
 
 
@@ -1651,7 +1715,6 @@ _fp("U505", "gnssbike:OPT3001_USON-6_2x2mm_P0.65mm", "GERADO", "")
 _fp("D101", "gnssbike:ESD761_X1SON-2_1x0.6mm", "GERADO", "")
 _fp("D102", "gnssbike:TPD4E05U06_USON-10_1x2.5mm_P0.5mm", "GERADO", "")
 _fp("U502", "gnssbike:BMP585_LGA-8_3.25x3.25mm", "GERADO", "")
-_fp("U302", "gnssbike:TXU0204_WQFN-14_3x2.5mm_P0.5mm", "GERADO", "")
 _fp("U301", "gnssbike:u-blox_MAX_LCC-18_9.7x10.1mm", "GERADO", "")
 _fp("D601", "gnssbike:LED_RGB_3528_3.5x2.8mm", "GERADO",
     "TUOZHAN S4-3528RGBTA-A: o sufixo do APTF1616 do projeto nao existe "

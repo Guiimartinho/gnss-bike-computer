@@ -42,7 +42,7 @@ flowchart LR
     end
     subgraph GNSSB["GNSS"]
         ANT["antena L1/L5"] --> GMOD["u-blox MAX-F10S<br/>ou MAX-M10N-10B"]
-        GMOD --- XLAT["TXU0204<br/>1,8 V para 3,0 V"]
+        GMOD --- DIRETO["sem tradutor: receptor a 3,0 V<br/>no mesmo trilho do MCU (2026-09-26)"]
     end
     subgraph HMI["Interface"]
         LCD["Sharp LS027B7DH01A<br/>com luz frontal, ou JDI"]
@@ -91,8 +91,8 @@ flowchart TD
     AEM -->|"STO"| VBAT
     VBAT --> LDO["TPS7A02 1,8 V"]
     LDO --> VBCKP["V_BCKP do GNSS"]
-    PMIC -->|"BUCK2 3,0 V"| R3V0["3V0: BM20C, display, sensores,<br/>buzzer, lado A do TXU0204"]
-    PMIC -->|"BUCK1 1,8 V"| R1V8["1V8: GNSS VCC e V_IO,<br/>lado B do TXU0204"]
+    PMIC -->|"BUCK2 3,0 V"| R3V0["3V0: BM20C, display, sensores,<br/>buzzer e, por ferrite, o GNSS (VCC e V_IO)"]
+    PMIC -->|"BUCK1 1,8 V"| R1V8["1V8: montado, sem carga<br/>desde 2026-09-26; o firmware o desliga"]
     R3V0 --> LSW["chave LDSW1 do nPM1300"]
     LSW --> RSD["SD3V0: microSD e flash NOR"]
     PMIC -->|"VSYS"| LDO2["LDSW2 do nPM1300<br/>como LDO de 3,3 V"]
@@ -106,8 +106,8 @@ flowchart TD
 | VBUS | USB-C | 4,0 a 5,5 V (o nPM1300 tolera 22 V em transitório) | limite de entrada do nPM1300, de 100 mA a 1,5 A | nPM1300; pela saída VBUSOUT, o VBUS do BM20C e o divisor do DIS_STO_CH do AEM10900 | o USB do nRF54LM20A exige 5 V no pino VBUS além do VDD; a VBUSOUT tem proteção contra sobretensão e subtensão |
 | VBAT | célula, através do MAX17262 | 3,0 a 4,2 V | proteção do pack | VBAT do nPM1300, STO do AEM10900, entrada do TPS7A02 | nenhuma carga da aplicação direto no VBAT: o datasheet do nPM1300 proíbe |
 | VSYS | saída do power path do nPM1300 | VBAT; com USB, a tensão do VBUS, até 5,5 V (o limitador de entrada não regula o VSYS) | limite de entrada do VBUS | BUCK1, BUCK2, LDSW2, anodos do LED RGB e do LED de carga | nenhuma fonte externa no VSYS: o datasheet proíbe |
-| 3V0 | BUCK2 do nPM1300 | 3,0 V | 200 mA | BM20C, display (VDD e VDDA), sensores, buzzer, I2C_VDD do AEM10900, lado A do TXU0204, entrada da LDSW1 | tensão de partida pelo RVSET2 de 150 kΩ (tolerância de 5 % no máximo): a tabela do VSET1 não tem 3,0 V, a do VSET2 tem (tabelas 18 e 19 do datasheet); o MCU depende dele para ligar |
-| 1V8 | BUCK1 do nPM1300 | 1,8 V | 200 mA | VCC e V_IO do módulo GNSS, lado B do TXU0204 | filtro LC (ferrite e 10 µF) junto do módulo; ripple abaixo de 50 mV; partida pelo RVSET1 de 47 kΩ; o devicetree trava o BUCK1 em 1,8 V, porque o V_IO do módulo tem máximo absoluto de 1,98 V e o registrador aceitaria até 3,3 V; a rampa do V_IO fica entre 25 e 35.000 µs/V; o firmware manda `UBX-RXM-PMREQ` antes de desligar o trilho |
+| 3V0 | BUCK2 do nPM1300 | 3,0 V | 200 mA | BM20C, display (VDD e VDDA), sensores, buzzer, I2C_VDD do AEM10900, entrada da LDSW1 e, **desde 2026-09-26, VCC e V_IO do módulo GNSS** pelo jumper JP103 e um ferrite de 150 mΩ com 10 µF (nós `3V0_BLOCO` e `3V0_GNSS`) | tensão de partida pelo RVSET2 de 150 kΩ (tolerância de 5 % no máximo): a tabela do VSET1 não tem 3,0 V, a do VSET2 tem (tabelas 18 e 19 do datasheet); o MCU depende dele para ligar; com o receptor, 47 mA em regime e 123 mA no pico de partida ([02](../hardware_gnssbike/02-calculos.md#corrente-de-cada-trilho)); a rampa do V_IO fica entre 25 e 35.000 µs/V e a partida suave do buck cumpre |
+| 1V8 | BUCK1 do nPM1300 | 1,8 V | 200 mA | **nada, desde 2026-09-26**: o receptor passou ao 3V0 (opção 1 da tabela 35 do manual de integração, VIO_SEL aberto), porque o BUCK1 é de ±5 % e o projeto de 1,8 V pede ±2 % | montado como na configuração 1 do nPM1300 (indutor, capacitores e RVSET1 de 47 kΩ ficam: nenhum VSET pode ficar aberto); o firmware o desliga |
 | SD3V0 | chave LDSW1 do nPM1300, a partir do 3V0 | 3,0 V | 100 mA | microSD e flash NOR | 22 µF junto do soquete; a NOR gasta dezenas de miliampères apagando e microampères em deep power-down, e fica atrás da chave junto do cartão |
 | 3V3BL | LDSW2 do nPM1300 como LDO, a partir do VSYS | 3,3 V | 50 mA | luz do display: 10 mA no filme da Sharp, 16 mA no JDI | ligado só com a luz acesa; entrada de 2,6 V ao VSYS; com o VBAT abaixo de cerca de 3,4 V o LDO sai de regulação e a luz enfraquece; a corrente depende da tensão do LED, medida na amostra |
 | VBCKP | TPS7A02, a partir do VBAT | 1,8 V | 200 mA, 25 nA de consumo próprio | V_BCKP do GNSS (28 µA em backup de hardware no F10S) | mantém efemérides e relógio do GNSS em ship mode, para partidas a quente |
@@ -144,7 +144,7 @@ Pico estimado no 3V0: rádio a +8 dBm (10,9 mA), CPU (2,6 mA), sensores (cerca d
 | Bomba de carga de 5 V | TI REG710NA-5/3K (a mesma da V3) | SOT-23-6 | 30 mA, 65 µA parado; 0,22 µF de bombeamento e 10 µF na entrada e na saída, como na V3; EN num pino do MCU | — | validado |
 | GNSS | u-blox MAX-F10S (o MAX-M10N-10B no mesmo footprint) | LCC de 10,1 × 9,7 × 2,5 mm | L1 **e L5**: GPS, Galileo, BeiDou, QZSS, NavIC e SBAS; 46,8 mW a 1,8 V em rastreio (16 mA no VCC e 3 mA no V_IO a 3,0 V), sem modo econômico; SAW, LNA e SAW, com figura de ruído de 3,5 dB em L1 e 3,0 dB em L5; ROM; MSL 4; ver [GNSS](#gnss) | driver próprio do port, `u-blox,max-f10` | recomendado |
 | Antena GNSS | TE L000670-01 (protótipo) | chip de 14 × 10,75 × 1 mm, na borda | L1 e L5 numa alimentação: 66 % e 56 % de eficiência num plano de 90 × 41 mm; a eficiência cai com planos menores (gráfico da ficha), e a placa tem 55 mm de largura | — | recomendado para o protótipo; medir na placa de avaliação L000670-80 |
-| Tradutor de nível | TI TXU0204 | VQFN-14 de 3,0 × 2,5 mm no protótipo (há UQFN-12 de 2,0 × 1,7 mm) | 4 canais de direção fixa, 2 em cada sentido, 1,1 a 5,5 V de cada lado, 2,5 µA; saídas em alta impedância com qualquer VCC abaixo de 100 mV; pull-down interno de 5 MΩ nas entradas | — | recomendado |
+| Tradutor de nível | TI TXU0204 | VQFN-14 de 3,0 × 2,5 mm | **saiu em 2026-09-26**: com o receptor a 3,0 V, no trilho do MCU, não há domínio a traduzir | — | retirado |
 | PMIC | Nordic nPM1300 | QFN32 de 5 × 5 mm | carregador de 32 a 800 mA, 2 bucks de 200 mA, 2 LDO de 50 mA ou chaves de 100 mA, ship mode de 370 nA, VBUSOUT, detecção USB-C | `nordic,npm1300*` | recomendado |
 | Indutores dos bucks | Murata DFE201610E-2R2M=P2 (ou TDK TFM201610ALM-2R2MTAA), 2,2 µH | 2,0 × 1,6 × 1,0 mm (0806) | 140 mΩ e 2,4 A de saturação; a lista de referência do nPM1300 pede DCR abaixo de 400 mΩ e mais de 350 mA de saturação | — | validado |
 | LED de carga | Kingbright APT1608SURCK no LED1 do nPM1300, anodo no VSYS | 0603 | 5 mA, 1,82 V; o LED1 sai de fábrica como indicador de carga e acende sem firmware | — | validado |
@@ -174,11 +174,11 @@ Os números desta seção vêm da ficha do **MAX-F10S**, UBXDOC-963802114-12732 
 
 - **Módulo:** u-blox MAX-F10S, L1 e L5 ao mesmo tempo, sempre em potência plena: a firmware do F10 não tem o grupo `CFG-PM`, ou seja, não existe LEAP nem economia de rastreio, e a peça não faz banda única. O MAX-M10N-10B (só L1, com LEAP) é pino a pino e fica como alternativa econômica ([15](15-avaliacao-componentes.md#gnss)).
 - **Footprint único:** o MAX-F10S, o MAX-M10N e o MAX-M10S têm a mesma pinagem de alimentação, UART, RESET_N, EXTINT, TIMEPULSE, VIO_SEL e RF_IN (tabela 10 de cada ficha). Os pinos 16 e 17 do F10S são SDA e SCL, mas a seção 5 da ficha diz que o receptor só se comunica pela UART; no M10N eles são reservados. A placa não usa nenhum dos dois.
-- **Alimentação:** VCC de 1,76 a 3,6 V; V_IO nunca acima do VCC (com VIO_SEL em GND, de 1,76 a 1,98 V). A placa usa VCC e V_IO em 1,8 V, pelo BUCK1, com o TXU0204 entre os domínios de 1,8 V e 3,0 V: o F10S gasta 46,8 mW a 1,8 V contra 57 mW a 3,0 V (o M10N em LEAP, 13,7 contra 16,8 mW). Com o VIO_SEL em GND, o V_IO e os pinos digitais têm máximo absoluto de 1,98 V: o devicetree trava o BUCK1 em 1,8 V. A rampa do V_IO fica entre 25 e 35.000 µs/V (máximo absoluto, tabela 12). Alternativa sem tradutor: módulo inteiro em 3,0 V, pelo BUCK2, com o VIO_SEL aberto.
+- **Alimentação:** VCC de 1,76 a 3,6 V; V_IO nunca acima do VCC; com VIO_SEL em GND o V_IO é de 1,76 a 1,98 V, aberto é de 2,7 a 3,6 V (manual de integração UBXDOC-963802114-12892, 4.1.2 e tabela 35). **Desde 2026-09-26 a placa usa VCC e V_IO em 3,0 V, pelo BUCK2, com o VIO_SEL aberto** (opção 1 da tabela 35), sem tradutor de nível. Até esse dia era 1,8 V pelo BUCK1, porque o F10S gasta 46,8 mW a 1,8 V contra 57 mW a 3,0 V (o M10N em LEAP, 13,7 contra 16,8 mW); o que decidiu foi a tolerância: o BUCK1 é de ±5 % e a tabela 35 pede 1,8 V ±2 % para esse projeto, e um LDO de ±1 % do 3V0 custaria 35 mW na bateria contra os 11 mW da opção 1 ([02](../hardware_gnssbike/02-calculos.md#o-receptor-no-3v0-e-o-1v8-sem-carga)). A rampa do V_IO fica entre 25 e 35.000 µs/V (máximo absoluto, tabela 12).
 - **Corrente:** 26 mA no 1V8 em rastreio e 34 mA na aquisição (16 e 21 mA no VCC mais 3 mA no V_IO a 3,0 V, tabelas 15 e 16), contra 7,6 mA do M10N em LEAP; pico de até 100 mA na partida, nos dois. O BUCK1 entrega 200 mA.
 - **Desligar:** com V_IO em 1,8 V e o backup alimentado, a ficha pede desligar o V_IO 100 ms antes do VCC ou mandar `UBX-RXM-PMREQ` antes (seção 4.2 da ficha do F10S, com o mesmo texto da do M10N). Como os dois saem do BUCK1, o firmware manda o `UBX-RXM-PMREQ` (com backup e force, acordando pela linha RX) antes de desligar o trilho ou de entrar em ship mode; o driver corta o trilho sozinho quando o nó do receptor tem `vcc-supply` ([05](05-arquitetura-zephyr.md#receptor-gnss)).
 - **Configuração:** por `UBX-CFG-VALSET` nas camadas RAM e BBR, porque o standby por software apaga a RAM do receptor, inclusive a configuração; com o V_BCKP segurando a BBR, ele volta configurado. As chaves da UART, da taxa, do modelo dinâmico e da saída de mensagens têm os mesmos IDs nas duas firmwares. **Sem `CFG-PM`:** no F10S não há modo de energia para configurar. O grupo `CFG-SIGNAL` ganha `GPS_L5_ENA`, `GAL_E5A_ENA`, `BDS_B2A_ENA`, `QZSS_L5_ENA` e o NavIC, e toda escrita nele reinicia o subsistema GNSS: o driver manda as nove chaves num quadro só e espera 0,5 s depois do reconhecimento (seção 4.9.20).
-- **Sinais:** RXD e EXTINT do MCU para o módulo; TXD e TIMEPULSE do módulo para o MCU, pelos quatro canais do TXU0204, com o OE fixo no VCCA. O RESET_N (ativo baixo, pelo menos 1 ms) vem de um pino do MCU em dreno aberto, que só puxa para baixo e dispensa o tradutor. O TIMEPULSE divide o pino com o SAFEBOOT_N por 1 kΩ interno, e o módulo entra em safeboot se o pino estiver baixo na partida: nada de pull-down externo nessa linha. Sem LEAP, o TIMEPULSE do F10S não tem a limitação da SPG 5.30 e serve para medir o LFCLK do BM20C.
+- **Sinais:** RXD e EXTINT do MCU para o módulo; TXD e TIMEPULSE do módulo para o MCU, de pino a pino, no mesmo domínio de 3,0 V. O RESET_N (ativo baixo, pelo menos 1 ms) vem de um pino do MCU em dreno aberto, que só puxa para baixo; o pull-up é interno ao módulo. O TIMEPULSE divide o pino com o SAFEBOOT_N por 1 kΩ interno, e o módulo entra em safeboot se o pino estiver baixo na partida: nada de pull-down externo nessa linha. Sem LEAP, o TIMEPULSE do F10S não tem a limitação da SPG 5.30 e serve para medir o LFCLK do BM20C.
 - **Backup:** V_BCKP de 1,65 a 3,6 V; **28 µA** em backup de hardware (tabela 17, V_BCKP em 3,3 V) e cerca de 3 µA em operação normal, pelo TPS7A02. Em standby de software, 46 µA no V_IO a 3,3 V e 120 nA no VCC. Sem flash no módulo, as efémerides só sobrevivem na BBR: o V_BCKP deixa de ser conforto e vira o que segura a partida a quente.
 - **Entrada de RF:** o MAX-F10S tem SAW, LNA e SAW internos e dispensa filtro externo, com figura de ruído de 3,5 dB em L1 e 3,0 dB em L5 (tabela 13); um MAX-M10S ou um MAX-M10N-00B (LNA antes do SAW) pediria um SAW externo. **Atenção:** a tabela 12 do F10S dá um único máximo absoluto de **0 dBm** no RF_IN, sem a exceção de +15 dBm fora da banda que a ficha do M10N-10B traz. Com o BLE e o ANT+ a +8 dBm a centímetros da antena, quem tem de manter o nível abaixo de 0 dBm é o isolamento entre as duas antenas: meça o S21 em 2,44 GHz no protótipo **antes de ligar o rádio na potência cheia**, e se ficar apertado, baixe a potência de transmissão ou ponha um filtro de rejeição de 2,4 GHz na entrada. O bloqueio (queda de C/N0 com o rádio transmitindo) se mede junto.
 - **Antena:** a TE L000670 na borda de cima da placa, com área livre em todas as camadas e rede de casamento em π. Com o F10S, L5 deixa de ser opção: a antena precisa casar nas duas bandas desde o protótipo, e a eficiência dela em L5 é de 56 % contra 66 % em L1 num plano de 90 × 41 mm, enquanto a placa tem 55 mm. Numa segunda versão, elementos de L1 e L5 na parede da caixa com contatos de mola e um diplexador na RF_IN, como no [desenho](13-placa-nova.md#como-fica-o-aparelho) e nos produtos do mercado ([13](13-placa-nova.md#antena-gnss-dentro-da-caixa)).
@@ -221,11 +221,10 @@ Pinos de configuração e ligações que a validação ([19](19-lista-de-compras
 | MAX17262 | TH | BATT | temperatura pelo sensor interno; o firmware grava ETHRM = 0 |
 | MAX17262 | REG | 0,47 µF ao GND | regulador interno de 1,8 V, sem carga |
 | MAX17262 | ALRT | pull-up de 10 kΩ, para o MCU | dreno aberto |
-| MAX-F10S | VIO_SEL | GND | V_IO de 1,8 V |
+| MAX-F10S | VIO_SEL | **aberto** | V_IO de 2,7 a 3,6 V (opção 1 da tabela 35 do manual de integração); no GND o máximo absoluto do V_IO cai para 1,98 V e o 3V0 queima o módulo |
 | MAX-F10S | TIMEPULSE (SAFEBOOT_N) | sem pull-down | nível baixo na partida põe o módulo em safeboot |
 | MAX-F10S | RESET_N | pino do MCU em dreno aberto | pull-up interno do módulo |
 | MAX-F10S | V_BCKP | saída do TPS7A02 | efemérides e relógio em ship mode; sem flash no módulo, é o que segura a partida a quente |
-| TXU0204 | OE | VCCA | o Ioff-float isola o módulo desligado |
 | TPS7A02 | EN | IN | sempre ligado |
 | BMI270 ou LSM6DSV16X | 1 (SDO ou SA0) | GND | 0x68 no BMI270, 0x6A no LSM6DSV16X |
 | BMI270 ou LSM6DSV16X | 2 e 3 | VDDIO | a Bosch proíbe GND |
@@ -287,7 +286,7 @@ Duas regras de pino do nRF54LM20A (ficha 4539_001 v1.0) mandam no mapa:
 
 ## Placa de circuito impresso
 
-- **Contorno:** **34 × 90 mm**, cantos com raio de 4 mm. O tamanho sai do **circuito**, não da caixa: quem manda é a 7.2 da ficha do ME54BS13, que pede 50 mm entre os dois módulos de rádio desta placa. A conta está em [`hardware_gnssbike/04-pcb-e-caixa.md`](../hardware_gnssbike/04-pcb-e-caixa.md#de-onde-saem-os-34--90). A caixa de 62 × 104 mm segue tendo o tamanho que o display, a bateria e a mão pedem, e a placa cabe nela com folga de sobra. Origem no canto de cima à esquerda, com a placa vista pela frente.
+- **Contorno:** **34 × 95 mm** (90 até 2026-09-26: os 5 mm a mais vieram das teclas espalhadas na largura do display, que a área da antena do módulo de rádio só deixa passar com o módulo 5 mm mais baixo), cantos com raio de 4 mm. O tamanho sai do **circuito**, não da caixa: quem manda é a 7.2 da ficha do ME54BS13, que pede 50 mm entre os dois módulos de rádio desta placa. A conta está em [`hardware_gnssbike/04-pcb-e-caixa.md`](../hardware_gnssbike/04-pcb-e-caixa.md#de-onde-saem-os-34--90). A caixa de 62 × 106 mm (104 no conceito; 2 mm a mais para o berço da antena GNSS externa) segue tendo o tamanho que o display, a bateria e a mão pedem, e a placa cabe nela com folga de sobra. Origem no canto de cima à esquerda, com a placa vista pela frente.
 - **Espessura e camadas:** 0,8 mm, 4 camadas, controle de impedância; o desenho do receptáculo USB-C da Molex recomenda 0,8 mm.
 
 | Camada | Uso |
@@ -304,7 +303,7 @@ As espessuras de dielétrico saem com o fabricante para 90 Ω diferencial no USB
 | Zona | x (mm) | y (mm) | Conteúdo | Restrição |
 |---|---|---|---|---|
 | Antena GNSS | 0 a 55 | 0 a 8 | TE L000670 na borda de cima (protótipo) ou os contatos dos elementos na parede | sem cobre sob a antena em todas as camadas; nada metálico mais alto que 3 mm num raio de 10 mm |
-| GNSS | 20 a 35 | 2 a 16 | módulo MAX e filtro do 1V8 | sob o display: altura até 2,6 mm (o módulo tem 2,5 mm) |
+| GNSS | 20 a 35 | 2 a 16 | módulo MAX e filtro do 1V8 | sob o display: altura até 3,0 mm (o módulo tem 2,7 mm no máximo, cota C da ficha; o teto era 2,6 até 2026-09-26) |
 | LED | 50 a 53 | 0 a 3 | LED RGB sob o furo de luz | trilhas curtas, fora da área livre da antena |
 | IMU e magnetômetro | 8 a 15 | 20 a 23 | BMI270 e MMC5633NJL | longe de correntes altas e de ímãs |
 | FPC do display | 3,7 a 7,1 | 29,5 a 39,5 | Hirose FH28 na borda esquerda | longe das antenas |
@@ -317,9 +316,9 @@ As espessuras de dielétrico saem com o fabricante para 90 Ω diferencial no USB
 | USB-C | 23 a 32 | 94 a 97 | receptáculo IPX8 na borda de baixo, com o anel contra a parede | TVS junto do conector |
 | Luz ambiente | 0,4 a 2,4 | 88 a 90 | OPT3001 sob a janela de baixo | — |
 
-- **Faces:** na face da frente, sob o display, só peças de até 2,6 mm; na face de trás, na área da bateria (x 9,5 a 45,5, y 22,5 a 82,5), só peças de até 1,2 mm, com fita isolante sobre elas.
-- **Fixação:** 4 furos M2 nos cantos, alinhados aos parafusos da traseira; o furo de baixo à direita sai da área livre da antena do BM20C.
-- **Conectores:** display (FPC de 10 vias) na borda esquerda, com o do filme de luz (4 vias) ao lado; bateria (JST GH de 6 vias) na face de trás, ao lado da célula; painéis em três grupos (frente, esquerda, direita), por pads de mola ou FPC; USB-C na borda de baixo; microSD na borda esquerda, só no protótipo.
+- **Faces:** na face da frente, sob o display, só peças de até 3,0 mm (2,6 até 2026-09-26; o receptor tem 2,7 no máximo) e, fora dele, até 3,9 (a tampa da caixa fica a 4,2 da face da placa); na face de trás, na área da bateria (y 9,9 a 69,9 da placa de hoje), só peças de até 1,2 mm, com fita isolante sobre elas.
+- **Fixação:** 2 furos M2, em (3,2; 7,0) e (14,4; 91,7) da placa de hoje, com bossa na caixa nos dois (nenhum sobre a célula) e quatro pilares nos cantos; a conta de [02](../hardware_gnssbike/02-calculos.md#quantos-parafusos-a-placa-precisa).
+- **Conectores:** display (FPC de 10 vias) na borda esquerda, com o do filme de luz (4 vias) ao lado; bateria (JST SH de 6 vias, `J102`) **na frente**, em pé entre o SWD e o USB-C; painéis em três grupos (frente, esquerda, direita) num JST ZH de 4 vias (`J103`) **no verso**, em pé na borda esquerda; USB-C na borda de baixo; a memória é soldada (sem microSD).
 
 ## Empilhamento mecânico
 
@@ -351,7 +350,7 @@ Da frente para trás, na área do display:
 ## Teste e bring-up
 
 - **Pontos de teste:** VBUS, VBAT, VSYS, 3V0, 1V8, SD3V0, 3V3BL, 5V0, VBCKP e GND, com jumper de 0 Ω em série nos trilhos de cada bloco (BM20C, GNSS, display, sensores, armazenamento) para medir corrente com o PPK2.
-- **Depuração:** SWD (SWDIO em J3, SWDCLK em K3, reset em G2, VDD e GND) num footprint Tag-Connect TC2030-NL, para o cabo TC2030-CTX-NL (conector Cortex de 10 vias do J-Link) preso pelo TC2030-CLIP, e console no `uart20` (P1.00 e P1.31), em dois pads.
+- **Depuração:** SWD (SWDIO em J3, SWDCLK em K3, reset em G2, VDD e GND) num footprint Tag-Connect TC2030-NL, para o cabo TC2030-CTX-NL (conector Cortex de 10 vias do J-Link) preso pelo TC2030-CLIP, **e**, desde 2026-09-26 a pedido do dono, num conector Cortex Debug de 10 vias (`J202`, 2 × 5 a 1,27 mm, SMD) nas mesmas redes, onde o adaptador de 9 vias do J-Link encaixa sem clipe ([hardware_gnssbike/06](../hardware_gnssbike/06-conectores-e-pontos-de-teste.md#j202--depuração-swd-o-conector)); console no `uart20` (P1.00 e P1.31), em dois pads.
 
 ```mermaid
 flowchart LR
