@@ -26,8 +26,9 @@ roteadas**, em KiCad 8, gerados a partir dos documentos de
 | `gnssbike-3d-frente.png`, `-tras.png`, `-angulo.png` | a placa em 3D |
 | `gnssbike-3d-montagem.png` | a pilha aberta: display em cima, placa, célula embaixo |
 | `gnssbike-montagem.pdf` | **o desenho de montagem**: cada peça com o seu designador, frente e verso |
-| `gnssbike-caixa.pdf` | **a placa dentro da caixa** do conceito (62 × 104 × 19): frente com a tampa, por dentro, corte pelo comprimento, e a página das premissas e do que não bate (`make_caixa.py`, 2026-09-26) |
-| `gnssbike-3d-caixa-aberta.png`, `gnssbike-3d-caixa-frente.png` | a caixa em 3D com a placa, a célula e o display dentro: a concha aberta vista do lado do USB-C, e a frente com a tampa (janela e furos das teclas) |
+| `gnssbike-caixa.pdf` | **a proposta de caixa** em volta da placa (62 × 104 × 17): frente com a tampa, por dentro, cortes A-A e B-B, a tecla e o bolso de um módulo, e a página das premissas, do que não bate e das peças (`make_caixa.py`, 2026-09-26; [04](../04-pcb-e-caixa.md#a-placa-de-hoje-dentro-da-caixa-do-conceito)) |
+| `gnssbike-3d-caixa-aberta.png`, `-frente.png`, `-explodida.png` | a caixa em 3D com a placa, a célula e o display dentro: a concha aberta vista do lado do USB-C, a frente com a tampa, e a vista explodida com a tampa, as teclas, os módulos e as coberturas |
+| `caixa-concha.stl`, `caixa-tampa.stl`, `caixa-tecla-1/2/3.stl`, `caixa-membrana-teclas.stl`, `caixa-cobertura-faceta.stl`, `caixa-cobertura-chanfro.stl` | as peças da proposta para a primeira prova impressa: sopas de triângulos de caixas sobrepostas (o fatiador as une), não sólidos de CAD |
 
 ## O esquemático
 

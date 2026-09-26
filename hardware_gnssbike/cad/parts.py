@@ -464,6 +464,33 @@ add("J201", "Tag-Connect TC2030-NL", [
     note="so furos e pads. Pinagem da ficha TC2030-CTX_1.pdf da Tag-Connect: "
          "1 VCC, 2 SWDIO/TMS, 3 nRESET, 4 SWCLK/TCK, 5 GND, 6 SWO/TDO")
 
+# The plug-in SWD connector the owner asked for on 2026-09-26, IN ADDITION to
+# the Tag-Connect pads: the 10-pin, 2 x 5, 1,27 mm "Cortex Debug Connector"
+# that the J-Link's 9-pin Cortex-M adapter (or any 10-way 1,27 mm IDC lead)
+# mates with. Same nets as J201; only one of the two is used at a time.
+# Pinout is ARM's, the one every Cortex-M board and SEGGER's adapter use:
+# 1 VTref, 2 SWDIO/TMS, 3 GND, 4 SWDCLK/TCK, 5 GND, 6 SWO/TDO, 7 KEY (pin
+# removed on the shrouded part), 8 TDI/NC, 9 GNDDetect, 10 nRESET. The part
+# is still to be chosen (Samtec FTSH-105-01-L-DV-K or an equivalent shrouded
+# 2 x 5 1,27 mm SMD header); the footprint is KiCad's generic one.
+# SWDCLK and nRESET are `passive` here, not `output` as on J201: the two
+# connectors share the nets, and two `output` pins on one net is an ERC
+# error (pin_to_pin). J201 keeps the `output` that tells the ERC the net has
+# a driver; this one is electrically the same thing in parallel.
+add("J202", "SWD 2x5 1,27 mm", [
+    (1, "VTref", "power_in", L), (2, "SWDIO", "bidirectional", R),
+    (3, "GND1", "power_in", L), (4, "SWDCLK", "passive", R),
+    (5, "GND2", "power_in", L), (6, "SWO", "no_connect", R),
+    (7, "KEY", "no_connect", L), (8, "TDI", "no_connect", R),
+    (9, "GNDDetect", "no_connect", L), (10, "nRESET", "passive", R),
+], confirmed=True,
+    note="conector Cortex Debug de 10 vias, 2 x 5, passo 1,27 mm, SMD, para o "
+         "adaptador Cortex-M de 9 vias do J-Link; pinagem da ARM (Cortex Debug "
+         "Connector): 1 VTref, 2 SWDIO, 3 GND, 4 SWDCLK, 5 GND, 6 SWO, 7 KEY, "
+         "8 TDI, 9 GNDDetect, 10 nRESET. Peca a escolher, SEM carcaca (2,5 mm "
+         "sobre a placa): o blindado de 4,83 mm nao cabe sob a tampa da caixa "
+         "proposta, que deixa 3,6 mm da face da placa (make_caixa.py)")
+
 # The sixteen test points of 06-conectores-e-pontos-de-teste.md. Eleven of
 # the twelve on the power sheet were missing from the board entirely - only
 # the three of the console sheet existed - and a rail you cannot put a probe

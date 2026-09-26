@@ -86,7 +86,7 @@ flowchart TB
 
     subgraph F2["Folha 2 · MCU"]
         MOD["MinewSemi ME54BS13<br/>nRF54LM20A"]
-        SWD["Tag-Connect TC2030-NL"] --- MOD
+        SWD["Tag-Connect TC2030-NL<br/>e J202, Cortex de 10 vias"] --- MOD
         PADS["pads do console<br/>uart20"] --- MOD
     end
 

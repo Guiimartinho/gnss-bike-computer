@@ -110,6 +110,7 @@ dois cristais e o casamento ([01](01-esquematico.md#folha-2--mcu)).
 |---|---|---|---|---|
 | U201 | Módulo com o nRF54LM20A, 16,5 × 12,0 × 2,4 mm, antena de PCB | MinewSemi ME54BS13-1Y20TI | 1 | [MCU e rádio](../docs/19-lista-de-compras.md#mcu-e-rádio) — **a lista ainda o traz como plano B**, a US$ 9,00 na DigiKey; a loja da MinewSemi vende a US$ 6,00 |
 | J201 | Footprint de depuração SWD | Tag-Connect TC2030-NL, **só furos e pads** | 0 peças | o cabo TC2030-CTX-NL e o clipe estão em [Placas de avaliação e ferramentas](../docs/19-lista-de-compras.md#placas-de-avaliação-e-ferramentas) |
+| J202 | Conector de depuração SWD, Cortex Debug de 10 vias | 2 × 5, passo 1,27 mm, SMD, **sem carcaça** (2,5 mm de altura), **a escolher** | 1 | pedido do dono em 2026-09-26, ao lado do Tag-Connect: onde o adaptador Cortex-M de 9 vias do J-Link encaixa sem clipe; o blindado (Samtec FTSH-105-01-L-DV-K, 4,83 mm) não cabe sob a tampa da caixa proposta, que deixa 3,6 mm da face da placa; footprint genérico do KiCad, a conferir contra a ficha da peça |
 | TP201, TP202, TP203 | Pads do console `uart20` e o `GND` ao lado | cobre | 0 peças | [06](06-conectores-e-pontos-de-teste.md#pontos-de-teste) |
 | C201 em diante | Desacoplamento dos pinos `VDD` do módulo | 100 nF, 10 V, X7R, 0402 | a fechar no layout | [Passivos](../docs/19-lista-de-compras.md#passivos) |
 | C210 | **Volume do `3V0` junto do módulo** | 4,7 µF ([02](02-calculos.md#capacitor-de-volume-no-módulo)) | 1 | **a definir**: a lista não tem linha de 4,7 µF |

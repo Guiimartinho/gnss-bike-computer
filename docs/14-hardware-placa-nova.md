@@ -350,7 +350,7 @@ Da frente para trás, na área do display:
 ## Teste e bring-up
 
 - **Pontos de teste:** VBUS, VBAT, VSYS, 3V0, 1V8, SD3V0, 3V3BL, 5V0, VBCKP e GND, com jumper de 0 Ω em série nos trilhos de cada bloco (BM20C, GNSS, display, sensores, armazenamento) para medir corrente com o PPK2.
-- **Depuração:** SWD (SWDIO em J3, SWDCLK em K3, reset em G2, VDD e GND) num footprint Tag-Connect TC2030-NL, para o cabo TC2030-CTX-NL (conector Cortex de 10 vias do J-Link) preso pelo TC2030-CLIP, e console no `uart20` (P1.00 e P1.31), em dois pads.
+- **Depuração:** SWD (SWDIO em J3, SWDCLK em K3, reset em G2, VDD e GND) num footprint Tag-Connect TC2030-NL, para o cabo TC2030-CTX-NL (conector Cortex de 10 vias do J-Link) preso pelo TC2030-CLIP, **e**, desde 2026-09-26 a pedido do dono, num conector Cortex Debug de 10 vias (`J202`, 2 × 5 a 1,27 mm, SMD) nas mesmas redes, onde o adaptador de 9 vias do J-Link encaixa sem clipe ([hardware_gnssbike/06](../hardware_gnssbike/06-conectores-e-pontos-de-teste.md#j202--depuração-swd-o-conector)); console no `uart20` (P1.00 e P1.31), em dois pads.
 
 ```mermaid
 flowchart LR

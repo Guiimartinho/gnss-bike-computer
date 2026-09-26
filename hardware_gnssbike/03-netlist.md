@@ -196,9 +196,9 @@ castelado da ficha ME54BS13 V1.0.0.
 | `USB_DM` | 7 | USB-C A7 e B7 | dig | par de 90 Ω diferencial |
 | `USB_DP` | 8 | USB-C A6 e B6 | dig | idem |
 | `MOD_VBUS` | 9 | `VBUSOUT` | alim | detecção e PHY do USB. **A faixa aceita neste pad não foi levantada na ficha do ME54BS13**; os 4,4 a 5,5 V que este documento trazia eram do BM20C |
-| `SWDIO` | 5 | Tag-Connect pino 2 | dig | — |
-| `SWDCLK` | 6 | Tag-Connect pino 4 | dig | — |
-| `MOD_RESET` | 4 | Tag-Connect pino **3** | dig | corrigido em 2026-09-25: a ficha `TC2030-CTX_1.pdf` põe o `nRESET` no contato 3, e o 6 é o `SWO` |
+| `SWDIO` | 5 | Tag-Connect pino 2 e `J202` pino 2 | dig | — |
+| `SWDCLK` | 6 | Tag-Connect pino 4 e `J202` pino 4 | dig | — |
+| `MOD_RESET` | 4 | Tag-Connect pino **3** e `J202` pino 10 | dig | corrigido em 2026-09-25: a ficha `TC2030-CTX_1.pdf` põe o `nRESET` no contato 3, e o 6 é o `SWO`. O `J202` (conector Cortex de 10 vias, desde 2026-09-26) segue a pinagem da ARM: `nRESET` no 10 |
 | `3V0_MOD` | 19 | `JP102`, do `3V0` | alim | com o 100 nF e o 4,7 µF de volume ao lado |
 | — | 2 | **aberto** | rf | saída para antena externa; o módulo já traz a antena de PCB |
 | `GND` | 1, 3, 10, 11, 20, `D0`, `E0`, `F0` | plano | alim | oito pads de terra, cinco castelados e três da matriz |
@@ -274,6 +274,8 @@ placa sem que nada avise. Um pino de configuração aberto do AEM10900
 | Pull-ups de `WP` e `HOLD` da flash | 47 kΩ ao **`SD3V0`** | ao `3V0` a flash se alimentaria pelos pinos com a `LDSW1` cortada |
 | Tag-Connect pino 1 (`VTref`) | `3V0` | sem ele a maioria das sondas recusa conectar |
 | Tag-Connect pino 5 | `GND` | — |
+| `J202` pino 1 (`VTref`) | `3V0` | o mesmo `VTref`, no conector Cortex de 10 vias |
+| `J202` pinos 3 e 5 | `GND` | os dois terras do conector Cortex; o 9 (`GNDDetect`) fica aberto, o 7 é a chave e o 8 é TDI, só JTAG |
 
 > [!CAUTION]
 > **Nada de pull-down externo no `TIMEPULSE` do receptor**: com ele o

@@ -47,9 +47,11 @@ flowchart LR
     PAINEL --> J401["J401 · display<br/>Hirose FH28-10S<br/>10 vias"]
     PAINEL -.->|"por onde?"| LUZ["conector da luz<br/>não definido"]
     SONDA --> J201["J201 · SWD<br/>Tag-Connect TC2030-NL<br/>6 pads, sem peça"]
+    SONDA --> J202["J202 · SWD<br/>Cortex Debug 2 × 5, 1,27 mm<br/>adaptador de 9 vias do J-Link"]
     J101 --> F1["folha 1 · energia"]
     J102 --> F1
     J201 --> F2["folha 2 · MCU"]
+    J202 --> F2
     J401 --> F4["folha 4 · display"]
     LUZ -.-> F4
 ```
@@ -61,6 +63,7 @@ flowchart LR
 | `J101` USB-C | **padrão da indústria**: USB Type-C, receptáculo de 16 contatos (USB 2.0) | a norma define os sinais; o desenho da Molex dá o número do pad no footprint |
 | `J102` bateria | **escolha deste projeto** — não existe padrão para isto | o fabricante do pack, antes de fechar o pedido |
 | `J201` depuração | **conferido em 2026-09-25** na ficha `TC2030-CTX_1.pdf` da Tag-Connect: 1 `VCC`, 2 `SWDIO`, 3 `nRESET`, 4 `SWCLK`, 5 `GND`, 6 `SWO`. O projeto tinha o reset no 6 e foi corrigido | ficha oficial da Tag-Connect |
+| `J202` depuração, conector | **padrão da ARM** (Cortex Debug Connector, 10 vias): 1 `VTref`, 2 `SWDIO`, 3 `GND`, 4 `SWDCLK`, 5 `GND`, 6 `SWO`, 7 chave, 8 TDI, 9 `GNDDetect`, 10 `nRESET`; é a pinagem do adaptador Cortex-M de 9 vias do J-Link | a norma; a peça (Samtec FTSH-105-01-L-DV-K ou equivalente) ainda não foi escolhida |
 | `J401` display | **ficha do fabricante**, e a mesma ordem nas duas telas | fichas JDI LPM027M128B Ver.01 e Sharp LS027B7DH01A (LD-28305A) |
 | Conector da luz do JDI | **falta tudo**: não se sabe sequer se ele existe como conector separado ou se o C traz um FPC maior | ficha do **LPM027M128C**, ou uma amostra |
 | `JP401` tensão do display | **escolha deste projeto** | este documento |
@@ -362,6 +365,37 @@ de depuração.
 é o motivo de existir o clipe: a placa precisa da área livre em volta dos
 pads e dos três furos de alinhamento, nos dois lados, para o clipe
 encaixar ([04](04-pcb-e-caixa.md#posicionamento)).
+
+## J202 · Depuração SWD, o conector
+
+Em 2026-09-26 o dono pediu o conector pequeno de SWD do J-Link, e ele entrou
+**ao lado** do Tag-Connect, nas mesmas redes: o **Cortex Debug Connector**
+de 10 vias, 2 × 5 a 1,27 mm, SMD, **sem carcaça** (2,5 mm de altura; o
+blindado, Samtec FTSH-105-01-L-DV-K com 4,83 mm, não cabe sob a tampa da
+caixa proposta, que deixa 3,6 mm da face da placa). **A peça ainda não foi
+escolhida**, e o footprint é o genérico do KiCad, a conferir contra a ficha
+dela. É nele que o adaptador Cortex-M de 9 vias do J-Link encaixa, sem
+clipe (sem carcaça não há chave: o pino 7 fica sem pino, como manda a
+pinagem). Só um dos dois é usado de cada vez.
+
+| Pino | Sinal | Rede | Nota |
+|---|---|---|---|
+| 1 | `VTref` | `3V0` | o mesmo aviso do `J201`: o `3V0` sai do BUCK2, desligado em ship mode |
+| 2 | `SWDIO` | `SWDIO` | pad 5 do ME54BS13 |
+| 3 | `GND` | `GND` | — |
+| 4 | `SWDCLK` | `SWDCLK` | pad 6; `passive` no ERC, porque o `J201` já declara a saída |
+| 5 | `GND` | `GND` | — |
+| 6 | `SWO` | aberto | a mesma pendência do `J201`: qual pad do módulo expõe o `SWO` |
+| 7 | chave | não existe | o conector blindado tem o pino 7 removido |
+| 8 | TDI | aberto | só JTAG; o nRF54LM20A é SWD |
+| 9 | `GNDDetect` | aberto | a sonda o lê para saber se há alvo; aberto, como nas placas de referência da Nordic |
+| 10 | `nRESET` | `MOD_RESET` | pad 4; `passive` no ERC pelo mesmo motivo do 4 |
+
+**Custa 8 × 6 mm de placa** (pads mais courtyard) e, montado, 2,5 mm de
+altura, mais o cabo com o aparelho aberto — é o que
+[01](01-esquematico.md#folha-2--mcu) chamava de volume gasto por
+uma coisa de protótipo, e é o que o dono quis. Onde ficou na placa está em
+[04](04-pcb-e-caixa.md#posicionamento).
 
 ## J401 · Display
 

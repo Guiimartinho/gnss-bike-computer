@@ -81,7 +81,7 @@ JUNTO: dict[str, str] = {
     "J402": "J401", "Q401": "J401",
     "SW601": "SW602", "SW603": "SW602",
     "Q601": "D601", "Q602": "D601", "Q603": "D601",
-    "J201": "U201", "TP201": "U201", "TP202": "U201", "TP203": "U201",
+    "J201": "U201", "J202": "U201", "TP201": "U201", "TP202": "U201", "TP203": "U201",
     # Each power test point goes beside what it measures, which is what
     # 06-conectores-e-pontos-de-teste.md asks for point by point: the VBUS one
     # "junto do conector", the ground one "com via propria ao plano".
@@ -207,6 +207,14 @@ BORDA_FIXA: dict[str, tuple[float, float, int]] = {
     "SW601": (4.5, 66.0, 0),
     "SW602": (13.0, 66.0, 0),
     "SW603": (21.5, 66.0, 0),
+    # The 10-way SWD header (2026-09-26): 5 mm tall, so it cannot be under
+    # the display (y < 64,5, ceiling 2,6 mm) nor under the cell; and it has
+    # to be on the FRONT, where the lid opens. Left as a JUNTO of the module
+    # the placer put it at (17,5; 60,5), under the display. Here: below the
+    # keys (their courtyard ends at y 67,75), right of the M2 hole's square
+    # (x <= 6,5) and left of the USB pair's corridor (x >= 19,4): the
+    # courtyard (8,6 x 7,4) spans x 7,0-15,6 and y 68,5-75,9.
+    "J202": (11.3, 72.2, 0),
     # bottom right CORNER, which is the datasheet's "Best" (7.5, figure 1):
     # antenna over the notch, off the board edge, and as far from the GNSS
     # receiver as the board allows - which is the 50 mm of 7.2, and the rule
@@ -377,6 +385,7 @@ DO_MODULO = {r for r, dono in ()} | {"C201", "C210"}
 
 ROTACAO: dict[str, int] = {
     "J201": 0,
+    "J202": 0,
     "U101": 0,
     "U103": 0,
 }

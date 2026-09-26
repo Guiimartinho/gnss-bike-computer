@@ -191,7 +191,7 @@ flowchart TB
     R3V0(("3V0")) -->|"VDD, pad 19, 100 nF por pino"| MOD
     VOUT(("VBUSOUT")) -->|"VBUS, pad 9"| MOD
     USBD["USB-C D+ / D−"] ---|"par de 90 Ω, pads 8 e 7"| MOD
-    TC["Tag-Connect TC2030-NL"] ---|"SWDIO 5, SWDCLK 6, reset 4"| MOD
+    TC["Tag-Connect TC2030-NL<br/>e J202, Cortex de 10 vias"] ---|"SWDIO 5, SWDCLK 6, reset 4"| MOD
     TP["TP201 e TP202<br/>pads do console"] ---|"uart20 · P1.00, P1.31"| MOD
     MOD --- BUSES["spi00 · spi22 · uart21<br/>i2c23 · i2c30 · pwm20/21/22"]
 ```
@@ -224,10 +224,15 @@ lado do `i2c30` da energia, o que **o silício recusa**: cada bloco serial
 do nRF54LM20A tem um periférico só, e `uart30` e `i2c30` são o mesmo
 bloco.
 
-**A depuração é sem conector.** O footprint Tag-Connect TC2030-NL só tem
-furos e pads; o cabo se encosta com um clipe. Numa placa de 34 × 90 mm
-dentro de uma caixa vedada, um conector de dez vias seria volume gasto
-para sempre por uma coisa que se usa no protótipo.
+**A depuração tem os dois caminhos.** O footprint Tag-Connect TC2030-NL só
+tem furos e pads; o cabo se encosta com um clipe. Em 2026-09-26 o dono pediu
+o conector pequeno de SWD que o J-Link usa, e ele entrou **ao lado** do
+Tag-Connect: o `J202`, Cortex Debug de 10 vias (2 × 5, passo 1,27 mm, SMD),
+nas mesmas redes (`SWDIO`, `SWDCLK`, `MOD_RESET`, `3V0` no `VTref`, `GND`),
+com a pinagem da ARM (`nRESET` no pino 10, `SWO` no 6 sem ligação, 7 chave,
+8 TDI e 9 `GNDDetect` abertos). É volume gasto na placa por uma coisa de
+protótipo, e é o que o dono quis; o `SWDCLK` e o `nRESET` dele são
+`passive` no ERC, para não haver duas saídas na mesma rede.
 
 ### Em aberto nesta folha
 

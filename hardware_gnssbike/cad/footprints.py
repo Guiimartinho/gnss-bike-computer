@@ -92,6 +92,10 @@ _fp("J102", "Connector_JST:JST_GH_SM06B-GHS-TB_1x06-1MP_P1.25mm_Horizontal",
     "EXATO", "JST GH de 6 vias, entrada lateral")
 _fp("J201", "Connector:Tag-Connect_TC2030-IDC-NL_2x03_P1.27mm_Vertical", "EXATO",
     "TC2030-NL, so furos e pads")
+_fp("J202", "Connector_PinHeader_1.27mm:PinHeader_2x05_P1.27mm_Vertical_SMD", "ENCAPSULAMENTO",
+    "conector Cortex Debug de 10 vias, 2 x 5, passo 1,27 mm, SMD, sem carcaca "
+    "(2,5 mm de altura: o blindado de 4,83 nao cabe sob a tampa); o footprint "
+    "e o generico do KiCad, a conferir contra a ficha da peca escolhida")
 _fp("J401", "Connector_FFC-FPC:Hirose_FH12-10S-0.5SH_1x10-1MP_P0.50mm_Horizontal",
     "ENCAPSULAMENTO",
     "10 vias, passo 0,5 mm, CONTATO INFERIOR: a cauda do display entra com "
@@ -609,6 +613,12 @@ ALTURA: dict[str, tuple[float, str]] = {
     "gnssbike:SW_TS-1088R_3.9x3mm": (2.00, "XunPu TS-1088R-02026, desenho "
         "rev A: altura total 2,00, tampa de aco ate 1,50, embolo de o1,80 "
         "saindo 0,50 acima dela. Curso de 0,2 +-0,1"),
+    "Connector_PinHeader_1.27mm:PinHeader_2x05_P1.27mm_Vertical_SMD": (2.50,
+        "altura corrente de um cabecalho SMD de 2 x 5 a 1,27 mm SEM carcaca "
+        "(o modelo do KiCad), 2,5 mm sobre a placa - CONFERIR na ficha da peca "
+        "escolhida. O blindado (Samtec FTSH-105-01-L-DV-K, 4,83) NAO cabe: sob "
+        "a tampa da caixa proposta sobram 3,6 mm da face da placa "
+        "(make_caixa.py, 2026-09-26)"),
     "Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12": (3.26, "altura "
         "corrente de um receptaculo USB-C de montagem em superficie - "
         "CONFERIR na ficha do HRO TYPE-C-31-M-12 (LCSC C165948)"),

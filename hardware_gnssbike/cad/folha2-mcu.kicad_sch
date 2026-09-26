@@ -341,6 +341,102 @@
 				)
 			)
 		)
+		(symbol "gnssbike:J202"
+			(pin_names (offset 0.508))
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "J202"
+				(at -13.970 8.890 0)
+				(effects (font (size 1.27 1.27)) (justify left bottom))
+			)
+			(property "Value" "SWD 2x5 1,27 mm"
+				(at -13.970 -8.890 0)
+				(effects (font (size 1.27 1.27)) (justify left top))
+			)
+			(property "Footprint" "Connector_PinHeader_1.27mm:PinHeader_2x05_P1.27mm_Vertical_SMD"
+				(at 0 0 0)
+				(effects (font (size 1.27 1.27)) (hide yes))
+			)
+			(property "Datasheet" ""
+				(at 0 0 0)
+				(effects (font (size 1.27 1.27)) (hide yes))
+			)
+			(property "Description" "conector Cortex Debug de 10 vias, 2 x 5, passo 1,27 mm, SMD, para o adaptador Cortex-M de 9 vias do J-Link; pinagem da ARM (Cortex Debug Connector): 1 VTref, 2 SWDIO, 3 GND, 4 SWDCLK, 5 GND, 6 SWO, 7 KEY, 8 TDI, 9 GNDDetect, 10 nRESET. Peca a escolher: Samtec FTSH-105-01-L-DV-K ou equivalente blindado"
+				(at 0 0 0)
+				(effects (font (size 1.27 1.27)) (hide yes))
+			)
+			(symbol "J202_0_1"
+				(rectangle
+					(start -13.970 -7.620)
+					(end 13.970 7.620)
+					(stroke (width 0.254) (type default))
+					(fill (type background))
+				)
+			)
+			(symbol "J202_1_1"
+				(pin power_in line
+					(at -16.510 5.080 0)
+					(length 2.54)
+					(name "VTref" (effects (font (size 1.016 1.016))))
+					(number "1" (effects (font (size 1.016 1.016))))
+				)
+				(pin bidirectional line
+					(at 16.510 5.080 180)
+					(length 2.54)
+					(name "SWDIO" (effects (font (size 1.016 1.016))))
+					(number "2" (effects (font (size 1.016 1.016))))
+				)
+				(pin power_in line
+					(at -16.510 2.540 0)
+					(length 2.54)
+					(name "GND1" (effects (font (size 1.016 1.016))))
+					(number "3" (effects (font (size 1.016 1.016))))
+				)
+				(pin passive line
+					(at 16.510 2.540 180)
+					(length 2.54)
+					(name "SWDCLK" (effects (font (size 1.016 1.016))))
+					(number "4" (effects (font (size 1.016 1.016))))
+				)
+				(pin power_in line
+					(at -16.510 0.000 0)
+					(length 2.54)
+					(name "GND2" (effects (font (size 1.016 1.016))))
+					(number "5" (effects (font (size 1.016 1.016))))
+				)
+				(pin no_connect line
+					(at 16.510 0.000 180)
+					(length 2.54)
+					(name "SWO" (effects (font (size 1.016 1.016))))
+					(number "6" (effects (font (size 1.016 1.016))))
+				)
+				(pin no_connect line
+					(at -16.510 -2.540 0)
+					(length 2.54)
+					(name "KEY" (effects (font (size 1.016 1.016))))
+					(number "7" (effects (font (size 1.016 1.016))))
+				)
+				(pin no_connect line
+					(at 16.510 -2.540 180)
+					(length 2.54)
+					(name "TDI" (effects (font (size 1.016 1.016))))
+					(number "8" (effects (font (size 1.016 1.016))))
+				)
+				(pin no_connect line
+					(at -16.510 -5.080 0)
+					(length 2.54)
+					(name "GNDDetect" (effects (font (size 1.016 1.016))))
+					(number "9" (effects (font (size 1.016 1.016))))
+				)
+				(pin passive line
+					(at 16.510 -5.080 180)
+					(length 2.54)
+					(name "nRESET" (effects (font (size 1.016 1.016))))
+					(number "10" (effects (font (size 1.016 1.016))))
+				)
+			)
+		)
 		(symbol "gnssbike:J201"
 			(pin_names (offset 0.508))
 			(exclude_from_sim no)
@@ -1057,6 +1153,44 @@
 				)
 			)
 		)
+		(symbol "power:GND_L"
+			(power)
+			(pin_numbers hide)
+			(pin_names (offset 0) hide)
+			(exclude_from_sim no)
+			(in_bom no)
+			(on_board yes)
+			(property "Reference" "#PWR003"
+				(at 0 0 0)
+				(effects (font (size 1.27 1.27)) (hide yes))
+			)
+			(property "Value" "GND"
+				(at -3.300 0.000 0)
+				(effects (font (size 1.27 1.27)) (justify right))
+			)
+			(property "Footprint" ""
+				(at 0 0 0)
+				(effects (font (size 1.27 1.27)) (hide yes))
+			)
+			(property "Datasheet" ""
+				(at 0 0 0)
+				(effects (font (size 1.27 1.27)) (hide yes))
+			)
+			(symbol "GND_L_0_1"
+				(polyline (pts (xy 0.0000 0.0000) (xy -1.2700 0.0000)) (stroke (width 0) (type default)) (fill (type none)))
+				(polyline (pts (xy -1.2700 -1.9050) (xy -1.2700 1.9050)) (stroke (width 0) (type default)) (fill (type none)))
+				(polyline (pts (xy -1.9050 -1.1430) (xy -1.9050 1.1430)) (stroke (width 0) (type default)) (fill (type none)))
+				(polyline (pts (xy -2.5400 -0.5080) (xy -2.5400 0.5080)) (stroke (width 0) (type default)) (fill (type none)))
+			)
+			(symbol "GND_L_1_1"
+				(pin power_in line
+					(at 0 0 90)
+					(length 0)
+					(name "GND" (effects (font (size 1.27 1.27))))
+					(number "1" (effects (font (size 1.27 1.27))))
+				)
+			)
+		)
 		(symbol "power:VBUSOUT"
 			(power)
 			(pin_numbers hide)
@@ -1064,7 +1198,7 @@
 			(exclude_from_sim no)
 			(in_bom no)
 			(on_board yes)
-			(property "Reference" "#PWR004"
+			(property "Reference" "#PWR005"
 				(at 0 0 0)
 				(effects (font (size 1.27 1.27)) (hide yes))
 			)
@@ -1100,7 +1234,7 @@
 			(exclude_from_sim no)
 			(in_bom no)
 			(on_board yes)
-			(property "Reference" "#PWR005"
+			(property "Reference" "#PWR006"
 				(at 0 0 0)
 				(effects (font (size 1.27 1.27)) (hide yes))
 			)
@@ -1136,7 +1270,7 @@
 			(exclude_from_sim no)
 			(in_bom no)
 			(on_board yes)
-			(property "Reference" "#PWR007"
+			(property "Reference" "#PWR008"
 				(at 0 0 0)
 				(effects (font (size 1.27 1.27)) (hide yes))
 			)
@@ -1172,7 +1306,7 @@
 			(exclude_from_sim no)
 			(in_bom no)
 			(on_board yes)
-			(property "Reference" "#PWR008"
+			(property "Reference" "#PWR010"
 				(at 0 0 0)
 				(effects (font (size 1.27 1.27)) (hide yes))
 			)
@@ -1208,7 +1342,7 @@
 			(exclude_from_sim no)
 			(in_bom no)
 			(on_board yes)
-			(property "Reference" "#PWR009"
+			(property "Reference" "#PWR011"
 				(at 0 0 0)
 				(effects (font (size 1.27 1.27)) (hide yes))
 			)
@@ -1244,7 +1378,7 @@
 			(exclude_from_sim no)
 			(in_bom no)
 			(on_board yes)
-			(property "Reference" "#PWR010"
+			(property "Reference" "#PWR012"
 				(at 0 0 0)
 				(effects (font (size 1.27 1.27)) (hide yes))
 			)
@@ -1282,7 +1416,7 @@
 			(exclude_from_sim no)
 			(in_bom no)
 			(on_board yes)
-			(property "Reference" "#PWR011"
+			(property "Reference" "#PWR013"
 				(at 0 0 0)
 				(effects (font (size 1.27 1.27)) (hide yes))
 			)
@@ -1318,7 +1452,7 @@
 			(exclude_from_sim no)
 			(in_bom no)
 			(on_board yes)
-			(property "Reference" "#PWR012"
+			(property "Reference" "#PWR014"
 				(at 0 0 0)
 				(effects (font (size 1.27 1.27)) (hide yes))
 			)
@@ -1354,7 +1488,7 @@
 			(exclude_from_sim no)
 			(in_bom no)
 			(on_board yes)
-			(property "Reference" "#PWR013"
+			(property "Reference" "#PWR015"
 				(at 0 0 0)
 				(effects (font (size 1.27 1.27)) (hide yes))
 			)
@@ -1390,7 +1524,7 @@
 			(exclude_from_sim no)
 			(in_bom no)
 			(on_board yes)
-			(property "Reference" "#FLG015"
+			(property "Reference" "#FLG017"
 				(at 0 0 0)
 				(effects (font (size 1.27 1.27)) (hide yes))
 			)
@@ -1429,10 +1563,10 @@
 	)
 	(rectangle
 		(start 133.350 34.290)
-		(end 217.170 67.310)
+		(end 275.590 68.580)
 		(stroke (width 0.1524) (type dash))
 		(fill (type none))
-		(uuid "68f4d9af-618b-4eb9-841a-eaa0626f46db")
+		(uuid "656909aa-7774-4c69-8791-4b0e12139cb8")
 	)
 	(wire
 		(pts
@@ -1485,6 +1619,13 @@
 	)
 	(wire
 		(pts
+			(xy 219.710 49.530) (xy 219.710 52.070)
+		)
+		(stroke (width 0) (type default))
+		(uuid "109e772f-5cdf-4722-8f60-c3e953bb57ea")
+	)
+	(wire
+		(pts
 			(xy 44.450 120.650) (xy 57.150 120.650)
 		)
 		(stroke (width 0) (type default))
@@ -1503,6 +1644,13 @@
 		)
 		(stroke (width 0) (type default))
 		(uuid "590ed017-d159-445e-8737-08880d4e9b74")
+	)
+	(wire
+		(pts
+			(xy 219.710 49.530) (xy 217.170 49.530)
+		)
+		(stroke (width 0) (type default))
+		(uuid "0774e43e-6f37-49fd-8a70-c7d2ae2efbd4")
 	)
 	(wire
 		(pts
@@ -1541,6 +1689,13 @@
 	)
 	(wire
 		(pts
+			(xy 219.710 46.990) (xy 209.550 46.990)
+		)
+		(stroke (width 0) (type default))
+		(uuid "0c0121d0-5cb7-4cc8-8cb3-a581710e798d")
+	)
+	(wire
+		(pts
 			(xy 44.450 113.030) (xy 57.150 113.030)
 		)
 		(stroke (width 0) (type default))
@@ -1562,6 +1717,41 @@
 	)
 	(wire
 		(pts
+			(xy 91.440 54.610) (xy 93.980 54.610)
+		)
+		(stroke (width 0) (type default))
+		(uuid "ea97cf88-a1dc-4e6b-88f7-48c5bad302b8")
+	)
+	(wire
+		(pts
+			(xy 194.310 52.070) (xy 196.850 52.070)
+		)
+		(stroke (width 0) (type default))
+		(uuid "6503e21a-bb74-4f29-8e07-a58359c482a3")
+	)
+	(wire
+		(pts
+			(xy 252.730 49.530) (xy 255.270 49.530)
+		)
+		(stroke (width 0) (type default))
+		(uuid "682993fb-24df-4a65-8aed-05bc28294144")
+	)
+	(wire
+		(pts
+			(xy 91.440 52.070) (xy 93.980 52.070)
+		)
+		(stroke (width 0) (type default))
+		(uuid "74d34825-4403-4ed9-8b49-c740763a0007")
+	)
+	(wire
+		(pts
+			(xy 252.730 46.990) (xy 255.270 46.990)
+		)
+		(stroke (width 0) (type default))
+		(uuid "9990a3ae-d553-4936-8931-6880c6ce6174")
+	)
+	(wire
+		(pts
 			(xy 60.960 46.990) (xy 58.420 46.990)
 		)
 		(stroke (width 0) (type default))
@@ -1576,31 +1766,10 @@
 	)
 	(wire
 		(pts
-			(xy 91.440 52.070) (xy 93.980 52.070)
+			(xy 252.730 57.150) (xy 255.270 57.150)
 		)
 		(stroke (width 0) (type default))
-		(uuid "74d34825-4403-4ed9-8b49-c740763a0007")
-	)
-	(wire
-		(pts
-			(xy 194.310 46.990) (xy 196.850 46.990)
-		)
-		(stroke (width 0) (type default))
-		(uuid "5757a7fe-8759-40eb-8004-d12e0e85fff2")
-	)
-	(wire
-		(pts
-			(xy 91.440 54.610) (xy 93.980 54.610)
-		)
-		(stroke (width 0) (type default))
-		(uuid "ea97cf88-a1dc-4e6b-88f7-48c5bad302b8")
-	)
-	(wire
-		(pts
-			(xy 194.310 52.070) (xy 196.850 52.070)
-		)
-		(stroke (width 0) (type default))
-		(uuid "6503e21a-bb74-4f29-8e07-a58359c482a3")
+		(uuid "13a6f95d-d243-46eb-80fc-544d381dd5cc")
 	)
 	(wire
 		(pts
@@ -1898,6 +2067,13 @@
 	)
 	(wire
 		(pts
+			(xy 194.310 44.450) (xy 194.310 46.990)
+		)
+		(stroke (width 0) (type default))
+		(uuid "7300689d-6988-4ac9-8d2e-89345955bc53")
+	)
+	(wire
+		(pts
 			(xy 102.870 68.580) (xy 102.870 72.390)
 		)
 		(stroke (width 0) (type default))
@@ -2046,6 +2222,22 @@
 	(no_connect
 		(at 91.440 57.150)
 		(uuid "13999549-66e4-445c-8224-fa380c3125d8")
+	)
+	(no_connect
+		(at 219.710 54.610)
+		(uuid "ee6d548a-070f-42f1-830b-4e5d6929c765")
+	)
+	(no_connect
+		(at 219.710 57.150)
+		(uuid "c622f65f-3c27-4131-8c20-98c5435d8de7")
+	)
+	(no_connect
+		(at 252.730 52.070)
+		(uuid "2067eaaf-7182-421c-8e9b-c5dc0a05fd74")
+	)
+	(no_connect
+		(at 252.730 54.610)
+		(uuid "89daa443-9acf-465c-8009-111182422d44")
 	)
 	(no_connect
 		(at 194.310 54.610)
@@ -2291,6 +2483,42 @@
 		(effects (font (size 1.27 1.27)) (justify left))
 		(uuid "b620ddef-6595-4fa6-854d-65d318e59ee8")
 	)
+	(label "SWDCLK"
+		(at 93.980 54.610 0)
+		(fields_autoplaced yes)
+		(effects (font (size 1.27 1.27)) (justify left bottom))
+		(uuid "8b06f651-46d0-4e7e-8c96-8f3d98e371a9")
+	)
+	(label "SWDCLK"
+		(at 196.850 52.070 0)
+		(fields_autoplaced yes)
+		(effects (font (size 1.27 1.27)) (justify left bottom))
+		(uuid "6b0b467c-7bc3-4669-8e37-3f66d5d44db9")
+	)
+	(label "SWDCLK"
+		(at 255.270 49.530 0)
+		(fields_autoplaced yes)
+		(effects (font (size 1.27 1.27)) (justify left bottom))
+		(uuid "defa842b-b6d5-41b0-8b85-f7a67b6cfba2")
+	)
+	(label "SWDIO"
+		(at 93.980 52.070 0)
+		(fields_autoplaced yes)
+		(effects (font (size 1.27 1.27)) (justify left bottom))
+		(uuid "c73e5f77-661f-4710-84b3-29e9c4ef2ebd")
+	)
+	(label "SWDIO"
+		(at 194.310 44.450 0)
+		(fields_autoplaced yes)
+		(effects (font (size 1.27 1.27)) (justify left bottom))
+		(uuid "f5cd01fb-c07f-4001-8a27-dcdad1d84926")
+	)
+	(label "SWDIO"
+		(at 255.270 46.990 0)
+		(fields_autoplaced yes)
+		(effects (font (size 1.27 1.27)) (justify left bottom))
+		(uuid "b6a3971e-2c3c-4939-816b-30a447d4ac49")
+	)
 	(label "MOD_RESET"
 		(at 58.420 46.990 180)
 		(fields_autoplaced yes)
@@ -2303,29 +2531,11 @@
 		(effects (font (size 1.27 1.27)) (justify left bottom))
 		(uuid "7c775919-445f-4cd9-8b31-234288255e78")
 	)
-	(label "SWDIO"
-		(at 93.980 52.070 0)
+	(label "MOD_RESET"
+		(at 255.270 57.150 0)
 		(fields_autoplaced yes)
 		(effects (font (size 1.27 1.27)) (justify left bottom))
-		(uuid "c73e5f77-661f-4710-84b3-29e9c4ef2ebd")
-	)
-	(label "SWDIO"
-		(at 196.850 46.990 0)
-		(fields_autoplaced yes)
-		(effects (font (size 1.27 1.27)) (justify left bottom))
-		(uuid "42d2c450-485b-48e7-856c-a7c4e81ed58d")
-	)
-	(label "SWDCLK"
-		(at 93.980 54.610 0)
-		(fields_autoplaced yes)
-		(effects (font (size 1.27 1.27)) (justify left bottom))
-		(uuid "8b06f651-46d0-4e7e-8c96-8f3d98e371a9")
-	)
-	(label "SWDCLK"
-		(at 196.850 52.070 0)
-		(fields_autoplaced yes)
-		(effects (font (size 1.27 1.27)) (justify left bottom))
-		(uuid "6b0b467c-7bc3-4669-8e37-3f66d5d44db9")
+		(uuid "30957f58-1ea6-4ac9-81f6-38012ef4483d")
 	)
 	(text "Modulo ME54BS13 (nRF54LM20A)"
 		(exclude_from_sim no)
@@ -2339,11 +2549,11 @@
 		(effects (font (size 1.8 1.8)) (justify left bottom))
 		(uuid "72202862-10c9-465b-8d25-e4e12439ef99")
 	)
-	(text "2 MCU e depuracao - 14 posicoes. NADA MONTADO NEM MEDIDO."
+	(text "2 MCU e depuracao - 15 posicoes. NADA MONTADO NEM MEDIDO."
 		(exclude_from_sim no)
 		(at 20.000 24.000 0)
 		(effects (font (size 2.5 2.5)) (justify left bottom))
-		(uuid "b9088743-87c4-4b97-8464-f271c4971947")
+		(uuid "2baad848-dc8e-4995-8e16-ae2299b9924f")
 	)
 	(symbol
 		(lib_id "gnssbike:U201")
@@ -2427,6 +2637,54 @@
 			(project "gnssbike"
 				(path "/9c874366-f223-4aef-8b18-3e2a2bab2b25/0da3eb01-2091-4088-8504-92b9e7e9e70d"
 					(reference "U201")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "gnssbike:J202")
+		(at 236.220 52.070 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "d8d87c96-bb53-4b2a-844e-ec026119eefd")
+		(property "Reference" "J202"
+			(at 222.250 43.650 0)
+			(effects (font (size 1.27 1.27)) (justify left bottom))
+		)
+		(property "Value" "SWD 2x5 1,27 mm"
+			(at 222.250 60.490 0)
+			(effects (font (size 1.27 1.27)) (justify left top))
+		)
+		(property "Footprint" "Connector_PinHeader_1.27mm:PinHeader_2x05_P1.27mm_Vertical_SMD"
+			(at 236.22 52.07 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Datasheet" ""
+			(at 236.22 52.07 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Description" "conector Cortex Debug de 10 vias, 2 x 5, passo 1,27 mm, SMD, para o adaptador Cortex-M de 9 vias do J-Link; pinagem da ARM (Cortex Debug Connector): 1 VTref, 2 SWDIO, 3 GND, 4 SWDCLK, 5 GND, 6 SWO, 7 KEY, 8 TDI, 9 GNDDetect, 10 nRESET. Peca a escolher: Samtec FTSH-105-01-L-DV-K ou equivalente blindado"
+			(at 236.22 52.07 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(pin "1" (uuid "92ef4004-2277-493a-887e-8181bafe7ce6"))
+		(pin "2" (uuid "df06c43e-7767-4319-8c09-ef7ba91691a3"))
+		(pin "3" (uuid "b96de22b-c5d0-4128-8492-1dc8cfd17d5a"))
+		(pin "4" (uuid "0502bb6c-9f9e-4216-8a9e-2833fe3783b6"))
+		(pin "5" (uuid "a5df8181-0d7a-44b7-8b02-d626dbd54740"))
+		(pin "6" (uuid "2ac4c39c-2a0f-4472-85f4-d342e419e0c1"))
+		(pin "7" (uuid "147f3e38-df5d-44f7-8653-0961505fc20a"))
+		(pin "8" (uuid "c33f02ab-ea5e-4b04-891a-d377dbbf988d"))
+		(pin "9" (uuid "808bb468-a062-4475-8703-724080e66be6"))
+		(pin "10" (uuid "5d8f3d5d-9d48-496f-80b6-fb7e9b4348f1"))
+		(instances
+			(project "gnssbike"
+				(path "/9c874366-f223-4aef-8b18-3e2a2bab2b25/0da3eb01-2091-4088-8504-92b9e7e9e70d"
+					(reference "J202")
 					(unit 1)
 				)
 			)
@@ -3024,6 +3282,41 @@
 		)
 	)
 	(symbol
+		(lib_id "power:GND_L")
+		(at 217.170 49.530 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(dnp no)
+		(uuid "24942615-41e5-481e-80ba-2f8553a2a439")
+		(property "Reference" "#PWR003"
+			(at 217.17000000000002 49.53 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Value" "GND"
+			(at 213.870 49.530 0)
+			(effects (font (size 1.27 1.27)) (justify right))
+		)
+		(property "Footprint" ""
+			(at 217.17000000000002 49.53 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Datasheet" ""
+			(at 217.17000000000002 49.53 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(pin "1" (uuid "e021438c-c1ea-411a-8d5c-0618b2f48ee4"))
+		(instances
+			(project "gnssbike"
+				(path "/9c874366-f223-4aef-8b18-3e2a2bab2b25/0da3eb01-2091-4088-8504-92b9e7e9e70d"
+					(reference "#PWR003")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "power:GND_D")
 		(at 44.450 123.190 0)
 		(unit 1)
@@ -3032,7 +3325,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "98151857-f46a-4ec2-8454-b711fe864ca5")
-		(property "Reference" "#PWR003"
+		(property "Reference" "#PWR004"
 			(at 44.45 123.19000000000001 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
@@ -3052,7 +3345,7 @@
 		(instances
 			(project "gnssbike"
 				(path "/9c874366-f223-4aef-8b18-3e2a2bab2b25/0da3eb01-2091-4088-8504-92b9e7e9e70d"
-					(reference "#PWR003")
+					(reference "#PWR004")
 					(unit 1)
 				)
 			)
@@ -3067,7 +3360,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "d2199e51-0f56-4a3e-8059-0d032462d988")
-		(property "Reference" "#PWR004"
+		(property "Reference" "#PWR005"
 			(at 66.04 39.37 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
@@ -3087,7 +3380,7 @@
 		(instances
 			(project "gnssbike"
 				(path "/9c874366-f223-4aef-8b18-3e2a2bab2b25/0da3eb01-2091-4088-8504-92b9e7e9e70d"
-					(reference "#PWR004")
+					(reference "#PWR005")
 					(unit 1)
 				)
 			)
@@ -3102,7 +3395,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "49d852b3-cc4e-4fd7-8746-f48cf5c92d04")
-		(property "Reference" "#PWR005"
+		(property "Reference" "#PWR006"
 			(at 31.75 110.49 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
@@ -3122,7 +3415,7 @@
 		(instances
 			(project "gnssbike"
 				(path "/9c874366-f223-4aef-8b18-3e2a2bab2b25/0da3eb01-2091-4088-8504-92b9e7e9e70d"
-					(reference "#PWR005")
+					(reference "#PWR006")
 					(unit 1)
 				)
 			)
@@ -3137,7 +3430,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "b6c2a874-22f4-4285-8a22-ad41608e9ffe")
-		(property "Reference" "#PWR006"
+		(property "Reference" "#PWR007"
 			(at 39.37 41.910000000000004 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
@@ -3157,7 +3450,7 @@
 		(instances
 			(project "gnssbike"
 				(path "/9c874366-f223-4aef-8b18-3e2a2bab2b25/0da3eb01-2091-4088-8504-92b9e7e9e70d"
-					(reference "#PWR006")
+					(reference "#PWR007")
 					(unit 1)
 				)
 			)
@@ -3172,7 +3465,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "7a4abee1-b659-4e41-85ac-63a49eaf3b91")
-		(property "Reference" "#PWR007"
+		(property "Reference" "#PWR008"
 			(at 156.21 46.99 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
@@ -3192,7 +3485,42 @@
 		(instances
 			(project "gnssbike"
 				(path "/9c874366-f223-4aef-8b18-3e2a2bab2b25/0da3eb01-2091-4088-8504-92b9e7e9e70d"
-					(reference "#PWR007")
+					(reference "#PWR008")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:3V0_L")
+		(at 209.550 46.990 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(dnp no)
+		(uuid "61948c20-1fdd-4457-8329-3e26642e02b9")
+		(property "Reference" "#PWR009"
+			(at 209.55 46.99 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Value" "3V0"
+			(at 206.250 46.990 0)
+			(effects (font (size 1.27 1.27)) (justify right))
+		)
+		(property "Footprint" ""
+			(at 209.55 46.99 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Datasheet" ""
+			(at 209.55 46.99 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(pin "1" (uuid "bb71ffc6-022e-40f5-8884-edb8cbb33070"))
+		(instances
+			(project "gnssbike"
+				(path "/9c874366-f223-4aef-8b18-3e2a2bab2b25/0da3eb01-2091-4088-8504-92b9e7e9e70d"
+					(reference "#PWR009")
 					(unit 1)
 				)
 			)
@@ -3207,7 +3535,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "9001beef-5956-45ba-8804-d9d6670e8e3e")
-		(property "Reference" "#PWR008"
+		(property "Reference" "#PWR010"
 			(at 44.45 110.49 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
@@ -3227,7 +3555,7 @@
 		(instances
 			(project "gnssbike"
 				(path "/9c874366-f223-4aef-8b18-3e2a2bab2b25/0da3eb01-2091-4088-8504-92b9e7e9e70d"
-					(reference "#PWR008")
+					(reference "#PWR010")
 					(unit 1)
 				)
 			)
@@ -3242,7 +3570,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "6ac3dc54-ba4b-4d48-8652-3db2db06d3bd")
-		(property "Reference" "#PWR009"
+		(property "Reference" "#PWR011"
 			(at 109.22 54.61 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
@@ -3262,7 +3590,7 @@
 		(instances
 			(project "gnssbike"
 				(path "/9c874366-f223-4aef-8b18-3e2a2bab2b25/0da3eb01-2091-4088-8504-92b9e7e9e70d"
-					(reference "#PWR009")
+					(reference "#PWR011")
 					(unit 1)
 				)
 			)
@@ -3277,7 +3605,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "9cea45a9-eeb8-41ca-8e28-cad569687b9a")
-		(property "Reference" "#PWR010"
+		(property "Reference" "#PWR012"
 			(at 72.39 113.03 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
@@ -3297,7 +3625,7 @@
 		(instances
 			(project "gnssbike"
 				(path "/9c874366-f223-4aef-8b18-3e2a2bab2b25/0da3eb01-2091-4088-8504-92b9e7e9e70d"
-					(reference "#PWR010")
+					(reference "#PWR012")
 					(unit 1)
 				)
 			)
@@ -3312,7 +3640,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "d8841f2b-3bc4-4753-81ab-f6285d27ae4f")
-		(property "Reference" "#PWR011"
+		(property "Reference" "#PWR013"
 			(at 41.910000000000004 57.15 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
@@ -3332,7 +3660,7 @@
 		(instances
 			(project "gnssbike"
 				(path "/9c874366-f223-4aef-8b18-3e2a2bab2b25/0da3eb01-2091-4088-8504-92b9e7e9e70d"
-					(reference "#PWR011")
+					(reference "#PWR013")
 					(unit 1)
 				)
 			)
@@ -3347,7 +3675,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "de348d6c-5866-4681-8d0c-bb44c84fcac2")
-		(property "Reference" "#PWR012"
+		(property "Reference" "#PWR014"
 			(at 31.75 123.19 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
@@ -3367,7 +3695,7 @@
 		(instances
 			(project "gnssbike"
 				(path "/9c874366-f223-4aef-8b18-3e2a2bab2b25/0da3eb01-2091-4088-8504-92b9e7e9e70d"
-					(reference "#PWR012")
+					(reference "#PWR014")
 					(unit 1)
 				)
 			)
@@ -3382,7 +3710,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "0288266e-3458-4b9d-8ac8-597664cb5413")
-		(property "Reference" "#PWR013"
+		(property "Reference" "#PWR015"
 			(at 74.93 39.37 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
@@ -3402,7 +3730,7 @@
 		(instances
 			(project "gnssbike"
 				(path "/9c874366-f223-4aef-8b18-3e2a2bab2b25/0da3eb01-2091-4088-8504-92b9e7e9e70d"
-					(reference "#PWR013")
+					(reference "#PWR015")
 					(unit 1)
 				)
 			)
@@ -3417,7 +3745,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "df55f441-b210-486d-8f15-c1911e847993")
-		(property "Reference" "#PWR014"
+		(property "Reference" "#PWR016"
 			(at 31.75 44.45 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
@@ -3437,7 +3765,7 @@
 		(instances
 			(project "gnssbike"
 				(path "/9c874366-f223-4aef-8b18-3e2a2bab2b25/0da3eb01-2091-4088-8504-92b9e7e9e70d"
-					(reference "#PWR014")
+					(reference "#PWR016")
 					(unit 1)
 				)
 			)
@@ -3452,7 +3780,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "241710b3-5b8d-4671-8431-a043912650e9")
-		(property "Reference" "#FLG015"
+		(property "Reference" "#FLG017"
 			(at 44.45 110.49 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
@@ -3472,7 +3800,7 @@
 		(instances
 			(project "gnssbike"
 				(path "/9c874366-f223-4aef-8b18-3e2a2bab2b25/0da3eb01-2091-4088-8504-92b9e7e9e70d"
-					(reference "#FLG015")
+					(reference "#FLG017")
 					(unit 1)
 				)
 			)
@@ -3487,7 +3815,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "29b8142e-6abd-4ccc-84d6-5312fe910ff2")
-		(property "Reference" "#FLG016"
+		(property "Reference" "#FLG018"
 			(at 109.22 54.61 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
@@ -3507,7 +3835,7 @@
 		(instances
 			(project "gnssbike"
 				(path "/9c874366-f223-4aef-8b18-3e2a2bab2b25/0da3eb01-2091-4088-8504-92b9e7e9e70d"
-					(reference "#FLG016")
+					(reference "#FLG018")
 					(unit 1)
 				)
 			)

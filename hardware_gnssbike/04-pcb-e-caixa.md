@@ -572,6 +572,7 @@ O que o arranjo garante, e por quê:
 | BMP585 na face de trás, junto do respiro, em y 83 a 86,5 | fora da sombra da bateria, que termina em y 82,5 (**conta**) |
 | OPT3001 embaixo à esquerda | sob a janela de luz ambiente, longe das antenas |
 | USB-C no meio da borda de baixo | o anel veda contra a parede, sem tampa |
+| `J202`, o conector SWD de 10 vias, em (11,3; 72,2), abaixo das teclas e à esquerda do corredor do par USB | tem 5 mm de altura, então não cabe sob o display (teto 2,6) nem sob a célula, e precisa da face da frente, que é a que se abre; deixado como `JUNTO` do módulo o colocador o pôs em (17,5; 60,5), debaixo do display. A posição é explícita em `make_pcb.py` (2026-09-26) |
 
 ## Zonas proibidas
 
@@ -814,33 +815,50 @@ com e sem os resistores.
 
 ### A placa de hoje dentro da caixa do conceito
 
-O dono pediu, em 2026-09-26, para ver a caixa com a placa dentro. O
-[`cad/make_caixa.py`](cad/make_caixa.py) desenha exatamente isso, sem
-decidir nada: a caixa é a do conceito de 2026-09-20 (62 × 104 × 19, raio 7,
-paredes de 2 mm, fundo e tampa de 1,5), a placa é a `gnssbike.kicad_pcb` de
-hoje com o courtyard, a altura e a face de cada peça, e a posição da placa é
-uma **premissa**, escrita na página 2 do PDF: centrada na largura e com o
-contorno do display sobre o do conceito, o que a põe em x de 14 a 48 e y de
-5,9 a 95,9 da caixa; a célula deitada no fundo, a placa sobre a célula, o
-display 2,6 mm acima da frente da placa e a tampa de 17,5 a 19. Saem
-[`gnssbike-caixa.pdf`](cad/gnssbike-caixa.pdf) (frente com a tampa, por
-dentro, corte pelo comprimento, premissas e conflitos),
-[`gnssbike-3d-caixa-aberta.png`](cad/gnssbike-3d-caixa-aberta.png) e
-[`gnssbike-3d-caixa-frente.png`](cad/gnssbike-3d-caixa-frente.png).
+O dono pediu, em 2026-09-26, para ver a caixa com a placa dentro; e depois,
+o interior dela: lugar para colar a célula, teclas que batam com as chaves da
+placa, os cortes para colar os painéis e algo transparente por cima deles
+para a chuva. O [`cad/make_caixa.py`](cad/make_caixa.py) é uma **proposta**
+desenhada em volta da `gnssbike.kicad_pcb` de hoje (o courtyard, a altura e
+a face de cada peça, e o GLB da placa nas vistas 3D), a decidir em cima
+dela; nada foi impresso.
+
+| Decisão da proposta | Valor | Por quê |
+|---|---|---|
+| Caixa | 62 × 104 × **17** mm, raio 7, paredes 2, fundo e tampa 1,5 | a planta é a do conceito de 2026-09-20; 19 sobrava, e com 16 o USB-C (3,26) e o conector SWD batiam na tampa: sob ela sobram 3,6 mm da face da placa |
+| Placa | centrada (x 14 a 48), a 0,5 mm da parede de baixo (y 11,5 a 101,5) | o USB-C chega ao entalhe da parede |
+| Pilha, do fundo à tampa | célula colada no fundo (z 2,2 a 9,2) entre quatro nervuras; 0,5 de ar e 1,2 de peças do verso; placa em 10,9 a 11,7; 2,6 de peças da frente; display colado por baixo da tampa em volta da janela (fita 0,2); tampa em 15,5 a 17 | os tetos das sombras da placa, respeitados como estão em `make_dxf.ZONES` |
+| O que segura a placa | **uma** bossa M2 (no furo de (4,0; 75,75)) e três pilares de ø3 | o outro furo, (3,2; 45), fica **sobre a célula** e não pode ter bossa: precisa mudar na placa |
+| Teclas | as três chaves onde a placa as pôs (x 4,5 a 21,5); as **capas** espalhadas na largura do display, no passo de 14 mm do conceito, cada uma com uma barra de 5 × 0,5 por baixo da tampa até a sua chave; capas quadradas de 5 em furos de 5,6; membrana de TPU de 0,3 num rebaixo de 0,4 | o dono pediu as capas na largura da tela; a zona da antena do módulo não deixa a terceira chave passar de x = 21,5 na placa |
+| Painéis | dois módulos de 23 × 8 numa faceta plana de 1,5 mm abaixo das teclas e dois em cada chanfro de 45° (6,2 mm) das arestas longas, em bolsos de 1,9 mm; cobertura transparente de 0,6 mm por grupo, colada num degrau de 1 mm; furos de fio de ø1 | é o arranjo do conceito, com a faceta descida para baixo das teclas |
+| Furos | USB-C na parede de baixo e na aba da tampa; três de som sob o buzzer e o respiro do barômetro no fundo; LED e sensor de luz na tampa em posições **propostas** | na placa, `D601` e `U505` estão **debaixo do display** e precisam mudar de lugar |
+| Tampa | 4 parafusos M2 nos cantos, em bossas de ø5 | a vedação da partição não está desenhada |
+
+Saem [`gnssbike-caixa.pdf`](cad/gnssbike-caixa.pdf) (frente com a tampa,
+por dentro, cortes A-A e B-B, detalhes da tecla e do bolso, premissas, o que
+não bate e as peças), as vistas
+[`gnssbike-3d-caixa-aberta.png`](cad/gnssbike-3d-caixa-aberta.png),
+[`gnssbike-3d-caixa-frente.png`](cad/gnssbike-3d-caixa-frente.png) e
+[`gnssbike-3d-caixa-explodida.png`](cad/gnssbike-3d-caixa-explodida.png), e
+os STL `caixa-concha`, `caixa-tampa`, `caixa-tecla-1/2/3`,
+`caixa-membrana-teclas`, `caixa-cobertura-faceta` e
+`caixa-cobertura-chanfro`, sopas de triângulos para o fatiador, não sólidos
+de CAD.
 
 O que o desenho mostra que **não bate**, para o dono decidir:
 
 | O que | Medida | Quem cede |
 |---|---|---|
-| As teclas da placa (y = 66) caem em y = 71,9 da caixa, dentro da faceta solar do conceito (74,6 a 88,8); os botões do conceito estão em y = 95 | 3 teclas, 5,5 mm de folga até a faceta | a caixa: a faceta e os botões mudam de lugar |
-| O USB-C termina em y = 95,8 e a parede de baixo começa em 102 | 6,2 mm até a boca do conector chegar à parede | ou a placa desce, ou a parede entra |
-| A célula (36) e o display (40,08) são mais largos que a placa (34) | 1 mm e 3,04 mm de cada lado | a caixa é quem os segura |
-| Peças mais altas que o teto da sombra em que estão (regra `ME2`) | `J102` 4,25, `LS601` 3,0 e `U502` 1,86 sob a célula (teto 1,2); `J103` 3,75 e `U301` 2,7 sob o display (teto 2,6) | a placa, menos o `U301` (ver acima) |
-| Da face do display até a tampa sobram 4,6 mm | caixa de 19 mm | a caixa pode ser mais fina, ou a janela mais funda |
-| O conceito tem microSD, AEM10900 e BM20C; a placa tem memória soldada, ADP5091 e ME54BS13 | — | o raio X do conceito (`docs/img/placa-nova-caixa.svg`) está desatualizado e não foi redesenhado |
+| `D601` (LED) e `U505` (sensor de luz) estão debaixo do vidro do display | (31,1; 9,75) e (32; 16,5) da placa, com o display até y = 64,5 | a placa: os dois vão para baixo das teclas, onde a tampa tem as janelas propostas, (3,5; 70,5) e (17,5; 70) |
+| Um dos dois furos M2 da placa fica sobre a célula | (3,2; 45) | a placa: o furo vai para y ≥ 72 |
+| Peças mais altas que o teto da sombra em que estão (regra `ME2`) | `J102` 4,25, `LS601` 3,0 e `U502` 1,86 sob a célula (teto 1,2); `J103` 3,75 e `U301` 2,7 sob o display (teto 2,6) | a placa, menos o `U301` (ver acima); no 3D com a tampa o `J103` atravessa o display |
+| A célula (36) e o display (40,08) são mais largos que a placa (34) | 1 mm e 3,04 mm de cada lado | a caixa é quem os segura, e a proposta já faz isso |
+| O conceito tem microSD, AEM10900 e BM20C, a faceta entre o display e os botões e o engate atrás | — | o raio X do conceito (`docs/img/placa-nova-caixa.svg`) está desatualizado; o engate de quarto de volta não foi desenhado |
 
-Os seis módulos solares, o engate de quarto de volta e o respiro não estão no
-desenho: ficam na caixa, e nenhum documento os põe nas coordenadas da placa.
+Ainda não desenhado, pedido do dono para a próxima rodada: um dry run da
+caixa inteira (colunas, furos, espaços), a porta que protege o USB-C (que
+carrega e transfere arquivos), o suporte interno para uma antena GNSS
+externa à placa e a saída dos fios dos módulos até `J103`, `J104` e `J105`.
 
 ## Montagem
 

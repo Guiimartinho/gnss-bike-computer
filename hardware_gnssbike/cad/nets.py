@@ -95,7 +95,7 @@ net("3V0", ("L102", "2"), ("U101", "VOUT2"), ("U101", "LSIN1"),
     ("C105", "1"), ("C106", "1"), ("C107", "1"), ("C108", "1"),
     ("JP102", "1"), ("JP104", "1"), ("JP105", "1"),
     ("R107", "1"), ("R108", "1"), ("R109", "1"), ("R110", "1"),
-    ("J201", "VTref"))
+    ("J201", "VTref"), ("J202", "VTref"))
 net("3V0_MOD", ("JP102", "2"), ("U201", "VDD"), ("C201", "1"), ("C210", "1"))
 net("3V0_SENS", ("JP105", "2"), ("R112", "1"), ("C123", "1"), ("C124", "1"),
     ("C125", "1"), ("C126", "1"), ("U502", "VDD"), ("U502", "VDDIO"), ("U502", "CSB"),
@@ -215,9 +215,9 @@ net("IMU_INT", ("U201", "P1.10"), ("U503", "INT1"))
 net("BARO_INT", ("U201", "P1.12"), ("U502", "INT"))
 net("INT_OPT", ("U505", "INT"), ("R112", "2"))
 
-net("SWDIO", ("U201", "SWDIO"), ("J201", "SWDIO"))
-net("SWDCLK", ("U201", "SWDCLK"), ("J201", "SWDCLK"))
-net("MOD_RESET", ("U201", "RESET"), ("J201", "RESET"))
+net("SWDIO", ("U201", "SWDIO"), ("J201", "SWDIO"), ("J202", "SWDIO"))
+net("SWDCLK", ("U201", "SWDCLK"), ("J201", "SWDCLK"), ("J202", "SWDCLK"))
+net("MOD_RESET", ("U201", "RESET"), ("J201", "RESET"), ("J202", "nRESET"))
 net("CON_TX", ("U201", "P1.00"), ("TP201", "1"))
 net("CON_RX", ("U201", "P1.31"), ("TP202", "1"))
 
@@ -325,7 +325,8 @@ net("GND",
     ("C129", "2"),
     ("U201", "GND"), ("U201", "GND3"), ("U201", "GND10"), ("U201", "GND11"),
     ("U201", "GND20"), ("U201", "GND_D0"), ("U201", "GND_E0"),
-    ("U201", "GND_F0"), ("J201", "GND"), ("TP203", "1"),
+    ("U201", "GND_F0"), ("J201", "GND"), ("J202", "GND1"), ("J202", "GND2"),
+    ("TP203", "1"),
     ("U301", "GND"), ("U301", "GND2"), ("U301", "GND3"),
     ("C301", "2"), ("C302", "2"), ("C303", "2"), ("C304", "2"),
     ("C305", "2"), ("C306", "2"),
@@ -373,6 +374,10 @@ SEM_LIGACAO: dict[str, str] = {
         "desligada",
     "J101 SBU1, SBU2": "as duas linhas laterais do USB-C, sem uso em USB 2.0",
     "J201 SWO": "o pino 6 do TC2030 e o SWO, saida de trace do alvo. A sonda nunca o aciona, entao deixa-lo aberto nao quebra nada; leva-lo a um pad de trace do modulo daria printf por ITM no bring-up, e falta descobrir qual pad do ME54BS13 expoe o SWO",
+    "J202 SWO": "o pino 6 do conector Cortex de 10 vias e o SWO, como o 6 do TC2030: mesma pendencia, qual pad do ME54BS13 expoe o SWO",
+    "J202 KEY": "o pino 7 e a chave do conector blindado: nao existe pino ali",
+    "J202 TDI": "o pino 8 e TDI/NC, so JTAG; o nRF54LM20A e SWD",
+    "J202 GNDDetect": "o pino 9 e o GNDDetect da ARM: a sonda o le para saber se ha alvo; fica aberto, como nas placas de referencia da Nordic",
     "D102 NC1 a NC4": "a TI os reserva para roteamento reto, nao sao pinos",
 }
 
