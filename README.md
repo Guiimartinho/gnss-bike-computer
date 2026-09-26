@@ -12,7 +12,7 @@
 ![Testes](https://img.shields.io/badge/testes%20de%20host-714%20casos-2E7D32)
 ![CI](https://img.shields.io/badge/CI-desligado-lightgrey)
 ![Estado](https://img.shields.io/badge/estado-port%20em%20andamento-EF6C00)
-![Licença](https://img.shields.io/badge/licen%C3%A7a-a%20definir-lightgrey)
+![Licença](https://img.shields.io/badge/licen%C3%A7a-CC%20BY--NC%204.0-2E7D32)
 
 </div>
 
@@ -191,4 +191,4 @@ flowchart TB
 - **stravaV10** e **myStravaB**: Vincent Gollé ([vincent290587/stravaV10](https://github.com/vincent290587/stravaV10)), licenciado sob **Creative Commons Atribuição-NãoComercial 4.0 (CC BY-NC 4.0)**. O port deriva desse código; ver [`legacy/README.md`](legacy/README.md).
 - Bibliotecas de terceiros em `libraries/` e `tools/` mantêm suas licenças (BSD, LGPL-2.1, GPL-2.0, Nordic, SEGGER): tabela em [docs/12-ferramentas-testes.md](docs/12-ferramentas-testes.md#bibliotecas-e-licenças).
 - O add-on `sdk-ant` e o material ANT+ não fazem parte do repositório: o ANT+ Adopter Agreement proíbe redistribuir ([07](docs/07-radio-ant-ble.md#decisão-ant-e-ble)).
-- A licença do port ainda não foi definida.
+- **Este projeto é CC BY-NC 4.0** ([`LICENSE`](LICENSE), decisão do dono em 2026-09-26): código, hardware e documentação podem ser copiados, estudados, modificados e redistribuídos, com atribuição, e **não podem ser usados comercialmente**. É a mesma licença do stravaV10, do qual o port deriva, e por isso a restrição vale sobre o todo. Não é uma licença "open source" no sentido da OSI, que não admite restrição de uso: é código aberto com uso não comercial. Uso comercial só com autorização por escrito do dono e, para o que vem do stravaV10, do autor dele.

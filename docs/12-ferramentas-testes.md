@@ -170,4 +170,4 @@ Nenhuma pasta de `libraries/` é compilada pelo port; ele reimplementa o que pre
 | `tools/TDD/timer` | Teunis van Beelen | **GPL-2.0** | sem uso |
 | `tools/TDD/sd/fatfs` | FatFs R0.12b (ChaN) | licença do FatFs | sem uso |
 
-O código do stravaV10 é CC BY-NC 4.0 (atribuição e uso não comercial) e o port deriva dele: a licença do projeto é uma [decisão pendente do dono](10-status-do-port.md#decisões-do-dono).
+O código do stravaV10 é CC BY-NC 4.0 (atribuição e uso não comercial) e o port deriva dele. **O projeto inteiro é CC BY-NC 4.0** desde 2026-09-26 ([`LICENSE`](../LICENSE) na raiz, com o texto legal completo): o que é obra do projeto, em `zephyr_app/`, `hardware_gnssbike/`, `docs/` e `tools/fw`, `tools/docs` e `tools/ui`, nasce sob ela; o que é de terceiros, na tabela acima, mantém a licença de origem. Não é uma licença "open source" no sentido da OSI, que não admite restrição de uso; é código aberto com uso não comercial, que foi o que o dono pediu.

@@ -10,7 +10,7 @@ Esta pasta guarda o firmware que inspira o projeto: o **stravaV10**, computador 
 | Cópia local | arquivos com data de 2025-11-25 |
 
 > [!IMPORTANT]
-> A CC BY-NC 4.0 exige atribuição e proíbe uso comercial. O port em `zephyr_app/` traduz algoritmos, constantes e estruturas deste código, então é uma obra derivada: a licença do projeto precisa levar isso em conta. As bibliotecas de terceiros em [`../libraries/`](../libraries/) têm licenças próprias (ver `docs/12-ferramentas-testes.md`).
+> A CC BY-NC 4.0 exige atribuição e proíbe uso comercial. O port em `zephyr_app/` traduz algoritmos, constantes e estruturas deste código, então é uma obra derivada, e por isso o projeto inteiro é **CC BY-NC 4.0** ([`LICENSE`](../LICENSE) na raiz, decisão de 2026-09-26): a atribuição a Vincent Gollé é obrigatória e a restrição de uso não comercial vale sobre o todo. As bibliotecas de terceiros em [`../libraries/`](../libraries/) têm licenças próprias (ver `docs/12-ferramentas-testes.md`).
 
 ## Regras
 

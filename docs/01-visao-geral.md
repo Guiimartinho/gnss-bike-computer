@@ -83,7 +83,7 @@ timeline
 | Execução | task manager cooperativo | threads preemptivas |
 | Rádio | ANT+ e BLE central | BLE periférico + central |
 | Estado | completo, testado pelo autor, não compila aqui | compila, 53 conjuntos de testes de host (714 casos), sem teste na placa |
-| Licença | CC BY-NC 4.0 | a definir (deriva do legacy) |
+| Licença | CC BY-NC 4.0 | CC BY-NC 4.0, a mesma, porque deriva do legacy ([`LICENSE`](../LICENSE), decisão de 2026-09-26) |
 
 ## Onde começar
 
