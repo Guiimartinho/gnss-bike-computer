@@ -26,6 +26,8 @@ roteadas**, em KiCad 8, gerados a partir dos documentos de
 | `gnssbike-3d-frente.png`, `-tras.png`, `-angulo.png` | a placa em 3D |
 | `gnssbike-3d-montagem.png` | a pilha aberta: display em cima, placa, célula embaixo |
 | `gnssbike-montagem.pdf` | **o desenho de montagem**: cada peça com o seu designador, frente e verso |
+| `gnssbike-caixa.pdf` | **a placa dentro da caixa** do conceito (62 × 104 × 19): frente com a tampa, por dentro, corte pelo comprimento, e a página das premissas e do que não bate (`make_caixa.py`, 2026-09-26) |
+| `gnssbike-3d-caixa-aberta.png`, `gnssbike-3d-caixa-frente.png` | a caixa em 3D com a placa, a célula e o display dentro: a concha aberta vista do lado do USB-C, e a frente com a tampa (janela e furos das teclas) |
 
 ## O esquemático
 
@@ -209,6 +211,7 @@ Depois, as vistas:
 python hardware_gnssbike/cad/make_dxf.py     # contorno e zonas em DXF
 "D:/KiCAD/bin/kicad-cli.exe" pcb export glb --output hardware_gnssbike/cad/gnssbike.glb     --include-tracks --include-zones --subst-models hardware_gnssbike/cad/gnssbike.kicad_pcb
 python hardware_gnssbike/cad/make_3d.py      # as quatro vistas 3D em PNG
+python hardware_gnssbike/cad/make_caixa.py   # a placa dentro da caixa: PDF e duas vistas 3D
 "D:/KiCAD/bin/kicad-cli.exe" pcb export svg --output hardware_gnssbike/cad/gnssbike-2d.svg     --layers "F.Cu,In1.Cu,In2.Cu,B.Cu,F.SilkS,Edge.Cuts,F.Fab"     --page-size-mode 2 --exclude-drawing-sheet hardware_gnssbike/cad/gnssbike.kicad_pcb
 python hardware_gnssbike/cad/make_2d.py      # o PDF, uma pagina por camada
 ```

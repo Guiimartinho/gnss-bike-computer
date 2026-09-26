@@ -381,12 +381,20 @@ def ler_wrl(caminho: pathlib.Path) -> list[tuple[np.ndarray, tuple]]:
 # is the clearance the board has to respect, not the part's own thickness.
 MONTAGEM = (
     # nome, x0, y0, x1, y1, vao ate a placa, espessura, atras, cor, fonte
-    ("display JDI LPM027M128B", 7.46, 5.10, 47.54, 66.90, 2.60, 1.00, False,
-     (0.16, 0.17, 0.20), "04-pcb-e-caixa.md, tabela de zonas: contorno "
-     "40,08 x 61,8 em x 7,46-47,54 e y 5,1-66,9, teto de 2,6 mm"),
-    ("celula LiPo 36 x 60 x 7", 9.50, 22.50, 45.50, 82.50, 1.20, 7.00, True,
-     (0.30, 0.31, 0.34), "04-pcb-e-caixa.md: bolsa de 36 x 60 x 7 mm na face "
-     "de tras, em x 9,5-45,5 e y 22,5-82,5, teto de 1,2 mm"),
+    #
+    # On the 34 x 90 board (2026-09-26) both parts are WIDER than the board:
+    # the display's 40,08 mm outline overhangs it by 3,04 mm a side and the
+    # cell's 36 mm by 1 mm; they are centred on its width. The y ranges are
+    # make_dxf.ZONES', the same the ME2 rule measures against. Until
+    # 2026-09-26 this table still held the 55 mm board's numbers.
+    ("display JDI LPM027M128C, contorno 40,08 x 61,8", 17.0 - 20.04, 2.7,
+     17.0 + 20.04, 64.5, 2.60, 1.00, False, (0.16, 0.17, 0.20),
+     "04-pcb-e-caixa.md, tabela das sombras: y 2,7-64,5, teto de 2,6 mm; "
+     "make_dxf.ZONES SOMBRA_DISPLAY"),
+    ("celula LiPo 36 x 60 x 7", 17.0 - 18.0, 9.9, 17.0 + 18.0, 69.9, 1.20, 7.00,
+     True, (0.30, 0.31, 0.34),
+     "04-pcb-e-caixa.md: bolsa de 36 x 60 x 7 mm na face de tras, y 9,9-69,9, "
+     "teto de 1,2 mm; make_dxf.ZONES SOMBRA_BATERIA"),
 )
 # The six 23 x 8 mm solar modules are deliberately NOT here. They live in the
 # case walls - two on the sloped face and two on each chamfer - and nothing

@@ -812,6 +812,36 @@ devicetree; **a decisão é do dono e não é deste documento**. O que a bancada
 tem de fazer é o ensaio: `UBX-MON-SPAN` com a flash escrevendo e apagando,
 com e sem os resistores.
 
+### A placa de hoje dentro da caixa do conceito
+
+O dono pediu, em 2026-09-26, para ver a caixa com a placa dentro. O
+[`cad/make_caixa.py`](cad/make_caixa.py) desenha exatamente isso, sem
+decidir nada: a caixa é a do conceito de 2026-09-20 (62 × 104 × 19, raio 7,
+paredes de 2 mm, fundo e tampa de 1,5), a placa é a `gnssbike.kicad_pcb` de
+hoje com o courtyard, a altura e a face de cada peça, e a posição da placa é
+uma **premissa**, escrita na página 2 do PDF: centrada na largura e com o
+contorno do display sobre o do conceito, o que a põe em x de 14 a 48 e y de
+5,9 a 95,9 da caixa; a célula deitada no fundo, a placa sobre a célula, o
+display 2,6 mm acima da frente da placa e a tampa de 17,5 a 19. Saem
+[`gnssbike-caixa.pdf`](cad/gnssbike-caixa.pdf) (frente com a tampa, por
+dentro, corte pelo comprimento, premissas e conflitos),
+[`gnssbike-3d-caixa-aberta.png`](cad/gnssbike-3d-caixa-aberta.png) e
+[`gnssbike-3d-caixa-frente.png`](cad/gnssbike-3d-caixa-frente.png).
+
+O que o desenho mostra que **não bate**, para o dono decidir:
+
+| O que | Medida | Quem cede |
+|---|---|---|
+| As teclas da placa (y = 66) caem em y = 71,9 da caixa, dentro da faceta solar do conceito (74,6 a 88,8); os botões do conceito estão em y = 95 | 3 teclas, 5,5 mm de folga até a faceta | a caixa: a faceta e os botões mudam de lugar |
+| O USB-C termina em y = 95,8 e a parede de baixo começa em 102 | 6,2 mm até a boca do conector chegar à parede | ou a placa desce, ou a parede entra |
+| A célula (36) e o display (40,08) são mais largos que a placa (34) | 1 mm e 3,04 mm de cada lado | a caixa é quem os segura |
+| Peças mais altas que o teto da sombra em que estão (regra `ME2`) | `J102` 4,25, `LS601` 3,0 e `U502` 1,86 sob a célula (teto 1,2); `J103` 3,75 e `U301` 2,7 sob o display (teto 2,6) | a placa, menos o `U301` (ver acima) |
+| Da face do display até a tampa sobram 4,6 mm | caixa de 19 mm | a caixa pode ser mais fina, ou a janela mais funda |
+| O conceito tem microSD, AEM10900 e BM20C; a placa tem memória soldada, ADP5091 e ME54BS13 | — | o raio X do conceito (`docs/img/placa-nova-caixa.svg`) está desatualizado e não foi redesenhado |
+
+Os seis módulos solares, o engate de quarto de volta e o respiro não estão no
+desenho: ficam na caixa, e nenhum documento os põe nas coordenadas da placa.
+
 ## Montagem
 
 Três restrições de processo mandam no layout, e todas vêm do módulo:
