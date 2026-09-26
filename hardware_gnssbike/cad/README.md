@@ -1,7 +1,7 @@
 # Projeto KiCad da placa
 
 Este diretório é o projeto de CAD do GNSS Bike Computer: **esquemático
-hierárquico em sete folhas** e **placa com as 116 peças posicionadas e
+hierárquico em sete folhas** e **placa com as 156 peças posicionadas e
 roteadas**, em KiCad 8, gerados a partir dos documentos de
 [`hardware_gnssbike/`](../README.md) e conferidos contra eles por programa.
 
@@ -20,16 +20,9 @@ roteadas**, em KiCad 8, gerados a partir dos documentos de
 | `folha1-energia.kicad_sch` … `folha6-interface.kicad_sch` | as seis folhas |
 | `gnssbike.kicad_pcb` | a placa |
 | `gnssbike.kicad_dru` | as duas regras locais de folga |
-| `gnssbike-esquematico.pdf` | as 7 páginas do esquemático |
-| `gnssbike-pcb.pdf` | a placa em 2D, **uma página por camada de cobre** e uma quinta com as quatro juntas |
-| `gnssbike-2d.svg` | as quatro camadas numa folha só, para olhar rápido |
-| `gnssbike-3d-frente.png`, `-tras.png`, `-angulo.png` | a placa em 3D |
-| `gnssbike-3d-montagem.png` | a pilha aberta: display em cima, placa, célula embaixo |
-| `gnssbike-montagem.pdf` | **o desenho de montagem**: cada peça com o seu designador, frente e verso |
-| `gnssbike-caixa.pdf` | **a proposta de caixa** em volta da placa (62 × 106 × 17): frente com a tampa e a porta do USB-C, por dentro com o berço da antena externa, cortes A-A e B-B, a tecla e o bolso de um módulo, e a página das premissas, do que não bate e das peças (`make_caixa.py`, 2026-09-26; [04](../04-pcb-e-caixa.md#a-placa-de-hoje-dentro-da-caixa-do-conceito)) |
-| `gnssbike-3d-caixa-aberta.png`, `-frente.png`, `-explodida.png` | a caixa em 3D com a placa, a célula e o display dentro: a concha aberta vista do lado do USB-C, a frente com a tampa, e a vista explodida com a tampa, as teclas, os módulos, as coberturas e a porta |
-| `caixa-concha.stl`, `caixa-tampa.stl`, `caixa-tecla-1/2/3.stl`, `caixa-membrana-teclas.stl`, `caixa-cobertura-faceta.stl`, `caixa-cobertura-chanfro.stl`, `caixa-porta-usb.stl` | as peças da proposta para a primeira prova impressa: sopas de triângulos de caixas sobrepostas (o fatiador as une), não sólidos de CAD |
-| `dry_run_caixa.py` | **o dry run da caixa**: 13 regras medidas na mesma `Caixa` que desenha o PDF, as vistas e os STL — folga sob a tampa e sobre a célula, o teto do display, capas sobre as chaves, janela e vidro, entalhe e porta do USB-C, bossas e pilares, bossas da tampa contra as antenas, janelas do LED e do sensor, furos do buzzer e do barômetro, bolsos, coberturas e fendas de fio dos módulos, o chanfro assentando na parede e a folga da face interna dele, o berço da antena; uma regra que não acha o que medir **falha** |
+| `zonas.dxf`, `contorno-r3.dxf`, `contorno-r4.dxf` | as zonas e o contorno da placa em DXF, gerados pelo `make_dxf.py` (entradas da placa, não saídas) |
+
+O que se **lê** sai daqui para as pastas do assunto (reorganização de 2026-09-26): o esquemático em PDF para [`../esquematico/`](../esquematico/), a placa em PDF e SVG e o desenho de montagem para [`../placa/`](../placa/), a proposta de caixa (PDF, STL e os dois scripts dela) para [`../caixa/`](../caixa/README.md), e as vistas 3D da placa e da caixa para [`../../docs/img/hardware/`](../../docs/img/hardware/). A tabela de [`../README.md`](../README.md#o-cad-e-o-que-sai-dele) lista cada arquivo. O `gnssbike.glb` que o `kicad-cli` exporta fica aqui e fora do git (45 MB, regenerado quando a placa muda).
 
 ## O esquemático
 
@@ -187,7 +180,7 @@ Com 34 mm de largura, três decisões deixaram de ser gosto:
 
 ```sh
 python hardware_gnssbike/cad/check_sch.py                 # regera e confere o esquematico
-"D:/KiCAD/bin/kicad-cli.exe" sch export pdf --output hardware_gnssbike/cad/gnssbike-esquematico.pdf hardware_gnssbike/cad/gnssbike.kicad_sch
+"D:/KiCAD/bin/kicad-cli.exe" sch export pdf --output hardware_gnssbike/esquematico/gnssbike-esquematico.pdf hardware_gnssbike/cad/gnssbike.kicad_sch
 python hardware_gnssbike/cad/make_pcb.py                  # 1. coloca as pecas
 python hardware_gnssbike/cad/route.py                     # 2. roteia o que consegue
 "D:/KiCAD/bin/python.exe" hardware_gnssbike/cad/fill_zones.py   # 3. preenche as malhas de terra
@@ -212,11 +205,11 @@ Depois, as vistas:
 ```sh
 python hardware_gnssbike/cad/make_dxf.py     # contorno e zonas em DXF
 "D:/KiCAD/bin/kicad-cli.exe" pcb export glb --output hardware_gnssbike/cad/gnssbike.glb     --include-tracks --include-zones --subst-models hardware_gnssbike/cad/gnssbike.kicad_pcb
-python hardware_gnssbike/cad/make_3d.py      # as quatro vistas 3D em PNG
-python hardware_gnssbike/cad/dry_run_caixa.py   # a caixa medida contra a placa: 13 regras (falha = codigo 1)
-python hardware_gnssbike/cad/make_caixa.py   # a placa dentro da caixa: PDF, tres vistas 3D e os STL
-"D:/KiCAD/bin/kicad-cli.exe" pcb export svg --output hardware_gnssbike/cad/gnssbike-2d.svg     --layers "F.Cu,In1.Cu,In2.Cu,B.Cu,F.SilkS,Edge.Cuts,F.Fab"     --page-size-mode 2 --exclude-drawing-sheet hardware_gnssbike/cad/gnssbike.kicad_pcb
-python hardware_gnssbike/cad/make_2d.py      # o PDF, uma pagina por camada
+python hardware_gnssbike/cad/make_3d.py      # as quatro vistas 3D em PNG, em docs/img/hardware/
+python hardware_gnssbike/caixa/dry_run_caixa.py   # a caixa medida contra a placa: 13 regras (falha = codigo 1)
+python hardware_gnssbike/caixa/make_caixa.py   # a caixa: PDF e STL em caixa/, tres vistas em docs/img/hardware/
+"D:/KiCAD/bin/kicad-cli.exe" pcb export svg --output hardware_gnssbike/placa/gnssbike-2d.svg     --layers "F.Cu,In1.Cu,In2.Cu,B.Cu,F.SilkS,Edge.Cuts,F.Fab"     --page-size-mode 2 --exclude-drawing-sheet hardware_gnssbike/cad/gnssbike.kicad_pcb
+python hardware_gnssbike/cad/make_2d.py      # o PDF em placa/, uma pagina por camada
 ```
 
 O `make_2d.py` existe por causa do preenchimento. As quatro camadas numa
@@ -245,7 +238,7 @@ componente** em folha nenhuma; nada fora da folha; nenhuma peça sobre outra;
 e todo rótulo hierárquico tem o pino de folha que responde por ele.
 
 **Placa** — o KiCad abre e roda o **DRC, que fecha em zero erro**, com as
-malhas preenchidas e 101 ligações ainda sem trilha; as **116 peças** estão lá,
+malhas preenchidas e 58 itens ainda sem trilha (2026-09-26); as **156 peças** estão lá,
 uma vez cada; **todo pad leva a rede da lista de nós** e nenhuma ligação ficou
 sem pad; nenhum contorno sobre outro; nada passa da borda; nada dentro das
 áreas de antena; a placa cabe na caixa; os três planos de terra existem.

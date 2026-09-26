@@ -7,7 +7,7 @@ LAYERS below, and a value that no document gives is written as a layer name
 ending in _CONFERIR, so that it cannot be mistaken for a decided number.
 
 Output (hardware_gnssbike/cad/):
-  contorno-r3.dxf   board outline only, 3 mm corner radius (case_drawing.py)
+  contorno-r3.dxf   board outline only, 3 mm corner radius (the concept drawing's)
   contorno-r4.dxf   board outline only, 4 mm corner radius (docs/14)
   zonas.dxf         mounting holes, keep-outs, shadows and placement zones
 
@@ -71,7 +71,7 @@ H = float(os.environ.get("GNSSBIKE_H", 95.0))
 THICKNESS = 0.8
 
 # The two sources disagree on the corner radius; both are written out.
-RADIUS_DRAWING = 3.0  # tools/docs/case_drawing.py:339, rect(3.5, 3.5, W-7, H-7, 3)
+RADIUS_DRAWING = 3.0  # the concept drawing's (tools/docs/case_drawing.py:339, retired 2026-09-26)
 RADIUS_DOC14 = 4.0  # docs/14-hardware-placa-nova.md#placa-de-circuito-impresso
 
 # Mounting holes, board coordinates. TWO of them, decided by the owner on
@@ -425,7 +425,7 @@ def main() -> int:
     write_outline(HERE / "contorno-r4.dxf", RADIUS_DOC14)
     write_zones(HERE / "zonas.dxf")
     print(f"placa {W:g} x {H:g} mm, {THICKNESS:g} mm")
-    print(f"contorno-r3.dxf  raio {RADIUS_DRAWING:g} mm (case_drawing.py)")
+    print(f"contorno-r3.dxf  raio {RADIUS_DRAWING:g} mm (o do desenho do conceito)")
     print(f"contorno-r4.dxf  raio {RADIUS_DOC14:g} mm (docs/14)")
     print(f"zonas.dxf        {len(ZONES)} zonas, {len(CONFLITOS)} conflitos, "
           f"{len(FUROS_DOC)} furo M2")

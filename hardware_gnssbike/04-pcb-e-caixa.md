@@ -6,8 +6,8 @@ aberto por natureza: um esquemático diz o que se liga a quê, e é o layout
 que decide se a antena
 enxerga o céu, se o harmônico da flash cai dentro de L1 e se a placa cabe na
 caixa. As posições vêm da tabela de zonas de [`docs/14`](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso)
-e do desenho da caixa em [`tools/docs/case_drawing.py`](../tools/docs/case_drawing.py),
-que gera [`docs/img/placa-nova-caixa.svg`](../docs/img/placa-nova-caixa.svg).
+e, até 2026-09-26, do desenho do conceito da caixa (`tools/docs/case_drawing.py`,
+retirado nesse dia: a proposta medida em [`caixa/`](caixa/README.md) o substitui).
 Conta feita aqui vem marcada como **conta**; número de ficha ou de desenho
 vem marcado como **ficha** ou **desenho**.
 
@@ -42,8 +42,9 @@ vem marcado como **ficha** ou **desenho**.
 > caixa.** O tamanho de agora sai das regras das fichas, e a conta está em
 > [De onde saem os 34 × 90](#de-onde-saem-os-34--90).
 >
-> O desenho da caixa em [`tools/docs/case_drawing.py`](../tools/docs/case_drawing.py)
-> continua sendo o de 62 × 104, e **isso não é pendência da placa**: a caixa
+> A caixa do conceito continuava sendo a de 62 × 104 (o desenho dela foi
+> retirado em 2026-09-26; a proposta medida, em [`caixa/`](caixa/README.md),
+> tem 62 × 106 × 17), e **isso não é pendência da placa**: a caixa
 > tem o tamanho que o display, a bateria e a mão pedem, e a placa encolher não
 > muda nenhum dos três.
 
@@ -61,7 +62,7 @@ vem marcado como **ficha** ou **desenho**.
 |---|---|---|
 | PCB | **34 × 95 mm**, espessura de 0,8 mm | derivado das regras em [`cad/make_dxf.py`](cad/make_dxf.py) (`W`, `H`); os 5 mm além dos 90 de 2026-09-24 são das teclas no passo de 13,4 (abaixo) |
 | Raio de canto da placa | **3 mm no desenho, 4 mm em [14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso)** | as duas fontes discordam, ver abaixo |
-| Caixa | conceito: 62 × 104 × 19 mm, mais 3 mm do engate de quarto de volta; proposta de 2026-09-26: **62 × 106 × 17** ([abaixo](#a-placa-de-hoje-dentro-da-caixa-do-conceito)) | [`case_drawing.py`](../tools/docs/case_drawing.py) (`W, H, T`, `MOUNT`); [`cad/make_caixa.py`](cad/make_caixa.py) |
+| Caixa | conceito: 62 × 104 × 19 mm, mais 3 mm do engate de quarto de volta; proposta de 2026-09-26: **62 × 106 × 17** ([abaixo](#a-placa-de-hoje-dentro-da-caixa-do-conceito)) | o desenho do conceito (`tools/docs/case_drawing.py`, retirado em 2026-09-26); [`caixa/make_caixa.py`](caixa/make_caixa.py) (`W_C, H_C, T_C`) |
 | Raio de canto da caixa | 7 mm | idem (`R`) |
 | Placa da V3, para comparar | 52,35 × 77,47 mm | [13](../docs/13-placa-nova.md#o-que-cabe-numa-caixa-pequena) |
 
@@ -101,10 +102,10 @@ de teclas em y = 66 passa a 5,0 mm dela. São 3.230 mm² (`GNSSBIKE_H` em
 `make_dxf.py` troca a altura).
 
 > [!IMPORTANT]
-> **O raio de canto da placa não bate entre as duas fontes.** O desenho da
-> caixa traça a placa com **3 mm** de raio — `xv.rect(3.5, 3.5, W - 7, H - 7, 3, …)`
-> em [`case_drawing.py:339`](../tools/docs/case_drawing.py), onde o quarto
-> argumento é o raio —, e [14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso)
+> **O raio de canto da placa não bate entre as duas fontes.** O desenho do
+> conceito traçava a placa com **3 mm** de raio — `xv.rect(3.5, 3.5, W - 7, H - 7, 3, …)`,
+> linha 339 do `case_drawing.py` retirado em 2026-09-26; o número vive em
+> `cad/make_dxf.RADIUS_DRAWING` —, e [14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso)
 > escreve "cantos com raio de 4 mm". Um milímetro num canto não muda nada
 > elétrico, mas muda o contorno que vai para o fabricante e a folga contra
 > a parede de 7 mm de raio da caixa. **Qual dos dois vale ainda não foi
@@ -265,17 +266,17 @@ receptor de junto da antena) e até 1,2 mm sob a bateria
 
 > [!IMPORTANT]
 > **A posição do display e da célula sobre esta placa é uma PROPOSTA de
-> 2026-09-26, não uma decisão.** A caixa desenhada em
-> [`tools/docs/case_drawing.py`](../tools/docs/case_drawing.py) é a da
+> 2026-09-26, não uma decisão.** A caixa desenhada de manhã (o conceito
+> de `tools/docs/case_drawing.py`, retirado à tarde) era a da
 > placa antiga, de 55 × 97, e nenhum arquivo dizia onde as duas peças caem
 > sobre a placa de 34 × 90 — a tabela abaixo, até essa data, ainda trazia
 > retângulos de 47 mm de largura numa placa de 34. Sem os retângulos a
 > regra `ME2` do dry-run passava **sem medir peça nenhuma**; agora eles
 > estão em `cad/make_dxf.py` (`SOMBRA_DISPLAY_JDI_MAX_3-0MM` e
 > `SOMBRA_BATERIA_MAX_1-2MM`), a regra mede, e o que ela mede está abaixo.
-> A caixa de [`cad/make_caixa.py`](cad/make_caixa.py) lê os mesmos
+> A caixa de [`caixa/make_caixa.py`](caixa/make_caixa.py) lê os mesmos
 > retângulos (`make_dxf.DISPLAY_Y1`), e o dry run dela
-> ([`cad/dry_run_caixa.py`](cad/dry_run_caixa.py)) mede a pilha inteira.
+> ([`caixa/dry_run_caixa.py`](caixa/dry_run_caixa.py)) mede a pilha inteira.
 
 O que fixa cada retângulo, na placa de 34 × 95:
 
@@ -719,7 +720,7 @@ atual a bateria termina em y 22,5, a 14,5 mm da zona da antena (**conta**:
 certamente entram nela. Os módulos solares mais altos são os dos chanfros
 laterais, e começam em **y 21,5 na caixa**, ou **y 18 na placa**; a faceta
 chanfrada que os recebe começa antes, em **y 17,5 na caixa**, ou **y 14 na
-placa** ([`case_drawing.py`](../tools/docs/case_drawing.py), o bisel
+placa** (no desenho do conceito, retirado em 2026-09-26: o bisel
 `rect(0.6, 17.5, 6.2, 55.0, …)` e os módulos `module(fv, x0, 21.5, 5.5, 23.0, True)`):
 
 ```
@@ -851,10 +852,10 @@ o interior dela: lugar para colar a célula, teclas que batam com as chaves da
 placa, os cortes para colar os painéis e algo transparente por cima deles
 para a chuva; depois, as chaves da placa exatamente sob as capas, um dry run
 da caixa inteira, a porta do USB-C, o suporte de uma antena GNSS externa e a
-fixação dos painéis laterais conferida. O [`cad/make_caixa.py`](cad/make_caixa.py)
+fixação dos painéis laterais conferida. O [`caixa/make_caixa.py`](caixa/make_caixa.py)
 é uma **proposta** desenhada em volta da `gnssbike.kicad_pcb` de hoje (o
 courtyard, a altura e a face de cada peça, e o GLB da placa nas vistas 3D),
-e o [`cad/dry_run_caixa.py`](cad/dry_run_caixa.py) mede essa mesma
+e o [`caixa/dry_run_caixa.py`](caixa/dry_run_caixa.py) mede essa mesma
 proposta, regra a regra; a decidir em cima dela; nada foi impresso.
 
 | Decisão da proposta | Valor | Por quê |
@@ -880,12 +881,12 @@ o entalhe do USB-C 0,2 mm acima da base do receptáculo, o berço da antena
 dentro da placa e a fita do display com 1,0 mm nos lados curtos — este
 último é o que o display dá, e a regra passou a pedir 1,0.
 
-Saem [`gnssbike-caixa.pdf`](cad/gnssbike-caixa.pdf) (frente com a tampa e a
+Saem [`gnssbike-caixa.pdf`](caixa/gnssbike-caixa.pdf) (frente com a tampa e a
 porta, por dentro com o berço, cortes A-A e B-B, detalhes da tecla e do
 bolso, premissas, o que não bate e as peças), as vistas
-[`gnssbike-3d-caixa-aberta.png`](cad/gnssbike-3d-caixa-aberta.png),
-[`gnssbike-3d-caixa-frente.png`](cad/gnssbike-3d-caixa-frente.png) e
-[`gnssbike-3d-caixa-explodida.png`](cad/gnssbike-3d-caixa-explodida.png), e
+[`gnssbike-3d-caixa-aberta.png`](../docs/img/hardware/gnssbike-3d-caixa-aberta.png),
+[`gnssbike-3d-caixa-frente.png`](../docs/img/hardware/gnssbike-3d-caixa-frente.png) e
+[`gnssbike-3d-caixa-explodida.png`](../docs/img/hardware/gnssbike-3d-caixa-explodida.png), e
 os STL `caixa-concha`, `caixa-tampa`, `caixa-tecla-1/2/3`,
 `caixa-membrana-teclas`, `caixa-cobertura-faceta`, `caixa-cobertura-chanfro`
 e `caixa-porta-usb`, sopas de triângulos para o fatiador, não sólidos de CAD.
@@ -955,7 +956,7 @@ montagem, que não existe.**
 | **Alcance do rádio** | a linha de **20 mm** da tabela de isolação (ficha **7.2**) é cumprida na placa de [`cad/`](cad/), mas a de **25 mm do display não é e não pode ser** — 11,3 mm medidos; a bolsa da bateria fica a 4 mm da zona proibida; e se a MinewSemi tem regra de metal externo ninguém a leu | [Zonas proibidas](#zonas-proibidas), [09](09-dry-run-da-pcb.md) |
 | **Área do FPC do display** | os **3,4 × 10 mm** da tabela de zonas não saem de ficha nenhuma: o PDF do Hirose FH28 que está em `datasheets/` é só a folha de especificação (ELC4-153887-02), **sem vista, sem corte e sem tabela de cotas**. Falta a folha de desenho da Hirose, ou medir uma amostra | [Orçamento de área](#orçamento-de-área) |
 | **Folga entre placa e caixa** | 3,5 mm no desenho contra os 2,5 mm que [14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso) descreve | [O contorno](#o-contorno) |
-| **Raio de canto da placa** | 3 mm no [desenho](../tools/docs/case_drawing.py) contra os 4 mm de [14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso); as duas fontes discordam e nenhuma foi confirmada | [O contorno](#o-contorno) |
+| **Raio de canto da placa** | 3 mm no desenho do conceito (`cad/make_dxf.RADIUS_DRAWING`) contra os 4 mm de [14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso); as duas fontes discordam e nenhuma foi confirmada | [O contorno](#o-contorno) |
 | **Face de cada peça e ordem do forno** | a conta põe o ME54BS13 na frente; o arquivo de montagem não existe | [Montagem](#montagem) |
 | **Plugue do USB-C na caixa** | a boca do conector fica 0,77 mm atrás da face externa; um plugue de capa grossa pode não entrar | [Zonas proibidas](#zonas-proibidas) |
 | **Contatos da antena** | a área dos contatos do elemento de antena na parede da caixa não está dimensionada. Os painéis **deixaram de ser pendência** em 2026-09-24: são um `J103` de 4 vias medido ([Como os painéis chegam à placa](#como-os-painéis-chegam-à-placa)) | [Orçamento de área](#orçamento-de-área) |

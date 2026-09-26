@@ -160,7 +160,8 @@ def main() -> int:
             f"GNSS Bike Computer - placa {M.W:g} x {M.H:g} mm - "
             "NADA FABRICADO NEM MEDIDO", fontsize=8, fontname=FONTE)
         total += desenha(pag, lugar, atras, esc, ox, oy)
-    saida = HERE / "gnssbike-montagem.pdf"
+    saida = HERE.parent / "placa" / "gnssbike-montagem.pdf"
+    saida.parent.mkdir(parents=True, exist_ok=True)
     doc.save(saida, garbage=3, deflate=True)
     doc.close()
     print(f"{saida.name}: 2 paginas, {len(lugar)} pecas, "

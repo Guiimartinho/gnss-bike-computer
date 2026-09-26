@@ -52,11 +52,22 @@ flowchart LR
 
 ## Placa nova
 
-![Proposta do aparelho: frente, lateral direita, traseira e arranjo interno](docs/img/placa-nova-caixa.svg)
+<div align="center">
 
-Conceito em escala, a partir da caixa da V3: 62 × 104 × 19 mm (a proposta desenhada em volta da placa em 2026-09-26, medida por um dry run próprio, é de 62 × 106 × 17: [`hardware_gnssbike/04`](hardware_gnssbike/04-pcb-e-caixa.md#a-placa-de-hoje-dentro-da-caixa-do-conceito)); a PCB, dimensionada pelo circuito e **não** pela caixa, tem 34 × 95 mm em 4 camadas, 6 módulos solares na frente inclinada e nos chanfros laterais. A escolha de cada componente, com os números dos datasheets, está em [docs/15-avaliacao-componentes.md](docs/15-avaliacao-componentes.md); a lista de compras, validada peça a peça, em [docs/19-lista-de-compras.md](docs/19-lista-de-compras.md).
+![A placa em CAD, vista em ângulo: o USB-C na borda de cima, o módulo de rádio à esquerda e o receptor GNSS à direita](docs/img/hardware/gnssbike-3d-angulo.png)
 
-![A placa em CAD, vista em ângulo: o USB-C na borda de cima, o módulo de rádio à esquerda e o receptor GNSS à direita](hardware_gnssbike/cad/gnssbike-3d-angulo.png)
+*A placa `gnssbike`, 34 × 95 mm em 4 camadas, gerada por programa a partir dos documentos de `hardware_gnssbike/`.*
+
+</div>
+
+| | |
+|---|---|
+| ![A caixa proposta, vista de frente: janela do display, três teclas sob a membrana, módulos solares nos chanfros e na faceta](docs/img/hardware/gnssbike-3d-caixa-frente.png) | ![A caixa em vista explodida: tampa com o display colado, teclas, módulos e coberturas, a porta do USB-C](docs/img/hardware/gnssbike-3d-caixa-explodida.png) |
+| *A caixa proposta em 2026-09-26, 62 × 106 × 17 mm, medida por um dry run próprio* | *Explodida: tampa com o display, teclas, módulos solares, porta do USB-C* |
+
+![Manual de montagem: as peças em escala e os oito passos, do chicote solar ao fechamento do aparelho](docs/img/manual-de-montagem.svg)
+
+A caixa foi desenhada em volta da placa real ([`hardware_gnssbike/caixa/`](hardware_gnssbike/caixa/README.md), decisões em [`hardware_gnssbike/04`](hardware_gnssbike/04-pcb-e-caixa.md#a-placa-de-hoje-dentro-da-caixa-do-conceito)); a placa, dimensionada pelo circuito e **não** pela caixa, tem 34 × 95 mm em 4 camadas, 6 módulos solares na faceta e nos chanfros laterais da caixa. A escolha de cada componente, com os números dos datasheets, está em [docs/15-avaliacao-componentes.md](docs/15-avaliacao-componentes.md); a lista de compras, validada peça a peça, em [docs/19-lista-de-compras.md](docs/19-lista-de-compras.md).
 
 A placa existe como **arquivo de CAD**, gerado por programa: 156 peças, 114
 redes, 1.417 segmentos, 549 vias, **196 ligações roteadas e 75 ainda sem
@@ -132,7 +143,8 @@ flowchart TB
     ROOT --> LIB["libraries/<br/>bibliotecas do legacy"]
     ROOT --> TOOLS["tools/<br/>fw e docs do projeto · TDD, zpm, MMD, jumper do legacy"]
     ROOT --> HW["hardware/<br/>Eagle da myStravaB V3 (Gerbers da V2)"]
-    ROOT --> DOCS["docs/<br/>documentação numerada, img, historico"]
+    ROOT --> HWN["hardware_gnssbike/<br/>a placa nova: docs 01 a 10, cad (KiCad e geradores),<br/>esquematico, placa, caixa (PDF, STL, dry run), datasheets"]
+    ROOT --> DOCS["docs/<br/>documentação numerada, img (telas, hardware), historico"]
     ROOT --> AI["CLAUDE.md · AGENTS.md · .claude/skills/"]
     ROOT --> BAT["build.bat · flash.bat · recover.bat · serial.bat"]
 ```
@@ -160,6 +172,7 @@ flowchart TB
 | [17 · Dispositivos BLE e ANT+](docs/17-dispositivos-ble-ant.md) | catálogo de sensores e acessórios, prioridades e limites do rádio |
 | [18 · Interface e telas](docs/18-interface-telas.md) | interface LVGL da placa nova: todas as telas, desenhadas e testadas no PC, em 8 cores e em preto e branco |
 | [19 · Lista de compras](docs/19-lista-de-compras.md) | peças validadas em duas passagens, trocas, correções de integração e códigos da DigiKey |
+| [Hardware da placa nova](hardware_gnssbike/README.md) | o esquemático folha a folha, os cálculos, a lista de nós, a placa e a caixa, os conectores, o layout e os dois dry runs; o CAD em [`cad/`](hardware_gnssbike/cad/README.md), a caixa em [`caixa/`](hardware_gnssbike/caixa/README.md), os PDF em [`esquematico/`](hardware_gnssbike/esquematico/) e [`placa/`](hardware_gnssbike/placa/) |
 | [CHANGELOG](CHANGELOG.md) | histórico de mudanças |
 
 ## Estado e próximos passos
@@ -169,8 +182,9 @@ flowchart TB
 - **Novos alvos e rádio:** o port compila para o nRF54LM20 DK, e a pilha ANT do add-on `sdk-ant` v2.1.1 compila sobre o NCS v3.3.0 nos dois DKs (`ANT=1`); nada disso foi testado em placa.
 - **Interface:** os 44 quadros em LVGL, testadas no PC, rodam no firmware desde 2026-09-19 com um driver próprio da tela (JDI LPM027M128B em 8 cores ou Sharp em preto e branco, em retrato), teclas com toque longo e a máquina da luz; nunca vistas num painel.
 - **Placa nova:** desenho do aparelho, especificação ([14](docs/14-hardware-placa-nova.md)) e avaliação dos componentes ([15](docs/15-avaliacao-componentes.md)). O esquemático é do dono; antes do layout vêm os testes de bancada da carga dupla, do GNSS (C/N0 por banda e isolamento da antena contra o rádio de 2,4 GHz), da coexistência dos rádios e do display.
+- **Hardware da placa nova (2026-09-23 a 26):** o esquemático em sete folhas, a placa de 34 × 95 mm colocada e roteada por programa, o desenho de montagem, o manual e o chicote solar, dois dry runs (as regras das fichas e da IPC-2221 medidas no arquivo; a caixa medida contra a placa) e a proposta de caixa de 62 × 106 × 17 com STL para a primeira prova. Nada fabricado, nada impresso, nenhum componente na bancada; o que falta antes de mandar fabricar está em [`hardware_gnssbike/README.md`](hardware_gnssbike/README.md#antes-de-mandar-fabricar).
 - **Decidido:** ANT+ e BLE juntos (os equipamentos externos falam ANT+) e placa própria com o nRF54LM20A. Decisões e pendências em [docs/10-status-do-port.md](docs/10-status-do-port.md#decisões-do-dono).
-- **Próximo:** bancada e esquemático da placa nova, depois fidelidade dos algoritmos, armazenamento, rádio e interface. Roteiro em [docs/10-status-do-port.md](docs/10-status-do-port.md#roteiro).
+- **Próximo:** os testes de bancada da placa nova (carga dupla, isolamento entre as antenas, o display sobre a antena GNSS), o roteamento que falta e a primeira prova impressa da caixa; no firmware, fidelidade dos algoritmos, armazenamento, rádio e interface. Roteiro em [docs/10-status-do-port.md](docs/10-status-do-port.md#roteiro).
 
 ## Créditos e licenças
 

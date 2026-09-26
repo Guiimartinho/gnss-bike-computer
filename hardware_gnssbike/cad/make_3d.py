@@ -25,6 +25,9 @@ import numpy as np
 from PIL import Image
 
 HERE = pathlib.Path(__file__).resolve().parent
+# the rendered views live with the documentation's images, not with the
+# CAD sources (the repository's reorganisation of 2026-09-26)
+IMG = HERE.parents[1] / "docs" / "img" / "hardware"
 
 TIPOS = {5120: ("b", 1), 5121: ("B", 1), 5122: ("h", 2), 5123: ("H", 2),
          5125: ("I", 4), 5126: ("f", 4)}
@@ -685,8 +688,9 @@ def main() -> int:
                                ("gnssbike-3d-angulo.png", 28.0, 38.0, 1600, 1300),
                                ("gnssbike-3d-tras.png", 180.0, -90.0, 1100, 1800)):
         img = render(tris, cols, w, h, az, el)
-        img.save(HERE / nome)
-        print(f"  {nome}: {w} x {h}")
+        IMG.mkdir(parents=True, exist_ok=True)
+        img.save(IMG / nome)
+        print(f"  {IMG.relative_to(HERE.parents[1]) / nome}: {w} x {h}")
 
     # and the stack: display, board, cell, pulled apart so the three are all
     # visible at once. The board alone never showed what it has to fit
@@ -697,7 +701,7 @@ def main() -> int:
     montagem_t = np.concatenate([tris, caixa_t])
     montagem_c = np.concatenate([cols, caixa_c])
     img = render(montagem_t, montagem_c, 1500, 1500, 24.0, 26.0)
-    img.save(HERE / "gnssbike-3d-montagem.png")
+    img.save(IMG / "gnssbike-3d-montagem.png")
     print(f"  gnssbike-3d-montagem.png: 1500 x 1500 "
           f"({len(MONTAGEM)} pecas da caixa)")
     return 0

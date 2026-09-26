@@ -88,11 +88,13 @@ flowchart LR
 
 ## Como fica o aparelho
 
-![Proposta do aparelho: frente, lateral direita, traseira e arranjo interno](img/placa-nova-caixa.svg)
+![A caixa proposta em 2026-09-26, aberta: a concha com a placa, o display e a célula dentro](img/hardware/gnssbike-3d-caixa-aberta.png)
 
-Conceito em escala a partir da caixa impressa da V3 ([foto](img/front1.png)), gerado por `tools/docs/case_drawing.py`; não há projeto mecânico nem layout ainda.
+![A mesma caixa em vista explodida: tampa com o display colado, teclas, módulos solares nos chanfros e na faceta, a porta do USB-C](img/hardware/gnssbike-3d-caixa-explodida.png)
 
-- **Caixa:** 62 × 104 × 19 mm, mais 3 mm do engate de quarto de volta; a V3 tem cerca de 60 × 85 mm. A frente mantém a moldura elevada, os três botões e o furo de luz da V3. A proposta desenhada em volta da placa real, em 2026-09-26, ficou em **62 × 106 × 17** (2 mm a mais para o berço de uma antena GNSS externa; 17 porque 19 sobrava) e é medida por [`hardware_gnssbike/cad/dry_run_caixa.py`](../hardware_gnssbike/cad/dry_run_caixa.py) ([04](../hardware_gnssbike/04-pcb-e-caixa.md#a-placa-de-hoje-dentro-da-caixa-do-conceito)).
+O conceito de 2026-09-20 era um desenho em escala a partir da caixa impressa da V3 ([foto](img/front1.png)), com a placa antiga de 55 × 97; foi retirado em 2026-09-26, quando a proposta desenhada em volta da placa real e medida por um dry run próprio o substituiu ([`hardware_gnssbike/caixa/`](../hardware_gnssbike/caixa/README.md), [04](../hardware_gnssbike/04-pcb-e-caixa.md#a-placa-de-hoje-dentro-da-caixa-do-conceito)). As vistas acima são dela. Nada foi impresso.
+
+- **Caixa:** 62 × 104 × 19 mm, mais 3 mm do engate de quarto de volta; a V3 tem cerca de 60 × 85 mm. A frente mantém a moldura elevada, os três botões e o furo de luz da V3. A proposta desenhada em volta da placa real, em 2026-09-26, ficou em **62 × 106 × 17** (2 mm a mais para o berço de uma antena GNSS externa; 17 porque 19 sobrava) e é medida por [`hardware_gnssbike/caixa/dry_run_caixa.py`](../hardware_gnssbike/caixa/dry_run_caixa.py) ([04](../hardware_gnssbike/04-pcb-e-caixa.md#a-placa-de-hoje-dentro-da-caixa-do-conceito)).
 - **Tela:** JDI LPM027M128C com a interface em 8 cores e a luz frontal integrada, decidida em 2026-09-23; a janela é a mesma do LS027. A Sharp LS027B7DH01A com o filme Azumo continua como plano B, no mesmo conector e na mesma janela ([lista de compras](19-lista-de-compras.md#display)).
 - **Painéis:** 6 módulos de 3 células de 23 × 8 mm, 2 numa face inclinada abaixo da tela e 2 em cada chanfro de 45° das bordas longas ([painel solar](#painel-solar)).
 - **Antenas:** GNSS L1 e L5 na parede de cima, longe dos painéis; o módulo BM20C (BLE e ANT+) no canto de baixo à direita, com a antena fora da área dos painéis.

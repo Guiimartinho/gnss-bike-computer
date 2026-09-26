@@ -404,7 +404,7 @@ outra pergunta é o que acontece com a **caixa**, que é vedada e fica no
 guidão.
 
 Área externa (**conta**, caixa de 62 × 106 × 17 mm, a proposta de
-[`cad/make_caixa.py`](cad/make_caixa.py); o conceito de 62 × 104 × 19 dava
+[`caixa/make_caixa.py`](caixa/make_caixa.py); o conceito de 62 × 104 × 19 dava
 192 cm²):
 
 ```

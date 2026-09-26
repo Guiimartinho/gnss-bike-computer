@@ -15,7 +15,7 @@
 
 </div>
 
-![A placa vista em ângulo, com o USB-C na borda de cima, o módulo de rádio à esquerda e o receptor GNSS à direita](cad/gnssbike-3d-angulo.png)
+![A placa vista em ângulo, com o USB-C na borda de cima, o módulo de rádio à esquerda e o receptor GNSS à direita](../docs/img/hardware/gnssbike-3d-angulo.png)
 
 O hardware completo do aparelho: cada folha do esquemático, cada ligação, a
 conta que justifica cada valor — e a placa, com as peças postas, o cobre
@@ -41,21 +41,25 @@ componente.
 > que depende de decisão, de ficha por ler ou de medida está na lista de
 > [Antes de mandar fabricar](#antes-de-mandar-fabricar).
 
-## O CAD
+## O CAD e o que sai dele
 
 Tudo em [`cad/`](cad/) é **gerado por programa**, não desenhado à mão: o
 esquemático, o footprint de cada peça, a colocação, o roteamento e as
 vistas. A cadeia inteira e os comandos estão em
-[`cad/README.md`](cad/README.md).
+[`cad/README.md`](cad/README.md). Os arquivos que se leem ficam fora das
+fontes, cada um na sua pasta (2026-09-26):
 
-| Arquivo | O que é |
-|---|---|
-| `gnssbike-esquematico.pdf` | as seis folhas, com símbolo de peça de verdade |
-| `gnssbike-pcb.pdf` | sete páginas: uma por camada de cobre, mais a de conjunto |
-| `gnssbike-montagem.pdf` | o desenho de montagem, 155 peças com linha de chamada |
-| `gnssbike-3d-frente.png`, `-tras.png`, `-angulo.png` | a placa vista de cima, de baixo e em ângulo |
-| `gnssbike-3d-montagem.png` | a pilha: display, placa e célula |
-| [`docs/img/manual-de-montagem.svg`](../docs/img/manual-de-montagem.svg) | o **manual de montagem**: as peças em escala e os oito passos |
+| Pasta | Arquivo | O que é |
+|---|---|---|
+| [`esquematico/`](esquematico/) | [`gnssbike-esquematico.pdf`](esquematico/gnssbike-esquematico.pdf) | as sete páginas do esquemático, com símbolo de peça de verdade |
+| [`placa/`](placa/) | [`gnssbike-pcb.pdf`](placa/gnssbike-pcb.pdf) | sete páginas: uma por camada de cobre, mais a de conjunto |
+| | [`gnssbike-2d.svg`](placa/gnssbike-2d.svg) | as quatro camadas numa folha só, para olhar rápido |
+| | [`gnssbike-montagem.pdf`](placa/gnssbike-montagem.pdf) | o desenho de montagem, 156 peças com linha de chamada |
+| [`caixa/`](caixa/README.md) | [`gnssbike-caixa.pdf`](caixa/gnssbike-caixa.pdf) e os `caixa-*.stl` | a proposta de caixa, medida pelo `dry_run_caixa.py`, e as peças para a primeira prova impressa |
+| [`docs/img/hardware/`](../docs/img/hardware/) | `gnssbike-3d-frente.png`, `-tras.png`, `-angulo.png` | a placa vista de cima, de baixo e em ângulo |
+| | `gnssbike-3d-montagem.png` | a pilha: display, placa e célula |
+| | `gnssbike-3d-caixa-aberta.png`, `-frente.png`, `-explodida.png` | a caixa com a placa, a célula e o display dentro |
+| [`docs/img/`](../docs/img/) | [`manual-de-montagem.svg`](../docs/img/manual-de-montagem.svg) | o **manual de montagem**: as peças em escala e os oito passos |
 | [`docs/img/chicote-solar.svg`](../docs/img/chicote-solar.svg) | como ligar os seis módulos solares na placa |
 
 ## Índice
@@ -73,6 +77,7 @@ vistas. A cadeia inteira e os comandos estão em
 | [09 · Dry-run da placa](09-dry-run-da-pcb.md) | as regras das fichas e da IPC-2221 medidas no arquivo de CAD, com o que passa, o que falha e o que ninguém mediu |
 | [10 · Dry-run de 2026-09-26](10-dry-run-2026-09-26.md) | placa roteada, esquemático, mecânica e contas, em três análises independentes: o que foi corrigido no dia e o que fica para o dono |
 | [CAD](cad/README.md) | como o esquemático e a placa são gerados, e como se confere cada etapa |
+| [Caixa](caixa/README.md) | a proposta de caixa em volta da placa: o gerador, o dry run de 13 regras, o PDF e os STL |
 
 ## O aparelho em blocos
 

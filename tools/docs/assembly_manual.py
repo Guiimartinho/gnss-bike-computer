@@ -9,10 +9,10 @@ it.
 Every part is at TRUE SIZE at its panel's own scale, and every dimension comes
 from a file in this repository:
 
-  * case 62 x 104 x 19 mm, corner radius 7          tools/docs/case_drawing.py
-  * cavity 58 x 100 mm (rule ME1: the 34 x 90 board leaves 12 mm each side
-    and 5 mm top and bottom)                        cad/dry_run_pcb.py
-  * board 34 x 90 x 0.8 mm, two M2 holes                     gnssbike.kicad_pcb
+  * case 62 x 106 x 17 mm, corner radius 7        hardware_gnssbike/caixa/make_caixa.py
+  * cavity 58 x 102 mm (the 34 x 95 board leaves 12 mm each side, 6,5 at the
+    top for the antenna cradle and 0,5 at the bottom)   caixa/dry_run_caixa.py
+  * board 34 x 95 x 0.8 mm, two M2 holes                     gnssbike.kicad_pcb
   * every connector's position and face                     gnssbike.kicad_pcb
   * display LPM027M128C, outline 40.08 x 61.8, active 35.28 x 58.8
                                                     hardware_gnssbike/04

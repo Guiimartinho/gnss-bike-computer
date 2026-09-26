@@ -94,7 +94,10 @@ def main() -> int:
         pag = junto[-1]
         pag.insert_text((36, 28), rotulo, fontsize=11, fontname="helv")
         d.close()
-    saida = HERE / "gnssbike-pcb.pdf"
+    # the deliverable lives in placa/, beside the 2D SVG and the assembly
+    # drawing; cad/ keeps the sources (2026-09-26)
+    saida = HERE.parent / "placa" / "gnssbike-pcb.pdf"
+    saida.parent.mkdir(parents=True, exist_ok=True)
     junto.save(saida, garbage=3, deflate=True)
     junto.close()
     for p, _r in paginas:
