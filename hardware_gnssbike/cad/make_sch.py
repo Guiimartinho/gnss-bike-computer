@@ -16,6 +16,7 @@ Check: python hardware_gnssbike/cad/check_sch.py
 
 from __future__ import annotations
 
+import math
 import pathlib
 import sys
 
@@ -26,8 +27,9 @@ import nets as N  # noqa: E402
 import parts as P  # noqa: E402
 import footprints as FPS  # noqa: E402
 import sheets as S  # noqa: E402
-from sch_lib import (GRID, HierLabel, PowerPort, Router, Schematic,  # noqa: E402
-                     SheetSymbol, snap)
+import blocos as B  # noqa: E402
+from sch_lib import (GRID, HierLabel, LocalLabel, PowerPort, Router,  # noqa: E402
+                     Schematic, SheetSymbol, snap)
 
 PROJETO = "gnssbike"
 DATA = "2026-09-23"
@@ -67,11 +69,13 @@ def escolher_papel(refs: list[str], n_labels: int) -> str:
     row ended above the bottom margin. That is the same code that draws them,
     so the answer cannot drift from the drawing.
     """
+    # `refs` is the list of functional blocks since 2026-09-26: the blocks are
+    # laid out on the candidate sheet and the sheet is accepted when the last
+    # shelf ends above the bottom margin and no block is wider than the page.
     for nome in ORDEM:
         w, h = PAPEIS[nome]
-        if (h - 2 * MARGEM) / (2 * GRID) < n_labels:
-            continue
-        if posicionar(refs, nome) <= h - MARGEM:
+        fim = B.posicionar(refs, (w, h), MARGEM, MARGEM + 14.0)
+        if fim <= h - MARGEM and all(b.caixa[2] <= w - MARGEM + 1e-6 for b in refs):
             return nome
     return "A0"
 
@@ -171,6 +175,18 @@ def lado_do_pino(ref: str, pin_name: str) -> str:
         # 0 e um pino que aponta para a direita, ou seja, esta na ESQUERDA.
         ang = part.pin_local()[numero][2]
         return {0: "L", 180: "R", 90: "B", 270: "T"}.get(ang, "L")
+    # Um simbolo de dois terminais deste projeto e desenhado pela GEOMETRIA
+    # de pin_local(), nao pelos lados que parts.py declarou: o modulo solar
+    # PV101 declara os pinos como R e B e o desenho os poe a esquerda e a
+    # direita. Quem usava o lado declarado punha o simbolo de terra dois
+    # passos ABAIXO da ponta direita, em cima do vizinho - foi assim que o
+    # GND engoliu PV_A, PV_B, SRC e MPPT em 2026-09-26.
+    from sch_lib import classe_do_simbolo
+    if classe_do_simbolo(part):
+        px, py, _a = part.pin_local()[numero]
+        if part.eixo() == "v":
+            return "T" if py > 0 else "B"
+        return "L" if px < 0 else "R"
     return next(q.side for q in part.pins
                 if q.name == pin_name or q.number == pin_name)
 
@@ -178,20 +194,44 @@ def lado_do_pino(ref: str, pin_name: str) -> str:
 def montar_folha(nome: str, arquivo: str, pagina: str, root_uuid: str,
                  sheet_uuid: str, tipo: dict[str, str],
                  papel_forcado: str = "") -> tuple[Schematic, list[str], int]:
-    refs = ordenar_por_ligacao(S.por_folha()[nome])
+    refs = S.por_folha()[nome]
     entre = sorted(n for n, k in tipo.items()
                    if k == "ENTRE" and any(S.sheet_of(r) == nome for r, _p in N.NETS[n]))
-    papel = papel_forcado or escolher_papel(refs, len(entre))
-    posicionar(refs, papel)
+    # The sheet is drawn by functional block since 2026-09-26 (blocos.py):
+    # each block around its anchor, the blocks left to right in the order
+    # the signal flows, a dashed box and a title on each.
+    blocos = B.blocos_da_folha(nome, refs)
+    papel = papel_forcado or escolher_papel(blocos, len(entre))
+    B.posicionar(blocos, PAPEIS[papel], MARGEM, MARGEM + 14.0)
     w_pag, h_pag = PAPEIS[papel]
 
     sch = Schematic(PROJETO, papel, name=nome, root_uuid=root_uuid,
                     title=f"GNSS Bike Computer - {nome}", rev="A", date=DATA)
     sch.sheet_symbol_uuid = sheet_uuid
     sch.parts = [P.PARTS[r] for r in refs]
+    for b in blocos:
+        sch.rects.append(b.caixa)
+        # the title sits just above its box, where no power symbol can be
+        sch.text(b.caixa[0], b.caixa[1] - 0.8, b.titulo, 1.8)
+    dono_bloco = B.bloco_de(blocos)
 
     router = Router(sch.parts)
     router.build_obstacles()
+    # A wire never leaves its block: the gaps between the boxes and the page
+    # margins are closed to the router, so what crosses a box boundary is a
+    # label, by construction.
+    x_cells = range(0, int(w_pag / GRID) + 2)
+    y_cells = range(0, int(h_pag / GRID) + 2)
+    dentro_de_bloco: set[tuple[int, int]] = set()
+    for b in blocos:
+        x0, y0, x1, y1 = b.caixa
+        for kx in range(router.key(x0, y0)[0], router.key(x1, y1)[0] + 1):
+            for ky in range(router.key(x0, y0)[1], router.key(x1, y1)[1] + 1):
+                dentro_de_bloco.add((kx, ky))
+    for kx in x_cells:
+        for ky in y_cells:
+            if (kx, ky) not in dentro_de_bloco:
+                router.blocked.add((kx, ky))
 
     # De quem e cada celula de pino desta folha.
     #
@@ -235,7 +275,11 @@ def montar_folha(nome: str, arquivo: str, pagina: str, root_uuid: str,
     # over each other - "GNDGNDGND" across the bottom of every chip. What is
     # reserved now is the whole thing, the name included.
     ocupados: set[tuple[float, float]] = set()
-    caixas: list[tuple[float, float, float, float]] = []
+    # what a symbol's name must not sit on: the other symbols (added as
+    # they are placed) and the parts, with the room their reference and
+    # value take - the same boxes the block placer keeps apart
+    caixas: list[tuple[float, float, float, float]] = [
+        B._caixa(r, P.PARTS[r].x, P.PARTS[r].y) for r in refs]
 
     def _cabe(qx: float, qy: float, rede: str) -> bool:
         w = len(rede) * 0.9 + 0.8
@@ -244,10 +288,50 @@ def montar_folha(nome: str, arquivo: str, pagina: str, root_uuid: str,
         return not any(a[2] > b[0] and b[2] > a[0] and a[3] > b[1] and b[3] > a[1]
                        for b in caixas)
 
+    # A rail pin that gets no room for its symbol is closed by a LABEL with
+    # the rail's name instead (same net for KiCad: a local label named GND
+    # joins the GND power net of the sheet). Until 2026-09-26 the fallback
+    # was "put the symbol two steps away anyway", and two steps away was the
+    # neighbour's pin: that is how GND swallowed PV_A, SRC and MPPT.
+    sem_simbolo: list[tuple[str, str, str]] = []
     for rede, terra in S.TRILHOS.items():
         if rede not in N.NETS:
             continue
+        # Neighbouring pins of the same rail on the same side of a part -
+        # the four VDD pins across the top of the IMU - are joined by one
+        # wire along their tips and get ONE symbol, at the end of the run.
+        # One symbol per pin printed four names on top of each other.
+        grupos: dict[tuple[str, str], list[tuple[float, tuple[float, float], str]]] = {}
         for ref, pin_name in pinos_do_no(rede, nome):
+            px, py = ponto(ref, pin_name)
+            lado = lado_do_pino(ref, pin_name)
+            chave = py if lado in ("L", "R") else px
+            grupos.setdefault((ref, lado), []).append((chave, (px, py), pin_name))
+        primeiros: list[tuple[str, str]] = []
+        for (ref, lado), lista in grupos.items():
+            lista.sort()
+            i = 0
+            while i < len(lista):
+                j = i
+                while (j + 1 < len(lista)
+                       and abs(lista[j + 1][0] - lista[j][0] - 2 * GRID) < 1e-6):
+                    j += 1
+                if j > i:
+                    # one wire per pair of neighbours, not one wire over the
+                    # whole run: "wires connect with other wires or pins
+                    # only if their ends coincide exactly" (KiCad manual),
+                    # so a pin in the middle of a long wire is NOT on it
+                    for k in range(i, j):
+                        a, b = lista[k][1], lista[k + 1][1]
+                        sch.wires.append((a, b))
+                        for cel in (router.key(*a), router.key(*b),
+                                    router.key((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)):
+                            router.used.setdefault(cel, set()).add(rede)
+                            router.dirs.setdefault(cel, {}).setdefault(rede, set()).add(
+                                "V" if lado in ("L", "R") else "H")
+                primeiros.append((ref, lista[i][2]))
+                i = j + 1
+        for ref, pin_name in primeiros:
             px, py = ponto(ref, pin_name)
             lado = lado_do_pino(ref, pin_name)
             dx, dy = {"L": (-1, 0), "R": (1, 0), "T": (0, -1), "B": (0, 1)}[lado]
@@ -277,7 +361,20 @@ def montar_folha(nome: str, arquivo: str, pagina: str, root_uuid: str,
                 if passo is not None:
                     break
             if passo is None:
-                passo = 2
+                for tentativa in range(9, 16):
+                    qx, qy = (px + dx * tentativa * GRID,
+                              py + dy * tentativa * GRID)
+                    if (qx, qy) in ocupados or router.key(qx, qy) in router.blocked:
+                        continue
+                    if any(_de_outro(router.key(px + dx * k * GRID,
+                                                py + dy * k * GRID), rede)
+                           for k in range(1, tentativa + 1)):
+                        continue
+                    passo = tentativa
+                    break
+            if passo is None:
+                sem_simbolo.append((rede, ref, pin_name))
+                continue
             qx, qy = px + dx * passo * GRID, py + dy * passo * GRID
             ocupados.add((qx, qy))
             w_r = len(rede) * 0.9 + 0.8
@@ -292,36 +389,98 @@ def montar_folha(nome: str, arquivo: str, pagina: str, root_uuid: str,
                 d = router.dirs.setdefault(cel, {}).setdefault(rede, set())
                 d.add("H" if dy == 0 else "V")
 
-    # ---- signals that leave the sheet: a label on the nearest margin ----
-    alvos_label: dict[str, tuple[float, float]] = {}
-    esq = [r for r in entre if _mais_a_esquerda(r, nome, w_pag)]
-    dir_ = [r for r in entre if r not in esq]
-    for lista, x_lab, ang in ((esq, MARGEM + LABEL_X - 6.0, 180),
-                              (dir_, w_pag - MARGEM - LABEL_X + 6.0, 0)):
-        n = len(lista)
-        if not n:
-            continue
-        passo = max(2 * GRID, snap((h_pag - 2 * MARGEM - 20.0) / max(n, 1)))
-        for i, rede in enumerate(sorted(lista)):
-            ly = snap(MARGEM + 14.0 + i * passo)
-            sch.labels.append(HierLabel(rede, snap(x_lab), ly, angle=ang))
-            alvos_label[rede] = (snap(x_lab), ly)
-            # a label is a connection point: a wire of another net that runs
-            # over it joins that signal, silently
-            router.pin_cells.add(router.key(snap(x_lab), ly))
-
-    # ---- routing ----
+    # ---- nets: a wire inside a block, a label across blocks and sheets ----
+    #
+    # A net whose pins all sit in one block is drawn as a wire, by the maze
+    # router, inside the box. A net that touches two blocks of this sheet
+    # gets a local label on a short stub at every pin; one that leaves the
+    # sheet gets a hierarchical label the same way (the root sheet draws the
+    # line between the blocks). Nothing crosses the page as a wire.
     falhas: list[str] = []
+    n_rotulos_por_falha = 0
     dentro = [n for n, k in tipo.items()
               if k == "DENTRO" and any(S.sheet_of(r) == nome for r, _p in N.NETS[n])]
-    # A ORDEM importa, e muito. Um pino no MEIO de uma coluna de dez - o
-    # pino 5 do FPC do display - fica cercado pelos fios dos vizinhos assim
-    # que eles saem, e quem chega por ultimo nao acha caminho. Roteando
-    # primeiro quem tem menos espaco em volta, o apertado passa e o folgado
-    # da a volta, que e o que uma pessoa faz.
-    #
-    # "Espaco em volta" aqui e quantas celulas livres ha ao redor dos pinos
-    # da rede, contadas no raio de tres passos de grade.
+    nomes_entre = set(entre)
+
+    def _livre(c: tuple[int, int], rede: str) -> bool:
+        return not (c in router.blocked or c in router.pin_cells
+                    or _de_outro(c, rede) or (router.used.get(c, set()) - {rede}))
+
+    def _rotulo(rede: str, ref: str, pin: str, hier: bool) -> bool:
+        """A stub out of the pin, in the direction it faces, and the label.
+
+        A straight stub of two to eight steps when the way is clear; when it
+        is not, the maze router takes the stub to the nearest free cell
+        instead. What is never done is drawing the stub over something
+        else: a label on another net's wire joins the two, silently.
+        """
+        lado, (px, py) = B._lado_e_ponta(ref, pin)
+        dx, dy = {"L": (-1, 0), "R": (1, 0), "T": (0, -1), "B": (0, 1)}[lado]
+        fim = None
+        for tent in range(2, 9):
+            cels = [router.key(px + dx * k * GRID, py + dy * k * GRID)
+                    for k in range(1, tent + 1)]
+            if all(_livre(c, rede) for c in cels):
+                fim = (snap(px + dx * tent * GRID), snap(py + dy * tent * GRID))
+                sch.wires.append(((px, py), fim))
+                for k in range(tent + 1):
+                    cel = router.key(px + dx * k * GRID, py + dy * k * GRID)
+                    router.used.setdefault(cel, set()).add(rede)
+                    router.dirs.setdefault(cel, {}).setdefault(rede, set()).add(
+                        "H" if dy == 0 else "V")
+                break
+        if fim is None:
+            k0 = router.key(px, py)
+            alvos = {(k0[0] + ax, k0[1] + ay)
+                     for ax in range(-10, 11) for ay in range(-10, 11)
+                     if 2 <= abs(ax) + abs(ay) <= 10
+                     and _livre((k0[0] + ax, k0[1] + ay), rede)}
+            router.used.setdefault(k0, set()).add(rede)
+            caminho = router.route(rede, (px, py), alvos, 12) if alvos else None
+            if caminho is None:
+                falhas.append(f"{nome}: {rede} sem lugar para o rotulo em {ref}.{pin}")
+                return False
+            router.add_path(rede, caminho)
+            fim = router.pos(caminho[-1])
+            fim = (snap(fim[0]), snap(fim[1]))
+        qx, qy = fim
+        # a label is a connection point: a wire of another net that runs
+        # over it joins that signal, silently
+        router.pin_cells.add(router.key(qx, qy))
+        ang = 180 if lado == "L" else 0
+        if hier:
+            sch.labels.append(HierLabel(rede, qx, qy, angle=ang))
+        else:
+            sch.local_labels.append(LocalLabel(rede, qx, qy, angle=ang))
+        return True
+
+    # The rail pins that got no room for a power symbol next to them: the
+    # maze router takes a stub to the nearest free cell and the symbol goes
+    # there. NOT a local label named after the rail - measured in KiCad's
+    # netlist on 2026-09-26, a local label "3V0" is a net of its own,
+    # "/folha/3V0", and never joins the power net 3V0.
+    for rede_s, ref_s, pin_s in sem_simbolo:
+        terra_s = S.TRILHOS.get(rede_s, False)
+        _lado_s, (px_s, py_s) = B._lado_e_ponta(ref_s, pin_s)
+        k0 = router.key(px_s, py_s)
+        alvos = {(k0[0] + ax, k0[1] + ay)
+                 for ax in range(-12, 13) for ay in range(-12, 13)
+                 if 2 <= abs(ax) + abs(ay) <= 12
+                 and _livre((k0[0] + ax, k0[1] + ay), rede_s)}
+        router.used.setdefault(k0, set()).add(rede_s)
+        caminho = router.route(rede_s, (px_s, py_s), alvos, 14) if alvos else None
+        if caminho is None:
+            falhas.append(f"{nome}: {rede_s} sem lugar para o simbolo em {ref_s}.{pin_s}")
+            continue
+        router.add_path(rede_s, caminho)
+        qx_s, qy_s = router.pos(caminho[-1])
+        qx_s, qy_s = snap(qx_s), snap(qy_s)
+        router.pin_cells.add(router.key(qx_s, qy_s))
+        sch.powers.append(PowerPort(rede_s, qx_s, qy_s, ground=terra_s,
+                                    ref=f"#PWR{len(sch.powers) + 1:03d}"))
+
+    # A ORDEM importa: roteando primeiro quem tem menos espaco em volta, o
+    # apertado passa e o folgado da a volta, que e o que uma pessoa faz.
     def _aperto(rede: str) -> int:
         livre = 0
         for r, p in pinos_do_no(rede, nome):
@@ -333,27 +492,47 @@ def montar_folha(nome: str, arquivo: str, pagina: str, root_uuid: str,
                         livre += 1
         return livre
 
+    # Labels first, wires after: a label is a fixed point and a wire is not,
+    # so the wires are what bends around them, not the other way round.
+    com_fio: list[str] = []
     for rede in sorted(dentro, key=lambda n: (_aperto(n), n)) + sorted(entre):
-        pts = [ponto(r, p) for r, p in pinos_do_no(rede, nome)]
-        if rede in alvos_label:
-            pts.append(alvos_label[rede])
+        pinos = pinos_do_no(rede, nome)
+        hier = rede in nomes_entre
+        blocos_da_rede = {id(dono_bloco[r]) for r, _p in pinos}
+        if hier or len(blocos_da_rede) > 1:
+            for r, p in pinos:
+                _rotulo(rede, r, p, hier)
+        else:
+            com_fio.append(rede)
+    for rede in com_fio:
+        pinos = pinos_do_no(rede, nome)
+        pts = [ponto(r, p) for r, p in pinos]
         if len(pts) < 2:
             continue
         feito = {router.key(*pts[0])}
         router.used.setdefault(router.key(*pts[0]), set()).add(rede)
+        roteou = True
         for pt in pts[1:]:
             if router.key(*pt) in feito:
                 continue
             caminho = None
-            for folga in (60, 200, 700):
+            for folga in (40, 120, 400):
                 caminho = router.route(rede, pt, feito, folga)
                 if caminho is not None:
                     break
             if caminho is None:
-                falhas.append(f"{nome}: {rede} ate {pt}")
-                continue
+                roteou = False
+                break
             router.add_path(rede, caminho)
             feito |= set(caminho)
+        if not roteou:
+            # the wire did not find its way inside the block: the net is
+            # closed by labels instead, which is electrically the same and
+            # leaves nothing open. Counted, and printed, so it is known.
+            n_rotulos_por_falha += 1
+            falhas.append(f"{nome}: {rede} fechada por rotulo")
+            for r, p in pinos:
+                _rotulo(rede, r, p, False)
 
     _fechar(sch, router)
 
@@ -657,11 +836,18 @@ def main() -> int:
         print(f"  {arquivo}: {sch.paper}, {len(sch.parts)} pecas, "
               f"{len(sch.powers)} simbolos de alimentacao, "
               f"{len(sch.labels)} rotulos, {len(sch.wires)} fios")
-    if falhas:
-        print(f"  NAO ROTEADOS: {len(falhas)}")
-        for f in falhas[:10]:
+    por_rotulo = [f for f in falhas if "fechada por rotulo" in f]
+    reais = [f for f in falhas if "fechada por rotulo" not in f]
+    if por_rotulo:
+        print(f"  fechadas por rotulo em vez de fio (o labirinto nao passou): "
+              f"{len(por_rotulo)}")
+        for f in por_rotulo[:10]:
             print(f"    {f}")
-    return 1 if falhas else 0
+    if reais:
+        print(f"  NAO ROTEADOS: {len(reais)}")
+        for f in reais[:10]:
+            print(f"    {f}")
+    return 1 if reais else 0
 
 
 if __name__ == "__main__":

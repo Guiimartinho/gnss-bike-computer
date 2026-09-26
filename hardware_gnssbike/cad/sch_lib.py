@@ -272,6 +272,11 @@ class Part:
     y: float = 0.0
     w: float = 0.0
     h: float = 0.0
+    # A two-terminal symbol drawn mirrored, so that the pin that serves the
+    # chip is the one facing it. The generator cannot rotate symbols; it can
+    # flip these, and a flipped resistor is still a resistor. Set by
+    # blocos.py, honoured by pin_local() and instance().
+    espelho: bool = False
 
     @property
     def sym_name(self) -> str:
@@ -411,9 +416,14 @@ class Part:
             if len(p) == 1:
                 return {p[0].number: (a, 0.0, 180)}
             if self.eixo() == "v":
-                return {p[0].number: (0.0, a, 270),
-                        p[1].number: (0.0, -a, 90)}
-            return {p[0].number: (-a, 0.0, 0), p[1].number: (a, 0.0, 180)}
+                fora = {p[0].number: (0.0, a, 270), p[1].number: (0.0, -a, 90)}
+                if self.espelho:      # flipped top for bottom: (mirror x)
+                    fora = {p[0].number: (0.0, -a, 90), p[1].number: (0.0, a, 270)}
+                return fora
+            fora = {p[0].number: (-a, 0.0, 0), p[1].number: (a, 0.0, 180)}
+            if self.espelho:          # flipped left for right: (mirror y)
+                fora = {p[0].number: (a, 0.0, 180), p[1].number: (-a, 0.0, 0)}
+            return fora
         w, h = self.size()
         hw, hh = w / 2.0, h / 2.0
         s = self._sides()
@@ -542,8 +552,16 @@ class Part:
         u = uid("inst", self.ref)
         pins = "\n".join(f'\t\t(pin "{esc(p.number)}" (uuid "{uid("pin", self.ref, p.number)}"))'
                          for p in self.pins)
+        # KiCad's tokens are named after the coordinate they negate, not the
+        # axis they mirror about - MEASURED on 2026-09-26 with a resistor and
+        # two labels, exported by kicad-cli: (mirror x) swaps left for right,
+        # (mirror y) swaps top for bottom. pin_local() already reports the
+        # flipped tips, so the wires land on them.
+        espelho = ""
+        if self.espelho and not self.kicad and classe_do_simbolo(self):
+            espelho = "\t\t(mirror y)\n" if self.eixo() == "v" else "\t\t(mirror x)\n"
         return (f'\t(symbol\n\t\t(lib_id "{self.sym_name}")\n'
-                f'\t\t(at {self.x:.3f} {self.y:.3f} 0)\n\t\t(unit 1)\n'
+                f'\t\t(at {self.x:.3f} {self.y:.3f} 0)\n{espelho}\t\t(unit 1)\n'
                 '\t\t(exclude_from_sim no)\n\t\t(in_bom yes)\n\t\t(on_board yes)\n\t\t(dnp no)\n'
                 f'\t\t(uuid "{u}")\n'
                 f'\t\t(property "Reference" "{esc(self.ref)}"\n'
@@ -848,6 +866,28 @@ class HierLabel:
 
 
 @dataclass
+class LocalLabel:
+    """A net name on a stub: the way a signal crosses a sheet without a wire.
+
+    KiCad joins every local label of the same name on the same sheet. It is
+    what keeps a block from being wired to the other end of the page, and it
+    is how a person reads it: the name says where the signal goes.
+    """
+    name: str
+    x: float
+    y: float
+    angle: int = 0     # 0 text to the right of the point, 180 to the left
+
+    def render(self) -> str:
+        just = "left" if self.angle == 0 else "right"
+        return (f'\t(label "{esc(self.name)}"\n'
+                f'\t\t(at {self.x:.3f} {self.y:.3f} {self.angle})\n'
+                '\t\t(fields_autoplaced yes)\n'
+                f'\t\t(effects (font (size 1.27 1.27)) (justify {just} bottom))\n'
+                f'\t\t(uuid "{uid("ll", self.name, self.x, self.y)}")\n\t)')
+
+
+@dataclass
 class SheetSymbol:
     """One block on the root sheet."""
     name: str
@@ -917,6 +957,9 @@ class Schematic:
         # fio esquecido, e o ERC inteiro vira ruido que ninguem le.
         self.no_connects: list[tuple[float, float]] = []
         self.texts: list[tuple[float, float, str, float]] = []
+        # the functional blocks: a dashed rectangle each, drawn by blocos.py
+        self.local_labels: list[LocalLabel] = []
+        self.rects: list[tuple[float, float, float, float]] = []
 
     @property
     def inst_path(self) -> str:
@@ -954,6 +997,13 @@ class Schematic:
             f'\n\t\t(effects (font (size {sz} {sz})) (justify left bottom))'
             f'\n\t\t(uuid "{uid("tx", x, y, s)}")\n\t)' for x, y, s, sz in self.texts)
         rotulos = "\n".join(lb.render() for lb in self.labels)
+        locais = "\n".join(lb.render() for lb in self.local_labels)
+        # a dashed box per functional block; no fill, so nothing hides
+        rects = "\n".join(
+            f'\t(rectangle\n\t\t(start {x0:.3f} {y0:.3f})\n\t\t(end {x1:.3f} {y1:.3f})\n'
+            '\t\t(stroke (width 0.1524) (type dash))\n\t\t(fill (type none))\n'
+            f'\t\t(uuid "{uid("rc", x0, y0, x1, y1)}")\n\t)'
+            for x0, y0, x1, y1 in self.rects)
         folhas = "\n".join(sh.render(self.project, self.uuid) for sh in self.sheets)
         bloco = ""
         if self.title:
@@ -967,7 +1017,7 @@ class Schematic:
                     else f'\t(paper "User" {self.paper[0]} {self.paper[1]})\n')
                  + bloco +
                  f'\t(lib_symbols\n{libs}\n\t)']
-        for chunk in (folhas, wires, nc, juncs, rotulos, texts, insts):
+        for chunk in (folhas, rects, wires, nc, juncs, rotulos, locais, texts, insts):
             if chunk:
                 parts.append(chunk)
         if self.root_uuid is None:

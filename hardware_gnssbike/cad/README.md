@@ -31,14 +31,42 @@ roteadas**, em KiCad 8, gerados a partir dos documentos de
 
 ```mermaid
 flowchart TB
-    RAIZ["folha raiz · A3<br/>diagrama de blocos<br/>as 36 linhas entre as folhas"]
-    RAIZ --> F1["1 Energia · A3<br/>69 pecas"]
-    RAIZ --> F2["2 MCU e depuracao · A4<br/>7 pecas"]
-    RAIZ --> F3["3 GNSS · A4<br/>10 pecas"]
-    RAIZ --> F4["4 Display e luz · A4<br/>11 pecas"]
-    RAIZ --> F5["5 Memoria e sensores · A4<br/>16 pecas"]
-    RAIZ --> F6["6 Interface · A4<br/>22 pecas"]
+    RAIZ["folha raiz · A3<br/>diagrama de blocos<br/>as linhas entre as folhas"]
+    RAIZ --> F1["1 Energia · A3<br/>79 posicoes em 6 blocos"]
+    RAIZ --> F2["2 MCU e depuracao · A4<br/>14 posicoes em 2 blocos"]
+    RAIZ --> F3["3 GNSS · A4<br/>13 posicoes em 2 blocos"]
+    RAIZ --> F4["4 Display e luz · A4<br/>15 posicoes em 2 blocos"]
+    RAIZ --> F5["5 Memoria e sensores · A4<br/>18 posicoes em 5 blocos"]
+    RAIZ --> F6["6 Interface · A4<br/>23 posicoes em 3 blocos"]
 ```
+
+### Desenhado por bloco funcional, desde 2026-09-26
+
+Até esse dia cada folha era a lista de nós desenhada em fios: as peças numa
+grade por ordem de ligação e o roteador de labirinto puxando um fio de cada
+pino até o outro extremo, fosse ele do outro lado da página. O dono pediu o
+padrão industrial — ligações e rótulos, A4 ou A3, peças certas, fácil de
+ler, os circuitos subdivididos em caixas tracejadas —, e o `blocos.py` é
+isso:
+
+| Regra | Como | De onde vem |
+|---|---|---|
+| Cada folha é uma fila de **blocos funcionais**, na ordem em que o sinal flui, cada um numa **caixa tracejada com título** | a tabela `BLOCOS` de `blocos.py` diz as âncoras de cada bloco (o CI ou o conector); os passivos seguem `make_pcb.DECOPLA` e `JUNTO` (as tabelas que já dizem de quem é cada capacitor na placa), depois `sheets.SEGUE`, depois a lista de nós sem os trilhos (o vizinho mais próximo por saltos) | SparkFun, "How to read a schematic": "truly expansive schematics should be split into functional blocks", "following the flow of circuit from input to output" |
+| Dentro do bloco, o passivo fica **ao lado do pino que serve**, do lado para onde o pino aponta; o desacoplamento vai numa **prateleira** sob o CI | `_colocar_bloco()`: a âncora no meio, cada membro a dois passos da ponta do pino que compartilha com ela, empurrado para fora até caber sem sobrepor nem encostar ponta de outra rede; o que só toca trilho vai para a prateleira, que quebra linha na largura da âncora | prática corrente; a razão é o roteador: um fio curto sempre passa |
+| Um passivo de dois terminais é **espelhado** quando o pino que serve ao CI é o de trás | `Part.espelho`, honrado por `pin_local()` e `instance()`. **Medido** no KiCad 8 com um resistor e dois rótulos, pelo `kicad-cli sch export netlist`: `(mirror x)` troca esquerda por direita e `(mirror y)` troca cima por baixo — os nomes são o da coordenada que muda de sinal, não o do eixo | medida de 2026-09-26; a primeira versão supôs o contrário e todo passivo espelhado saiu com os pinos trocados |
+| Alimentação e terra por **símbolo**, um por pino; pinos vizinhos do mesmo trilho no mesmo lado ganham **um fio pela ponta deles e um símbolo só** | o fio é um por par de vizinhos: "wires connect with other wires or pins only if their ends coincide exactly" — um pino no meio de um fio comprido **não** está nele | manual do Eeschema 8 |
+| Sinal que sai do bloco vira **rótulo local**; sinal que sai da folha vira **rótulo hierárquico**, os dois num toco curto saído do pino | `_rotulo()`: toco reto de 2 a 8 passos se o caminho está livre, senão o labirinto leva o toco à célula livre mais próxima; nunca por cima de outra rede | manual do Eeschema 8: "local labels connect items located in the same sheet"; SparkFun: "give a net a name and label it, rather than routing a wire all over the schematic" |
+| Um pino de trilho sem lugar para o símbolo ganha o símbolo no fim de um toco roteado — **nunca um rótulo local com o nome do trilho** | **medido** na lista de nós do KiCad: um rótulo local `3V0` é a rede `/folha/3V0`, outra rede, e não se junta ao `3V0` dos símbolos de alimentação | medida de 2026-09-26 |
+| Tudo na **grade de 50 mil** (1,27 mm) | `snap()` em toda coordenada | manual do Eeschema 8: "always use a 50 mil grid" |
+| O tamanho da folha continua **medido**: a menor de A4, A3, A2 em que os blocos cabem | `escolher_papel()` coloca os blocos na candidata e aceita quando a última prateleira termina acima da margem | ver abaixo |
+
+O `check_sch.py` é quem diz se deu certo: a lista de nós que o KiCad extrai
+tem de bater com a de `nets.py` pino a pino, o ERC não pode acusar erro novo,
+nenhum fio pode cruzar componente e nada pode sair da folha. Em 2026-09-26
+ele passou com as seis folhas por bloco; duas redes do display fecharam por
+rótulo porque o labirinto não achou caminho dentro do bloco, e o gerador diz
+quais. O que ainda não está bom: a densidade em volta dos pinos do nPM1300 e
+do ADP5091, onde os nomes dos símbolos de alimentação se encostam.
 
 ### O tamanho da folha é medido, não escolhido
 
@@ -350,7 +378,7 @@ flowchart LR
     DOCS --> PARTS["parts.py<br/>pecas e pinagem"]
     DOCS --> NETS["nets.py<br/>ligacoes"]
     DOCS --> DXF["make_dxf.py<br/>contorno e zonas"]
-    PARTS --> SCH["make_sch.py + sheets.py"]
+    PARTS --> SCH["make_sch.py + blocos.py + sheets.py"]
     NETS --> SCH
     PARTS --> PCB["make_pcb.py + make_pro.py"]
     NETS --> PCB

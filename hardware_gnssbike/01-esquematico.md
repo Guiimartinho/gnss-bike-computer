@@ -8,8 +8,35 @@ estão na [lista de nós](03-netlist.md) e os valores, nos
 **Nesta página:** [Folha 1 · Energia](#folha-1--energia) · [Folha 2 · MCU](#folha-2--mcu) · [Folha 3 · GNSS](#folha-3--gnss) · [Folha 4 · Display](#folha-4--display) · [Folha 5 · Memória e sensores](#folha-5--memória-e-sensores) · [Folha 6 · Interface](#folha-6--interface)
 
 > [!WARNING]
-> Nada aqui foi montado. Não existe placa, não existe layout, nenhum
+> Nada aqui foi montado. A placa existe como arquivo de CAD
+> ([09](09-dry-run-da-pcb.md)), nenhuma foi fabricada e nenhum
 > componente passou por bancada.
+
+## Como as folhas são desenhadas
+
+Desde 2026-09-26 o gerador (`cad/make_sch.py` com `cad/blocos.py`) desenha
+cada folha no padrão que o dono pediu, e as regras e a origem de cada uma
+estão em [`cad/README.md`](cad/README.md#desenhado-por-bloco-funcional-desde-2026-09-26):
+
+- **blocos funcionais** na ordem em que o sinal flui, cada um numa caixa
+  tracejada com título — na folha 1: USB-C e proteção, nPM1300, medidor e
+  célula, backup do receptor, colheita solar, corte térmico;
+- dentro do bloco, o **passivo ao lado do pino que serve**, do lado para
+  onde o pino aponta, e o desacoplamento numa prateleira sob o CI;
+- **alimentação e terra por símbolo**; pinos vizinhos do mesmo trilho no
+  mesmo lado do CI ganham um fio pelas pontas e um símbolo só;
+- sinal que sai do bloco vira **rótulo local**; sinal que sai da folha,
+  **rótulo hierárquico**, os dois num toco curto saído do pino — nenhum fio
+  atravessa a página;
+- folha 1 em **A3**, as outras em **A4**, o tamanho medido pelo próprio
+  desenho; grade de 50 mil em tudo.
+
+O `check_sch.py` confere o resultado contra a [lista de nós](03-netlist.md)
+pino a pino, pelo ERC do KiCad e pela geometria (fio sobre componente, peça
+fora da folha). Duas coisas foram **medidas** no KiCad no caminho e valem
+para quem mexer no gerador: `(mirror x)` troca esquerda por direita (não
+`mirror y`), e um rótulo local com o nome de um trilho é outra rede, não o
+trilho.
 
 ## Folha 1 · Energia
 

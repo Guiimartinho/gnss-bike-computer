@@ -37,10 +37,47 @@ FOLHAS: list[tuple[str, str, str]] = [
 # Reference prefixes to sheet, by the first digit of the number: 1xx is the
 # power sheet, 2xx the MCU, and so on, which is how 05-materiais.md numbers
 # them. This is the only rule; nothing is placed by hand.
+# Who follows whom on the SCHEMATIC when neither table of the board says
+# it, or says it wrong for the drawing: the block jumpers go with the block
+# they feed (JP102 is the module's 3V0 jumper and was numbered 1xx), the
+# comparator's divider and reference stay with the comparator (they touch
+# SRC, which is the harvester's, one hop either way), the display's
+# pull-down with the display.
+SEGUE: dict[str, str] = {
+    "JP102": "U201", "JP103": "U301", "JP104": "J401", "JP105": "U503",
+    "R112": "U505", "R403": "J401", "C120": "U103",
+    "RT101": "U105", "R106": "U105", "R124": "U105", "R125": "U105",
+    "D106": "U105",
+}
+
+_FOLHA_DE: dict[str, str] = {}
+
+
 def sheet_of(ref: str) -> str:
-    digitos = "".join(c for c in ref if c.isdigit())
+    """The sheet of a part: its chip's sheet when it serves a chip, else the
+    sheet its number says.
+
+    A decoupling capacitor is drawn beside the chip it decouples, whatever
+    its number: C123 to C126 are the sensors' 100 nF and were numbered on
+    the power sheet, where they sat in a block called "Outros" next to the
+    display's jumper. make_pcb.DECOPLA and JUNTO already say whose each of
+    them is, for the board; the schematic follows the same tables.
+    """
+    if ref in _FOLHA_DE:
+        return _FOLHA_DE[ref]
+    from make_pcb import DECOPLA, JUNTO
+    base = ref
+    vistos = set()
+    while base not in vistos:
+        vistos.add(base)
+        anc = SEGUE.get(base) or DECOPLA.get(base) or JUNTO.get(base)
+        if anc is None or anc not in P.PARTS:
+            break
+        base = anc
+    digitos = "".join(c for c in base if c.isdigit())
     n = int(digitos[0]) if digitos else 1
-    return FOLHAS[min(max(n, 1), 6) - 1][0]
+    _FOLHA_DE[ref] = FOLHAS[min(max(n, 1), 6) - 1][0]
+    return _FOLHA_DE[ref]
 
 
 # Supplies and grounds. Everything here is drawn with power symbols.
