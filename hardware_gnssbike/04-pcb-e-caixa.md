@@ -27,8 +27,11 @@ vem marcado como **ficha** ou **desenho**.
 > é o número medido no arquivo, não o retângulo desta tabela.
 
 > [!CAUTION]
-> **A placa é 34 × 90 mm desde 2026-09-24, e as tabelas de orçamento de área,
-> de sobreposições e de posicionamento abaixo ainda são as de 55 × 97.** Elas
+> **A placa é 34 × 90 mm desde 2026-09-24 e 34 × 95 desde 2026-09-26 (as
+> três teclas espalhadas na largura do display, no passo de 13,4 mm, só
+> passam pela área da antena do módulo de rádio com ele 5 mm mais baixo), e
+> as tabelas de orçamento de área, de sobreposições e de posicionamento
+> abaixo ainda são as de 55 × 97.** Elas
 > precisam ser refeitas a partir dos retângulos novos, que estão em
 > [`cad/make_dxf.py`](cad/make_dxf.py) (`ZONES`) e agora são **derivados de
 > `W` e `H`**, não escritos um a um. Enquanto isso, quando esta página e o CAD
@@ -56,9 +59,9 @@ vem marcado como **ficha** ou **desenho**.
 
 | Item | Medida | Origem |
 |---|---|---|
-| PCB | **34 × 90 mm**, espessura de 0,8 mm | derivado das regras em [`cad/make_dxf.py`](cad/make_dxf.py) (`W`, `H`) |
+| PCB | **34 × 95 mm**, espessura de 0,8 mm | derivado das regras em [`cad/make_dxf.py`](cad/make_dxf.py) (`W`, `H`); os 5 mm além dos 90 de 2026-09-24 são das teclas no passo de 13,4 (abaixo) |
 | Raio de canto da placa | **3 mm no desenho, 4 mm em [14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso)** | as duas fontes discordam, ver abaixo |
-| Caixa | 62 × 104 × 19 mm, mais 3 mm do engate de quarto de volta | [`case_drawing.py`](../tools/docs/case_drawing.py) (`W, H, T`, `MOUNT`) |
+| Caixa | conceito: 62 × 104 × 19 mm, mais 3 mm do engate de quarto de volta; proposta de 2026-09-26: **62 × 106 × 17** ([abaixo](#a-placa-de-hoje-dentro-da-caixa-do-conceito)) | [`case_drawing.py`](../tools/docs/case_drawing.py) (`W, H, T`, `MOUNT`); [`cad/make_caixa.py`](cad/make_caixa.py) |
 | Raio de canto da caixa | 7 mm | idem (`R`) |
 | Placa da V3, para comparar | 52,35 × 77,47 mm | [13](../docs/13-placa-nova.md#o-que-cabe-numa-caixa-pequena) |
 
@@ -87,6 +90,15 @@ placa para pôr um capacitor de desacoplamento que a ficha quer a 2 mm.
 São **3.060 mm² contra os 5.335 mm² dos 55 × 97 que estavam escritos à mão —
 43 % menos placa** — e a ocupação dos contornos das peças sobe de 28 % para
 48 %.
+
+**E depois 34 × 95** (2026-09-26). O dono quis as três teclas espalhadas na
+largura do display, exatamente sob as capas da caixa, e não juntas no canto
+esquerdo: no passo de 13,4 mm, o maior que a margem de 0,8 mm da borda
+deixa, a terceira chave fica em x = 30,4, dentro dos 5 mm que a ficha do
+ME54BS13 (7.4) quer livres em volta da área da antena do módulo. A área
+começa em y = H − 22: com H = 95 ela desce 5 mm junto com o módulo, e a fila
+de teclas em y = 66 passa a 5,0 mm dela. São 3.230 mm² (`GNSSBIKE_H` em
+`make_dxf.py` troca a altura).
 
 > [!IMPORTANT]
 > **O raio de canto da placa não bate entre as duas fontes.** O desenho da
@@ -217,8 +229,10 @@ fecha com folga.**
 > qualquer lado — uma placa plana só tem uma orientação, então **soldar os
 > módulos na placa não é uma opção**.
 >
-> Eles chegam por **um conector de 4 vias na borda direita**, o `J103`, que
-> consome 10,5 mm dessa borda e 8 mm para dentro. Antes eram três pares de
+> Eles chegam por **um conector de 4 vias em pé na borda esquerda, na face
+> de trás**, o `J103` (na borda direita da frente até 2026-09-26, quando o
+> dry run da caixa o mediu a 0,05 mm da tampa), que consome 10,5 mm dessa
+> borda e 8 mm para dentro. Antes eram três pares de
 > pads de mola, e a área deles era o número que faltava aqui; agora está
 > medida e entra na soma. Ver [Como os painéis chegam à
 > placa](#como-os-painéis-chegam-à-placa).
@@ -244,7 +258,9 @@ fecha com folga.**
 
 O display fica sobre a face da frente e a bateria, sob a face de trás. Não
 competem por área de planta, mas **limitam a altura** das peças embaixo
-delas: até 2,6 mm sob o display e até 1,2 mm sob a bateria
+delas: até 3,0 mm sob o display (2,6 até 2026-09-26: o receptor MAX-F10S
+tem 2,7 no máximo, e a caixa desceu a placa 0,4 mm em vez de tirar o
+receptor de junto da antena) e até 1,2 mm sob a bateria
 ([14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso)).
 
 > [!IMPORTANT]
@@ -255,15 +271,23 @@ delas: até 2,6 mm sob o display e até 1,2 mm sob a bateria
 > sobre a placa de 34 × 90 — a tabela abaixo, até essa data, ainda trazia
 > retângulos de 47 mm de largura numa placa de 34. Sem os retângulos a
 > regra `ME2` do dry-run passava **sem medir peça nenhuma**; agora eles
-> estão em `cad/make_dxf.py` (`SOMBRA_DISPLAY_JDI_MAX_2-6MM` e
+> estão em `cad/make_dxf.py` (`SOMBRA_DISPLAY_JDI_MAX_3-0MM` e
 > `SOMBRA_BATERIA_MAX_1-2MM`), a regra mede, e o que ela mede está abaixo.
+> A caixa de [`cad/make_caixa.py`](cad/make_caixa.py) lê os mesmos
+> retângulos (`make_dxf.DISPLAY_Y1`), e o dry run dela
+> ([`cad/dry_run_caixa.py`](cad/dry_run_caixa.py)) mede a pilha inteira.
 
-O que fixa cada retângulo, na placa de 34 × 90:
+O que fixa cada retângulo, na placa de 34 × 95:
 
 - **O display** LPM027M128C tem 40,08 × 61,8 mm: é **mais largo que a
   placa**, logo cobre a largura inteira. Em y, ele tem de acabar **acima
   das teclas**, que ficam em y = 66 com corpo de 3,5 mm (uma tecla debaixo
-  do vidro não se aperta): fim em **64,5**, começo 61,8 acima, em **2,7**.
+  do vidro não se aperta) — e acima do **furo da capa** de cada tecla na
+  tampa, de 5,6 mm, que desce até y = 63,2: fim em **62,9**, começo 61,8
+  acima, em **1,1**. Era 64,5 até o dry run da caixa de 2026-09-26, que
+  mediu o furo entrando 1,3 mm no vidro colado; as teclas não podem descer
+  (o SWD, o conector da célula e o USB-C ocupam y 67,75 a 85,44 até 0,4
+  mm), e o dono quer as capas exatamente sobre as chaves.
 - **A célula** de 36 × 60 × 7 também cobre a largura. A bolsa é metal, e
   metal não pode ficar atrás da antena GNSS (y até 9,88) nem no canto da
   área da antena do módulo (x ≥ 29,3, y ≥ 68,0; ficha do ME54BS13, 7.4).
@@ -271,40 +295,42 @@ O que fixa cada retângulo, na placa de 34 × 90:
   logo abaixo da antena GNSS, em **9,9**, ela acaba em **69,9**, 1,9 mm
   dentro do canto da antena do módulo.
 
-| Sombra | Retângulo (coordenadas da placa) | Área (mm²) | % dos 3.060 | Altura permitida |
+| Sombra | Retângulo (coordenadas da placa) | Área (mm²) | % dos 3.230 | Altura permitida |
 |---|---|---|---|---|
-| Display JDI LPM027M128C (contorno 40,08 × 61,8) | 0–34, 2,7–64,5 | 2.101,2 | 68,7 % | 2,6 mm |
-| Bateria LiPo (36 × 60), na face de trás | 0–34, 9,9–69,9 | 2.040,0 | 66,7 % | 1,2 mm |
+| Display JDI LPM027M128C (contorno 40,08 × 61,8) | 0–34, 1,1–62,9 | 2.101,2 | 65,1 % | 3,0 mm |
+| Bateria LiPo (36 × 60), na face de trás | 0–34, 9,9–69,9 | 2.040,0 | 63,2 % | 1,2 mm |
 
-Contas de conferência (**conta**; a placa tem 34 × 90 = 3.060 mm²):
+Contas de conferência (**conta**; a placa tem 34 × 95 = 3.230 mm²):
 
 ```
-interseção das duas sombras = 34 mm × (64,5 − 9,9) = 34 × 54,6 = 1.856,4 mm²  (60,7 %)
-união = 2.101,2 + 2.040,0 − 1.856,4 = 2.284,8 mm²  (74,7 %)
-área sem restrição de altura dos dois lados = 3.060 − 2.284,8 = 775,2 mm²  (25,3 %)
+interseção das duas sombras = 34 mm × (62,9 − 9,9) = 34 × 53,0 = 1.802,0 mm²  (55,8 %)
+união = 2.101,2 + 2.040,0 − 1.802,0 = 2.339,2 mm²  (72,4 %)
+área sem restrição de altura dos dois lados = 3.230 − 2.339,2 = 890,8 mm²  (27,6 %)
 ```
 
-**61 % da placa tem teto de 2,6 mm na frente e de 1,2 mm atrás ao mesmo
-tempo**, e só um quarto está livre das duas — a faixa de cima (a antena
-GNSS e o receptor) e a de baixo (USB-C, módulo de rádio e teclas). O
+**56 % da placa tem teto de 3,0 mm na frente e de 1,2 mm atrás ao mesmo
+tempo**, e pouco mais de um quarto está livre das duas — a faixa de cima (a
+antena GNSS e o receptor) e a de baixo (USB-C, módulo de rádio e teclas). O
 dry-run de 2026-09-26 mediu as peças contra esses tetos (`ME2`), com as
-alturas das fichas, e **cinco não cabem**:
+alturas das fichas, e **cinco não cabiam**; no mesmo dia, com a caixa
+desenhada e medida, todas saíram da sombra ou o teto subiu:
 
-| Peça | Altura | Onde está | Teto | O que fazer |
+| Peça | Altura | Onde estava | Teto | O que foi feito |
 |---|---|---|---|---|
-| `J102`, conector da célula | 4,25 mm | face de trás, (4,0; 62,0) | 1,2 mm | sair de baixo da célula: para y ≥ 72, na faixa entre a célula e o USB-C |
-| `LS601`, buzzer | 3,00 mm | face de trás, zona `ZONA_BUZZER` (y 62 a 73) | 1,2 mm | idem: a zona precisa descer para y ≥ 70 |
-| `U502`, BMP585 | 1,86 mm | face de trás, no respiro (y 67 a 71) | 1,2 mm | descer com o respiro para y ≥ 70 |
-| `J103`, conector do painel | 3,75 mm | frente, (29,0; 32,0) | 2,6 mm | sair de baixo do display: só há lugar na faixa de cima (y < 2,7 não existe) ou na de baixo, ou ir para a face de trás abaixo da célula |
-| `U301`, MAX-F10S | 2,70 mm | frente, sob a antena (y 10,5 a 22) | 2,6 mm | **não tem para onde ir**: o receptor fica junto da antena, e a antena fica sob o display. O teto de 2,6 mm da caixa tem de subir pelo menos 0,1 mm — mais a folga |
+| `J102`, conector da célula | 4,25 mm (GH) | face de trás, (4,0; 62,0) | 1,2 mm | virou o **JST SH** de 2,9 mm, **na frente**, em pé em (13,5; 80,4): fora das duas sombras, sob os 4,2 mm que a tampa deixa; perde a trava positiva ([06](06-conectores-e-pontos-de-teste.md#j102--bateria)) |
+| `LS601`, buzzer | 3,00 mm | face de trás, zona `ZONA_BUZZER` (y 62 a 73) | 1,2 mm | face de trás em (18,0; 76,2), y ≥ 69,95, fora da célula; os furos de som ficam no fundo da caixa |
+| `U502`, BMP585 | 1,86 mm | face de trás, no respiro (y 67 a 71) | 1,2 mm | face de trás em (9,7; 82,5), entre o `J103` e o buzzer, acima das pernas do USB-C; o respiro da caixa segue a peça |
+| `J103`, conector do painel | 3,75 mm | frente, (29,0; 32,0) | 2,6 mm | **face de trás**, em pé na borda esquerda, (4,9; 75,2) a 270°: fora da célula, com 8 mm de ar até o fundo da caixa; o chicote sai para a parede e sobe pela lateral da placa |
+| `U301`, MAX-F10S | 2,70 mm | frente, sob a antena (y 10,5 a 22) | 2,6 mm | **o teto subiu para 3,0 mm**: a caixa desceu a placa 0,4 mm (`make_caixa.DISPLAY_VAO`) e a célula acabou a 0,3 mm do fundo |
 
 E dois conflitos que não são de altura, desenhados em `zonas.dxf`
 (`CONFLITOS` em `cad/make_dxf.py`) para ninguém esquecer:
 
-- **o display cobre 7,2 mm da área da antena GNSS** (y de 2,7 a 9,88): a
-  ficha da Unictron não diz o que um vidro com ITO a poucos milímetros faz
-  ao ganho, e a regra `RF9` do dry-run também reclama do display a 6,8 mm
-  da área da antena do módulo, onde a ficha do ME54BS13 pede 25;
+- **o display cobre 8,8 mm da área da antena GNSS** (y de 1,1 a 9,88;
+  eram 7,2 com o display acabando em 64,5): a ficha da Unictron não diz o
+  que um vidro com ITO a poucos milímetros faz ao ganho, e a regra `RF9`
+  do dry-run também reclama do display a 11,8 mm da área da antena do
+  módulo, onde a ficha do ME54BS13 pede 25;
 - **a célula entra 1,9 mm no canto da área da antena do módulo.** As
   saídas são uma célula de até 58 mm, ou não mexer nas antenas e aceitar
   o canto — decisão do dono, com medição de S21 na bancada.
@@ -316,20 +342,23 @@ na faixa de baixo ou na borda, fora da sombra da célula.
 
 > [!CAUTION]
 > **O ME54BS13 vai na face da frente, e não há alternativa.** Atrás, o
-> teto sob a célula é 1,2 mm e o módulo tem 2,4; na frente ele cai na
-> sombra do display, onde o teto é 2,6 mm: cabe com **0,2 mm de folga** —
-> e essa folga sai de ficha, não de peça medida. Não medido: a altura real
-> do módulo e a do pack de bateria comprado.
+> teto sob a célula é 1,2 mm e o módulo tem 2,4; na frente, na placa de
+> 95 mm, ele fica **abaixo do display** (y 76,25 a 88,75), sob os 4,2 mm
+> que a tampa deixa fora dele — e mesmo sob o display, com o teto de 3,0,
+> sobrariam 0,6 mm. As alturas saem de ficha, não de peça medida. Não
+> medido: a altura real do módulo e a do pack de bateria comprado.
 
 ### A ordem de montagem
 
 ![Manual de montagem: as peças em escala e os oito passos, do chicote solar ao fechamento do aparelho](../docs/img/manual-de-montagem.svg)
 
 O manual sai de [`tools/docs/assembly_manual.py`](../tools/docs/assembly_manual.py)
-e **todas as peças estão em escala**: a caixa de 62 × 104, a placa de 34 × 90,
+e **todas as peças estão em escala**: a caixa de 62 × 106, a placa de 34 × 95,
 o display de 40,08 × 61,8, a célula de 36 × 60, os módulos de 23 × 8 e cada
-conector na posição que ocupa no arquivo da placa. Quando um conector se move
-no CAD, a folha se move junto.
+conector na posição que ocupa no arquivo da placa. As posições estão
+**escritas no script** (`CONEC`, `TECLAS`, `FUROS`), copiadas do
+`make_pcb.py`, e não lidas do arquivo: quando um conector se move no CAD,
+alguém tem de mover a folha junto (feito em 2026-09-26).
 
 A ordem não é arbitrária. Três coisas a decidem:
 
@@ -339,9 +368,10 @@ A ordem não é arbitrária. Três coisas a decidem:
 2. **Os dois cabos do display entram com a placa ainda fora da cavidade.**
    O `J401` e o `J402` ficam na borda esquerda, a 5,1 mm dela, e a trava de
    um FPC de 0,5 mm não se alcança com a placa assentada.
-3. **A bateria liga antes de a placa entrar**, porque o `J102` fica no
-   **verso**. Depois de assentada, esse conector está contra o fundo da
-   caixa.
+3. **O chicote solar liga antes de a placa entrar**, porque o `J103` fica no
+   **verso** (em pé na borda esquerda, com a boca para a parede). A bateria
+   liga **depois**: o `J102` fica na **frente**, e o cabo da célula, que está
+   debaixo da placa, dá a volta pela lateral esquerda até ele.
 
 Três coisas que o manual diz que **não estão definidas em arquivo nenhum**:
 como o módulo solar é preso à parede, como o painel é preso à frente e onde
@@ -391,10 +421,11 @@ Quatro decisões dentro dessa, cada uma com o seu motivo:
    2 × 2 mm que uma mola da caixa pressionaria. Três razões derrubaram isso:
    a JLCPCB **não monta mola**; uma bicicleta vibra, e um contato pressionado
    que abre e fecha na entrada de um conversor chaveado é um transitório
-   sujo; e o conector come **10,5 mm** da borda direita contra os 16 mm dos
-   três pares.
+   sujo; e o conector come **10,5 mm** de borda (a esquerda, no verso, desde
+   2026-09-26) contra os 16 mm dos três pares.
 2. **Família diferente da bateria, de propósito.** A célula entra num **JST
-   GH de 1,25 mm** de 6 vias. Se o painel usasse a mesma família, um dia
+   SH de 1,0 mm** de 6 vias (era o GH de 1,25 até 2026-09-26, e a razão da
+   família diferente vale igual). Se o painel usasse a mesma família, um dia
    alguém pluga a bateria de 4,2 V na entrada do colhedor, que aguenta
    **2,73 V**. Com **ZH de 1,5 mm** os dois não entram um no outro, e os
    corpos têm tamanhos visivelmente diferentes. É proteção mecânica, de
@@ -818,47 +849,59 @@ com e sem os resistores.
 O dono pediu, em 2026-09-26, para ver a caixa com a placa dentro; e depois,
 o interior dela: lugar para colar a célula, teclas que batam com as chaves da
 placa, os cortes para colar os painéis e algo transparente por cima deles
-para a chuva. O [`cad/make_caixa.py`](cad/make_caixa.py) é uma **proposta**
-desenhada em volta da `gnssbike.kicad_pcb` de hoje (o courtyard, a altura e
-a face de cada peça, e o GLB da placa nas vistas 3D), a decidir em cima
-dela; nada foi impresso.
+para a chuva; depois, as chaves da placa exatamente sob as capas, um dry run
+da caixa inteira, a porta do USB-C, o suporte de uma antena GNSS externa e a
+fixação dos painéis laterais conferida. O [`cad/make_caixa.py`](cad/make_caixa.py)
+é uma **proposta** desenhada em volta da `gnssbike.kicad_pcb` de hoje (o
+courtyard, a altura e a face de cada peça, e o GLB da placa nas vistas 3D),
+e o [`cad/dry_run_caixa.py`](cad/dry_run_caixa.py) mede essa mesma
+proposta, regra a regra; a decidir em cima dela; nada foi impresso.
 
 | Decisão da proposta | Valor | Por quê |
 |---|---|---|
-| Caixa | 62 × 104 × **17** mm, raio 7, paredes 2, fundo e tampa 1,5 | a planta é a do conceito de 2026-09-20; 19 sobrava, e com 16 o USB-C (3,26) e o conector SWD batiam na tampa: sob ela sobram 3,6 mm da face da placa |
-| Placa | centrada (x 14 a 48), a 0,5 mm da parede de baixo (y 11,5 a 101,5) | o USB-C chega ao entalhe da parede |
-| Pilha, do fundo à tampa | célula colada no fundo (z 2,2 a 9,2) entre quatro nervuras; 0,5 de ar e 1,2 de peças do verso; placa em 10,9 a 11,7; 2,6 de peças da frente; display colado por baixo da tampa em volta da janela (fita 0,2); tampa em 15,5 a 17 | os tetos das sombras da placa, respeitados como estão em `make_dxf.ZONES` |
-| O que segura a placa | **uma** bossa M2 (no furo de (4,0; 75,75)) e três pilares de ø3 | o outro furo, (3,2; 45), fica **sobre a célula** e não pode ter bossa: precisa mudar na placa |
-| Teclas | as três chaves onde a placa as pôs (x 4,5 a 21,5); as **capas** espalhadas na largura do display, no passo de 14 mm do conceito, cada uma com uma barra de 5 × 0,5 por baixo da tampa até a sua chave; capas quadradas de 5 em furos de 5,6; membrana de TPU de 0,3 num rebaixo de 0,4 | o dono pediu as capas na largura da tela; a zona da antena do módulo não deixa a terceira chave passar de x = 21,5 na placa |
-| Painéis | dois módulos de 23 × 8 numa faceta plana de 1,5 mm abaixo das teclas e dois em cada chanfro de 45° (6,2 mm) das arestas longas, em bolsos de 1,9 mm; cobertura transparente de 0,6 mm por grupo, colada num degrau de 1 mm; furos de fio de ø1 | é o arranjo do conceito, com a faceta descida para baixo das teclas |
-| Furos | USB-C na parede de baixo e na aba da tampa; três de som sob o buzzer e o respiro do barômetro no fundo; LED e sensor de luz na tampa em posições **propostas** | na placa, `D601` e `U505` estão **debaixo do display** e precisam mudar de lugar |
-| Tampa | 4 parafusos M2 nos cantos, em bossas de ø5 | a vedação da partição não está desenhada |
+| Caixa | 62 × **106** × **17** mm, raio 7, paredes 2, fundo e tampa 1,5 | a planta é a do conceito de 2026-09-20 mais 2 mm de comprimento, que o berço da antena externa pede (abaixo); 19 sobrava, e com 16 o USB-C (3,26) e o conector SWD batiam na tampa: sob ela sobram 4,2 mm da face da placa |
+| Placa | centrada (x 14 a 48), a 0,5 mm da parede de baixo (y 8,5 a 103,5) | o USB-C chega ao entalhe da parede; em cima sobram 6,5 mm para o berço da antena |
+| Pilha, do fundo à tampa | célula colada no fundo (z 1,8 a 8,8) entre quatro nervuras; 0,5 de ar e 1,2 de peças do verso; placa em 10,5 a 11,3; **3,0** de peças da frente sob o display (era 2,6: o receptor tem 2,7); display colado por baixo da tampa em volta da janela (fita 0,2), vidro em 14,3 a 15,3; tampa em 15,5 a 17 | os tetos das sombras da placa, os mesmos de `make_dxf.ZONES` (`DISPLAY_Y1`) |
+| O que segura a placa | **duas** bossas M2, nos furos de (3,2; 7,0) e (14,4; 91,7), e quatro pilares de ø3 (três cantos e um ao lado do USB-C) | nenhum furo sobre a célula; o segundo foi para a borda de baixo porque a reserva dele ocupava o lugar do sensor de luz e a faixa do verso que segura o `J103` |
+| Teclas | as três chaves da placa no passo de **13,4 mm** (x 3,6, 17 e 30,4), espalhadas na largura do display, e as capas **exatamente sobre elas**: capa quadrada de 5 em furo de 5,6, com aba de 7 × 0,5 por baixo da tampa; membrana de TPU de 0,3 num rebaixo de 0,4 | pedido do dono: mexer na placa, não fazer a caixa alcançar as chaves com barras; o furo da capa obrigou o display a subir 1,6 mm na placa (acima) |
+| Painéis | dois módulos de 23 × 8 numa faceta plana de 1,5 mm abaixo das teclas, em bolsos de 1,9 sob uma cobertura de 0,6 colada num degrau de 1 mm, com furos de fio de ø1; dois em cada chanfro de 45° e **7,5 mm** das arestas longas (era 6,2), em bolsos de 1,9 cortados na face rebaixada de 0,6, sob uma **tira** transparente de ponta a ponta da rampa, com duas fendas de fio de 1,5 × 2 por bolso | a 6,2 a rampa tinha 8,8 mm e o módulo ocupa 8,4 dela: não havia lugar para degrau nem parede; a 7,5 a rampa tem 10,6, com 1,1 de parede em cada ponta e 0,5 atrás do bolso (`CX10`) |
+| Chanfros na montagem | a parede longa da concha para em z 9,5 sob o chanfro, e o pé do chanfro (x 0 a 4,24) assenta nela; a face interna do chanfro é paralela à rampa até 1,0 mm do vidro do display e sobe vertical dali; a placa da tampa começa em x 7,5 ao lado dos chanfros, dentro do sólido deles | pedido do dono; medido em `CX11` (folga de 1,0 ao vidro e 7,96 à placa); até o dry run a placa da tampa atravessava a rampa 2,7 mm |
+| Furos e janelas | USB-C na parede de baixo e na aba da tampa, o entalhe começando 0,3 abaixo da face da placa; porta de 14 × 8,2 × 1,2 por fora, em dois ressaltos com pino de ø1,5; três furos de som sob o buzzer e o respiro do barômetro no fundo; janela do LED (`D601`) e do sensor de luz (`U505`) sobre as peças, na fileira das teclas | as peças da placa saíram de baixo do display no mesmo dia |
+| Antena GNSS externa (opção) | berço de 12,6 × 4,6 entre duas nervuras contra a parede de cima, com lábio na frente, para uma patch de 12 × 12 × 4 em pé; o rabicho U.FL chega ao `J302` a 15 mm | com a placa a 4,5 mm da parede de cima o berço entrava na placa (`CX12`): a caixa cresceu 2 mm |
+| Tampa | 4 parafusos M2 nos cantos, em bossas de ø5, a mais de 8 mm das duas antenas | a vedação da partição não está desenhada |
 
-Saem [`gnssbike-caixa.pdf`](cad/gnssbike-caixa.pdf) (frente com a tampa,
-por dentro, cortes A-A e B-B, detalhes da tecla e do bolso, premissas, o que
-não bate e as peças), as vistas
+O dry run da caixa, na placa de hoje: **12 regras medidas e cumpridas, 0
+violadas, 1 não medida** (a passagem dos fios dos seis módulos por dentro da
+tampa, a junta da porta e da partição, o aperto das capas na membrana e os
+parafusos auto-atarraxantes: só uma prova impressa diz). Antes das correções
+do dia ele acusava seis: `J103` a 0,05 mm da tampa e sob o display, `U301`
+sob o display com 2,7 contra 2,6, os furos das capas 1,3 mm dentro do vidro,
+o entalhe do USB-C 0,2 mm acima da base do receptáculo, o berço da antena
+dentro da placa e a fita do display com 1,0 mm nos lados curtos — este
+último é o que o display dá, e a regra passou a pedir 1,0.
+
+Saem [`gnssbike-caixa.pdf`](cad/gnssbike-caixa.pdf) (frente com a tampa e a
+porta, por dentro com o berço, cortes A-A e B-B, detalhes da tecla e do
+bolso, premissas, o que não bate e as peças), as vistas
 [`gnssbike-3d-caixa-aberta.png`](cad/gnssbike-3d-caixa-aberta.png),
 [`gnssbike-3d-caixa-frente.png`](cad/gnssbike-3d-caixa-frente.png) e
 [`gnssbike-3d-caixa-explodida.png`](cad/gnssbike-3d-caixa-explodida.png), e
 os STL `caixa-concha`, `caixa-tampa`, `caixa-tecla-1/2/3`,
-`caixa-membrana-teclas`, `caixa-cobertura-faceta` e
-`caixa-cobertura-chanfro`, sopas de triângulos para o fatiador, não sólidos
-de CAD.
+`caixa-membrana-teclas`, `caixa-cobertura-faceta`, `caixa-cobertura-chanfro`
+e `caixa-porta-usb`, sopas de triângulos para o fatiador, não sólidos de CAD.
 
-O que o desenho mostra que **não bate**, para o dono decidir:
+O que o desenho ainda mostra que **não bate**, para o dono decidir:
 
 | O que | Medida | Quem cede |
 |---|---|---|
-| `D601` (LED) e `U505` (sensor de luz) estão debaixo do vidro do display | (31,1; 9,75) e (32; 16,5) da placa, com o display até y = 64,5 | a placa: os dois vão para baixo das teclas, onde a tampa tem as janelas propostas, (3,5; 70,5) e (17,5; 70) |
-| Um dos dois furos M2 da placa fica sobre a célula | (3,2; 45) | a placa: o furo vai para y ≥ 72 |
-| Peças mais altas que o teto da sombra em que estão (regra `ME2`) | `J102` 4,25, `LS601` 3,0 e `U502` 1,86 sob a célula (teto 1,2); `J103` 3,75 e `U301` 2,7 sob o display (teto 2,6) | a placa, menos o `U301` (ver acima); no 3D com a tampa o `J103` atravessa o display |
 | A célula (36) e o display (40,08) são mais largos que a placa (34) | 1 mm e 3,04 mm de cada lado | a caixa é quem os segura, e a proposta já faz isso |
+| O conector da célula perdeu a trava positiva | JST SH de 2,9 mm no lugar do GH de 4,25, que não cabia sob a tampa (4,2 mm) | o cabo preso à caixa com fita, ou a caixa 0,5 mm mais alta com o GH |
+| O display cobre 8,8 mm da área da antena GNSS | subiu 1,6 mm para o furo das capas sair do vidro | só medindo, na bancada (conflito já registrado acima) |
 | O conceito tem microSD, AEM10900 e BM20C, a faceta entre o display e os botões e o engate atrás | — | o raio X do conceito (`docs/img/placa-nova-caixa.svg`) está desatualizado; o engate de quarto de volta não foi desenhado |
 
-Ainda não desenhado, pedido do dono para a próxima rodada: um dry run da
-caixa inteira (colunas, furos, espaços), a porta que protege o USB-C (que
-carrega e transfere arquivos), o suporte interno para uma antena GNSS
-externa à placa e a saída dos fios dos módulos até `J103`, `J104` e `J105`.
+Não desenhados: a saída dos fios dos seis módulos por dentro da tampa até
+`J103`, `J104` e `J105` (passam pelos furos e fendas), o pino e a junta da
+porta, a vedação da partição, textos e logotipo.
 
 ## Montagem
 

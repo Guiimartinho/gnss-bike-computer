@@ -92,7 +92,9 @@ JUNTO: dict[str, str] = {
 # The back face. Nothing about the case decides this: these are the parts
 # that do not have to be reached from the front and that free the front face
 # for the ones that do.
-ATRAS = {"U502", "J102", "RT101", "LS601"}
+# J102 left this set on 2026-09-26: the cell connector is a JST SH on the
+# FRONT now (see BORDA_FIXA)
+ATRAS = {"U502", "RT101", "LS601", "J103"}
 # LS601 is on the back because of arithmetic, not taste: it is 10,5 x 9,5 mm,
 # the largest part on the board after the two modules, and on the front the
 # only band left between the key row and the module is 9,25 mm tall. Pushed
@@ -163,7 +165,12 @@ BORDA_FIXA: dict[str, tuple[float, float, int]] = {
     # 6,9 e nao 6,2: a 6,2 a serigrafia do receptaculo saia 1,5 mm a
     # esquerda do centro e cortava o arco de 3 mm do canto da placa (DRC
     # silk_edge_clearance, duas vezes); a 6,9 ela fica a 2,2, dentro do arco
-    "J101": (6.9, _H - 4.29, 0),
+    # 6,5 desde o dry run da caixa (2026-09-26): o segundo furo M2 foi para
+    # a borda de baixo, entre este receptaculo e o modulo (x >= 17,0), e a
+    # reserva dele (4,9 mais 0,05 de cada lado) so cabe com o contorno do
+    # receptaculo acabando em 11,82. A serigrafia fica 0,4 mais perto do
+    # arco do canto do que a 6,9; o DRC do check_pcb.py e quem diz se corta
+    "J101": (6.5, _H - 4.29, 0),
     # O diodo de protecao do USB fica ACIMA da fileira de contatos, a 90
     # graus, com os cinco pinos de sinal virados para ela a 0,5 mm de passo -
     # o mesmo passo da fileira - e com o par ENTRANDO pelos pinos 4 e 5 e
@@ -175,17 +182,19 @@ BORDA_FIXA: dict[str, tuple[float, float, int]] = {
     # 0,73 mm, e duas trilhas de 0,207 com os 0,2 de isolamento pedem 1,01.
     # O ponto de teste do VBUS, que ocupava este lugar, foi para onde o
     # diodo estava.
-    # Em y, o que manda e o furo M2 de (4,0; 75,75): o colocador reserva
-    # um QUADRADO de RAIO_COURTYARD_FURO + FOLGA (2,5 mm) em volta dele,
-    # que vai ate y = 78,25, e o contorno do diodo (1,5 abaixo do centro)
-    # tem de comecar acima disso: 79,1. Ate 2026-09-26 a reserva era de
-    # 1,7 mm e o diodo ficava em 78,8; o circulo real do courtyard tem 2,45
-    # de raio, e o canto do diodo a 78,8 estaria a 2,57 dele - passaria no
-    # DRC -, mas a reserva do colocador e quadrada e nao se faz excecao
-    # para uma peca. Os 0,3 mm a mais alongam as diagonais que ligar_usb()
-    # desenha do receptaculo ate os pinos do diodo; elas sao calculadas da
-    # posicao real, nao de um numero fixo.
-    "D102": (6.65, 79.1, 90),
+    # Em y, 79,1 vem do furo M2 que esteve em (4,0; 75,75) ate 2026-09-26:
+    # o colocador reserva um QUADRADO de RAIO_COURTYARD_FURO + FOLGA (2,5
+    # mm) em volta de um furo, e o contorno do diodo (0,75 abaixo do centro,
+    # deitado a 90) tinha de comecar depois de 78,25. O furo foi para a
+    # borda de baixo, em (14,4; 91,7) - make_dxf.FUROS_DOC diz por que - e o
+    # diodo ficou onde estava, com o sensor de luz acima dele (y <= 75,25)
+    # e as pernas do USB-C abaixo (y >= 85,44). As diagonais que ligar_usb()
+    # desenha do receptaculo ate os pinos do diodo sao calculadas da posicao
+    # real, nao de um numero fixo.
+    # x 4,0 since 2026-09-26 (was 6,65): the diode sits against the left
+    # edge, leaving x >= 6,65 to the USB pair and the pocket to the right
+    # for the cell connector J102
+    "D102": (4.0, 79.1, 90),
     # As tres teclas em linha, a 9,0 mm de passo, em y = 66,0 - ABAIXO do
     # display. Ate 2026-09-26 elas estavam em y = 58, e a revisao mecanica
     # mostrou o obvio que ninguem tinha medido: o LPM027M128C tem 61,8 mm de
@@ -194,7 +203,9 @@ BORDA_FIXA: dict[str, tuple[float, float, int]] = {
     # dia: descem.
     #
     # Onde cabem, medido: a linha fica entre o fim do display (que passa a
-    # ter de acabar em y <= 64,5 da placa - restricao registrada em 04) e o
+    # ter de acabar em y <= 64,5 da placa - restricao registrada em 04; desde
+    # o dry run da caixa e 62,9, make_dxf.DISPLAY_Y1, para o furo da capa
+    # de 5,6 na tampa nao entrar no vidro) e o
     # corredor sem peca que o par USB precisa para entrar nos pinos do
     # modulo (x 19,4-22,8, y >= 68,3). O que limita a direita e a area da
     # antena do modulo, KEEPOUT_ANTENA_MODULO em x >= 29,3 e y >= 68,0, que
@@ -204,17 +215,25 @@ BORDA_FIXA: dict[str, tuple[float, float, int]] = {
     # passo a terceira tecla ficava em 23,0, a 3,56 mm da area, e livre() a
     # recusou; a 8,5 de passo, centro em 21,5, o contorno acaba em 24,25 e
     # a distancia da 5,06 mm.
-    "SW601": (4.5, 66.0, 0),
-    "SW602": (13.0, 66.0, 0),
-    "SW603": (21.5, 66.0, 0),
+    # 2026-09-26, later the same day: the owner wants the three keys spread
+    # across the display's width, at the case's pitch, and moved them on the
+    # board rather than have the case reach them with levers. Centred on
+    # the display (x 17), the widest pitch BORDA allows a 5,5 mm courtyard
+    # is 13,4: x 3,6 and 30,4 leave 0,85 mm to the edges. The third key at
+    # 30,4 only clears the module's antenna keep-out because the board grew
+    # to 95 mm (make_dxf.H) and the module went 5 mm down with it.
+    "SW601": (3.6, 66.0, 0),
+    "SW602": (17.0, 66.0, 0),
+    "SW603": (30.4, 66.0, 0),
     # The 10-way SWD header (2026-09-26): 5 mm tall, so it cannot be under
     # the display (y < 64,5, ceiling 2,6 mm) nor under the cell; and it has
     # to be on the FRONT, where the lid opens. Left as a JUNTO of the module
     # the placer put it at (17,5; 60,5), under the display. Here: below the
-    # keys (their courtyard ends at y 67,75), right of the M2 hole's square
-    # (x <= 6,5) and left of the USB pair's corridor (x >= 19,4): the
-    # courtyard (8,6 x 7,4) spans x 7,0-15,6 and y 68,5-75,9.
-    "J202": (11.3, 72.2, 0),
+    # keys (their courtyard ends at y 67,75), right of the light sensor by
+    # more than twice its own 2,5 mm (OP1: at x 11,3 it sat 2,25 mm from
+    # U505) and left of the USB pair's corridor (x >= 19,4): the courtyard
+    # (8,6 x 7,4) spans x 9,9-18,5 and y 67,9-75,3.
+    "J202": (14.2, 71.6, 0),
     # bottom right CORNER, which is the datasheet's "Best" (7.5, figure 1):
     # antenna over the notch, off the board edge, and as far from the GNSS
     # receiver as the board allows - which is the 50 mm of 7.2, and the rule
@@ -230,18 +249,62 @@ BORDA_FIXA: dict[str, tuple[float, float, int]] = {
     # on the back face the footprint is mirrored, so the angle that sends
     # the cable to the left is 270, not 90. It costs the front nothing: the
     # two faces have their own placement area since this run.
-    "J102": (4.0, 62.0, 270),        # battery connector, back face
+    # battery connector, now a JST SH on the FRONT (2026-09-26). The GH on
+    # the back at (4,0; 62,0) was under the cell, 4,25 mm tall against a
+    # 1,2 mm ceiling (ME2); the strip of the back under the cell's shadow
+    # (y 70 to 85) cannot hold a GH with the 12 mm buzzer, the M2 hole's
+    # square and the USB-C's legs (the buzzer cannot come within 5 mm of
+    # the module's antenna keep-out), the back's top strip is the GNSS
+    # antenna's keep-out, and on the front a GH (4,25) hits the case's lid,
+    # which leaves 3,8 mm. The SH (2,9) fits on the front, in the pocket
+    # between the SWD header (y <= 75,3), the module (x >= 17) and the USB-C
+    # (y >= 85,4). Lying at (10,6; 82) its left mounting pad sat on the USB
+    # pair's path (x 6,65-7,15: DRC clearance and mask bridge, 2 each) and
+    # it was 3 mm from the light sensor, which wants 5,8. STANDING (270: the
+    # cable leaves to the left, over D102, to the cell under the board) the
+    # courtyard is 6,56 x 9,8 at x 10,2-16,8, y 75,5-85,3: 3 mm clear of the
+    # USB pair, 6,0 from the sensor, 0,2 from the module and 0,14 from J101.
+    "J102": (13.5, 80.4, 270),
+    # The Tag-Connect pads: left as a JUNTO of the module they took the
+    # pocket meant for J102. No height and no part, so under the display
+    # is fine; the clip is used with the board out of the case, and J202
+    # is the everyday path (2026-09-26).
+    "J201": (26.0, 52.0, 0),
     # The light sensor's datasheet asks for every nearby component to be at
     # least twice its own height away, because of secondary optical
     # reflections. The case window follows the sensor, not the other way.
     # On the RIGHT edge: the left of the top band is the receiver's, and
     # the receiver has to be hard in that corner for the 50 mm rule.
-    "U505": (_W - 2.0, 16.5, 0),     # ambient light, under its window
+    # ambient light: at (32; 16,5) it was under the display's glass, where
+    # no window reaches it. Below the keys, left, where the lid's window is
+    # over it (2026-09-26). At (3,5; 71) the first key was 2,0 mm away (it
+    # is 2,0 tall) and the SWD header 2,25 (2,5 tall). Here every taller
+    # neighbour is beyond twice its height: SW601 5,0 (needs 4), J202 5,65
+    # (needs 5), J102 6,0 (needs 5,8), D102 3,1 (needs 0,8); the 0402s
+    # around it are lower than the sensor and cast no shadow on it.
+    "U505": (3.0, 74.0, 0),
     # y 9,75: o corpo cresceu de 1,6 x 1,6 para 3,5 x 2,8 e ficou a
     # 3,25 mm do sensor de luz, que pede o dobro da altura do vizinho -
     # 3,8 mm para os 1,9 deste LED. Descido para 3,85 mm de folga, com
     # a borda de baixo em 8,10, logo acima do keepout da antena GNSS.
-    "D601": (_W - 2.9, 9.75, 0),     # RGB LED, under its light pipe
+    # RGB LED: at (31,1; 9,75) it was under the display's glass. In the
+    # keys' row, between the second and the third key: that row (y <= 67,75)
+    # is the only strip below the display and above the 5 mm band of the
+    # module's antenna keep-out (y >= 68), and (21,5; 70,5) fell in the USB
+    # pair's corridor. The lid's light-pipe hole is under the keys'
+    # membrane there (2026-09-26).
+    "D601": (23.7, 66.0, 0),
+    # barometer, back face: the zone put it at (3; 71), 0,8 mm under the
+    # cell's shadow (y <= 69,9) with 1,86 mm against a 1,2 ceiling (ME2).
+    # The back's strip off the cell and off the module's antenna band (x <=
+    # 24,3 for y >= 68) holds, since 2026-09-26, the solar connector J103
+    # standing at the left edge (x 0,9-8,9, y 69,95-80,45), the buzzer
+    # (x 11,75-24,25, y 69,95-82,45) and, between the two and above the
+    # USB-C's legs (y >= 85,44), this: x 7,82-11,58, y 80,62-84,38.
+    "U502": (9.7, 82.5, 0),
+    # buzzer, back face, 12,5 round: right of J103, left of the module's
+    # antenna band, off the cell (y >= 69,9 with 3,0 mm of height)
+    "LS601": (18.0, 76.2, 0),
     # The receiver goes hard into the top LEFT corner, and that is the 50 mm
     # rule again: with it centred, its courtyard overlapped the module's in x
     # and the distance collapsed to the vertical gap alone.
@@ -293,7 +356,16 @@ BORDA_FIXA: dict[str, tuple[float, float, int]] = {
     # y 32,0: o corpo de 4 vias tem 10,5 mm, entao ele vai de 26,75 a
     # 37,25 - 9,0 mm livres ate o sensor de luz (que pede duas vezes a
     # altura do vizinho) e 0,65 mm antes do colhedor.
-    "J103": (_W - 5.0, 32.0, 90),
+    # 2026-09-26, the case's dry run: at (W-5; 32) the connector, 3,75 mm
+    # tall, sat under the display's glass (ceiling 3,0) and 0,05 mm under
+    # the lid. The front outside the display is full (keys, SWD header,
+    # cell connector, module, USB-C), so it goes to the BACK, standing at
+    # the left edge: 270 sends the cable to the left on the back (see J402),
+    # out to the case wall and round the board's edge to the lid's modules.
+    # Courtyard 8 x 10,5 at x 0,9-8,9, y 69,95-80,45: off the cell's shadow
+    # (y <= 69,9, ceiling 1,2), left of the buzzer (x >= 11,75), above the
+    # barometer (y >= 80,62) and the USB-C's legs (y >= 85,44).
+    "J103": (4.9, 75.2, 270),
 }
 
 
@@ -733,7 +805,21 @@ def colocar() -> tuple[dict[str, tuple[float, float, int, bool]], list[str]]:
     # em 70,75, e um corredor que entra nela derruba a posicao fixa do modulo.
     # De 68,3 e nao de 68,2: o contorno da tecla da direita acaba em 67,75 e
     # livre() exige FOLGA entre contornos; a 68,2 a tecla nao cabia.
-    corredores = [(19.4, 68.3, 22.8, 70.7)]
+    # The top end follows the module since the board grew to 95
+    # (2026-09-26): the module's placement box starts at H - 19,25, and the
+    # corridor ends 0,05 above it, as before; the bottom end stays at 68,3,
+    # FOLGA under the keys' courtyards, which did not move in y.
+    # The second corridor is the USB pair's own path from the ESD diode D102
+    # (courtyard to y 79,85, x 2,5-5,5) to the receptacle J101 (from y 85,44,
+    # D+ and D- pads at x 6,25 and 6,75): ligar_usb() draws the two diagonals
+    # there from the real positions, and the placer knew nothing about them.
+    # When the bottom M2 hole moved to (14,4; 91,7) on 2026-09-26 it pushed
+    # the test point TP101 to (3; 84), straight onto the pair: a short to a
+    # ground stub, a clearance of 0,071 mm and a mask bridge, all three in
+    # the DRC. Both ends are fixed parts, so the strip stops FOLGA short of
+    # each courtyard; x 3 to 8,5 keeps the cell connector (x >= 10,22) out
+    # of it.
+    corredores = [(19.4, 68.3, 22.8, M.H - 19.3), (3.0, 80.0, 8.5, 85.3)]
     postos_face: dict[bool, list[tuple[float, float, float, float]]] = {
         False: list(furos) + corredores, True: list(furos)}
     falhas: list[str] = []
@@ -1016,6 +1102,13 @@ def colocar() -> tuple[dict[str, tuple[float, float, int, bool]], list[str]]:
         return 0 if abs(dx) >= abs(dy) else 90
 
     resto = [r for r in FPS.FP if r not in lugar]
+    # A part the spiral cannot place stays out of `lugar`, and until
+    # 2026-09-26 it also stayed in `resto` with the same score: the same wave
+    # came round again, ran the whole spiral again, and the placer never
+    # ended (a stack dump every two minutes showed it in espiral(), always
+    # from this loop). Whoever fails is given up on here and reported by
+    # por() in `falhas`; the run ends and says which part did not fit.
+    desistidos: set[str] = set()
     while resto:
         pontuacao = {r: len(ligados.get(r, set()) & set(lugar)) for r in resto}
         melhor = max(pontuacao.values())
@@ -1030,7 +1123,9 @@ def colocar() -> tuple[dict[str, tuple[float, float, int, bool]], list[str]]:
             cy = sum(v[1] for v in vizinhos) / len(vizinhos)
             por(ref, round(cx / PASSO) * PASSO, round(cy / PASSO) * PASSO,
                 angulo(ref))
-        resto = [r for r in resto if r not in lugar]
+            if ref not in lugar:
+                desistidos.add(ref)
+        resto = [r for r in resto if r not in lugar and r not in desistidos]
 
     return lugar, falhas
 
@@ -1406,6 +1501,10 @@ def main() -> int:
         corpo = fp_load.corpo(nome_fp)
         if atras:
             corpo = virar(corpo)
+            # a maker's model on the back may need its own offset, measured
+            # (footprints.MODELO_GIRADO_VERSO): the flip is KiCad's, and it
+            # does not mirror the model offset the way it mirrors the pads
+            corpo = FPS.modelo_no_verso(corpo)
         corpo = girar_pads(corpo, ang)
         corpo = com_redes(corpo, ref, por_pad, numeros)
         px, py = P_(x, y)

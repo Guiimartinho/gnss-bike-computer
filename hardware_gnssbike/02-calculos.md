@@ -403,10 +403,12 @@ O [calor do carregador](#calor-do-carregador) é a junção de um chip. A
 outra pergunta é o que acontece com a **caixa**, que é vedada e fica no
 guidão.
 
-Área externa (**conta**, caixa de 62 × 104 × 19 mm):
+Área externa (**conta**, caixa de 62 × 106 × 17 mm, a proposta de
+[`cad/make_caixa.py`](cad/make_caixa.py); o conceito de 62 × 104 × 19 dava
+192 cm²):
 
 ```
-2×(62×104) + 2×(62×19) + 2×(104×19) = 19.204 mm² = 192 cm² = 0,0192 m²
+2×(62×106) + 2×(62×17) + 2×(106×17) = 18.856 mm² = 189 cm² = 0,0189 m²
 ```
 
 Dissipação no pior caso, que é **carregando**. E aqui a conta não é "o
@@ -424,12 +426,12 @@ Com convecção natural em ar parado, cujo coeficiente fica entre 5 e
 
 | `h` | Elevação da caixa | Caixa a 25 °C de ambiente |
 |---|---|---|
-| 5 W/m²·K (pior) | 19,7 °C | **44,7 °C** |
-| 7 W/m²·K | 14,1 °C | 39,1 °C |
-| 10 W/m²·K (melhor) | 9,8 °C | 34,8 °C |
+| 5 W/m²·K (pior) | 20,1 °C | **45,1 °C** |
+| 7 W/m²·K | 14,3 °C | 39,3 °C |
+| 10 W/m²·K (melhor) | 10,0 °C | 35,0 °C |
 
 **Pedalando, o problema não existe:** sem carga o aparelho dissipa 263 mW
-no pior caso, e a caixa sobe de 1,4 a 2,7 °C. O calor é inteiramente do
+no pior caso, e a caixa sobe de 1,4 a 2,8 °C. O calor é inteiramente do
 caminho de carga, e só com o cabo ligado.
 
 > [!CAUTION]
@@ -797,14 +799,17 @@ até a parede da cavidade a placa **gira** antes de esbarrar em algo. É
 margem zero num aperto que depende de plástico impresso — e não os "vinte
 vezes" da primeira versão.
 
-**Dois parafusos.** Com o segundo em (4,0; 75,75), ao lado do USB-C, o
-momento vira binário sobre os **30,8 mm** entre eles:
+**Dois parafusos.** Com o primeiro em (3,2; 7,0), na borda de cima, e o
+segundo em (14,4; 91,7), na borda de baixo entre o USB-C e o módulo de rádio
+(o dry run da caixa de 2026-09-26 tirou os dois de cima da célula e o
+segundo do lugar do sensor de luz), o momento vira binário sobre os
+**85,4 mm** entre eles (**conta**: √(11,2² + 84,7²)):
 
 ```
-F_por_parafuso = 74 N·mm / 30,8 mm = 2,4 N de cisalhamento
+F_por_parafuso = 74 N·mm / 85,4 mm = 0,87 N de cisalhamento
 ```
 
-2,4 N num M2 é nada: a área de tensão de um M2 tem 2,07 mm² e o aço 4.8
+0,87 N num M2 é nada: a área de tensão de um M2 tem 2,07 mm² e o aço 4.8
 rompe ao cisalhamento por volta de **500 N** (0,6 × 420 MPa). O parafuso
 deixa de trabalhar por atrito, onde ele é ruim, e passa a trabalhar por
 cisalhamento, onde ele é bom — e o elo fraco passa a ser o pilar impresso,

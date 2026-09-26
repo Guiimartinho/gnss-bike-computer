@@ -62,6 +62,7 @@ Todas as peças passam na integração, com as ressalvas de cada linha. Na compr
 | Murata NCP15XH103J03RC | não recomendado para projetos novos | TDK NTCG103JF103FT1 | o mesmo B3380 e 10 kΩ ±1 % |
 | TI ESD751DYAR | sem estoque até 27/11/2026 | TI ESD761DPYR | a mesma família em X1SON de 1,0 × 0,6 mm |
 | JST SH de 4 vias | 1 A por contato e trava por atrito | JST GH de 6 vias | VBAT e GND em dois contatos; trava positiva; 4,25 mm de altura |
+| JST GH de 6 vias (SM06B-GHS-TB) | 4,25 mm de altura: a caixa desenhada em 2026-09-26 deixa 4,2 mm entre a face da placa e a tampa fora do display, e no verso a faixa livre não o segura ([04](../hardware_gnssbike/04-pcb-e-caixa.md#a-placa-de-hoje-dentro-da-caixa-do-conceito)) | JST SH de 6 vias (SM06B-SRSS-TB, 2,9 mm), carcaça SHR-06V-S-B e terminais SSH-003T-P0.2 | volta a trava por atrito: o cabo da célula é preso à caixa com fita. A alternativa é a caixa 0,5 mm mais alta com o GH; **decisão do dono** |
 | Indutor de 6,8 µH do AEM10900 | a tabela 6 da ficha dá 65,5 mA de entrada, abaixo dos 88 mA do painel ao meio-dia | TDK VLS252012HBX-4R7M-1 (4,7 µH) | de 95 a 123 mA; o de 6,8 µH vai para a bancada |
 | Amphenol 12402484E512A | o desenho não abriu (403): o anel de vedação incluso não foi confirmado | Molex 2036150003 | o desenho confirma o anel e o IPX8; pede placa de 0,8 mm |
 | Chaves táteis comuns (E-Switch TL3340, Panasonic EVP-AA, Omron B3FS) | sem grau IP | Omron B3S-1002P | IP67 pela ficha; a E-Switch TL3780AF240QG, IP67 e mais baixa, fica de alternativa |

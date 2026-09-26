@@ -26,9 +26,10 @@ roteadas**, em KiCad 8, gerados a partir dos documentos de
 | `gnssbike-3d-frente.png`, `-tras.png`, `-angulo.png` | a placa em 3D |
 | `gnssbike-3d-montagem.png` | a pilha aberta: display em cima, placa, célula embaixo |
 | `gnssbike-montagem.pdf` | **o desenho de montagem**: cada peça com o seu designador, frente e verso |
-| `gnssbike-caixa.pdf` | **a proposta de caixa** em volta da placa (62 × 104 × 17): frente com a tampa, por dentro, cortes A-A e B-B, a tecla e o bolso de um módulo, e a página das premissas, do que não bate e das peças (`make_caixa.py`, 2026-09-26; [04](../04-pcb-e-caixa.md#a-placa-de-hoje-dentro-da-caixa-do-conceito)) |
-| `gnssbike-3d-caixa-aberta.png`, `-frente.png`, `-explodida.png` | a caixa em 3D com a placa, a célula e o display dentro: a concha aberta vista do lado do USB-C, a frente com a tampa, e a vista explodida com a tampa, as teclas, os módulos e as coberturas |
-| `caixa-concha.stl`, `caixa-tampa.stl`, `caixa-tecla-1/2/3.stl`, `caixa-membrana-teclas.stl`, `caixa-cobertura-faceta.stl`, `caixa-cobertura-chanfro.stl` | as peças da proposta para a primeira prova impressa: sopas de triângulos de caixas sobrepostas (o fatiador as une), não sólidos de CAD |
+| `gnssbike-caixa.pdf` | **a proposta de caixa** em volta da placa (62 × 106 × 17): frente com a tampa e a porta do USB-C, por dentro com o berço da antena externa, cortes A-A e B-B, a tecla e o bolso de um módulo, e a página das premissas, do que não bate e das peças (`make_caixa.py`, 2026-09-26; [04](../04-pcb-e-caixa.md#a-placa-de-hoje-dentro-da-caixa-do-conceito)) |
+| `gnssbike-3d-caixa-aberta.png`, `-frente.png`, `-explodida.png` | a caixa em 3D com a placa, a célula e o display dentro: a concha aberta vista do lado do USB-C, a frente com a tampa, e a vista explodida com a tampa, as teclas, os módulos, as coberturas e a porta |
+| `caixa-concha.stl`, `caixa-tampa.stl`, `caixa-tecla-1/2/3.stl`, `caixa-membrana-teclas.stl`, `caixa-cobertura-faceta.stl`, `caixa-cobertura-chanfro.stl`, `caixa-porta-usb.stl` | as peças da proposta para a primeira prova impressa: sopas de triângulos de caixas sobrepostas (o fatiador as une), não sólidos de CAD |
+| `dry_run_caixa.py` | **o dry run da caixa**: 13 regras medidas na mesma `Caixa` que desenha o PDF, as vistas e os STL — folga sob a tampa e sobre a célula, o teto do display, capas sobre as chaves, janela e vidro, entalhe e porta do USB-C, bossas e pilares, bossas da tampa contra as antenas, janelas do LED e do sensor, furos do buzzer e do barômetro, bolsos, coberturas e fendas de fio dos módulos, o chanfro assentando na parede e a folga da face interna dele, o berço da antena; uma regra que não acha o que medir **falha** |
 
 ## O esquemático
 
@@ -144,18 +145,18 @@ tamanho: o capacitor de desacoplamento cai ao lado do CI que ele desacopla.
 
 | Item | Valor |
 |---|---|
-| Contorno | **34 × 90 mm**, canto de 3 mm, 0,8 mm de espessura — **derivado das regras**, não escrito à mão |
+| Contorno | **34 × 95 mm**, canto de 3 mm, 0,8 mm de espessura — **derivado das regras**, não escrito à mão; os 5 mm além dos 90 de 2026-09-24 são das três teclas no passo de 13,4 (a área da antena do módulo desce com ele; `GNSSBIKE_H` troca a altura) |
 | Camadas | **4**: `F.Cu`, `In1.Cu` (terra), `In2.Cu` (alimentação), `B.Cu` |
 | Por que esse tamanho | a 7.2 do ME54BS13 pede **50 mm entre dois módulos de rádio**, e esta placa tem dois. Varrendo cada milímetro que cumpre isso e ainda cabe a fila de teclas, 34 × 90 é o menor contorno com folga — **3.060 mm² contra os 5.335 do 55 × 97, 43 % menos** |
 | Relação com a caixa | **nenhuma.** A placa sai do circuito; a caixa sai do display, da bateria e da mão. Encolher uma não encolhe a outra |
-| Peças na placa | **155**, com rotação (2026-09-26); as de trás estão em `make_pcb.ATRAS` |
+| Peças na placa | **156**, com rotação (2026-09-26); as de trás (`U502`, `RT101`, `LS601`, `J103`) estão em `make_pcb.ATRAS` |
 | Fora da placa | 7 (o painel, a célula e os seis módulos solares moram na caixa; a antena GNSS passou a morar na placa) |
 | Redes | **114** |
-| Furos de fixação | **2**, M2, em (3,2; 45,0) e (4,0; 75,75) — decisão do dono em 2026-09-25, depois da conta de [02](../02-calculos.md#quantos-parafusos-a-placa-precisa) |
+| Furos de fixação | **2**, M2, em (3,2; 7,0) e (14,4; 91,7) — decisão do dono em 2026-09-25 (dois furos), depois da conta de [02](../02-calculos.md#quantos-parafusos-a-placa-precisa); as posições são do dry run da caixa de 2026-09-26: nenhum sobre a célula, o segundo entre o USB-C (que andou 0,4 para a esquerda por ele) e o módulo, fora do lugar do sensor de luz e da faixa do verso que segura o `J103` |
 | Planos de terra | **3**, em `In1.Cu` e nas duas faces, preenchidos pelo `fill_zones.py` (com o Python do KiCad) |
-| Roteamento | **204 ligações**, 1.506 segmentos, 544 vias; o par USB à mão; `RF_IN`, `RF_ANT`, `RF_CHIP` e `RF_UFL` ficam de fora de propósito |
-| Ligações sem trilha | **59**, em 26 redes, pelo roteador; **44 itens desconectados** pelo DRC completo (`--severity-all`) com as malhas preenchidas — a regra `RT1` do `dry_run_pcb.py` |
-| Erros de DRC | **4**, isolamento de 0,125 contra 0,127 mm entre `PWR_SCL` e `VBAT` junto do nPM1300 |
+| Roteamento | **196 ligações**, 1.417 segmentos, 549 vias (2026-09-26, à tarde, na placa de 95 mm); o par USB à mão, num corredor reservado de `D102` a `J101`; `RF_IN`, `RF_ANT`, `RF_CHIP` e `RF_UFL` ficam de fora de propósito |
+| Ligações sem trilha | **75**, em 33 redes, pelo roteador; **58 itens desconectados** em 37 redes pelo DRC completo (`--severity-all`) com as malhas preenchidas — a regra `RT1` do `dry_run_pcb.py` |
+| Erros de DRC | **0** (20 avisos, todos de biblioteca de footprint); os 3 do par USB contra o ponto de teste `TP101`, que o furo M2 novo empurrou para o caminho do par, saíram com o corredor |
 
 ### O que decide a posição de cada peça
 
@@ -212,7 +213,8 @@ Depois, as vistas:
 python hardware_gnssbike/cad/make_dxf.py     # contorno e zonas em DXF
 "D:/KiCAD/bin/kicad-cli.exe" pcb export glb --output hardware_gnssbike/cad/gnssbike.glb     --include-tracks --include-zones --subst-models hardware_gnssbike/cad/gnssbike.kicad_pcb
 python hardware_gnssbike/cad/make_3d.py      # as quatro vistas 3D em PNG
-python hardware_gnssbike/cad/make_caixa.py   # a placa dentro da caixa: PDF e duas vistas 3D
+python hardware_gnssbike/cad/dry_run_caixa.py   # a caixa medida contra a placa: 13 regras (falha = codigo 1)
+python hardware_gnssbike/cad/make_caixa.py   # a placa dentro da caixa: PDF, tres vistas 3D e os STL
 "D:/KiCAD/bin/kicad-cli.exe" pcb export svg --output hardware_gnssbike/cad/gnssbike-2d.svg     --layers "F.Cu,In1.Cu,In2.Cu,B.Cu,F.SilkS,Edge.Cuts,F.Fab"     --page-size-mode 2 --exclude-drawing-sheet hardware_gnssbike/cad/gnssbike.kicad_pcb
 python hardware_gnssbike/cad/make_2d.py      # o PDF, uma pagina por camada
 ```

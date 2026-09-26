@@ -4,11 +4,13 @@
 
 **Placa `gnssbike`, nRF54LM20A no módulo MinewSemi ME54BS13**
 
-![Estado](https://img.shields.io/badge/estado-esquem%C3%A1tico%20e%20placa%20em%20CAD-EF6C00)
-![Placa](https://img.shields.io/badge/placa-34%20%C3%97%2090%20mm%20%C2%B7%204%20camadas-0082FC)
+![Estado](https://img.shields.io/badge/estado-esquem%C3%A1tico%2C%20placa%20e%20caixa%20em%20CAD-EF6C00)
+![Placa](https://img.shields.io/badge/placa-34%20%C3%97%2095%20mm%20%C2%B7%204%20camadas-0082FC)
+![Caixa](https://img.shields.io/badge/caixa-62%20%C3%97%20106%20%C3%97%2017%20mm-0082FC)
 ![MCU](https://img.shields.io/badge/MCU-nRF54LM20A-00A9CE)
-![DRC](https://img.shields.io/badge/DRC-0%20viola%C3%A7%C3%B5es-2E7D32)
-![Regras](https://img.shields.io/badge/regras%20de%20ficha-21%20de%2022-2E7D32)
+![DRC](https://img.shields.io/badge/DRC-0%20erros-2E7D32)
+![Regras](https://img.shields.io/badge/regras%20de%20ficha-25%20de%2029%20medidas-2E7D32)
+![Caixa medida](https://img.shields.io/badge/dry%20run%20da%20caixa-12%20de%2012-2E7D32)
 ![Montada](https://img.shields.io/badge/montada-n%C3%A3o-C62828)
 
 </div>
@@ -27,11 +29,13 @@ componente.
 
 > [!WARNING]
 > **Nada disto foi montado, medido ou fabricado.** A placa existe como
-> arquivo de CAD — 155 peças, 114 redes, 1.506 segmentos, 544 vias, **204
-> ligações roteadas e 59 sem trilha**, 4 violações de isolamento de 2 µm e
-> 24 das 29 medidas das fichas cumpridas ([09](09-dry-run-da-pcb.md),
-> 2026-09-26) —, mas nenhuma foi feita e nenhum componente passou por
-> bancada. Este aviso já disse "0 ligações sem trilha" com 47 em aberto:
+> arquivo de CAD — 156 peças, 114 redes, 1.417 segmentos, 549 vias, **196
+> ligações roteadas e 75 sem trilha** (58 itens desconectados no DRC
+> completo, 0 erros) e 25 das 33 regras das fichas cumpridas
+> ([09](09-dry-run-da-pcb.md), [10](10-dry-run-2026-09-26.md), 2026-09-26)
+> —, e a caixa existe como proposta medida por um dry run próprio (12
+> regras cumpridas, 0 violadas, [04](04-pcb-e-caixa.md#a-placa-de-hoje-dentro-da-caixa-do-conceito));
+> mas nenhuma foi feita e nenhum componente passou por bancada. Este aviso já disse "0 ligações sem trilha" com 47 em aberto:
 > o DRC rodava só com erros, e os não roteados são aviso. Todo valor
 > abaixo vem de ficha ou de conta feita aqui, e está marcado como tal. O
 > que depende de decisão, de ficha por ler ou de medida está na lista de
@@ -204,8 +208,9 @@ caso que mata a carga solar.
 
 E quatro contas estavam erradas, com a pior no calor: dentro da caixa não é
 "o carregador mais a perda dos reguladores", é **tudo o que entra pelo cabo
-e não vira química na célula** — 1,89 W, que põem a caixa em **44,7 °C** a
-25 °C de ambiente, empate com o corte do JEITA **antes de qualquer sol**.
+e não vira química na célula** — 1,89 W, que põem a caixa em **45,1 °C** a
+25 °C de ambiente (44,7 na caixa do conceito, de 192 cm²; a proposta de
+62 × 106 × 17 tem 189), empate com o corte do JEITA **antes de qualquer sol**.
 
 ### O que os dry-runs deixaram para trás
 

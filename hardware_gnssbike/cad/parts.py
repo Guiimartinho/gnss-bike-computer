@@ -286,12 +286,21 @@ for i in range(1, 7):
         note="modulo solar de 3 celulas, 23 x 8 mm; a ficha nao numera os "
              "terminais, so marca + e - na serigrafia do verso")
 
-add("J102", "JST SM06B-GHS-TB", [
+# JST SH (1,0 mm, side entry, 2,9 mm tall) since 2026-09-26, on the FRONT;
+# it was the GH SM06B-GHS-TB (1,25 mm, 4,25 mm tall) on the back. With the
+# board at 95 mm the strip of the back under the cell's shadow could not
+# hold the GH, the 12 mm buzzer and the M2 hole together (the buzzer cannot
+# get within 5 mm of the module's antenna keep-out), and on the front the
+# case's lid leaves 3,8 mm: the GH does not fit, the SH does. The pack
+# maker still decides the pinout, and now the pitch too.
+add("J102", "JST SM06B-SRSS-TB", [
     (1, "1", "passive", R), (2, "2", "passive", R), (3, "3", "passive", R),
     (4, "4", "passive", R), (5, "5", "passive", R), (6, "6", "passive", R),
-], confirmed=True, lcsc="C133065",
-    note="conector da celula, 6 vias, passo 1,25 mm; o catalogo da JST nao da "
-         "funcao a contato nenhum, e quem decide e o fabricante do pack")
+], confirmed=True,
+    note="conector da celula, 6 vias, JST SH passo 1,0 mm, entrada lateral, "
+         "2,9 mm de altura, na face da frente; o catalogo da JST nao da "
+         "funcao a contato nenhum, e quem decide e o fabricante do pack. "
+         "LCSC a conferir (era o GH C133065)")
 
 passive("RT101", "10 k B3380", "NTC do corte termico, na face de tras sob a celula; agora "
                                        "lido pelo comparador U105, nao por pino do colhedor", lcsc="C209959")

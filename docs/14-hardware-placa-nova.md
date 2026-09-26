@@ -286,7 +286,7 @@ Duas regras de pino do nRF54LM20A (ficha 4539_001 v1.0) mandam no mapa:
 
 ## Placa de circuito impresso
 
-- **Contorno:** **34 × 90 mm**, cantos com raio de 4 mm. O tamanho sai do **circuito**, não da caixa: quem manda é a 7.2 da ficha do ME54BS13, que pede 50 mm entre os dois módulos de rádio desta placa. A conta está em [`hardware_gnssbike/04-pcb-e-caixa.md`](../hardware_gnssbike/04-pcb-e-caixa.md#de-onde-saem-os-34--90). A caixa de 62 × 104 mm segue tendo o tamanho que o display, a bateria e a mão pedem, e a placa cabe nela com folga de sobra. Origem no canto de cima à esquerda, com a placa vista pela frente.
+- **Contorno:** **34 × 95 mm** (90 até 2026-09-26: os 5 mm a mais vieram das teclas espalhadas na largura do display, que a área da antena do módulo de rádio só deixa passar com o módulo 5 mm mais baixo), cantos com raio de 4 mm. O tamanho sai do **circuito**, não da caixa: quem manda é a 7.2 da ficha do ME54BS13, que pede 50 mm entre os dois módulos de rádio desta placa. A conta está em [`hardware_gnssbike/04-pcb-e-caixa.md`](../hardware_gnssbike/04-pcb-e-caixa.md#de-onde-saem-os-34--90). A caixa de 62 × 106 mm (104 no conceito; 2 mm a mais para o berço da antena GNSS externa) segue tendo o tamanho que o display, a bateria e a mão pedem, e a placa cabe nela com folga de sobra. Origem no canto de cima à esquerda, com a placa vista pela frente.
 - **Espessura e camadas:** 0,8 mm, 4 camadas, controle de impedância; o desenho do receptáculo USB-C da Molex recomenda 0,8 mm.
 
 | Camada | Uso |
@@ -303,7 +303,7 @@ As espessuras de dielétrico saem com o fabricante para 90 Ω diferencial no USB
 | Zona | x (mm) | y (mm) | Conteúdo | Restrição |
 |---|---|---|---|---|
 | Antena GNSS | 0 a 55 | 0 a 8 | TE L000670 na borda de cima (protótipo) ou os contatos dos elementos na parede | sem cobre sob a antena em todas as camadas; nada metálico mais alto que 3 mm num raio de 10 mm |
-| GNSS | 20 a 35 | 2 a 16 | módulo MAX e filtro do 1V8 | sob o display: altura até 2,6 mm (o módulo tem 2,5 mm) |
+| GNSS | 20 a 35 | 2 a 16 | módulo MAX e filtro do 1V8 | sob o display: altura até 3,0 mm (o módulo tem 2,7 mm no máximo, cota C da ficha; o teto era 2,6 até 2026-09-26) |
 | LED | 50 a 53 | 0 a 3 | LED RGB sob o furo de luz | trilhas curtas, fora da área livre da antena |
 | IMU e magnetômetro | 8 a 15 | 20 a 23 | BMI270 e MMC5633NJL | longe de correntes altas e de ímãs |
 | FPC do display | 3,7 a 7,1 | 29,5 a 39,5 | Hirose FH28 na borda esquerda | longe das antenas |
@@ -316,9 +316,9 @@ As espessuras de dielétrico saem com o fabricante para 90 Ω diferencial no USB
 | USB-C | 23 a 32 | 94 a 97 | receptáculo IPX8 na borda de baixo, com o anel contra a parede | TVS junto do conector |
 | Luz ambiente | 0,4 a 2,4 | 88 a 90 | OPT3001 sob a janela de baixo | — |
 
-- **Faces:** na face da frente, sob o display, só peças de até 2,6 mm; na face de trás, na área da bateria (x 9,5 a 45,5, y 22,5 a 82,5), só peças de até 1,2 mm, com fita isolante sobre elas.
-- **Fixação:** 4 furos M2 nos cantos, alinhados aos parafusos da traseira; o furo de baixo à direita sai da área livre da antena do BM20C.
-- **Conectores:** display (FPC de 10 vias) na borda esquerda, com o do filme de luz (4 vias) ao lado; bateria (JST GH de 6 vias) na face de trás, ao lado da célula; painéis em três grupos (frente, esquerda, direita), por pads de mola ou FPC; USB-C na borda de baixo; microSD na borda esquerda, só no protótipo.
+- **Faces:** na face da frente, sob o display, só peças de até 3,0 mm (2,6 até 2026-09-26; o receptor tem 2,7 no máximo) e, fora dele, até 3,9 (a tampa da caixa fica a 4,2 da face da placa); na face de trás, na área da bateria (y 9,9 a 69,9 da placa de hoje), só peças de até 1,2 mm, com fita isolante sobre elas.
+- **Fixação:** 2 furos M2, em (3,2; 7,0) e (14,4; 91,7) da placa de hoje, com bossa na caixa nos dois (nenhum sobre a célula) e quatro pilares nos cantos; a conta de [02](../hardware_gnssbike/02-calculos.md#quantos-parafusos-a-placa-precisa).
+- **Conectores:** display (FPC de 10 vias) na borda esquerda, com o do filme de luz (4 vias) ao lado; bateria (JST SH de 6 vias, `J102`) **na frente**, em pé entre o SWD e o USB-C; painéis em três grupos (frente, esquerda, direita) num JST ZH de 4 vias (`J103`) **no verso**, em pé na borda esquerda; USB-C na borda de baixo; a memória é soldada (sem microSD).
 
 ## Empilhamento mecânico
 

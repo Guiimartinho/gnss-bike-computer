@@ -61,7 +61,13 @@ HERE = pathlib.Path(__file__).resolve().parent
 # GNSSBIKE_W and GNSSBIKE_H override both, so the size can be searched
 # without editing the file.
 W = float(os.environ.get("GNSSBIKE_W", 34.0))
-H = float(os.environ.get("GNSSBIKE_H", 90.0))
+# 95 since 2026-09-26, 90 before: the owner wants the three keys at the
+# case's pitch across the display (13,4 mm, x 3,6 / 17 / 30,4), and at
+# y = 66 the third one only clears the radio module's antenna keep-out
+# (8,5 mm above the module, 5 mm from any part) with the module 5 mm
+# lower; the extra 5 mm also take the cell connector, the buzzer and the
+# barometer out from under the cell's shadow (rule ME2).
+H = float(os.environ.get("GNSSBIKE_H", 95.0))
 THICKNESS = 0.8
 
 # The two sources disagree on the corner radius; both are written out.
@@ -99,7 +105,36 @@ RADIUS_DOC14 = 4.0  # docs/14-hardware-placa-nova.md#placa-de-circuito-impresso
 # The decision of 2026-09-23 was for a single hole "to leave area for parts
 # and tracks". That premise is gone: measured on the placed board, 7402
 # points accept an M2 hole, the freest with 5.2 mm of clear radius.
-FUROS_DOC = [(3.2, H * 0.5), (4.0, 75.75)]
+# The first hole was at (3,2; H/2), over the cell: a screw boss cannot rise
+# there (the case's dry run of 2026-09-26). It moved to the top edge, under
+# the display but off the cell (whose shadow starts at y 9,9; the boss of
+# 4,5 mm reaches 9,25). The second was at (4,0; 75,75), between the keys
+# and the module; its 2,45 mm reserve took the only spot the light sensor
+# can have (outside the display, more than twice the first key's height
+# below it, more than twice the SWD header's height left of it), and the
+# left column of the BACK, y 69,9 (the cell's shadow) to 85,44 (the USB-C's
+# legs), is the only strip that holds the solar connector J103 (10,5 long)
+# off the cell and off the module's antenna band: 15,5 mm for 10,5 plus a
+# 4,9 reserve does not fit. So the hole is at the bottom edge, between the
+# USB-C and the module: x 14,4, with the USB-C moved 0,4 to the left (its
+# courtyard ends at 11,82) and the module's courtyard starting at 17,0 -
+# 4,78 mm of room for a reserve of 4,9 plus 0,05 each side, which is why
+# the USB-C moved; y 91,7 so that the 2,45 mm reach ends at 94,15, inside
+# the 0,8 margin, and the reserve's top (89,2) stays below the module's
+# courtyard (89,25). The case gives the corner beside the USB-C a post.
+FUROS_DOC = [(3.2, 7.0), (14.4, 91.7)]
+
+# The display's glass over the board: 61,8 tall, ending at DISPLAY_Y1. It
+# ended at 64,5 until 2026-09-26, 1,5 mm above the keys' centres (y 66):
+# the case's dry run then showed the caps' 5,6 mm holes in the lid cutting
+# 1,3 mm into the glued glass (CX4). The keys cannot go lower (the SWD
+# header and the cell connector between them and the USB-C fill y 67,75
+# to 85,44 to 0,4 mm) and the owner wants the caps straight over the
+# switches, so the glass moved up 1,6: the hole now stops 0,3 short of the
+# glass. The price is 1,6 mm more of glass over the GNSS antenna's area
+# (8,8 of its 9,88), the conflict flagged below.
+DISPLAY_ALT = 61.8
+DISPLAY_Y1 = 62.9
 
 # The four screws the case drawing still has, at (6.5, 12.5), (55.5, 12.5),
 # (6.5, 91.5) and (55.5, 91.5) in case coordinates, are 3.5 mm inside on every
@@ -201,14 +236,14 @@ ZONES = [
     ("ZONA_GNSS_MAX-F10S", _f(W / 2 - 14.0, 10.5, W / 2 + 8.0, 22.0), 3,
      "MAX-F10S IM 4.4: o receptor logo abaixo da zona da antena, com a rede pi "
      "entre o pino RF_IN e o contato de mola"),
-    ("ZONA_LUZ_AMBIENTE_OPT3001", _f(1.2, 10.5, 3.8, 13.5), 3,
+    ("ZONA_LUZ_AMBIENTE_OPT3001", _f(2.0, 69.5, 5.0, 72.5), 3,
      "OPT3001 SBOS681B: sob a janela, e longe de peca alta (reflexao "
      "optica secundaria)"),
     # Alargada em 2026-09-24: o LED RGB passou de 1,6 x 1,6 para
     # 3,5 x 2,8 mm, porque o APTF1616 saiu de linha e o que sobrou tem
     # 305 pecas. Com folga de contorno o corpo pede 5,2 x 3,3, e a zona
     # de 4,0 x 3,5 que estava aqui nao o continha.
-    ("ZONA_LED_RGB", _f(W - 5.6, 8.1, W - 0.2, 11.8), 3,
+    ("ZONA_LED_RGB", _f(21.0, 64.0, 26.5, 68.0), 3,
      "sob o guia de luz, do lado oposto ao sensor de luz"),
     ("ZONA_FLASH_MX25R6435F", _f(2.5, 21.0, W / 2 - 1.5, 32.0), 3,
      "flash NOR: fala SPI com o modulo, fora da faixa de energia"),
@@ -221,10 +256,10 @@ ZONES = [
      "um indutor de potencia, e o modulo comeca em H-13,5"),
     ("ZONA_FPC_DISPLAY_J401", _f(0.8, H - 34.0, 9.0, H - 24.0), 3,
      "cabo plano do display, 10 vias, saindo pela esquerda"),
-    ("ZONA_BUZZER", _f(1.0, H - 28.0, W - 1.0, H - 17.0), 3,
+    ("ZONA_BUZZER", _f(1.0, 72.0, W - 1.0, H - 12.0), 3,
      "buzzer piezo, na FACE DE TRAS: 10,5 x 9,5 mm nao cabem na faixa de "
      "9,25 mm que sobra na frente entre a fila de teclas e o modulo"),
-    ("ZONA_BAROMETRO_BMP585", _f(2.0, H - 23.0, 6.0, H - 19.0), 3,
+    ("ZONA_BAROMETRO_BMP585", _f(7.5, 80.0, 12.0, 85.0), 3,
      "BMP585 na face de tras, no respiro"),
     ("ZONA_BOTOES", _f(1.5, H - 23.0, W - 6.0, H - 15.0), 3,
      "3 teclas Omron B3S-1002P em fila: 3 x 10,2 mm de passo"),
@@ -239,18 +274,22 @@ ZONES = [
     # placa antiga, de 55 x 97), e sem as sombras a ME2 passava sem medir
     # peca nenhuma. O que se sabe vem das outras regras:
     #  - o display LPM027M128C tem 40,08 x 61,8: mais largo que a placa, entao
-    #    cobre a largura toda. Acaba em y = 64,5, logo acima do corpo das
-    #    teclas (centro em 66, corpo de 3,5), e comeca 61,8 acima, em 2,7 -
-    #    o que o poe sobre a antena GNSS (0 a 9,88), e isso e um CONFLITO;
+    #    cobre a largura toda. Acaba em y = DISPLAY_Y1 (62,9), 0,3 acima do
+    #    furo da capa das teclas na tampa (centro em 66, furo de 5,6), e
+    #    comeca 61,8 acima, em 1,1 - o que o poe sobre a antena GNSS (0 a
+    #    9,88), e isso e um CONFLITO;
     #  - a celula de 36 x 60 x 7, na face de tras, tambem cobre a largura.
     #    A bolsa e metal: nao pode ficar atras da antena GNSS (ate 9,88), e
     #    com 60 de altura chega a 69,9, 1,9 mm dentro do canto da area da
     #    antena do modulo (x >= W-4,7, y >= 68,0), que tambem recusa metal.
     #    Entre as duas antenas ha 58,1 mm e a celula tem 60: CONFLITO. A
     #    saida e uma celula de ate 58 mm, e nao mexer nas antenas.
-    ("SOMBRA_DISPLAY_JDI_MAX_2-6MM", _f(0.0, 64.5 - 61.8, W, 64.5), 4,
-     "04#as-duas-sombras-display-e-bateria: teto de 2,6 mm na frente; "
-     "PROPOSTA, a caixa nao esta desenhada para esta placa"),
+    # teto de 3,0 e nao 2,6 desde 2026-09-26: o receptor MAX-F10S tem 2,7
+    # de maximo (cota C da ficha) e fica sob o display; a caixa desce a
+    # placa 0,4 mm (make_caixa.DISPLAY_VAO) e a celula fica a 0,3 do fundo
+    ("SOMBRA_DISPLAY_JDI_MAX_3-0MM", _f(0.0, DISPLAY_Y1 - DISPLAY_ALT, W, DISPLAY_Y1), 4,
+     "04#as-duas-sombras-display-e-bateria: teto de 3,0 mm na frente; "
+     "PROPOSTA, a caixa e a de make_caixa.py, nao impressa"),
     ("SOMBRA_BATERIA_MAX_1-2MM", _f(0.0, 9.9, W, 69.9), 4,
      "04#as-duas-sombras-display-e-bateria: teto de 1,2 mm atras; "
      "PROPOSTA, a caixa nao esta desenhada para esta placa"),
@@ -272,8 +311,9 @@ CONFLITOS: list[tuple] = [
     # aqui: o dono decide entre celula menor, display mais baixo ou caixa
     # diferente.
     ("CONFLITO_DISPLAY_SOBRE_ANTENA_GNSS",
-     _f(13.25 - 4.96, 64.5 - 61.8, 13.25 + 10.04, 9.88), 1,
-     "o display de 61,8 mm, acabando em 64,5, comeca em 2,7 e cobre 7,2 mm "
+     _f(13.25 - 4.96, DISPLAY_Y1 - DISPLAY_ALT, 13.25 + 10.04, 9.88), 1,
+     f"o display de {DISPLAY_ALT:g} mm, acabando em {DISPLAY_Y1:g}, comeca em "
+     f"{DISPLAY_Y1 - DISPLAY_ALT:.1f} e cobre {9.88 - (DISPLAY_Y1 - DISPLAY_ALT):.1f} mm "
      "da area da antena GNSS; a ficha da Unictron nao diz o que um vidro com "
      "ITO a poucos milimetros faz ao ganho - so medindo"),
     ("CONFLITO_CELULA_NA_ANTENA_DO_MODULO",

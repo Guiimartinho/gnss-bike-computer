@@ -54,17 +54,19 @@ flowchart LR
 
 ![Proposta do aparelho: frente, lateral direita, traseira e arranjo interno](docs/img/placa-nova-caixa.svg)
 
-Conceito em escala, a partir da caixa da V3: 62 × 104 × 19 mm; a PCB, dimensionada pelo circuito e **não** pela caixa, tem 34 × 90 mm em 4 camadas, 6 módulos solares na frente inclinada e nos chanfros laterais. A escolha de cada componente, com os números dos datasheets, está em [docs/15-avaliacao-componentes.md](docs/15-avaliacao-componentes.md); a lista de compras, validada peça a peça, em [docs/19-lista-de-compras.md](docs/19-lista-de-compras.md).
+Conceito em escala, a partir da caixa da V3: 62 × 104 × 19 mm (a proposta desenhada em volta da placa em 2026-09-26, medida por um dry run próprio, é de 62 × 106 × 17: [`hardware_gnssbike/04`](hardware_gnssbike/04-pcb-e-caixa.md#a-placa-de-hoje-dentro-da-caixa-do-conceito)); a PCB, dimensionada pelo circuito e **não** pela caixa, tem 34 × 95 mm em 4 camadas, 6 módulos solares na frente inclinada e nos chanfros laterais. A escolha de cada componente, com os números dos datasheets, está em [docs/15-avaliacao-componentes.md](docs/15-avaliacao-componentes.md); a lista de compras, validada peça a peça, em [docs/19-lista-de-compras.md](docs/19-lista-de-compras.md).
 
 ![A placa em CAD, vista em ângulo: o USB-C na borda de cima, o módulo de rádio à esquerda e o receptor GNSS à direita](hardware_gnssbike/cad/gnssbike-3d-angulo.png)
 
-A placa existe como **arquivo de CAD**, gerado por programa: 155 peças, 114
-redes, 1.506 segmentos, 544 vias, **204 ligações roteadas e 59 ainda sem
-trilha**, 4 violações de isolamento de 2 µm, e 24 das 29 medidas que as
-fichas dos componentes e a IPC-2221B impõem, feitas uma a uma
-([dry-run de 2026-09-26](hardware_gnssbike/10-dry-run-2026-09-26.md)). Nenhuma
-placa foi fabricada e nenhum componente passou por bancada. O esquemático,
-a placa e como se confere cada etapa estão em
+A placa existe como **arquivo de CAD**, gerado por programa: 156 peças, 114
+redes, 1.417 segmentos, 549 vias, **196 ligações roteadas e 75 ainda sem
+trilha**, 0 erros no DRC completo, e 25 das 29 medidas que as fichas dos
+componentes e a IPC-2221B impõem, feitas uma a uma
+([dry-run de 2026-09-26](hardware_gnssbike/10-dry-run-2026-09-26.md)); a
+caixa existe como proposta em volta dela, medida por um dry run próprio (12
+regras cumpridas, 0 violadas). Nenhuma placa foi fabricada, nada foi
+impresso e nenhum componente passou por bancada. O esquemático, a placa, a
+caixa e como se confere cada etapa estão em
 [hardware_gnssbike/](hardware_gnssbike/README.md).
 
 ```mermaid

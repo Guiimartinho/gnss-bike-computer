@@ -88,8 +88,11 @@ _fp("J101", "Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12", "EXATO",
     "USB-C de 16 contatos do HRO TYPE-C-31-M-12, que e a peca da lista: o "
     "footprint do KiCad tem o nome da peca. Os nomes de pad batem com o "
     "padrao USB-IF e o S1 da blindagem agora tem pino no esquematico")
-_fp("J102", "Connector_JST:JST_GH_SM06B-GHS-TB_1x06-1MP_P1.25mm_Horizontal",
-    "EXATO", "JST GH de 6 vias, entrada lateral")
+_fp("J102", "Connector_JST:JST_SH_SM06B-SRSS-TB_1x06-1MP_P1.00mm_Horizontal",
+    "EXATO", "JST SH de 6 vias, entrada lateral, 2,9 mm de altura, na FRENTE "
+    "(2026-09-26; era o GH SM06B-GHS-TB no verso). A biblioteca de modelos "
+    "instalada com o KiCad nao traz o dele; o STEP do kicad-packages3D esta "
+    "em cad/3d/real/ (fora do git), e as regras ME4, ME5 e ME6 o medem")
 _fp("J201", "Connector:Tag-Connect_TC2030-IDC-NL_2x03_P1.27mm_Vertical", "EXATO",
     "TC2030-NL, so furos e pads")
 _fp("J202", "Connector_PinHeader_1.27mm:PinHeader_2x05_P1.27mm_Vertical_SMD", "ENCAPSULAMENTO",
@@ -613,6 +616,9 @@ ALTURA: dict[str, tuple[float, str]] = {
     "gnssbike:SW_TS-1088R_3.9x3mm": (2.00, "XunPu TS-1088R-02026, desenho "
         "rev A: altura total 2,00, tampa de aco ate 1,50, embolo de o1,80 "
         "saindo 0,50 acima dela. Curso de 0,2 +-0,1"),
+    "Connector_JST:JST_SH_SM06B-SRSS-TB_1x06-1MP_P1.00mm_Horizontal": (2.90,
+        "JST SH de entrada lateral, SM06B-SRSS-TB: 2,9 mm de altura sobre a "
+        "placa (ficha da serie SH da JST) - CONFERIR no desenho da peca"),
     "Connector_PinHeader_1.27mm:PinHeader_2x05_P1.27mm_Vertical_SMD": (2.50,
         "altura corrente de um cabecalho SMD de 2 x 5 a 1,27 mm SEM carcaca "
         "(o modelo do KiCad), 2,5 mm sobre a placa - CONFERIR na ficha da peca "
@@ -768,6 +774,45 @@ MODELO_GIRADO = {
     # centro pelo lado das ilhas.
     "JST_ZH_S4B-ZR-SM4A-TF_1x04-1MP_P1.50mm_Horizontal": (0, 2.25, -2.0),
 }
+
+# The same model on the BACK face needs another turn AND another offset, and
+# both were measured, not deduced (2026-09-26, J103 standing at the left
+# edge of the back at 270 degrees). kicad-cli mirrors the footprint's pads
+# for the back face but does not mirror the model with them: with the front
+# entry as it is, the body sat 2,14 mm off the F.Fab and its solder legs
+# pointed away from the pads. Exporting the board's GLB with test values
+# and reading the body back gave the facts: turning the model 180 degrees
+# puts the legs on the pads' side (ME5, ME6), and the offset is applied in
+# the footprint's frame whatever the turn - one unit of the model's x moves
+# the body +1 in the board's y, one unit of its y moves it -1 in x, for
+# both turns -, so from the body's centre at (5,76; 77,45) with no offset
+# to the F.Fab's centre (3,90; 75,20) it takes (-2,25; +1,86). Checked on
+# the exported GLB: ME4 finds the six pads under the body (x 1,04..7,54,
+# y 70,7..79,7 against a F.Fab of 0,9..6,9 x 70,7..79,7), ME5 finds the
+# legs on the pads' side, ME6 the axis and the sides right. Whoever puts a
+# model of this table on the other face measures it again the same way.
+MODELO_GIRADO_VERSO = {
+    "JST_ZH_S4B-ZR-SM4A-TF_1x04-1MP_P1.50mm_Horizontal": (180, -2.25, 1.86),
+}
+
+
+def modelo_no_verso(corpo: str) -> str:
+    """The footprint's text for a BACK face instance: the model offset of
+    MODELO_GIRADO_VERSO in place of the front one, when the table has it."""
+    import re as _re
+
+    m = _re.search(r'\(model "([^"]+)"', corpo)
+    if not m:
+        return corpo
+    base = m.group(1).rsplit("/", 1)[-1].rsplit(".", 1)[0]
+    if base not in MODELO_GIRADO_VERSO:
+        return corpo
+    giro, ox, oy = MODELO_GIRADO_VERSO[base]
+    inicio = m.start()
+    trecho = corpo[inicio:]
+    trecho = _re.sub(r"\(offset\s*\(xyz [^)]*\)\s*\)", "(offset (xyz %g %g 0))" % (ox, oy), trecho, count=1)
+    trecho = _re.sub(r"\(rotate\s*\(xyz [^)]*\)\s*\)", "(rotate (xyz 0 0 %d))" % giro, trecho, count=1)
+    return corpo[:inicio] + trecho
 
 
 def linha_de_modelo(rel: str) -> str:

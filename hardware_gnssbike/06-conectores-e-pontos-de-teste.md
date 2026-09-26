@@ -43,7 +43,7 @@ flowchart LR
         SONDA["J-Link<br/>cabo TC2030-CTX-NL"]
     end
     CABO --> J101["J101 · USB-C<br/>Molex 2036150003<br/>16 contatos"]
-    PACK --> J102["J102 · bateria<br/>JST SM06B-GHS-TB<br/>6 vias"]
+    PACK --> J102["J102 · bateria<br/>JST SM06B-SRSS-TB<br/>6 vias"]
     PAINEL --> J401["J401 · display<br/>Hirose FH28-10S<br/>10 vias"]
     PAINEL -.->|"por onde?"| LUZ["conector da luz<br/>não definido"]
     SONDA --> J201["J201 · SWD<br/>Tag-Connect TC2030-NL<br/>6 pads, sem peça"]
@@ -129,11 +129,18 @@ seriam saída contra terra.
 
 ## J102 · Bateria
 
-**JST SM06B-GHS-TB** na placa e **GHR-06V-S** no cabo, com terminais
-SSHL-002T-P0.2. Série GH, passo de 1,25 mm, 6 vias, **1 A por contato**,
-com trava positiva — que é a razão de a série GH ter substituído a SH
-([14](../docs/14-hardware-placa-nova.md#componentes-principais),
-[19](../docs/19-lista-de-compras.md#trocas)).
+**JST SM06B-SRSS-TB** na placa e **SHR-06V-S-B** no cabo, com terminais
+SSH-003T-P0.2 (a conferir no catálogo eSH ao fechar o pedido). Série SH,
+passo de 1,0 mm, 6 vias, **1 A por contato**, entrada lateral, **2,9 mm de
+altura**. Até 2026-09-26 era o GH SM06B-GHS-TB, escolhido pela trava
+positiva ([19](../docs/19-lista-de-compras.md#trocas)); a caixa desenhada
+nesse dia deixa **4,2 mm** entre a face da placa e a tampa fora do display,
+e o GH tem 4,25. O SH cabe e perde a trava: o cabo da célula, curto, é preso
+à caixa com fita (a alternativa é a caixa 0,5 mm mais alta, com o GH:
+decisão do dono). Fica **na frente**, em pé na borda esquerda do bolso entre
+o SWD `J202` e o USB-C, a 270°: o footprint do KiCad tem as ilhas de sinal em
+y −2 e a boca do lado oposto, e a rotação manda a boca para a esquerda, para
+a parede da caixa, por cima do diodo `D102`; a célula fica debaixo da placa.
 
 > [!IMPORTANT]
 > **A pinagem abaixo é escolha deste projeto.** Não existe padrão de
@@ -681,7 +688,7 @@ Honesto, item a item:
 | **`J102`: a pinagem inteira** | é proposta deste documento, e o fabricante do pack é quem monta o cabo. **Conferir antes de fechar o pedido** ([19](../docs/19-lista-de-compras.md#antes-de-fechar-o-pedido)) | fabricante do pack |
 | **`J102`: os dois NTC referenciados ao negativo da célula** | é o que faz quatro sinais caberem em seis vias; com termistores isolados o conector muda para oito | especificação do pack |
 | **`J102`: NTC do pack ou NTC de placa** | os dois juntos dão 5 kΩ, que o AEM10900 lê como 44,4 °C contra um limite de 45 °C, e a carga solar morre | decisão do dono |
-| **`J102`: entrada lateral ou superior** | pela nomenclatura da JST o prefixo `SM` é de entrada lateral e `BM`, de topo; o desenho **não foi lido aqui** e é ele que decide para que lado o cabo sai | catálogo GH da JST |
+| **`J102`: para que lado sai o cabo** | o prefixo `SM` da JST é entrada lateral; no footprint do KiCad as ilhas de sinal ficam em y −2 e as de fixação em y +1,875, e a boca é do lado das de fixação (+y). Com 270° na placa a boca aponta para a esquerda. O desenho da JST **não foi lido aqui**: conferir a boca no catálogo eSH antes de fabricar | catálogo SH da JST |
 | **`TH_MON`: ordem do divisor** | [14](../docs/14-hardware-placa-nova.md#ligações-fixas-dos-cis) registra "`RDIV` de 22 kΩ" e o NTC, mas não diz qual perna fica no `TH_REF` e qual no `GND`. Trocar inverte o sentido da leitura de temperatura | ficha do AEM10900 |
 | **`J201`: a que pad do ME54BS13 levar o `SWO`** | o contato 6 do TC2030 é o `SWO` e hoje está sem ligação. Levá-lo a um pad de trace daria `printf` por ITM no bring-up, e qual pad do módulo expõe o `SWO` não está na ficha dele | ficha do ME54BS13 |
 | **Por onde a luz do LPM027M128C se liga** | **alta prioridade, e bloqueia o layout**: o FPC de 10 vias não tem par de LED, e nenhum documento do projeto diz se o C traz um FPC maior ou um rabicho próprio. A ficha lida é a do **B**, que não tem luz ([acima](#j402--luz-do-lpm027m128c)) | ficha do **LPM027M128C**, ou uma amostra |

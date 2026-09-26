@@ -3,48 +3,52 @@
 
 Until 2026-09-26 the only case was the concept of docs/13 (tools/docs/
 case_drawing.py), drawn around the OLD 55 mm board. This file is a case
-PROPOSAL around the real one, gnssbike.kicad_pcb, 34 x 90 mm, read with
+PROPOSAL around the real one, gnssbike.kicad_pcb, 34 x 95 mm, read with
 every footprint's courtyard, height and face, plus the GLB the 3D renderer
 uses. What the owner asked for on 2026-09-26, in his words: the inside of
 the case, room to glue the cell, keys that match the push buttons, the cuts
-to fit or glue the solar modules, and something transparent over the
-modules for the rain.
+to fit or glue the solar modules, something transparent over the modules
+for the rain, a door over the USB-C, a cradle for an external GNSS antenna,
+and a dry run of the whole case (dry_run_caixa.py measures this file).
 
 What is decided HERE, and is a proposal until the owner says otherwise
 (page 3 of the PDF repeats it):
-  - outer size 62 x 104 (the concept's) by 17 mm thick (the concept's 19
-    had air over the display; 16 was tried and the USB-C and the SWD header
+  - outer size 62 x 106 (the concept's 62 x 104 plus 2 mm of length for
+    the external antenna's cradle) by 17 mm thick (the concept's 19 had
+    air over the display; 16 was tried and the USB-C and the SWD header
     hit the lid); corner radius 7; walls 2, floor and lid 1,5; a 45-degree
-    bevel of 6,2 mm along the long edges, on the lid, carrying two solar
-    modules a side, like the concept;
+    bevel of 7,5 mm along the long edges, on the lid, carrying two solar
+    modules a side, like the concept - 7,5 and not the concept's 6,2
+    because a 6,2 bevel has 8,8 mm of sloped face and the module is 8 mm
+    across it: with the cover and a wall at each end it needs 10,4;
   - the board centred in the width and 0,5 mm off the bottom wall, so that
     the USB-C reaches the wall's opening; the cell (36 x 60 x 7) glued on
     the floor inside four ribs, 0,5 mm under the parts of the board's back;
-    the board on one M2 screw boss (the other hole of the board is over the
-    cell and cannot take a boss) and three posts; the display glued under
-    the lid round the window with 0,2 mm tape, its glass 1,5 mm below the
-    lid's face (a raised bezel is the alternative, not drawn);
-  - three square key caps through the lid, spread across the display's
-    width at the concept's 14 mm pitch (the owner's request), each with a
-    bar under the lid reaching its switch on the board - the switches
-    themselves stop at x 21,5 of the board because of the radio module's
-    antenna keep-out -, under a 0,3 mm TPU membrane glued in a 0,4 mm
-    recess (rain);
+    the board on the M2 screw bosses of its two holes and on four posts;
+    the display glued under the lid round the window with 0,2 mm tape, its
+    glass 1,5 mm below the lid's face (a raised bezel is the alternative,
+    not drawn), 3,0 mm over the board (the receiver is 2,7);
+  - three square key caps through the lid, straight over the board's three
+    switches, which the owner moved to the case's pitch (13,4 mm, spread
+    across the display's width); each cap has a flange under the lid that
+    keeps it in; under a 0,3 mm TPU membrane glued in a 0,4 mm recess;
   - a raised facet below the keys with two module pockets and one clear
-    cover, two pockets and one cover on each bevel; wire holes to the
-    inside; a light-pipe hole for the LED and a window for the light sensor
-    at PROPOSED board positions (both parts are under the display today);
+    cover on a step; on each bevel two pockets under one clear strip laid
+    in a full-face recess (the slope has no room for a step across it);
+    wire holes to the inside; a light-pipe hole for the LED and a window
+    for the light sensor over the parts;
   - four M2 screws at the corners hold the lid; a notch in the bottom wall
-    and lid for the USB-C; sound holes under the buzzer and a vent with a
-    membrane recess under the barometer, in the floor.
+    and lid for the USB-C, with a hinged door outside; sound holes under
+    the buzzer and a vent under the barometer, in the floor; a slot with
+    two ribs against the top wall for an external patch antenna (option).
 
 Run:  python hardware_gnssbike/cad/make_caixa.py
 Out:  gnssbike-caixa.pdf (3 pages), gnssbike-3d-caixa-aberta.png,
       gnssbike-3d-caixa-frente.png, gnssbike-3d-caixa-explodida.png and the
       STL files caixa-concha.stl, caixa-tampa.stl, caixa-tecla-1/2/3.stl,
       caixa-membrana-teclas.stl, caixa-cobertura-faceta.stl,
-      caixa-cobertura-chanfro.stl (triangle soups of overlapping boxes, for
-      a slicer, not a CAD solid).
+      caixa-cobertura-chanfro.stl, caixa-porta-usb.stl (triangle soups of
+      overlapping boxes, for a slicer, not a CAD solid).
 """
 
 from __future__ import annotations
@@ -67,7 +71,13 @@ import make_dxf as MD         # noqa: E402
 import make_pcb as MP         # noqa: E402
 
 # ---------------------------------------------------------------- the case
-W_C, H_C, R_C = 62.0, 104.0, 7.0                  # the concept's plan
+# 62 x 106, not the concept's 62 x 104 (the case's dry run, 2026-09-26):
+# the 95 mm board 0,5 off the bottom wall left 4,5 mm between its top
+# edge and the top wall, and the cradle for the external GNSS antenna (a
+# 12 x 12 x 4 patch standing against that wall between two ribs, with a
+# lip in front and 0,5 mm to the board) needs 6,1. Two millimetres of
+# length buy the option the owner asked to keep.
+W_C, H_C, R_C = 62.0, 106.0, 7.0
 # 17, not the concept's 19: the board's top face sits 2,6 mm (the display
 # shadow's ceiling) under the display, which is glued under the lid, so
 # what is left under the lid for the parts outside the display is the
@@ -75,16 +85,27 @@ W_C, H_C, R_C = 62.0, 104.0, 7.0                  # the concept's plan
 # SWD header without its shroud 2,5. At 16 both hit the lid.
 T_C = 17.0
 PAREDE, FUNDO, TAMPA = 2.0, 1.5, 1.5
-CHANFRO = 6.2                                     # 45-degree bevel, long edges
+# 45-degree bevel along the long edges: its horizontal run, equal to its
+# rise. 7,5 and not the concept's 6,2 (the case's dry run, 2026-09-26):
+# the sloped face is CHANFRO * sqrt(2) long and has to hold the module
+# ACROSS it (MODULO_H + 2 * MODULO_FOLGA = 8,4) with a wall of at least
+# 1 mm at each end for the cover to land on: 10,4 mm, so CHANFRO >= 7,35.
+# At 6,2 the face was 8,77 and the cover step reached past both ends.
+CHANFRO = 7.5
 CHANFRO_Y = (16.0, 76.0)                          # where the bevel runs
 FOLGA_PLACA = 0.5
 # ------------------------------------------------------- the parts held
-DISPLAY_W, DISPLAY_H, DISPLAY_ESP, DISPLAY_VAO = 40.08, 61.8, 1.0, 2.6
+# DISPLAY_VAO 3,0, not 2,6: the receiver MAX-F10S is 2,7 at most (its
+# datasheet's cota C) and sits under the glass; 0,3 of air over it. The
+# board is 0,4 lower for it, and the cell ends 0,3 above the floor.
+DISPLAY_W, DISPLAY_H, DISPLAY_ESP, DISPLAY_VAO = 40.08, MD.DISPLAY_ALT, 1.0, 3.0
 JANELA_W, JANELA_H = 36.28, 59.8                  # viewing area
 ARO_JANELA, FITA_DISPLAY = 0.3, 0.2               # lid rim over the glass, tape
 CELULA_W, CELULA_H, CELULA_ESP, CELULA_VAO = 36.0, 60.0, 7.0, 1.2
 PLACA_W, PLACA_H, PLACA_ESP = MD.W, MD.H, 0.8
-SOMBRA_DISPLAY = (64.5 - 61.8, 64.5)              # board y, make_dxf.ZONES
+# the display's shadow on the board, from make_dxf: the same numbers the
+# board's ME2 rule and the zonas.dxf use, so that the two cannot disagree
+SOMBRA_DISPLAY = (MD.DISPLAY_Y1 - MD.DISPLAY_ALT, MD.DISPLAY_Y1)
 SOMBRA_CELULA = (9.9, 69.9)
 MODULO_W, MODULO_H, MODULO_ESP = 23.0, 8.0, 1.8   # KXOB25-05X3F class
 COBERTURA_ESP = 0.6                               # clear cover thickness
@@ -99,13 +120,39 @@ PLACA_Z1 = DISPLAY_Z0 - DISPLAY_VAO               # board top face
 PLACA_Z0 = PLACA_Z1 - PLACA_ESP
 CELULA_Z1 = PLACA_Z0 - CELULA_VAO - 0.5
 CELULA_Z0 = CELULA_Z1 - CELULA_ESP
-# keys: square cap (stem) in a square hole, a bar under the lid to the switch,
-# the caps at the concept's pitch across the display, a membrane recess
+# keys: square cap (stem) in a square hole, a square flange under the lid,
+# straight over the board's switch (the owner moved the switches to the
+# case's pitch on 2026-09-26, so no lever is needed), a membrane recess
 TECLA_FURO = 5.6
 TECLA_CAPA = 5.0
-TECLA_PASSO = 14.0
-BARRA_LARG = 5.0
+BARRA_LARG = 7.0                                  # the flange under the lid
 BARRA_ESP = 0.5
+# the bevel solid's thickness, perpendicular to its slope: the module
+# pocket plus the cover recess plus 0,5 mm of wall left behind them (at the
+# lid's 1,5 the pocket went straight through - the case's own dry run)
+CHANFRO_ESP = max(TAMPA, COBERTURA_ESP + MODULO_ESP + 0.1 + 0.5)
+# the bevel solid's inner face is parallel to the slope up to this far from
+# the display's glass, then vertical to the lid's top: the parallel line
+# alone would end 0,4 mm from the glass (CX11 of the case's dry run)
+FOLGA_VIDRO_CHANFRO = 1.0
+# the wire slots through each bevel pocket's floor, one at each end of the
+# module along y (the module's two pads are marked + and - on its back;
+# the datasheet does not say where, so a slot at each end): FIO_CHANFRO_Y
+# along y, FIO_CHANFRO_S along the slope, FIO_CHANFRO_DESLOC from the
+# pocket's end
+FIO_CHANFRO_Y, FIO_CHANFRO_S, FIO_CHANFRO_DESLOC = 1.5, 2.0, 0.4
+# the facet's pocket floor (the lid is TAMPA thick; the facet stands
+# FACETA_ALT above it, and the pockets are cut from the top down to this)
+FACETA_FUNDO = 0.5
+# the USB-C door: a flap on the outer face of the bottom wall over the
+# notch, hinged on two lugs at its top corners; the plug goes through it
+# when it is open (charge and file transfer, docs/09), and closed it keeps
+# the rain out of the receptacle
+PORTA_ESP, PORTA_ABA, PORTA_LUG = 1.2, 2.0, 2.5
+# the cradle for an external GNSS patch antenna, an option the owner wants
+# to keep: 12 x 12 x 4 mm, standing against the top wall's inner face,
+# between two ribs, its U.FL pigtail to J302 on the board
+ANT_EXT_W, ANT_EXT_H, ANT_EXT_ESP, ANT_EXT_FOLGA = 12.0, 12.0, 4.0, 0.3
 MEMBRANA_ESP = 0.3
 MEMBRANA_REBAIXO = 0.4
 # facet below the keys: a plateau on the lid with the module pockets
@@ -325,18 +372,15 @@ class Caixa:
         self.bolso_display = (dx0 - 0.3, dy0 - 0.3, dx1 + 0.3, dy1 + 0.3)
         self.celula = (PLACA_X0 + PLACA_W / 2 - CELULA_W / 2, PLACA_Y0 + SOMBRA_CELULA[0],
                        PLACA_X0 + PLACA_W / 2 + CELULA_W / 2, PLACA_Y0 + SOMBRA_CELULA[1])
-        # Keys. The switches sit where the board could put them (x 4,5 to
-        # 21,5 of the board: the module's antenna keep-out stops the third
-        # one at 21,5); the CAPS are spread across the display's width, at
-        # the concept's 14 mm pitch, centred on the window - the owner's
-        # request of 2026-09-26. Each cap has a bar under the lid reaching
-        # its switch; the bar is what presses the switch and what keeps the
-        # cap in (it is wider than the hole), and the stem is square so the
-        # bar cannot turn.
+        # Keys. The three switches are on the board at the case's pitch
+        # (the owner moved them there on 2026-09-26: x 3,6, 17 and 30,4 of
+        # the board, 13,4 mm apart, the widest the board's edge allows, and
+        # spread across the display's width), so the caps sit straight over
+        # them. Each cap has a square stem through the lid and a wider
+        # flange under it, which is what presses the switch and keeps the
+        # cap in; the stem is square so the cap cannot turn.
         self.teclas = [(PLACA_X0 + p["x"], PLACA_Y0 + p["y"]) for p in teclas(pecas)]
-        cx_janela = (self.janela[0] + self.janela[2]) / 2
-        y_teclas = self.teclas[0][1] if self.teclas else PLACA_Y0 + 66.0
-        self.capas = [(cx_janela + (i - 1) * TECLA_PASSO, y_teclas) for i in range(len(self.teclas))]
+        self.capas = list(self.teclas)
         self.furos_teclas = [quadrado(x, y, TECLA_FURO) for x, y in self.capas]
         if self.capas:
             xs = [x for x, _y in self.capas]
@@ -362,21 +406,39 @@ class Caixa:
         for b in self.bolsos_faceta:
             for x in (b[0] + 1.5, b[2] - 1.5):
                 self.furos_fio.append(quadrado(x, fy, 1.0))
-        # the bevels: two modules a side, along y
+        # the bevels: two modules a side, along y; the wire slots at the two
+        # ends of each pocket; where the shell's long walls stop under the
+        # bevel; how far in the bevel solid may reach at the lid (the glass)
         self.modulos_chanfro = []
+        self.furos_fio_chanfro = []
         y0, y1 = CHANFRO_Y
         vao = (y1 - y0 - 2 * MODULO_W - 2 * MODULO_FOLGA * 2) / 3.0
         for lado in ("L", "R"):
             for k in range(2):
                 ya = y0 + vao + k * (MODULO_W + 2 * MODULO_FOLGA + vao)
-                self.modulos_chanfro.append((lado, ya, ya + MODULO_W + 2 * MODULO_FOLGA))
-        # windows for the LED and the light sensor, at PROPOSED positions
-        self.furo_led = quadrado(PLACA_X0 + LED_PROPOSTA[0], PLACA_Y0 + LED_PROPOSTA[1], LED_FURO)
-        self.furo_sensor = quadrado(PLACA_X0 + SENSOR_LUZ_PROPOSTA[0], PLACA_Y0 + SENSOR_LUZ_PROPOSTA[1], SENSOR_FURO)
-        # USB-C notch in the bottom wall (and the lid's rim), centred on J101
+                yb = ya + MODULO_W + 2 * MODULO_FOLGA
+                self.modulos_chanfro.append((lado, ya, yb))
+                self.furos_fio_chanfro.append((lado, ya + FIO_CHANFRO_DESLOC, ya + FIO_CHANFRO_DESLOC + FIO_CHANFRO_Y))
+                self.furos_fio_chanfro.append((lado, yb - FIO_CHANFRO_DESLOC - FIO_CHANFRO_Y, yb - FIO_CHANFRO_DESLOC))
+        self.z_parede_chanfro = T_C - CHANFRO
+        self.x_interno_chanfro = self.display[0] - FOLGA_VIDRO_CHANFRO
+        # windows for the LED and the light sensor, over the parts where the
+        # board has them (a part under the display gets no window: the
+        # conflict list says so)
+        self.furo_led = self.furo_sensor = None
+        led = pecas.get("D601")
+        if led and not led["atras"] and led["y"] >= SOMBRA_DISPLAY[1]:
+            self.furo_led = quadrado(PLACA_X0 + led["x"], PLACA_Y0 + led["y"], LED_FURO)
+        luz = pecas.get("U505")
+        if luz and not luz["atras"] and luz["y"] >= SOMBRA_DISPLAY[1]:
+            self.furo_sensor = quadrado(PLACA_X0 + luz["x"], PLACA_Y0 + luz["y"], SENSOR_FURO)
+        # USB-C notch in the bottom wall (and the lid's rim), centred on
+        # J101; it starts 0,3 BELOW the board's top face, because the
+        # receptacle's shell sits on that face (at +0,2 the wall's edge
+        # overlapped the shell's bottom: CX6 of the case's dry run)
         j101 = pecas.get("J101")
         jx = PLACA_X0 + (j101["x"] if j101 else PLACA_W / 2)
-        self.usb = (jx - 5.0, jx + 5.0, PLACA_Z1 + 0.2, PLACA_Z1 + 3.26 + 0.6)   # x0, x1, z0, z1
+        self.usb = (jx - 5.0, jx + 5.0, PLACA_Z1 - 0.3, PLACA_Z1 + 3.26 + 0.6)   # x0, x1, z0, z1
         # holes in the floor: sound under the buzzer, vent under the barometer
         self.furos_fundo = []
         ls = pecas.get("LS601")
@@ -400,13 +462,35 @@ class Caixa:
                 self.furos_sobre_celula.append((x, y))
             else:
                 self.bossas_placa.append((x, y))
+        # posts under the board's corners; the fourth, beside the USB-C
+        # (board y 85: above its legs at 87,05 and below the solar connector
+        # on the back at 80,45), since the bottom hole went to the middle of
+        # the bottom edge and that corner takes the plug's push
         self.pilares = [(PLACA_X0 + 1.5, PLACA_Y0 + 2.5), (PLACA_X0 + PLACA_W - 1.5, PLACA_Y0 + 2.5),
-                        (PLACA_X0 + PLACA_W - 1.5, PLACA_Y0 + PLACA_H - 3.5)]
+                        (PLACA_X0 + PLACA_W - 1.5, PLACA_Y0 + PLACA_H - 3.5),
+                        (PLACA_X0 + 1.5, PLACA_Y0 + 85.0)]
         # cell ribs: four, 2 mm thick, 5 mm tall, 0,25 mm off the cell
         f = 0.25
         self.nervuras = [
             (cx0 - f - 2.0, cy0 - f, cx0 - f, cy1 + f), (cx1 + f, cy0 - f, cx1 + f + 2.0, cy1 + f),
             (cx0 - f, cy0 - f - 2.0, cx1 + f, cy0 - f), (cx0 - f, cy1 + f, cx1 + f, cy1 + f + 2.0)]
+        # the USB-C door: (x0, x1, z0, z1) of the flap on the bottom wall's
+        # outer face, PORTA_ABA beyond the notch each way; two hinge lugs at
+        # its top corners
+        ux0, ux1, uz0, uz1 = self.usb
+        self.porta = (ux0 - PORTA_ABA, ux1 + PORTA_ABA, uz0 - PORTA_ABA, uz1 + PORTA_ABA)
+        self.lugs_porta = [(self.porta[0] - PORTA_LUG, self.porta[0]), (self.porta[1], self.porta[1] + PORTA_LUG)]
+        # the external antenna's cradle: the slot against the top wall's
+        # inner face (x0, y0, x1, y1 in plan, z0, z1) and its two ribs
+        meio = W_C / 2.0
+        s_w = ANT_EXT_W + 2 * ANT_EXT_FOLGA
+        s_d = ANT_EXT_ESP + 2 * ANT_EXT_FOLGA
+        self.berco = (meio - s_w / 2, PAREDE, meio + s_w / 2, PAREDE + s_d, FUNDO, FUNDO + ANT_EXT_H + ANT_EXT_FOLGA)
+        self.nervuras_berco = [
+            (meio - s_w / 2 - 1.0, PAREDE, meio - s_w / 2, PAREDE + s_d + 1.0),
+            (meio + s_w / 2, PAREDE, meio + s_w / 2 + 1.0, PAREDE + s_d + 1.0),
+            # a low lip along the slot's front, so the patch cannot tip out
+            (meio - s_w / 2, PAREDE + s_d, meio + s_w / 2, PAREDE + s_d + 1.0)]
 
     # ---- the segments of the outline that are the straight long sides
     def _segmentos_longos(self):
@@ -429,7 +513,7 @@ class Caixa:
             m.extrusao([centro] + pts, 0.0, FUNDO, COR_CAIXA)
         longos = set(self._segmentos_longos())
         n = len(self.fora)
-        z_baixo = T_C - CHANFRO
+        z_baixo = self.z_parede_chanfro
         for k in range(n):
             a, b = self.fora[k], self.fora[(k + 1) % n]
             ya, yb = sorted((a[1], b[1]))
@@ -462,6 +546,15 @@ class Caixa:
             m.cilindro(x, y, PILAR_D / 2, FUNDO, PLACA_Z0, COR_CAIXA)
         for x0, y0, x1, y1 in self.nervuras:
             m.caixa(x0, y0, FUNDO, x1, y1, FUNDO + 5.0, COR_CAIXA)
+        # the external antenna's cradle: two ribs the patch stands between
+        # and a low lip in front of it, against the top wall
+        z1 = self.berco[5]
+        for i, (x0, y0, x1, y1) in enumerate(self.nervuras_berco):
+            m.caixa(x0, y0, FUNDO, x1, y1, 3.0 + FUNDO if i == 2 else z1, COR_CAIXA)
+        # the USB door's hinge lugs, on the bottom wall's outer face
+        _px0, _px1, pz0, pz1 = self.porta
+        for lx0, lx1 in self.lugs_porta:
+            m.caixa(lx0, H_C, pz1, lx1, H_C + PORTA_ESP + 0.5, pz1 + PORTA_LUG, COR_CAIXA)
         return m
 
     def _cantos_fora(self):
@@ -475,7 +568,7 @@ class Caixa:
         dz = z_base - TAMPA_Z0
         z0, z1 = z_base, z_base + TAMPA
         furos = [self.janela] + self.furos_teclas + [quadrado(x, y, 2.2) for x, y in PARAFUSO_TAMPA]
-        furos += [self.furo_led, self.furo_sensor] + self.furos_fio
+        furos += [f for f in (self.furo_led, self.furo_sensor) if f] + self.furos_fio
         # the rim on the short sides and corners (the long sides are the bevels)
         longos = set(self._segmentos_longos())
         n = len(self.fora)
@@ -498,67 +591,138 @@ class Caixa:
         rx = self.rebaixo_membrana
         fx0, fy0, fx1, fy1 = self.faceta
         especiais = [(fx0, fy0, fx1, fy1)] + ([rx] if rx else [])
-        m.placa_com_furos(px0, py0, px1, py1, z0, z1, furos + especiais, COR_TAMPA)
+        # the plate, in three bands along y: beside the bevels it starts at
+        # x = CHANFRO, inside the bevel solid (which runs from its slope to
+        # x_interno_chanfro); from the wall it poked through the sloped
+        # face, 2,7 mm at z 15,5 (the case's dry run, 2026-09-26)
+        cy0, cy1 = CHANFRO_Y
+        for bx0, by0, bx1, by1 in ((px0, py0, px1, cy0), (CHANFRO, cy0, W_C - CHANFRO, cy1),
+                                   (px0, cy1, px1, py1)):
+            m.placa_com_furos(bx0, by0, bx1, by1, z0, z1, furos + especiais, COR_TAMPA)
         if rx:
             m.placa_com_furos(rx[0], rx[1], rx[2], rx[3], z0, z1 - MEMBRANA_REBAIXO, self.furos_teclas, COR_TAMPA)
         # the facet plateau: base with the wire holes, pockets, the cover step
-        m.placa_com_furos(fx0, fy0, fx1, fy1, z0, z0 + 0.5, self.furos_fio, COR_TAMPA)
+        m.placa_com_furos(fx0, fy0, fx1, fy1, z0, z0 + FACETA_FUNDO, self.furos_fio, COR_TAMPA)
         topo = z1 + FACETA_ALT
-        m.placa_com_furos(fx0, fy0, fx1, fy1, z0 + 0.5, topo - COBERTURA_ESP, self.bolsos_faceta, COR_TAMPA)
+        m.placa_com_furos(fx0, fy0, fx1, fy1, z0 + FACETA_FUNDO, topo - COBERTURA_ESP, self.bolsos_faceta, COR_TAMPA)
         m.placa_com_furos(fx0, fy0, fx1, fy1, topo - COBERTURA_ESP, topo, [self.cobertura_faceta], COR_TAMPA)
         # the bevels, with the module pockets and cover steps cut in
         for lado in ("L", "R"):
             self._chanfro(m, lado, dz)
         return m
 
-    def _perfil_chanfro(self, lado: str, dz: float, entalhe: float | None):
-        """Cross-section of the bevel solid in (x, z), for one y span:
-        `entalhe` is the pocket depth cut into the sloped face (None: none)."""
-        t = TAMPA
-        z_pe = T_C - CHANFRO + dz
+    def _geo_chanfro(self, dz: float = 0.0) -> dict:
+        """The left bevel's frame in (x, z), lid in place plus `dz`.
+
+        A is the foot of the sloped face, on the wall's outer face, at the
+        height where the shell's long wall stops; B its top edge; s runs
+        along the slope, nrm is the outward normal; comp is the slope's
+        length and meio its midpoint; P(a, d) is the point `a` along the
+        slope from meio and `d` into the solid. The inner boundary is E-D,
+        parallel to the face at CHANFRO_ESP (E on the wall's top, D where
+        that line reaches x_v), then D-C vertical up to the lid's top, x_v
+        being FOLGA_VIDRO_CHANFRO short of the display's glass - or, when
+        the parallel line reaches the top before that, C = D there.
+        """
+        t = CHANFRO_ESP
+        z_pe = self.z_parede_chanfro + dz
         z_top = T_C + dz
         A = (0.0, z_pe)
         B = (CHANFRO, z_top)
-        off = t * math.sqrt(2.0)
+        s = (1 / math.sqrt(2), 1 / math.sqrt(2))
+        nrm = (-1 / math.sqrt(2), 1 / math.sqrt(2))
+        comp = CHANFRO * math.sqrt(2)
+        meio = (A[0] + s[0] * comp / 2, A[1] + s[1] * comp / 2)
+
+        def P(a, d):
+            return (meio[0] + s[0] * a - nrm[0] * d, meio[1] + s[1] * a - nrm[1] * d)
+        off = t * math.sqrt(2)
         E = (off, z_pe)
-        D = (CHANFRO + off, z_top - t)
-        C = (CHANFRO + off, z_top)
+        x_v = min(self.x_interno_chanfro, CHANFRO + off)
+        D = (x_v, z_pe + (x_v - off))
+        C = (x_v, z_top)
+        c = COBERTURA_ESP * math.sqrt(2)
+        return dict(A=A, B=B, C=C, D=D, E=E, s=s, nrm=nrm, comp=comp, meio=meio, P=P, t=t,
+                    off=off, A_=(c, z_pe), B_=(CHANFRO + c, z_top),
+                    h_mod=(MODULO_H + 2 * MODULO_FOLGA) / 2)
+
+    @staticmethod
+    def _limpar(pol):
+        """Drop consecutive duplicate points (C = D when the parallel inner
+        line reaches the top first), which ear clipping cannot take."""
+        out = []
+        for p in pol:
+            if not out or abs(p[0] - out[-1][0]) > 1e-9 or abs(p[1] - out[-1][1]) > 1e-9:
+                out.append(p)
+        if len(out) > 1 and abs(out[0][0] - out[-1][0]) < 1e-9 and abs(out[0][1] - out[-1][1]) < 1e-9:
+            out.pop()
+        return out
+
+    def _espelhar(self, lado: str, pol):
+        return [(W_C - x, z) for x, z in pol] if lado == "R" else list(pol)
+
+    def _perfil_chanfro(self, lado: str, dz: float, entalhe: float | None):
+        """Cross-section of the bevel solid in (x, z) for one y span:
+        `entalhe` None is the plain bevel; 0,0 the span under the cover,
+        where the whole sloped face is recessed COBERTURA_ESP (a strip of
+        cover lies in it, foot to top: the slope has no room for a step
+        across it); a depth is the module's pocket, cut below the recess."""
+        g = self._geo_chanfro(dz)
+        A, B, C, D, E, P = g["A"], g["B"], g["C"], g["D"], g["E"], g["P"]
+        c = COBERTURA_ESP
+        h = g["h_mod"]
         if entalhe is None:
             pol = [A, B, C, D, E]
+        elif entalhe <= 0.0:
+            pol = [g["A_"], g["B_"], C, D, E]
         else:
-            # the slope from A to B with a two-step notch: the cover step
-            # (COBERTURA_ESP deep, wider) and the module pocket (deeper)
-            s = (1 / math.sqrt(2), 1 / math.sqrt(2))       # along the slope
-            nrm = (-1 / math.sqrt(2), 1 / math.sqrt(2))    # outward normal
-            comp = CHANFRO * math.sqrt(2)                   # slope length
-            meio = (A[0] + s[0] * comp / 2, A[1] + s[1] * comp / 2)
-            h_cob = (MODULO_H + 2 * MODULO_FOLGA) / 2 + COBERTURA_FOLGA
-            h_mod = (MODULO_H + 2 * MODULO_FOLGA) / 2
+            pol = [g["A_"], P(-h, c), P(-h, c + entalhe), P(h, c + entalhe), P(h, c), g["B_"], C, D, E]
+        return self._espelhar(lado, self._limpar(pol))
 
-            def P(a, d):
-                return (meio[0] + s[0] * a - nrm[0] * d, meio[1] + s[1] * a - nrm[1] * d)
-            pol = [A, P(-h_cob, 0), P(-h_cob, COBERTURA_ESP), P(-h_mod, COBERTURA_ESP),
-                   P(-h_mod, COBERTURA_ESP + entalhe), P(h_mod, COBERTURA_ESP + entalhe),
-                   P(h_mod, COBERTURA_ESP), P(h_cob, COBERTURA_ESP), P(h_cob, 0), B, C, D, E]
-        if lado == "R":
-            pol = [(W_C - x, z) for x, z in pol]
-        return pol
+    def _perfis_chanfro_fio(self, lado: str, dz: float) -> list:
+        """The pocket's cross-section split in two by a wire slot through
+        its floor, FIO_CHANFRO_S along the slope about the pocket's middle:
+        the piece below the slot and the piece above it."""
+        g = self._geo_chanfro(dz)
+        C, D, E, P = g["C"], g["D"], g["E"], g["P"]
+        c, e, h, t = COBERTURA_ESP, MODULO_ESP + 0.1, g["h_mod"], g["t"]
+        fs = FIO_CHANFRO_S / 2
+        baixo = [g["A_"], P(-h, c), P(-h, c + e), P(-fs, c + e), P(-fs, t), E]
+        cima = [P(fs, c + e), P(h, c + e), P(h, c), g["B_"], C, D, P(fs, t)]
+        return [self._espelhar(lado, self._limpar(baixo)), self._espelhar(lado, self._limpar(cima))]
+
+    def perfis_modulo_chanfro(self, lado: str, dz: float = 0.0) -> tuple[list, list]:
+        """The module's and the cover strip's cross-sections on one bevel:
+        the module lies in its pocket 0,1 below the recess, the strip fills
+        the recess from the wall's top to the lid's top (a parallelogram,
+        its ends horizontal)."""
+        g = self._geo_chanfro(dz)
+        P = g["P"]
+        c, h = COBERTURA_ESP, MODULO_H / 2
+        quad_mod = [P(-h, c + 0.1), P(h, c + 0.1), P(h, c + 0.1 + MODULO_ESP), P(-h, c + 0.1 + MODULO_ESP)]
+        quad_cob = [g["A"], g["B"], g["B_"], g["A_"]]
+        return self._espelhar(lado, quad_mod), self._espelhar(lado, quad_cob)
 
     def _chanfro(self, m: Malha, lado: str, dz: float):
         y0, y1 = CHANFRO_Y
-        cortes = sorted({y0, y1} | {ya for l_, ya, yb in self.modulos_chanfro if l_ == lado}
-                        | {yb for l_, ya, yb in self.modulos_chanfro if l_ == lado}
-                        | {ya - COBERTURA_FOLGA for l_, ya, yb in self.modulos_chanfro if l_ == lado}
-                        | {yb + COBERTURA_FOLGA for l_, ya, yb in self.modulos_chanfro if l_ == lado})
+        meus = [(a, b) for l_, a, b in self.modulos_chanfro if l_ == lado]
+        fios = [(a, b) for l_, a, b in self.furos_fio_chanfro if l_ == lado]
+        cortes = {y0, y1}
+        for a, b in meus:
+            cortes |= {a, b, a - COBERTURA_FOLGA, b + COBERTURA_FOLGA}
+        for a, b in fios:
+            cortes |= {a, b}
+        cortes = sorted(cortes)
         for i in range(len(cortes) - 1):
             ya, yb = cortes[i], cortes[i + 1]
             ym = (ya + yb) / 2
-            modulo = any(a <= ym <= b for l_, a, b in self.modulos_chanfro if l_ == lado)
-            cobertura = any(a - COBERTURA_FOLGA <= ym <= b + COBERTURA_FOLGA
-                            for l_, a, b in self.modulos_chanfro if l_ == lado)
-            if modulo:
+            if any(a <= ym <= b for a, b in fios):
+                for pol in self._perfis_chanfro_fio(lado, dz):
+                    m.prisma_yz(pol, ya, yb, COR_TAMPA)
+                continue
+            if any(a <= ym <= b for a, b in meus):
                 pol = self._perfil_chanfro(lado, dz, MODULO_ESP + 0.1)
-            elif cobertura:
+            elif any(a - COBERTURA_FOLGA <= ym <= b + COBERTURA_FOLGA for a, b in meus):
                 pol = self._perfil_chanfro(lado, dz, 0.0)
             else:
                 pol = self._perfil_chanfro(lado, dz, None)
@@ -604,22 +768,9 @@ class Caixa:
         for bx0, by0, bx1, by1 in self.bolsos_faceta:
             mod.caixa(bx0 + MODULO_FOLGA, by0 + MODULO_FOLGA, topo - COBERTURA_ESP - MODULO_ESP - 0.1,
                       bx1 - MODULO_FOLGA, by1 - MODULO_FOLGA, topo - COBERTURA_ESP - 0.1, COR_MODULO)
-        # on the bevels: boxes along the slope
-        s = (1 / math.sqrt(2), 1 / math.sqrt(2))
-        nrm = (-1 / math.sqrt(2), 1 / math.sqrt(2))
-        comp = CHANFRO * math.sqrt(2)
+        # on the bevels: the module in its pocket, the strip in the recess
         for lado, ya, yb in self.modulos_chanfro:
-            A = (0.0, T_C - CHANFRO + dz)
-            meio = (A[0] + s[0] * comp / 2, A[1] + s[1] * comp / 2)
-
-            def P(a, d):
-                x, z = meio[0] + s[0] * a - nrm[0] * d, meio[1] + s[1] * a - nrm[1] * d
-                return (W_C - x, z) if lado == "R" else (x, z)
-            h = MODULO_H / 2
-            hc = (MODULO_H + 2 * MODULO_FOLGA) / 2 + COBERTURA_FOLGA
-            quad_mod = [P(-h, COBERTURA_ESP + 0.1), P(h, COBERTURA_ESP + 0.1),
-                        P(h, COBERTURA_ESP + 0.1 + MODULO_ESP), P(-h, COBERTURA_ESP + 0.1 + MODULO_ESP)]
-            quad_cob = [P(-hc, 0.0), P(hc, 0.0), P(hc, COBERTURA_ESP), P(-hc, COBERTURA_ESP)]
+            quad_mod, quad_cob = self.perfis_modulo_chanfro(lado, dz)
             mod.prisma_yz(quad_mod, ya + MODULO_FOLGA, yb - MODULO_FOLGA, COR_MODULO)
             cob.prisma_yz(quad_cob, ya - COBERTURA_FOLGA, yb + COBERTURA_FOLGA, COR_COBERTURA)
         return cob, mod
@@ -632,6 +783,32 @@ class Caixa:
         m.caixa(dx0, dy0, DISPLAY_Z0 + dz_display, dx1, dy1, DISPLAY_Z1 + dz_display, COR_DISPLAY)
         jx0, jy0, jx1, jy1 = self.janela
         m.caixa(jx0, jy0, DISPLAY_Z1 + dz_display, jx1, jy1, DISPLAY_Z1 + 0.05 + dz_display, COR_JANELA)
+        return m
+
+    def porta_3d(self, origem=None) -> Malha:
+        """The USB-C door, closed: the flap on the bottom wall's outer face
+        with two hinge knuckles along its top edge. `origem` draws it alone,
+        lying flat, for the STL."""
+        m = Malha()
+        x0, x1, z0, z1 = self.porta
+        y0, y1 = H_C, H_C + PORTA_ESP
+        if origem is None:
+            m.caixa(x0, y0, z0, x1, y1, z1, COR_TECLA)
+            for k in (x0, x1 - PORTA_LUG):
+                m.caixa(k, y0, z1, k + PORTA_LUG, y1 + 0.5, z1 + PORTA_LUG, COR_TECLA)
+        else:
+            w, h = x1 - x0, z1 - z0
+            m.caixa(0, 0, 0, w, h, PORTA_ESP, COR_TECLA)
+            for k in (0.0, w - PORTA_LUG):
+                m.caixa(k, h, 0, k + PORTA_LUG, h + PORTA_LUG, PORTA_ESP + 0.5, COR_TECLA)
+        return m
+
+    def antena_externa_3d(self) -> Malha:
+        """The patch antenna in its cradle, for the views (an option)."""
+        m = Malha()
+        x0, y0, x1, y1, z0, z1 = self.berco
+        m.caixa(x0 + ANT_EXT_FOLGA, y0 + ANT_EXT_FOLGA, z0, x1 - ANT_EXT_FOLGA, y1 - ANT_EXT_FOLGA,
+                z0 + ANT_EXT_H, (0.85, 0.85, 0.80))
         return m
 
 
@@ -752,7 +929,7 @@ def f2(v):
 
 def pagina_1(doc, cx: Caixa):
     page = doc.new_page(width=842, height=595)
-    _t(page, 30, 32, f"GNSS Bike Computer - proposta de caixa em volta da placa de 34 x 90: {W_C:g} x {H_C:g} x {T_C:g} mm", 11)
+    _t(page, 30, 32, f"GNSS Bike Computer - proposta de caixa em volta da placa de {PLACA_W:g} x {PLACA_H:g}: {W_C:g} x {H_C:g} x {T_C:g} mm", 11)
     page.insert_text(fitz.Point(30, 46), "Escala 4,2 pt/mm. Proposta de 2026-09-26, nada impresso nem medido; as premissas e o que nao bate estao na pagina 3.",
                      fontsize=7, fontname="helv", color=(0.35, 0.35, 0.35))
     # ---- front, lid on
@@ -775,21 +952,28 @@ def pagina_1(doc, cx: Caixa):
     for (sx, sy), (kx, ky) in zip(cx.teclas, cx.capas):
         fv.rect(*quadrado(sx, sy, 3.5), cor=(0.4, 0.1, 0.1), fill=None, largura=0.4, tracejado="[1.5 1] 0")
         fv.linha(sx, sy, kx, ky, (0.4, 0.1, 0.1), 0.4, "[1.5 1] 0")
-    if cx.capas:
-        fv.texto(cx.capas[0][0] - 6.0, cx.capas[0][1] - 6.5, "capas no passo de 14; tracejado: a chave na placa e a barra", 4.5, (0.4, 0.1, 0.1))
+    if len(cx.capas) > 1:
+        passo = cx.capas[1][0] - cx.capas[0][0]
+        fv.texto(cx.capas[0][0] - 6.0, cx.capas[0][1] - 6.5, f"capas sobre as chaves da placa, passo {f2(passo)}; tracejado: a chave", 4.5, (0.4, 0.1, 0.1))
     fv.rect(*cx.faceta, cor=(0.2, 0.2, 0.22), fill=(0.80, 0.81, 0.84), largura=0.6)
     fv.rect(*cx.cobertura_faceta, cor=(0.2, 0.4, 0.5), fill=(0.80, 0.88, 0.92), largura=0.5)
     for b in cx.bolsos_faceta:
         fv.rect(*b, cor=(0.1, 0.12, 0.3), fill=(0.35, 0.40, 0.55), largura=0.5)
-    fv.rect(*cx.furo_led, cor=(0.1, 0.5, 0.1), fill=(0.6, 0.9, 0.6), largura=0.5)
-    fv.rect(*cx.furo_sensor, cor=(0.1, 0.3, 0.6), fill=(0.7, 0.8, 0.95), largura=0.5)
-    fv.texto(cx.furo_led[0] - 12.5, cx.furo_led[1] - 0.8, "LED (proposta)", 4.5, (0.1, 0.4, 0.1))
-    fv.texto(cx.furo_sensor[2] + 0.8, cx.furo_sensor[3] + 0.5, "sensor de luz (proposta)", 4.5, (0.1, 0.3, 0.6))
+    if cx.furo_led:
+        fv.rect(*cx.furo_led, cor=(0.1, 0.5, 0.1), fill=(0.6, 0.9, 0.6), largura=0.5)
+        fv.texto(cx.furo_led[2] + 0.8, cx.furo_led[3] + 0.3, "LED D601", 4.5, (0.1, 0.4, 0.1))
+    if cx.furo_sensor:
+        fv.rect(*cx.furo_sensor, cor=(0.1, 0.3, 0.6), fill=(0.7, 0.8, 0.95), largura=0.5)
+        fv.texto(cx.furo_sensor[0] - 1.0, cx.furo_sensor[3] + 3.2, "sensor de luz U505", 4.5, (0.1, 0.3, 0.6))
     for x, y in PARAFUSO_TAMPA:
         fv.circulo(x, y, 1.1, (0.2, 0.2, 0.2), (0.9, 0.9, 0.9), 0.5)
     ux0, ux1, _z0, _z1 = cx.usb
     fv.rect(ux0, H_C - 1.2, ux1, H_C, (0.1, 0.3, 0.7), (0.6, 0.7, 0.9), 0.5)
-    fv.texto(ux1 + 1.0, H_C - 0.3, "USB-C", 4.5, (0.1, 0.3, 0.7))
+    px0, px1, _pz0, _pz1 = cx.porta
+    fv.rect(px0, H_C, px1, H_C + PORTA_ESP, (0.2, 0.2, 0.2), (0.45, 0.46, 0.48), 0.5)
+    for lx0, lx1 in cx.lugs_porta:
+        fv.rect(lx0, H_C, lx1, H_C + PORTA_ESP + 0.5, (0.2, 0.2, 0.2), (0.6, 0.6, 0.62), 0.4)
+    fv.texto(px1 + 3.5, H_C + 1.0, "USB-C com a porta (vista de cima)", 4.5, (0.1, 0.3, 0.7))
     fv.cota_v(-4.0, 0, H_C, f"{H_C:g}")
     fv.cota_h(H_C + 4.0, 0, W_C, f"{W_C:g}", acima=False)
     fv.cota_v(W_C + 3.0, jy0, jy1, f2(JANELA_H))
@@ -801,6 +985,11 @@ def pagina_1(doc, cx: Caixa):
     xv.poli(cx.dentro, (0.5, 0.5, 0.5), None, 0.4)
     for x0, y0, x1, y1 in cx.nervuras:
         xv.rect(x0, y0, x1, y1, (0.3, 0.3, 0.3), (0.75, 0.76, 0.78), 0.4)
+    for x0, y0, x1, y1 in cx.nervuras_berco:
+        xv.rect(x0, y0, x1, y1, (0.3, 0.3, 0.3), (0.75, 0.76, 0.78), 0.4)
+    bx0, by0, bx1, by1, _bz0, _bz1 = cx.berco
+    xv.rect(bx0, by0, bx1, by1, (0.5, 0.35, 0.1), (0.95, 0.9, 0.75), 0.5, "[2 1] 0")
+    xv.texto(bx1 + 1.5, by1 + 0.5, f"berco da antena GNSS externa {ANT_EXT_W:g} x {ANT_EXT_H:g} x {ANT_EXT_ESP:g}, em pe na parede de cima (opcao)", 4.5, (0.5, 0.35, 0.1))
     for x, y in PARAFUSO_TAMPA:
         xv.circulo(x, y, BOSSA_D / 2, (0.2, 0.2, 0.2), (0.8, 0.8, 0.8), 0.5)
         xv.circulo(x, y, BOSSA_FURO / 2, (0.2, 0.2, 0.2), (1, 1, 1), 0.4)
@@ -846,6 +1035,10 @@ def pagina_1(doc, cx: Caixa):
     ux0, ux1, uz0, uz1 = cx.usb
     zr(0, H_C - PAREDE, uz0, H_C, (0.1, 0.1, 0.1), (0.75, 0.76, 0.78))
     zr(uz1, H_C - PAREDE, T_C, H_C, (0.1, 0.1, 0.1), (0.80, 0.81, 0.83))
+    _px0, _px1, pz0, pz1 = cx.porta
+    zr(pz0, H_C, pz1, H_C + PORTA_ESP, (0.2, 0.2, 0.2), (0.45, 0.46, 0.48), 0.4)      # the door, closed
+    zr(pz1, H_C, pz1 + PORTA_LUG, H_C + PORTA_ESP + 0.5, (0.2, 0.2, 0.2), (0.6, 0.6, 0.62), 0.4)
+    sv.texto(pz1 + 3.5, H_C + 1.3, "porta do USB-C", 4.5, (0.2, 0.2, 0.2))
     zr(TAMPA_Z0, 0, T_C, H_C, (0.1, 0.1, 0.1), (0.80, 0.81, 0.83))
     zr(TAMPA_Z0, cx.janela[1], T_C, cx.janela[3], (0.1, 0.1, 0.1), (1, 1, 1), 0.3)     # window
     zr(DISPLAY_Z1, cx.display[1], TAMPA_Z0, cx.display[3], (0.5, 0.5, 0.5), (0.9, 0.9, 0.7), 0.2)   # tape
@@ -894,30 +1087,17 @@ def pagina_2(doc, cx: Caixa):
     xz(0, 0, W_C, FUNDO, (0.1, 0.1, 0.1), (0.75, 0.76, 0.78))
     for x0 in (0.0, W_C - PAREDE):
         xz(x0, FUNDO, x0 + PAREDE, T_C - CHANFRO, (0.1, 0.1, 0.1), (0.75, 0.76, 0.78))
-    # the lid: plate and the two bevel solids (with a pocket cut)
-    xz(PAREDE, TAMPA_Z0, W_C - PAREDE, T_C, (0.1, 0.1, 0.1), (0.80, 0.81, 0.83))
+    # the lid: plate (from x = CHANFRO along the bevels) and the two bevel
+    # solids with a pocket cut, the module in it and the cover strip
+    xz(CHANFRO, TAMPA_Z0, W_C - CHANFRO, T_C, (0.1, 0.1, 0.1), (0.80, 0.81, 0.83))
     xz(cx.janela[0], TAMPA_Z0, cx.janela[2], T_C, (0.1, 0.1, 0.1), (1, 1, 1), 0.3)
     xz(cx.display[0], DISPLAY_Z1, cx.display[2], TAMPA_Z0, (0.5, 0.5, 0.5), (0.9, 0.9, 0.7), 0.2)   # tape
     for lado in ("L", "R"):
         pol = cx._perfil_chanfro(lado, 0.0, MODULO_ESP + 0.1)
         bv.poli([(x, -z) for x, z in pol], (0.1, 0.1, 0.1), (0.80, 0.81, 0.83), 0.6)
-    cob, mod = cx.coberturas_e_modulos_3d()
-    # the modules and covers on the bevels, as their (x, z) outlines
-    s = (1 / math.sqrt(2), 1 / math.sqrt(2))
-    nrm = (-1 / math.sqrt(2), 1 / math.sqrt(2))
-    comp = CHANFRO * math.sqrt(2)
-    for lado in ("L", "R"):
-        A = (0.0, T_C - CHANFRO)
-        meio = (A[0] + s[0] * comp / 2, A[1] + s[1] * comp / 2)
-
-        def P(a, d):
-            x, z = meio[0] + s[0] * a - nrm[0] * d, meio[1] + s[1] * a - nrm[1] * d
-            return ((W_C - x) if lado == "R" else x, -z)
-        h = MODULO_H / 2
-        hc = (MODULO_H + 2 * MODULO_FOLGA) / 2 + COBERTURA_FOLGA
-        bv.poli([P(-h, COBERTURA_ESP + 0.1), P(h, COBERTURA_ESP + 0.1), P(h, COBERTURA_ESP + 0.1 + MODULO_ESP),
-                 P(-h, COBERTURA_ESP + 0.1 + MODULO_ESP)], (0.1, 0.12, 0.3), (0.35, 0.40, 0.55), 0.5)
-        bv.poli([P(-hc, 0.0), P(hc, 0.0), P(hc, COBERTURA_ESP), P(-hc, COBERTURA_ESP)], (0.2, 0.4, 0.5), (0.80, 0.88, 0.92), 0.5)
+        quad_mod, quad_cob = cx.perfis_modulo_chanfro(lado)
+        bv.poli([(x, -z) for x, z in quad_mod], (0.1, 0.12, 0.3), (0.35, 0.40, 0.55), 0.5)
+        bv.poli([(x, -z) for x, z in quad_cob], (0.2, 0.4, 0.5), (0.80, 0.88, 0.92), 0.5)
     cx0, _cy0, cx1, _cy1 = cx.celula
     xz(cx0, CELULA_Z0, cx1, CELULA_Z1, (0.85, 0.5, 0.1), (1.0, 0.93, 0.8))
     for x0, _y0, x1, _y1 in cx.nervuras[:2]:
@@ -928,7 +1108,9 @@ def pagina_2(doc, cx: Caixa):
     bv.cota_h(-T_C - 3.0, 0, W_C, f"{W_C:g}")
     bv.cota_v(W_C + 3.0, -T_C, 0, f"{T_C:g}")
     bv.cota_v(W_C + 9.0, -T_C, -(T_C - CHANFRO), f2(CHANFRO))
-    bv.texto(W_C / 2 - 8, -T_C - 5.5, "chanfro de 45 graus com dois modulos por lado, em bolso, sob cobertura transparente", 5.5, (0.3, 0.3, 0.3))
+    g = cx._geo_chanfro()
+    bv.texto(W_C / 2 - 14, -T_C - 5.5, f"chanfro de 45 graus e {f2(CHANFRO)} (face de {f2(g['comp'])}), dois modulos por lado em bolso, "
+             f"sob uma tira transparente de {f2(COBERTURA_ESP)} na face rebaixada; face interna a {f2(cx.display[0] - g['C'][0])} do vidro", 5.0, (0.3, 0.3, 0.3))
     bv.texto(cx0 + 1, -CELULA_Z0 - 1, "celula", 5.0, (0.7, 0.4, 0.05))
     bv.texto(dx0 + 1, -DISPLAY_Z1 - 0.5, "display colado sob a tampa, em volta da janela", 5.0, (0.2, 0.3, 0.6))
     # ---- key detail: page x = case x, page y = z
@@ -968,13 +1150,13 @@ def pagina_2(doc, cx: Caixa):
 
     def mz(x0, z0, x1, z1, cor, fill, largura=0.5):
         mv.rect(x0 - xm, -z1, x1 - xm, -z0, cor, fill, largura)
-    mz(b[0] - 2.0, TAMPA_Z0, b[2] + 2.0, TAMPA_Z0 + 0.5, (0.1, 0.1, 0.1), (0.80, 0.81, 0.83))
-    mz(b[0] - 2.0, TAMPA_Z0 + 0.5, b[0], topo - COBERTURA_ESP, (0.1, 0.1, 0.1), (0.80, 0.81, 0.83))
-    mz(b[2], TAMPA_Z0 + 0.5, b[2] + 2.0, topo - COBERTURA_ESP, (0.1, 0.1, 0.1), (0.80, 0.81, 0.83))
+    mz(b[0] - 2.0, TAMPA_Z0, b[2] + 2.0, TAMPA_Z0 + FACETA_FUNDO, (0.1, 0.1, 0.1), (0.80, 0.81, 0.83))
+    mz(b[0] - 2.0, TAMPA_Z0 + FACETA_FUNDO, b[0], topo - COBERTURA_ESP, (0.1, 0.1, 0.1), (0.80, 0.81, 0.83))
+    mz(b[2], TAMPA_Z0 + FACETA_FUNDO, b[2] + 2.0, topo - COBERTURA_ESP, (0.1, 0.1, 0.1), (0.80, 0.81, 0.83))
     mz(b[0] + MODULO_FOLGA, topo - COBERTURA_ESP - 0.1 - MODULO_ESP, b[2] - MODULO_FOLGA, topo - COBERTURA_ESP - 0.1,
        (0.1, 0.12, 0.3), (0.35, 0.40, 0.55))
     mz(b[0] - 1.0, topo - COBERTURA_ESP, b[2] + 1.0, topo, (0.2, 0.4, 0.5), (0.80, 0.88, 0.92))
-    mv.texto(0.2, -TAMPA_Z0 - 0.2, "tampa (0,5 sob o bolso; furos de fio o1)", 4.5, (0.1, 0.1, 0.1))
+    mv.texto(0.2, -TAMPA_Z0 - 0.2, f"tampa ({f2(FACETA_FUNDO)} sob o bolso; furos de fio o1)", 4.5, (0.1, 0.1, 0.1))
     mv.texto(2.6, -(topo - COBERTURA_ESP - 0.1) - 0.6, f"modulo 23 x 8 x {f2(MODULO_ESP)}, colado no fundo do bolso", 4.5, (0.1, 0.12, 0.3))
     mv.texto(2.6, -topo - 0.4, f"cobertura transparente {f2(COBERTURA_ESP)} (resina clara ou PET), colada no degrau", 4.5, (0.2, 0.4, 0.5))
     mv.cota_h(-TAMPA_Z0 + 1.6, b[0] - xm, b[2] - xm, f"bolso {f2(b[2] - b[0])}", acima=False)
@@ -985,14 +1167,10 @@ def conflitos(cx: Caixa) -> list[str]:
     p = cx.pecas
     for ref, nome in (("D601", "LED RGB"), ("U505", "sensor de luz OPT3001")):
         q = p.get(ref)
-        if q:
-            x0, y0, x1, y1 = q["caixa"]
-            sob = y0 < SOMBRA_DISPLAY[1] and not q["atras"]
-            if sob:
-                prop = LED_PROPOSTA if ref == "D601" else SENSOR_LUZ_PROPOSTA
-                out.append(f"{ref} ({nome}) esta em ({q['x']:g}; {q['y']:g}) da placa, DEBAIXO do vidro do display (y < {SOMBRA_DISPLAY[1]:g}): "
-                           f"nenhuma janela na tampa o alcanca. A janela foi desenhada na posicao PROPOSTA ({prop[0]:g}; {prop[1]:g}), "
-                           "abaixo das teclas; a peca tem de mudar de lugar na placa.")
+        if q and (q["atras"] or q["y"] < SOMBRA_DISPLAY[1]):
+            out.append(f"{ref} ({nome}) esta em ({q['x']:g}; {q['y']:g}) da placa, "
+                       + ("no verso" if q["atras"] else f"DEBAIXO do vidro do display (y < {SOMBRA_DISPLAY[1]:g})")
+                       + ": nenhuma janela na tampa o alcanca, e a tampa ficou sem a janela dele. A peca tem de mudar de lugar na placa.")
     for x, y in cx.furos_sobre_celula:
         out.append(f"O furo M2 da placa em ({x - PLACA_X0:g}; {y - PLACA_Y0:g}) fica em cima da celula: nao pode ter bossa. "
                    "A placa fica em UM parafuso (o outro furo) e tres pilares; o furo precisa mudar para fora da sombra da celula, por exemplo para y >= 72.")
@@ -1018,12 +1196,14 @@ def pagina_3(doc, cx: Caixa):
     _t(page, 30, 32, "Premissas, o que e proposta, o que nao bate, e as pecas", 11)
     y = 54
     itens = [
-        f"Caixa {W_C:g} x {H_C:g} x {T_C:g} mm (o conceito tinha 19 de espessura; com 16 o USB-C e o conector SWD batiam na tampa: sob a tampa sobram {f2(TAMPA_Z0 - PLACA_Z1)} mm da face da placa), raio {R_C:g}, paredes {PAREDE:g}, fundo {FUNDO:g}, tampa {TAMPA:g}; chanfro de 45 graus e {CHANFRO:g} mm nas arestas longas, na tampa, de y {CHANFRO_Y[0]:g} a {CHANFRO_Y[1]:g}, com dois modulos solares por lado; faceta plana de {FACETA_ALT:g} mm sobre a tampa abaixo das teclas, com dois modulos; cada grupo sob uma cobertura transparente de {f2(COBERTURA_ESP)} mm colada num degrau de {COBERTURA_FOLGA:g} mm em volta dos bolsos; furos de fio de o1 de cada modulo para dentro.",
+        f"Caixa {W_C:g} x {H_C:g} x {T_C:g} mm (o conceito tinha 19 de espessura; com 16 o USB-C e o conector SWD batiam na tampa: sob a tampa sobram {f2(TAMPA_Z0 - PLACA_Z1)} mm da face da placa), raio {R_C:g}, paredes {PAREDE:g}, fundo {FUNDO:g}, tampa {TAMPA:g}; chanfro de 45 graus e {f2(CHANFRO)} mm nas arestas longas, na tampa, de y {CHANFRO_Y[0]:g} a {CHANFRO_Y[1]:g} (o conceito tinha 6,2: a face de rampa de 8,8 mm nao segurava o modulo de {MODULO_H:g} atravessado nela com cobertura e parede; com {f2(CHANFRO)} a face tem {f2(cx._geo_chanfro()['comp'])}), com dois modulos solares por lado, cada um num bolso de {f2(MODULO_ESP + 0.1)} sob a face rebaixada de {f2(COBERTURA_ESP)} no vao dos dois, onde se cola uma tira transparente de ponta a ponta da rampa; as paredes longas da concha param em z {f2(cx.z_parede_chanfro)} sob o chanfro, e o chanfro assenta nelas; faceta plana de {FACETA_ALT:g} mm sobre a tampa abaixo das teclas, com dois modulos sob uma cobertura de {f2(COBERTURA_ESP)} colada num degrau de {COBERTURA_FOLGA:g} mm em volta dos bolsos; furos de fio de o1 na faceta e fendas de {f2(FIO_CHANFRO_Y)} x {f2(FIO_CHANFRO_S)} nas duas pontas de cada bolso do chanfro, para dentro.",
         f"Placa {PLACA_W:g} x {PLACA_H:g} x {PLACA_ESP:g}, gnssbike.kicad_pcb de hoje: centrada na largura (x {PLACA_X0:g} a {PLACA_X0 + PLACA_W:g}) e a {FOLGA_PLACA:g} mm da parede de baixo (y {f2(PLACA_Y0)} a {f2(PLACA_Y0 + PLACA_H)}), para o USB-C chegar ao entalhe da parede ({cx.usb[1] - cx.usb[0]:g} x {f2(cx.usb[3] - cx.usb[2])}, na parede e na aba da tampa).",
         f"Pilha: celula {CELULA_W:g} x {CELULA_H:g} x {CELULA_ESP:g} colada no fundo (fita dupla face) dentro de quatro nervuras de 2 x 5 mm, a 0,25 mm dela; 0,5 mm de ar e {CELULA_VAO:g} mm de pecas do verso ate a placa; a placa em {f2(PLACA_Z0)}-{f2(PLACA_Z1)}, apoiada em {len(cx.bossas_placa)} bossa(s) M2 e {len(cx.pilares)} pilares de o{PILAR_D:g}; {DISPLAY_VAO:g} mm de pecas da frente; o display ({DISPLAY_W:g} x {DISPLAY_H:g} x {DISPLAY_ESP:g}) colado por baixo da tampa, em volta da janela, com fita de {FITA_DISPLAY:g}: o vidro fica {f2(T_C - DISPLAY_Z1)} mm abaixo da face da tampa (a alternativa, um aro em relevo, nao esta desenhada).",
-        f"Teclas: as tres chaves ficam onde a placa as pos (x 4,5 a 21,5 da placa: a zona da antena do modulo nao deixa a terceira passar de 21,5), e as CAPAS ficam espalhadas na largura do display, no passo de {TECLA_PASSO:g} mm centrado na janela, como o dono pediu; cada capa e quadrada, de {TECLA_CAPA:g} mm num furo de {TECLA_FURO:g}, e tem por baixo da tampa uma barra de {BARRA_LARG:g} x {BARRA_ESP:g} que vai ate a sua chave (a da direita anda {f2(abs(cx.capas[-1][0] - cx.teclas[-1][0])) if cx.capas else '0'} mm): a barra e o que aperta o embolo do TS-1088R ({TECLA_ALT:g} mm) e o que segura a capa; a haste quadrada nao a deixa girar. Membrana de TPU de {MEMBRANA_ESP:g} colada no rebaixo de {MEMBRANA_REBAIXO:g} sobre as tres (chuva); curso {TECLA_CURSO:g}.",
+        f"Teclas: as tres capas ficam exatamente sobre as tres chaves da placa, que o dono mandou espalhar na largura do display (x {', '.join(f'{x - PLACA_X0:g}' for x, _y in cx.teclas)} da placa: passo {f2(cx.teclas[1][0] - cx.teclas[0][0]) if len(cx.teclas) > 1 else '-'}, o maior que a borda da placa permite); capa quadrada de {TECLA_CAPA:g} num furo de {TECLA_FURO:g}, com aba de {BARRA_LARG:g} x {BARRA_ESP:g} por baixo da tampa, do embolo do TS-1088R ({TECLA_ALT:g} mm) ate o fundo do rebaixo; a haste quadrada nao gira. Membrana de TPU de {MEMBRANA_ESP:g} colada no rebaixo de {MEMBRANA_REBAIXO:g} sobre as tres (chuva); curso {TECLA_CURSO:g}. O LED fica na fileira das teclas, sob a membrana (TPU translucido).",
         f"Tampa presa por 4 parafusos M2 nos cantos, em bossas de o{BOSSA_D:g} com furo de o{BOSSA_FURO:g} (auto-atarraxante); a vedacao da linha de particao (cordao de silicone ou junta cortada) nao esta desenhada. No fundo: {len(cx.furos_fundo)} furos (som do buzzer, respiro do barometro com rebaixo para a membrana).",
-        "Nao desenhados: o engate de quarto de volta atras, a saida dos fios dos seis modulos ate J103, J104 e J105 (passam pelos furos de o1 e correm por dentro da tampa), o respiro do USB-C IPX8, textos e logotipo.",
+        f"USB-C: entalhe de {cx.usb[1] - cx.usb[0]:g} x {f2(cx.usb[3] - cx.usb[2])} na parede de baixo e na aba da tampa, e uma porta de {f2(cx.porta[1] - cx.porta[0])} x {f2(cx.porta[3] - cx.porta[2])} x {PORTA_ESP:g} por fora, articulada em dois ressaltos no alto (pino de o1,5, nao desenhado), que fecha sobre o entalhe com {PORTA_ABA:g} mm de aba; aberta, passa o cabo para carregar e para o disco USB (docs/09). Uma junta de silicone entre a porta e a parede e o que a torna estanque, e nao esta desenhada.",
+        f"Antena GNSS externa (opcao): berco de {ANT_EXT_W + 2 * ANT_EXT_FOLGA:g} x {ANT_EXT_ESP + 2 * ANT_EXT_FOLGA:g} entre duas nervuras contra a parede de cima, com um labio baixo na frente, para uma patch de {ANT_EXT_W:g} x {ANT_EXT_H:g} x {ANT_EXT_ESP:g} em pe (a parede de cima aponta para o ceu com o aparelho inclinado no guidao); o rabicho U.FL vai ao J302 da placa, a {f2(math.hypot((cx.berco[0] + cx.berco[2]) / 2 - (PLACA_X0 + cx.pecas['J302']['x']), cx.berco[3] - (PLACA_Y0 + cx.pecas['J302']['y']))) if 'J302' in cx.pecas else '-'} mm. Com a externa ligada, o jumper JP301 tira a antena de chip do circuito.",
+        "Nao desenhados: o engate de quarto de volta atras, a saida dos fios dos seis modulos ate J103, J104 e J105 (passam pelos furos de o1 e correm por dentro da tampa), o pino e a junta da porta, textos e logotipo.",
         "Nada disto e decisao final: e uma proposta desenhada em volta da placa de hoje, para decidir em cima dela, e nao foi impressa.",
     ]
     for s in itens:
@@ -1039,8 +1219,9 @@ def pagina_3(doc, cx: Caixa):
     _t(page, 30, y, "Pecas e arquivos", 9.5)
     y += 15
     for s in [
-        "caixa-concha.stl (PETG ou ASA, 0,2 mm, sem suporte); caixa-tampa.stl (idem, impressa de cabeca para baixo, com suporte sob os chanfros); caixa-tecla.stl (3x, resina ou PETG); "
-        "caixa-membrana-teclas.stl (TPU 0,3 mm, ou filme de PET cortado); caixa-cobertura-faceta.stl e caixa-cobertura-chanfro.stl (4x): resina transparente, ou PET de 0,5 cortado no tamanho.",
+        "caixa-concha.stl (PETG ou ASA, 0,2 mm, sem suporte); caixa-tampa.stl (idem, impressa de cabeca para baixo, com suporte sob os chanfros); caixa-tecla-1/2/3.stl (resina ou PETG); "
+        "caixa-membrana-teclas.stl (TPU 0,3 mm, ou filme de PET cortado); caixa-cobertura-faceta.stl e caixa-cobertura-chanfro.stl (4x, uma tira em paralelogramo com as pontas horizontais, do alto da parede ao alto da tampa): "
+        "resina transparente, ou PET de 0,5 cortado no tamanho; caixa-porta-usb.stl (PETG, com o pino de o1,5 a parte).",
         "Ferragens: 4 parafusos M2 x 8 (tampa), 1 M2 x 6 (placa), fita dupla face de 0,5 para a celula e os modulos, fita de 0,2 para o display, silicone neutro para as coberturas e a particao.",
         "Os STL sao sopas de triangulos de caixas sobrepostas (o fatiador as une), nao solidos de CAD; servem para imprimir a primeira prova, nao para usinar.",
     ]:
@@ -1082,23 +1263,33 @@ def main() -> int:
     x0, y0, x1, y1 = cx.cobertura_faceta
     cf.caixa(0, 0, 0, x1 - x0, y1 - y0, COBERTURA_ESP, COR_COBERTURA)
     print(f"  caixa-cobertura-faceta.stl: {cf.stl(HERE / 'caixa-cobertura-faceta.stl')} triangulos")
+    # the bevel's cover: the strip that fills the recess, foot to top, its
+    # ends horizontal (a square-cut strip would hang 0,4 mm below the wall's
+    # top at the foot); drawn lying with its foot at the origin
     cc = Malha()
-    hc = (MODULO_H + 2 * MODULO_FOLGA) + 2 * COBERTURA_FOLGA
-    cc.caixa(0, 0, 0, hc, MODULO_W + 2 * MODULO_FOLGA + 2 * COBERTURA_FOLGA, COBERTURA_ESP, COR_COBERTURA)
-    print(f"  caixa-cobertura-chanfro.stl: {cc.stl(HERE / 'caixa-cobertura-chanfro.stl')} triangulos (imprimir 4)")
+    _quad_mod, quad_cob = cx.perfis_modulo_chanfro("L")
+    z_pe = cx.z_parede_chanfro
+    cc.prisma_yz([(x, z - z_pe) for x, z in quad_cob], 0.0, MODULO_W + 2 * MODULO_FOLGA + 2 * COBERTURA_FOLGA, COR_COBERTURA)
+    g = cx._geo_chanfro()
+    print(f"  caixa-cobertura-chanfro.stl: {cc.stl(HERE / 'caixa-cobertura-chanfro.stl')} triangulos (imprimir 4; "
+          f"tira de {g['comp']:.1f} x {MODULO_W + 2 * MODULO_FOLGA + 2 * COBERTURA_FOLGA:.1f} x {COBERTURA_ESP:g}, chanfro de {CHANFRO:g})")
+
+    porta = cx.porta_3d()
+    print(f"  caixa-porta-usb.stl: {cx.porta_3d(origem=(0, 0, 0)).stl(HERE / 'caixa-porta-usb.stl')} triangulos")
 
     placa = placa_3d()
     interior = cx.celula_e_display_3d()
-    t, c = juntar(concha, placa, interior, teclas3)
+    antena = cx.antena_externa_3d()
+    t, c = juntar(concha, placa, interior, teclas3, porta, antena)
     renderizar(t, c, "gnssbike-3d-caixa-aberta.png", 1600, 1500, 200.0, 40.0)
-    t, c = juntar(concha, placa, interior, tampa, teclas3, membrana, cob, mod)
+    t, c = juntar(concha, placa, interior, tampa, teclas3, membrana, cob, mod, porta)
     renderizar(t, c, "gnssbike-3d-caixa-frente.png", 1100, 1800, 0.0, 90.0)
     dz = 24.0
     tampa_alta = cx.tampa(TAMPA_Z0 + dz)
     cob_a, mod_a = cx.coberturas_e_modulos_3d(dz)
-    # the display goes up with the lid: it is glued into the lid's pocket
+    # the display goes up with the lid: it is glued under it
     t, c = juntar(concha, placa, cx.celula_e_display_3d(dz_display=dz), tampa_alta, cx.teclas_3d(dz),
-                  cx.membrana_3d(dz), cob_a, mod_a)
+                  cx.membrana_3d(dz), cob_a, mod_a, porta, antena)
     renderizar(t, c, "gnssbike-3d-caixa-explodida.png", 1600, 1600, 200.0, 32.0)
     return 0
 

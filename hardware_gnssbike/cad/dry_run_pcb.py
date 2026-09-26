@@ -221,7 +221,7 @@ ISOLACAO = (
 )
 # and the display itself, which is not a part on the board but a rectangle
 # over it - the 25 mm row applies to it more than to its connector
-ZONA_DISPLAY = "SOMBRA_DISPLAY_JDI_MAX_2-6MM"
+ZONA_DISPLAY = "SOMBRA_DISPLAY_JDI_MAX_3-0MM"
 PI_GNSS = ["L301", "C301", "C302"]
 MODULO = "U201"          # the radio module
 GNSS = "U301"            # the GNSS receiver
@@ -450,10 +450,17 @@ def _ilhas_sob_o_corpo(ref: str, pecas: dict):
     H = tris[..., 2] * 1000.0
     x0, y0, x1, y1 = pe["caixa"]
     # so o que esta INTEIRO dentro da envoltoria da peca mais 1 mm: assim a
-    # caixa medida e a do corpo dela, e nao a do vizinho
+    # caixa medida e a do corpo dela, e nao a do vizinho - e na FACE dela:
+    # ate 2026-09-26 a regra so olhava z > 0,95, e para o J103, que foi para
+    # o verso nesse dia, mediu o sensor de luz e o diodo da frente por cima
+    # dele e acusou uma ilha fora de um corpo que nao era o seu
+    if pe.get("atras", False):
+        na_face = H.max(axis=1) < -0.05
+    else:
+        na_face = H.min(axis=1) > 0.95
     c = ((X.min(axis=1) > x0 - 1.0) & (X.max(axis=1) < x1 + 1.0)
          & (Y.min(axis=1) > y0 - 1.0) & (Y.max(axis=1) < y1 + 1.0)
-         & (H.min(axis=1) > 0.95))
+         & na_face)
     if not c.any():
         return None
     caixa = (float(X[c].min()), float(Y[c].min()),
@@ -647,7 +654,15 @@ def _faces_da_peca(pe: dict, corpos=None):
             else:
                 fora_do_cobre = (H.max(axis=1) > 0.9) & (H.min(axis=1) > 0.80)
         else:
-            fora_do_cobre = np.ones(len(cx), dtype=bool)
+            # the bodies make_3d draws from a .wrl stand on FRENTE_Z (0,855)
+            # or hang from VERSO_Z (-0,035). A back part under a front one
+            # shares its courtyard in plan - the buzzer under the SWD header
+            # - and until 2026-09-26 its faces were counted as the front
+            # part's: ME6 called J202 "girado 90" with the buzzer's box.
+            if atras:
+                fora_do_cobre = H.max(axis=1) < 0.001
+            else:
+                fora_do_cobre = H.min(axis=1) > 0.80
         sel = dentro & fora_do_cobre
         if not sel.any():
             continue
@@ -1228,20 +1243,31 @@ def main() -> int:
             elif nome_fp in _F.ALTURA:
                 alt_de[r] = _F.ALTURA[nome_fp][0]
         perto_luz = []
+        sensor = pecas["U505"]
+        alt_sensor = alt_de.get("U505", 0.0)
         for r, p in pecas.items():
             if r == "U505" or r not in alt_de:
                 continue
-            d = dist_caixas(p["caixa"], pecas["U505"]["caixa"])
+            # a part on the other face cannot shade the sensor's window,
+            # and one no taller than the sensor casts no shadow on its top
+            # (the guideline is about TALLER neighbours): until 2026-09-26
+            # the rule counted the barometer on the back and every 0402
+            if p.get("atras", False) != sensor.get("atras", False):
+                continue
+            if alt_de[r] <= alt_sensor + 1e-9:
+                continue
+            d = dist_caixas(p["caixa"], sensor["caixa"])
             if d < 2 * alt_de[r]:
                 perto_luz.append((r, round(d, 2), alt_de[r]))
         if perto_luz:
-            falhou("OP1", f"{len(perto_luz)} pecas a menos de duas alturas do "
-                   "sensor de luz: " +
+            falhou("OP1", f"{len(perto_luz)} pecas mais altas que o sensor de luz "
+                   f"({alt_sensor:g}) a menos de duas vezes a propria altura: " +
                    ", ".join(f"{r} a {d} mm, alta {h}" for r, d, h in
                              sorted(perto_luz, key=lambda t: t[1])[:5]))
         else:
-            ok.append("OP1: nenhuma peca de altura conhecida a menos de duas "
-                      "alturas do sensor de luz")
+            ok.append(f"OP1: nenhuma peca da mesma face mais alta que o sensor "
+                      f"de luz ({alt_sensor:g} mm) a menos de duas vezes a "
+                      "propria altura dele")
 
     # -- ME3: o 2D e o 3D contam a mesma historia ------------------------
     import footprints as _FP
@@ -1260,11 +1286,13 @@ def main() -> int:
                   "o contorno")
 
     # -- ME2: cabe sob o display e sob a bateria? ------------------------
-    # 04-pcb-e-caixa.md gives two ceilings: 2.6 mm on the front, under the
-    # display, and 1.2 mm on the back, under the battery. A part taller than
-    # the shadow it stands in does not fit, and no DRC will ever say so -
-    # which is the whole reason the heights had to come from the datasheets.
-    TETOS = (("SOMBRA_DISPLAY_JDI_MAX_2-6MM", 2.6, False),
+    # 04-pcb-e-caixa.md gives two ceilings: 3.0 mm on the front, under the
+    # display (2.6 until 2026-09-26: the receiver's 2.7 maximum did not fit,
+    # and the case lowered the board 0.4 mm instead - make_caixa.DISPLAY_VAO),
+    # and 1.2 mm on the back, under the battery. A part taller than the
+    # shadow it stands in does not fit, and no DRC will ever say so - which
+    # is the whole reason the heights had to come from the datasheets.
+    TETOS = ((ZONA_DISPLAY, 3.0, False),
              ("SOMBRA_BATERIA_MAX_1-2MM", 1.2, True))
     altos = []
     sem_altura = []
@@ -1305,7 +1333,7 @@ def main() -> int:
                          for r, h, t, _z in altos[:6]))
     else:
         ok.append(f"ME2: nenhuma peca passa do teto da sombra em que esta "
-                  f"(2,6 mm sob o display, 1,2 mm sob a bateria); "
+                  f"({TETOS[0][1]:.1f} mm sob o display, {TETOS[1][1]:.1f} mm sob a bateria); "
                   f"{len(sem_altura)} pecas sem altura conhecida")
 
     # -- ME4: a boca do conector de borda aponta para fora? ------------------
