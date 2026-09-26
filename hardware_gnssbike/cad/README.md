@@ -103,13 +103,14 @@ tamanho: o capacitor de desacoplamento cai ao lado do CI que ele desacopla.
 | Camadas | **4**: `F.Cu`, `In1.Cu` (terra), `In2.Cu` (alimentação), `B.Cu` |
 | Por que esse tamanho | a 7.2 do ME54BS13 pede **50 mm entre dois módulos de rádio**, e esta placa tem dois. Varrendo cada milímetro que cumpre isso e ainda cabe a fila de teclas, 34 × 90 é o menor contorno com folga — **3.060 mm² contra os 5.335 do 55 × 97, 43 % menos** |
 | Relação com a caixa | **nenhuma.** A placa sai do circuito; a caixa sai do display, da bateria e da mão. Encolher uma não encolhe a outra |
-| Peças na placa | **116**, com rotação; 3 na face de trás |
-| Fora da placa | 8 (o painel, a antena e os seis módulos solares moram na caixa e chegam por contato de mola) |
-| Redes | **100** |
-| Furo de fixação | **1**, M2, em (3,9; 48,5) |
-| Planos de terra | **3**, em `In1.Cu` e nas duas faces, preenchidos |
-| Roteamento | **127 ligações**, 680 segmentos, 266 vias; `RF_IN` e `RF_ANT` ficam de fora de propósito |
-| Ligações sem trilha | **101** (o DRC do KiCad, com as malhas preenchidas) |
+| Peças na placa | **155**, com rotação (2026-09-26); as de trás estão em `make_pcb.ATRAS` |
+| Fora da placa | 7 (o painel, a célula e os seis módulos solares moram na caixa; a antena GNSS passou a morar na placa) |
+| Redes | **114** |
+| Furos de fixação | **2**, M2, em (3,2; 45,0) e (4,0; 75,75) — decisão do dono em 2026-09-25, depois da conta de [02](../02-calculos.md#quantos-parafusos-a-placa-precisa) |
+| Planos de terra | **3**, em `In1.Cu` e nas duas faces, preenchidos pelo `fill_zones.py` (com o Python do KiCad) |
+| Roteamento | **204 ligações**, 1.506 segmentos, 544 vias; o par USB à mão; `RF_IN`, `RF_ANT`, `RF_CHIP` e `RF_UFL` ficam de fora de propósito |
+| Ligações sem trilha | **59**, em 26 redes, pelo roteador; **44 itens desconectados** pelo DRC completo (`--severity-all`) com as malhas preenchidas — a regra `RT1` do `dry_run_pcb.py` |
+| Erros de DRC | **4**, isolamento de 0,125 contra 0,127 mm entre `PWR_SCL` e `VBAT` junto do nPM1300 |
 
 ### O que decide a posição de cada peça
 

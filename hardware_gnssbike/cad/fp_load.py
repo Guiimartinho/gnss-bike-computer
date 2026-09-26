@@ -201,3 +201,21 @@ if __name__ == "__main__":
     print(f"{len(FPS.FP)} footprints lidos, {len(falhas)} problemas")
     for f in falhas:
         print("  " + f)
+
+
+def redes_da_placa(arv) -> dict[str, int]:
+    """Net name -> number, read from the board's OWN net table.
+
+    route.py and dry_run_pcb.py used to take the numbers from nets.py at
+    run time. That is the same table only while nets.py does not change
+    between the board being generated and the script running - and on
+    2026-09-26 it did change, mid-chain: one net added ahead of GND moved
+    every number after it by one, the router wrote its ground vias with the
+    new number into a file that used the old one, and the checker counted
+    7 ground vias where there were 316. The file is the truth about itself.
+    """
+    out: dict[str, int] = {}
+    for n in kids(arv, "net"):
+        if len(n) >= 3 and n[2] != "":
+            out[n[2]] = int(n[1])
+    return out

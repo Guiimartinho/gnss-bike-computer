@@ -4,3 +4,4 @@ _*.svg
 *.net
 __pycache__/
 gnssbike.rpt
+_drc_all.json

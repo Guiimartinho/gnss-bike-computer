@@ -92,6 +92,7 @@ VIA_D, VIA_FURO = 0.45, 0.25
 # Alimentacao 0.127 (it differs by via size, not by clearance) and USB 0.2.
 # Treating USB as 0.127 is what put a ground track 0.075 mm from USB_DP.
 FOLGA = 0.14                # 0.127 of the class, plus the grid
+FOLGA_FURO = 0.21           # 0.2 do min_hole_clearance, mais a grade
 FOLGA_USB = 0.21            # 0.2 of the USB class, plus the grid
 # A via next to a pad has to leave more than the electrical clearance: the
 # two solder mask openings grow about 0.05 mm each and the web of mask left
@@ -123,7 +124,7 @@ CUSTO_CURVA_45 = 0.2          # virar 45: meia virada, meio custo
 # hopeless search into two seconds instead of half a minute; what it costs is
 # that a genuinely tortuous path may be given up on, and that shows in the
 # report as a net left unrouted rather than as a wrong board.
-ORCAMENTO = 90000
+ORCAMENTO = 300000   # era 90000: o tabuleiro tem ~400 mil celulas
 
 BLOQUEADO = "\x00"          # a net name no net can have: blocked for everyone
 
@@ -135,7 +136,13 @@ BLOQUEADO = "\x00"          # a net name no net can have: blocked for everyone
 # 50 ohm line and both are routed at the RF width on the front layer, even
 # though only one is ever fitted. The unfitted one ends at an open pad.
 NAO_ROTEAR = {"RF_IN", "RF_ANT", "RF_UFL", "RF_CHIP"}
-SO_FRENTE = NAO_ROTEAR
+# O par do USB tambem fica na frente: os 0,207 mm de 90 ohm foram
+# calculados para microstrip em F.Cu sobre o plano de terra a 0,10 mm. Em
+# In2.Cu a mesma trilha tem o plano a 0,46 mm de um lado e o despejo de B.Cu
+# a 0,10 do outro, e nao e 90 ohm de nada. As amarracoes dos contatos
+# repetidos ficam em In2.Cu de proposito, mas sao emendas de 1,7 mm entre
+# ilhas do mesmo no, nao a linha.
+SO_FRENTE = NAO_ROTEAR | {"USB_DP", "USB_DM"}
 # The differential pair. They are routed one after the other, and the second
 # one is drawn towards the first, so they run together instead of taking two
 # unrelated paths across the board.
@@ -236,26 +243,18 @@ def largura(rede: str) -> float:
     if rede in NAO_ROTEAR:
         return LARGURA_RF
     if rede.startswith("USB_D"):
-        # LARGURA_USB_CALC is the geometry that gives 90 ohm differential on
-        # this stack-up: 0.352 mm at a 0.2 mm gap. It does not fit the
-        # connector - a USB-C receptacle has 0.5 mm pitch pads, leaving 0.2 mm
-        # between two of them, and a 0.352 mm track with the USB class's
-        # 0.2 mm clearance cannot leave the pad field at all.
+        # A largura que da 90 ohm diferenciais NESTA pilha, calculada logo
+        # acima: 0,207 mm com 0,2 de afastamento. Ela cabe.
         #
-        # A neck gets it out of the pad field - emitir() cuts one and the
-        # search knows about it - but not across the board: at 0.352 mm with
-        # the USB class's 0.2 mm of clearance there is no channel from the
-        # receptacle in one bottom corner to the module in the other, and
-        # both halves of the pair come out unrouted. Worse, the two pads of
-        # each signal on a Type-C are the SAME signal on opposite rows, so
-        # joining them means crossing the connector's own pad field.
-        #
-        # So: the pair is routed at the width that fits, and the gap is
-        # REPORTED rather than hidden - US1 in the dry-run prints the routed
-        # width against the 0.352 mm that 90 ohm needs on this stack-up. It
-        # is a pair that has to be finished by hand, and saying so is the
-        # honest version of a pair that silently is not 90 ohm.
-        return LARGURA_USB
+        # Este comentario dizia 0,352 mm, e isso ficou aqui desde
+        # 2026-09-24 sem nunca ter sido conta: 0,352 e a largura de 90 ohm
+        # na pilha UNIFORME de 0,22 mm por vao, que foi abandonada no mesmo
+        # commit que criou este calculo. Com os 0,10 mm de prepreg que a
+        # placa tem, a mesma formula da 0,207. O numero errado sustentava um
+        # argumento inteiro - "0,352 nao sai do campo de ilhas de 0,5 mm de
+        # passo, entao o par e roteado mais fino e a diferenca e reportada" -
+        # que simplesmente nao existe: 0,207 sai.
+        return LARGURA_USB_CALC
     if e_alimentacao(rede):
         return LARGURA_ALIM
     return LARGURA
@@ -382,14 +381,29 @@ class Grade:
     def _ret(self, mapa: dict, camada: int, x: float, y: float,
              hw: float, hh: float, rede: str,
              respeitar_fixo: bool = True) -> None:
-        """Reserve the cells of an axis-aligned rectangle, inflated already."""
-        # floor and ceil, not round: cel() rounds to the nearest cell and
-        # can land up to half a step INSIDE the rectangle, leaving the outer
-        # 0.075 mm of the clearance unmarked
-        ix0 = int(math.floor((x - hw) / PASSO))
-        iy0 = int(math.floor((y - hh) / PASSO))
-        ix1 = int(math.ceil((x + hw) / PASSO))
-        iy1 = int(math.ceil((y + hh) / PASSO))
+        """Reserve the cells of an axis-aligned rectangle, inflated already.
+
+        A cell is a place a track CENTRE may sit, and the rectangle is
+        already inflated by the clearance plus half a track. So the cells to
+        reserve are exactly those whose centre falls inside it: a centre
+        0.075 mm outside the boundary is 0.075 mm MORE than the clearance
+        away from the copper, and it is legal.
+
+        This used floor and ceil on the corners, reserving every cell the
+        rectangle so much as touched - up to a full step, 0.15 mm, beyond
+        the boundary on each side. A 0.365 mm ring became a 0.5 mm one, and
+        at 0.5 mm of pad pitch the rings of two neighbouring pads met ON TOP
+        of every pad, where two nets' rings make a cell blocked for all.
+        Nothing could leave a fine-pitch row: not the USB pair from the
+        receptacle, not CC1 from the ESD diode, not the module's pins from
+        the top. The DRC, which measures real copper, never saw a problem,
+        because there was none: the only thing too close was the model.
+        """
+        eps = 1e-6
+        ix0 = int(math.floor((x - hw) / PASSO + eps)) + 1
+        iy0 = int(math.floor((y - hh) / PASSO + eps)) + 1
+        ix1 = int(math.ceil((x + hw) / PASSO - eps)) - 1
+        iy1 = int(math.ceil((y + hh) / PASSO - eps)) - 1
         for ix in range(ix0, ix1 + 1):
             for iy in range(iy0, iy1 + 1):
                 self._por(mapa, (camada, ix, iy), rede, respeitar_fixo)
@@ -418,7 +432,7 @@ class Grade:
                     self.fixo.add(k)
 
     def pad(self, camadas, x: float, y: float, hw: float, hh: float,
-            rede: str) -> None:
+            rede: str, folga: float = FOLGA) -> None:
         """A pad, as the rectangle it is, into both maps.
 
         A track has to keep FOLGA from the copper, so its centre line has to
@@ -427,8 +441,8 @@ class Grade:
         hole; the first is the larger, so it decides.
         """
         for c in camadas:
-            self._ret(self.t, c, x, y, hw + FOLGA + LARGURA / 2,
-                      hh + FOLGA + LARGURA / 2, rede)
+            self._ret(self.t, c, x, y, hw + folga + LARGURA / 2,
+                      hh + folga + LARGURA / 2, rede)
         # a via goes through: a pad on any layer blocks it on all of them
         # respeitar_fixo=False on purpose. In the track map that exemption
         # is what lets a net reach its own pad; in the VIA map there is no
@@ -440,11 +454,18 @@ class Grade:
                       hh + FOLGA_MASCARA + VIA_D / 2, rede,
                       respeitar_fixo=False)
 
-    def trilha(self, camada: int, p0, p1, larg: float, rede: str) -> None:
-        """Reserve a run of track on both maps, along its whole length."""
+    def trilha(self, camada: int, p0, p1, larg: float, rede: str,
+               folga: float = FOLGA) -> None:
+        """Reserve a run of track on both maps, along its whole length.
+
+        `folga` exists because the clearance is not one number for the whole
+        board: the USB class asks 0.2 mm where the default class asks 0.127.
+        Reserving the default around a USB track is how the router put a
+        sensor line 0.11 mm from a USB via and the DRC found it afterwards.
+        """
         n = max(1, int(math.ceil(math.hypot(p1[0] - p0[0], p1[1] - p0[1]) / (PASSO / 2))))
-        rt = larg / 2 + FOLGA + LARGURA / 2
-        rv = larg / 2 + FOLGA + VIA_D / 2
+        rt = larg / 2 + folga + LARGURA / 2
+        rv = larg / 2 + folga + VIA_D / 2
         for i in range(n + 1):
             f = i / n
             x = p0[0] + (p1[0] - p0[0]) * f
@@ -453,17 +474,19 @@ class Grade:
             for c in range(NC):
                 self._disco(self.v, c, x, y, rv, rede, respeitar_fixo=False)
 
-    def via(self, x: float, y: float, rede: str) -> None:
+    def via(self, x: float, y: float, rede: str,
+            folga: float = FOLGA) -> None:
         """Reserve a via: its pad on both layers, and room for the next one.
 
         Two vias have to keep their holes 0.2 mm apart and their pads 0.2 mm
         apart; the pads decide, so the next via centre stays VIA_D + FOLGA
-        away.
+        away. `folga` follows the net's class, for the same reason it does
+        in trilha().
         """
         self.postas.add(self.cel(x, y))
         for c in range(NC):
-            self._disco(self.t, c, x, y, VIA_D / 2 + FOLGA + LARGURA / 2, rede)
-            self._disco(self.v, c, x, y, VIA_D + FOLGA, rede,
+            self._disco(self.t, c, x, y, VIA_D / 2 + folga + LARGURA / 2, rede)
+            self._disco(self.v, c, x, y, VIA_D + folga, rede,
                         respeitar_fixo=False)
 
     def bloquear(self, camada: int, x: float, y: float, raio: float) -> None:
@@ -571,7 +594,14 @@ def pads_da_placa(arv) -> tuple[list[tuple], dict[str, list[tuple]], dict]:
             hw = abs(sw * math.cos(pa)) + abs(sh * math.sin(pa))
             hh = abs(sw * math.sin(pa)) + abs(sh * math.cos(pa))
             camadas = list(fp_load.kid(p, "layers")[1:])
-            passante = any(c.startswith("*") for c in camadas) or p[2] != "smd"
+            # "connect" is an SMD pad without paste - the Tag-Connect's six -
+            # and it lives on ONE face like any SMD pad. Treating everything
+            # that is not "smd" as through-hole let the search end a track
+            # on In2.Cu or B.Cu at a pad that only exists on F.Cu: three
+            # dangling tracks on SWDIO, SWDCLK and MOD_RESET, counted as
+            # routed while the pin had no copper reaching it.
+            passante = (any(c.startswith("*") for c in camadas)
+                        or p[2] in ("thru_hole", "np_thru_hole"))
             if passante:
                 idx = -1
             elif any("B.Cu" in c for c in camadas):
@@ -768,12 +798,21 @@ def base(arv, todos):
                 y - MP.ORIGEM[1], hw, hh, nome or BLOQUEADO)
     # and only then the clearance around it
     for nome, idx, x, y, hw, hh in todos:
+        # A pad with no net is a hole with nothing around it - the pegs of
+        # the receptacle, the three of the Tag-Connect - and the rule for
+        # copper next to a HOLE is 0.2 mm, not the 0.127 of copper to
+        # copper. Reserving the smaller one put SWDIO 0.175 mm from a
+        # Tag-Connect hole, which the DRC reports as a hole clearance error.
         g.pad(range(NC) if idx < 0 else (idx,), x - MP.ORIGEM[0],
-              y - MP.ORIGEM[1], hw, hh, nome or BLOQUEADO)
+              y - MP.ORIGEM[1], hw, hh, nome or BLOQUEADO,
+              folga=FOLGA if nome else FOLGA_FURO)
 
-    fx, fy = M.FUROS_DOC[0]
-    for c in range(NC):
-        g.bloquear(c, fx, fy, M.M2_DRILL_UNVERIFIED / 2 + FOLGA + 0.3)
+    # EVERY mounting hole, not the first: when the second one came in on
+    # 2026-09-25 this still read FUROS_DOC[0], and a track or a via was free
+    # to run through the hole at (4.0; 75.75)
+    for fx, fy in M.FUROS_DOC:
+        for c in range(NC):
+            g.bloquear(c, fx, fy, M.M2_DRILL_UNVERIFIED / 2 + FOLGA + 0.3)
     # No via inside a switching node's no-plane area: a ground via there
     # brings the plane straight back under the node, which is exactly what
     # section 13 of the AEM10900 datasheet asks to remove. The node's own
@@ -1015,6 +1054,238 @@ def costurar_rf(g: Grade, vias: list, segmentos: list) -> int:
     return postas
 
 
+def _mao(g: Grade, segmentos: list, camada: int, pts, larg: float,
+         rede: str, folga: float, cells: set) -> None:
+    """A hand-drawn run: emit it, reserve it, and remember its cells."""
+    for p0, p1 in zip(pts, pts[1:]):
+        segmentos.append((p0, p1, camada, rede, larg))
+        g.trilha(camada, p0, p1, larg, rede, folga)
+        n = max(2, int(math.hypot(p1[0] - p0[0], p1[1] - p0[1]) / (PASSO / 2)))
+        for k in range(n + 1):
+            f = k / n
+            cells.add((camada, *g.cel(p0[0] + (p1[0] - p0[0]) * f,
+                                      p0[1] + (p1[1] - p0[1]) * f)))
+
+
+def _par_no_diodo(pads):
+    """The two pads of a net that sit on the ESD diode: same x, 0.8 apart.
+
+    Entry first (the lower one, larger y, facing the receptacle), exit
+    second. None when the net does not cross the diode.
+    """
+    for q1 in pads:
+        for q2 in pads:
+            if q1 is q2:
+                continue
+            if abs(q1[2] - q2[2]) < 0.02 and abs(abs(q1[3] - q2[3]) - 0.8) < 0.05:
+                return sorted((q1, q2), key=lambda q: -q[3])
+    return None
+
+
+def ligar_usb(g: Grade, segmentos: list, vias: list, por_rede) -> dict:
+    """The USB data pair from the receptacle through the ESD diode, by hand.
+
+    No maze search gets a USB-class track out of a 0.5 mm pitch pad row,
+    and this board has two of them in series: the receptacle and the ESD
+    diode. Between two pads 0.5 mm apart there are 0.20 mm of board; the
+    USB class wants 0.20 mm of clearance on each side of a track, and the
+    0.15 mm grid puts the track up to 0.075 mm off the pad's centre. Every
+    routing run before this one ended with the pair at zero segments and
+    the checker saying "not routed" - the search was never going to win.
+
+    So the whole stretch is drawn here, like a person does:
+
+      1. the two contacts of each signal on the receptacle are tied UNDER
+         the connector, on In2.Cu. A Type-C carries D+ twice and D- twice,
+         interleaved - B7 A6 A7 B6 - so joining the two D+ crosses a D-, and
+         only the inner layer is free there (In1.Cu is the ground plane,
+         F.Cu and B.Cu carry the pour);
+      2. the INNER contact of each signal - A6 for D+, A7 for D- - rises
+         to the diode's entry pad. The diode sits half a pitch to the
+         right, so the two rises are parallel diagonals that never cross;
+      3. the signal crosses the diode from its entry pad to the pad in
+         front of it. The datasheet (SLVSBO7O, table 4-2) reserves pins 6,
+         7, 9 and 10 for exactly this: "used for optional straight-through
+         routing";
+      4. a short stub leaves the exit pad upward, past the reach of the
+         pad row's clearance, and the search takes the pair from there to
+         the module on F.Cu at its 90 ohm width.
+
+    The stubs are 0.15 mm, not the pair's width: inside a 0.5 mm field the
+    narrow track is what buys the clearance. It is the neck a person draws
+    at every fine-pitch connector, three millimetres long here.
+    """
+    ligados: dict[str, set] = {}
+    xs_rec = []
+    fila: dict[str, tuple] = {}
+    for rede in PAR:
+        linhas: dict[float, list] = {}
+        for q in por_rede.get(rede, []):
+            linhas.setdefault(round(q[3], 3), []).append(q)
+        dois = [v for v in linhas.values() if len(v) == 2]
+        if len(dois) != 1:
+            return ligados
+        a, b = sorted(dois[0], key=lambda q: q[2])
+        fila[rede] = (a, b)
+        xs_rec += [a[2], b[2]]
+    centro = sum(xs_rec) / len(xs_rec) - MP.ORIGEM[0]
+
+    for rede in PAR:
+        a, b = fila[rede]
+        xa, xb = a[2] - MP.ORIGEM[0], b[2] - MP.ORIGEM[0]
+        yr = a[3] - MP.ORIGEM[1]
+        yb, yt = yr + a[5], yr - a[5]      # bottom and top of the pad
+        cells: set = set()
+        for px in (xa, xb):
+            cells.add((0, *g.cel(px, yr)))
+
+        # 1. the tie under the connector
+        if rede == PAR[0]:
+            va, vb = (xa - 0.35, yb + 1.45), (xb + 0.30, yb + 1.65)
+        else:
+            va, vb = (xa - 0.65, yb + 2.70), (xb, yb + 2.70)
+        for px, v in ((xa, va), (xb, vb)):
+            _mao(g, segmentos, 0, [(px, yb - 0.30), v], 0.15, rede, FOLGA_USB, cells)
+            vias.append((v[0], v[1], rede))
+            g.via(v[0], v[1], rede, FOLGA_USB)
+            for c in range(NC):
+                cells.add((c, *g.cel(v[0], v[1])))
+        _mao(g, segmentos, 1, [va, vb], 0.15, rede, FOLGA_USB, cells)
+
+        par_d = _par_no_diodo([q for q in por_rede[rede] if q not in (a, b)])
+        if par_d is None:
+            ligados[rede] = cells
+            continue
+        ent, sai = par_d
+        xd = ent[2] - MP.ORIGEM[0]
+        y_ent, y_sai = ent[3] - MP.ORIGEM[1], sai[3] - MP.ORIGEM[1]
+        h_pad = ent[5]
+
+        # 2. the rise from the inner contact: a diagonal, then a vertical
+        x_in = xa if abs(xa - centro) < abs(xb - centro) else xb
+        _mao(g, segmentos, 0, [(x_in, yt - 0.03), (xd, y_ent + 0.60),
+                               (xd, y_ent + h_pad - 0.05)],
+             0.15, rede, FOLGA_USB, cells)
+        # 3. straight through the diode
+        _mao(g, segmentos, 0, [(xd, y_ent), (xd, y_sai)], 0.15, rede,
+             FOLGA_USB, cells)
+        # 4. out the far side, clear of the row's clearance, and the two
+        # stubs open up to 1.3 mm apart: at 0.5 mm the reservation rings of
+        # the two nets overlap and the search cannot even start from them
+        lado = -0.40 if rede == PAR[0] else 0.40
+        fim = (xd + lado, y_sai - h_pad - 1.30)
+        # only the END of the exit stub is seeded: seeding its every cell
+        # let the search leave from its corner and the last 0.45 mm hung
+        # loose, which the DRC reports as a dangling track
+        _mao(g, segmentos, 0, [(xd, y_sai), (xd, y_sai - h_pad - 0.35),
+                               (xd + lado, y_sai - h_pad - 0.85), fim],
+             0.15, rede, FOLGA_USB, set())
+        cells.add((0, *g.cel(*fim)))
+        ligados[rede] = cells
+
+    # the CC lines cross the diode the same way; otherwise they are
+    # ordinary nets and the search routes the rest of them
+    for rede in ("CC1", "CC2"):
+        par_d = _par_no_diodo(por_rede.get(rede, []))
+        if par_d is None:
+            continue
+        ent, sai = par_d
+        xd = ent[2] - MP.ORIGEM[0]
+        cells = set()
+        _mao(g, segmentos, 0, [(xd, ent[3] - MP.ORIGEM[1]),
+                               (xd, sai[3] - MP.ORIGEM[1])],
+             0.15, rede, FOLGA, cells)
+        ligados[rede] = cells
+    return ligados
+
+
+def podar_soltas(segmentos: list, vias: list, todos: list) -> int:
+    """Drop every track end that touches nothing, until none is left.
+
+    A hand-drawn stub the search did not use, a run the neck logic cut at a
+    field boundary and never continued - each leaves a copper spur with a
+    free end, and the DRC lists every one of them as a dangling track. An
+    end is anchored when it sits on a pad of its own net (allowing the
+    track's own half width, as KiCad does), on a via of its own net, or on
+    the end of another segment of the net on the same layer. Anything else
+    is pruned, and pruning one can free the next, so it goes round again.
+    """
+    orx, ory = MP.ORIGEM
+    pads_por_rede: dict[str, list] = {}
+    for nome, idx, x, y, hw, hh in todos:
+        if nome:
+            pads_por_rede.setdefault(nome, []).append((idx, x - orx, y - ory, hw, hh))
+    removidos = 0
+    while True:
+        pontas: dict[tuple, int] = {}
+        for p0, p1, cam, rede, _w in segmentos:
+            for p in (p0, p1):
+                k = (cam, rede, round(p[0], 3), round(p[1], 3))
+                pontas[k] = pontas.get(k, 0) + 1
+        vias_rede: dict[str, set] = {}
+        for vx, vy, rede in vias:
+            vias_rede.setdefault(rede, set()).add((round(vx, 3), round(vy, 3)))
+
+        por_camada: dict[tuple, list] = {}
+        for p0, p1, cam, rede, w in segmentos:
+            por_camada.setdefault((cam, rede), []).append((p0, p1, w))
+
+        def sobre_segmento(p, cam, rede, w):
+            """The end lies ON another segment of the net, not just at its end.
+
+            The search may finish on any cell the net already owns, and that
+            is often the middle of an earlier run - the second pad of a
+            three-pad net joins the first run wherever it is nearest. That
+            is a T-junction, and KiCad reads it as connected. Counting only
+            endpoints pruned whole routes: the USB D- run to the module went
+            piece by piece, from the module back to the tie it had joined.
+            """
+            for q0, q1, w2 in por_camada.get((cam, rede), ()):
+                dx, dy = q1[0] - q0[0], q1[1] - q0[1]
+                comp2 = dx * dx + dy * dy
+                if comp2 < 1e-12:
+                    continue
+                tt = ((p[0] - q0[0]) * dx + (p[1] - q0[1]) * dy) / comp2
+                if tt < -1e-6 or tt > 1 + 1e-6:
+                    continue
+                px, py = q0[0] + tt * dx, q0[1] + tt * dy
+                if math.hypot(p[0] - px, p[1] - py) <= (w + w2) / 2 + 0.02:
+                    # the segment's own ends are not "another" segment
+                    if (abs(p[0] - q0[0]) < 1e-6 and abs(p[1] - q0[1]) < 1e-6) or                             (abs(p[0] - q1[0]) < 1e-6 and abs(p[1] - q1[1]) < 1e-6):
+                        continue
+                    return True
+            return False
+
+        def ancorada(p, cam, rede, w):
+            if pontas.get((cam, rede, round(p[0], 3), round(p[1], 3)), 0) > 1:
+                return True
+            if (round(p[0], 3), round(p[1], 3)) in vias_rede.get(rede, ()):
+                return True
+            for idx, x, y, hw, hh in pads_por_rede.get(rede, ()):
+                if idx >= 0 and idx != cam:
+                    continue
+                # the track's end cap only has to overlap the pad, as KiCad
+                # judges it, hence the half width and a little slack
+                if (abs(p[0] - x) <= hw + w / 2 + 0.02
+                        and abs(p[1] - y) <= hh + w / 2 + 0.02):
+                    return True
+            return sobre_segmento(p, cam, rede, w)
+
+        solto = None
+        for i, (p0, p1, cam, rede, w) in enumerate(segmentos):
+            if not ancorada(p0, cam, rede, w) or not ancorada(p1, cam, rede, w):
+                solto = i
+                break
+        if solto is None:
+            return removidos
+        p0, p1, cam, rede, w = segmentos[solto]
+        if removidos < 8:
+            print(f"    podado {rede} {CAMADAS[cam]} "
+                  f"({p0[0]:.2f};{p0[1]:.2f})->({p1[0]:.2f};{p1[1]:.2f})")
+        del segmentos[solto]
+        removidos += 1
+
+
 def uma_passagem(arv, numeros, todos, por_rede, caixa_fp, prioridade):
     """One routing attempt with a given order. Returns what came out."""
     g = base(arv, todos)
@@ -1031,7 +1302,7 @@ def uma_passagem(arv, numeros, todos, por_rede, caixa_fp, prioridade):
             if caminho_cel[j][0] != a[0]:
                 x, y = g.pos(a[1], a[2])
                 vias.append((x, y, rede))
-                g.via(x, y, rede)
+                g.via(x, y, rede, folga_de(rede))
                 i = j
                 continue
             d = (caminho_cel[j][1] - a[1], caminho_cel[j][2] - a[2])
@@ -1072,10 +1343,14 @@ def uma_passagem(arv, numeros, todos, por_rede, caixa_fp, prioridade):
                 p1 = g.pos(caminho_cel[k1][1], caminho_cel[k1][2])
                 w = larg_pad if estreito else larg
                 segmentos.append((p0, p1, a[0], rede, w))
-                g.trilha(a[0], p0, p1, w, rede)
+                g.trilha(a[0], p0, p1, w, rede, folga_de(rede))
                 k0 = k1
             i = j
 
+    # The hand-drawn USB stretch goes in BEFORE the ground stitching: its
+    # vias are placed, not searched, and a stitching via already sitting
+    # there is not checked against them. One landed 0.10 mm from a tie via.
+    pre_ligados = ligar_usb(g, segmentos, vias, por_rede)
     n_gnd = terra(g, por_rede, segmentos, vias, falhas)
 
     def alcance(r: str) -> float:
@@ -1110,6 +1385,14 @@ def uma_passagem(arv, numeros, todos, por_rede, caixa_fp, prioridade):
         # pad is that wide - and that pad draws microamps while the rest of
         # the rail carries the 800 mA charging current.
         estreitos = [min(2 * q[4], 2 * q[5]) for q in pads]
+        if rede in PAR:
+            # Numa fileira de 0,5 mm de passo quem decide a largura NAO e a
+            # propria ilha, e a vizinha: entre duas ilhas de 0,30 mm a 0,5 de
+            # passo sobram 0,20 mm, e a classe USB pede 0,20 de isolamento de
+            # cada lado. Com a grade de 0,15 mm a trilha ainda sai ate 0,075
+            # fora do centro da ilha. Medindo so a propria ilha, a trilha de
+            # 0,207 passou a 0,1965 mm da vizinha e a DRC acusou tres vezes.
+            estreitos = [min(e, LARGURA) for e in estreitos]
         # How far the neck has to last: out of the pad field of the package
         # the pad belongs to, and not one millimetre further. Measuring it as
         # a radius over everything within 6 mm - which is what this did - made
@@ -1124,7 +1407,22 @@ def uma_passagem(arv, numeros, todos, por_rede, caixa_fp, prioridade):
             c0, c1 = g.cel(x - MP.ORIGEM[0], y - MP.ORIGEM[1])
             celulas.append({(c, c0, c1)
                             for c in (range(NC) if idx < 0 else (idx,))})
-        feito = set(celulas[0])
+        # Quando a rede ja tem uma ligacao feita a mao - o par do USB-C -,
+        # a busca tem de PARTIR dela, nao juntar as duas coisas num monte so:
+        # semear `feito` com a ligacao feita e com a primeira ilha da lista
+        # diz que as duas estao ligadas entre si, e elas nao estao. Foi assim
+        # que o par ficou com as amarracoes desenhadas e nenhuma trilha ate o
+        # modulo, enquanto o contador dizia que so faltava uma ligacao.
+        pre = pre_ligados.get(rede, set())
+        if pre:
+            for i_pre, cl in enumerate(celulas):
+                if cl & pre:
+                    if i_pre:
+                        celulas.insert(0, celulas.pop(i_pre))
+                        estreitos.insert(0, estreitos.pop(i_pre))
+                        campos.insert(0, campos.pop(i_pre))
+                    break
+        feito = set(celulas[0]) | pre
         if rede not in NAO_ROTEAR and not fechou[0]:
             fechou[0] = True
             fechar_sob_gnss(g)
@@ -1132,7 +1430,12 @@ def uma_passagem(arv, numeros, todos, por_rede, caixa_fp, prioridade):
             if alvo & feito:
                 continue
             larg = largura(rede)
-            larg_pad = max(LARGURA, min(larg, estreitos[k]))
+            # Half a grid step under the pad's width, not the pad's width:
+            # the pad's centre is not on the grid, so the neck runs up to
+            # 0.075 mm off it and a track as wide as the pad pokes out on
+            # one side. On the fuel gauge's 0.2 mm WLP bumps a 0.2 mm neck
+            # stuck out 0.05 mm and sat 0.125 mm from the next bump's track.
+            larg_pad = max(LARGURA, min(larg, estreitos[k] - PASSO / 2))
             q = pads[k]
             # the pad field in grid coordinates; without one, the pad's own
             # copper, which still has to be escaped
@@ -1183,6 +1486,7 @@ def uma_passagem(arv, numeros, todos, por_rede, caixa_fp, prioridade):
     n_cost = costurar(g, vias)
     n_cost += costurar_rf(g, vias, segmentos)
     n_malha = costurar_area(g, vias)
+    podar_soltas(segmentos, vias, todos)
     return segmentos, vias, falhas, falharam, n_gnd, n_ok, n_cost, n_malha
 
 
@@ -1303,7 +1607,8 @@ def main() -> int:
     caminho = HERE / "gnssbike.kicad_pcb"
     texto = caminho.read_text(encoding="utf-8")
     arv = fp_load.parse(texto)
-    numeros, _por_pad = MP.redes()
+    # the numbers the FILE uses: nets.py may have moved on since make_pcb
+    numeros = fp_load.redes_da_placa(arv)
     todos, por_rede, caixa_fp = pads_da_placa(arv)
 
     # Several passes. Whatever failed goes to the front of the next one,

@@ -45,6 +45,7 @@ DIEL = (DIEL_RF, DIEL_NUCLEO, DIEL_RF)
 CU_LAYERS = ("F.Cu", "In1.Cu", "In2.Cu", "B.Cu")
 KEEPOUTS = {"KEEPOUT_ANTENA_GNSS", "KEEPOUT_ANTENA_MODULO"}
 BORDA = 0.8                    # keep parts this far inside the outline
+RAIO_COURTYARD_FURO = 2.45     # F.CrtYd of MountingHole_2.2mm_M2.kicad_mod
 FOLGA = 0.05                   # between two courtyards: the courtyard
                                # already carries the maker's clearance
 PASSO = 0.5                    # placement grid
@@ -70,7 +71,12 @@ JUNTO: dict[str, str] = {
     "L101": "U101", "L102": "U101", "L103": "U103",
     "J102": "U101", "JP101": "U101", "RT101": "U101",
     "D101": "J101", "D102": "J101",
-    "U302": "U301", "FB301": "U301", "L301": "U301",
+    "U105": "U103", "R124": "U103", "R125": "U103", "R106": "U103",
+    "D106": "U103", "C122": "U102", "C123": "U503", "C124": "U503",
+    "C125": "U502", "C126": "U505",
+    "C129": "U101", "R406": "J402", "R407": "J402", "R408": "J402",
+    "R409": "J402", "D107": "SW602",
+    "FB301": "U301", "L301": "U301",
     "U504": "U503",
     "J402": "J401", "Q401": "J401",
     "SW601": "SW602", "SW603": "SW602",
@@ -154,16 +160,53 @@ BORDA_FIXA: dict[str, tuple[float, float, int]] = {
     #
     # A ilha mais proxima da borda passa a ser a da blindagem, a 1,14 mm
     # dela, e os 16 contatos ficam em _H - 7,29, bem dentro.
-    "J101": (6.2, _H - 4.29, 0),
-    # The three keys in a row at 10.2 mm of pitch: the courtyard is 10.0 wide
-    # and two of them at 10.0 touch, which the placer refuses and is right to
-    # refuse. The row is NOT on the bottom edge - on a board this narrow the
-    # module's 17.0 mm and the keys' 30.6 mm cannot share it, and the 5 mm
-    # that 7.4 asks around the module's antenna eats into it besides. It sits
-    # above the module instead, where neither applies.
-    "SW601": (6.2, _H - 32.0, 0),
-    "SW602": (16.4, _H - 32.0, 0),
-    "SW603": (26.6, _H - 32.0, 0),
+    # 6,9 e nao 6,2: a 6,2 a serigrafia do receptaculo saia 1,5 mm a
+    # esquerda do centro e cortava o arco de 3 mm do canto da placa (DRC
+    # silk_edge_clearance, duas vezes); a 6,9 ela fica a 2,2, dentro do arco
+    "J101": (6.9, _H - 4.29, 0),
+    # O diodo de protecao do USB fica ACIMA da fileira de contatos, a 90
+    # graus, com os cinco pinos de sinal virados para ela a 0,5 mm de passo -
+    # o mesmo passo da fileira - e com o par ENTRANDO pelos pinos 4 e 5 e
+    # SAINDO pelos 7 e 6, em frente, que a ficha reserva para isso. Em x, o
+    # x = J101 - 0,25 poe o D+ do diodo meio passo a direita do A6 e o D- meio passo a
+    # direita do A7: as duas subidas sao diagonais paralelas, sem cruzar.
+    # O colocador o punha ao LADO do receptaculo, em (12,5; 85,5), e dali o
+    # par nao chega por F.Cu: entre o pino da blindagem e o diodo sobram
+    # 0,73 mm, e duas trilhas de 0,207 com os 0,2 de isolamento pedem 1,01.
+    # O ponto de teste do VBUS, que ocupava este lugar, foi para onde o
+    # diodo estava.
+    # Em y, o que manda e o furo M2 de (4,0; 75,75): o colocador reserva
+    # um QUADRADO de RAIO_COURTYARD_FURO + FOLGA (2,5 mm) em volta dele,
+    # que vai ate y = 78,25, e o contorno do diodo (1,5 abaixo do centro)
+    # tem de comecar acima disso: 79,1. Ate 2026-09-26 a reserva era de
+    # 1,7 mm e o diodo ficava em 78,8; o circulo real do courtyard tem 2,45
+    # de raio, e o canto do diodo a 78,8 estaria a 2,57 dele - passaria no
+    # DRC -, mas a reserva do colocador e quadrada e nao se faz excecao
+    # para uma peca. Os 0,3 mm a mais alongam as diagonais que ligar_usb()
+    # desenha do receptaculo ate os pinos do diodo; elas sao calculadas da
+    # posicao real, nao de um numero fixo.
+    "D102": (6.65, 79.1, 90),
+    # As tres teclas em linha, a 9,0 mm de passo, em y = 66,0 - ABAIXO do
+    # display. Ate 2026-09-26 elas estavam em y = 58, e a revisao mecanica
+    # mostrou o obvio que ninguem tinha medido: o LPM027M128C tem 61,8 mm de
+    # altura numa placa de 90, e cobre y = 58 em qualquer posicao razoavel.
+    # Uma tecla debaixo do display nao se aperta. Decisao do dono, o mesmo
+    # dia: descem.
+    #
+    # Onde cabem, medido: a linha fica entre o fim do display (que passa a
+    # ter de acabar em y <= 64,5 da placa - restricao registrada em 04) e o
+    # corredor sem peca que o par USB precisa para entrar nos pinos do
+    # modulo (x 19,4-22,8, y >= 68,3). O que limita a direita e a area da
+    # antena do modulo, KEEPOUT_ANTENA_MODULO em x >= 29,3 e y >= 68,0, que
+    # a 7.4 da ficha quer a 5 mm de qualquer peca: o contorno da tecla
+    # (5,5 x 3,5) acaba 0,25 mm acima da area, entao os 5 mm tem de vir
+    # quase todos em x, e o contorno tem de acabar em x <= 24,3. Com 9,0 de
+    # passo a terceira tecla ficava em 23,0, a 3,56 mm da area, e livre() a
+    # recusou; a 8,5 de passo, centro em 21,5, o contorno acaba em 24,25 e
+    # a distancia da 5,06 mm.
+    "SW601": (4.5, 66.0, 0),
+    "SW602": (13.0, 66.0, 0),
+    "SW603": (21.5, 66.0, 0),
     # bottom right CORNER, which is the datasheet's "Best" (7.5, figure 1):
     # antenna over the notch, off the board edge, and as far from the GNSS
     # receiver as the board allows - which is the 50 mm of 7.2, and the rule
@@ -256,7 +299,7 @@ BORDA_FIXA: dict[str, tuple[float, float, int]] = {
 DECOPLA: dict[str, str] = {
     "C101": "U101", "C102": "U101", "C103": "U101", "C104": "U101",
     "C105": "U101", "C106": "U101", "C107": "U101", "C108": "U101",
-    "C109": "U101", "C110": "U101", "C111": "U101", "C112": "U101",
+    "C109": "U101", "C110": "U101", "C111": "U101",
     "C113": "U104", "C114": "U104",
     "C115": "U103", "C116": "U103", "C117": "U103",
     "C118": "U102",
@@ -267,7 +310,9 @@ DECOPLA: dict[str, str] = {
     "C601": "SW601", "C602": "SW602", "C603": "SW603",
     # the pull-ups of a bus go beside the master, not beside a slave
     "R107": "U201", "R108": "U201", "R504": "U201", "R505": "U201",
-    "R109": "U201",
+    # o pull-up do PMIC_INT vai com o PMIC, nao com o modulo: junto do
+    # modulo ele caiu em cima do pino de D+ e fechou a entrada do par USB
+    "R109": "U101",
     # the series resistors of the flash: two at the MCU, one at the flash
     "R506": "U201", "R507": "U201", "R508": "U501",
     # the gate pull-downs go at the transistor
@@ -602,9 +647,14 @@ def rotulos(lugar: dict) -> dict[str, tuple[float, float, int]]:
                            (bx[0] - meia_w - 0.25 - passo,
                             bx[3] + meia_h + 0.2 + passo)):
                 cx_, cy_ = x + dx, y + dy
-                if not (0.3 < cx_ < M.W - 0.3 and 0.3 < cy_ < M.H - 0.3):
-                    continue
                 t = _caixa_texto(ref, cx_, cy_, rot)
+                # the whole box of the text stays 0.3 mm inside the outline,
+                # not just its centre: a label turned 90 degrees near the
+                # bottom edge kept its centre inside and its far half out,
+                # and the DRC reported the silkscreen cut by the edge
+                if not (t[0] > 0.3 and t[2] < M.W - 0.3
+                        and t[1] > 0.3 and t[3] < M.H - 0.3):
+                    continue
                 if any(_cruza(t, q) for q in postas):
                     continue
                 # quantos contornos ALHEIOS ele pisa: so para desempatar
@@ -649,7 +699,12 @@ def colocar() -> tuple[dict[str, tuple[float, float, int, bool]], list[str]]:
         tam_bruto[ref] = fp_load.carregar(nome)[1]
 
     lugar: dict[str, tuple[float, float, int, bool]] = {}
-    raio = M.M2_DRILL_UNVERIFIED / 2 + 0.6
+    # The hole is KiCad's MountingHole_2.2mm_M2, and THAT footprint's
+    # courtyard is a circle of 2,45 mm of radius (fp_circle end 2.45 on
+    # F.CrtYd), for the head or washer of the screw. Reserving less than the
+    # courtyard is how J201 landed 2,0 mm from the hole and the DRC called it
+    # an overlap: the placer and the DRC have to agree on the same circle.
+    raio = RAIO_COURTYARD_FURO + FOLGA
     # One list per face, not one for the board. A part on the back does not
     # take room from a part on the front, and pretending it does is how a
     # small board runs out of space that it has: the battery connector, the
@@ -659,8 +714,19 @@ def colocar() -> tuple[dict[str, tuple[float, float, int, bool]], list[str]]:
     # on both faces.
     furos = [(fx - raio, fy - raio, fx + raio, fy + raio)
              for fx, fy in M.FUROS_DOC]
+    # Corredores sem peca, so na frente: faixas que o roteamento precisa e
+    # que o colocador enchia de peca miuda. O primeiro fica em cima dos
+    # pinos D+ e D- do modulo, em (20,55; 71,5) e (21,65; 71,5) com o
+    # modulo onde BORDA_FIXA o poe: o par do USB so entra neles por cima,
+    # entre vizinhos a 1,1 mm, e um resistor a 1,5 mm acima do pino fecha
+    # a entrada - o R109 fechou, e quando ele saiu o DISP_PWR_EN entrou.
+    # ate 70,7 e nao ate os pinos: a caixa de colocacao do modulo comeca
+    # em 70,75, e um corredor que entra nela derruba a posicao fixa do modulo.
+    # De 68,3 e nao de 68,2: o contorno da tecla da direita acaba em 67,75 e
+    # livre() exige FOLGA entre contornos; a 68,2 a tecla nao cabia.
+    corredores = [(19.4, 68.3, 22.8, 70.7)]
     postos_face: dict[bool, list[tuple[float, float, float, float]]] = {
-        False: list(furos), True: list(furos)}
+        False: list(furos) + corredores, True: list(furos)}
     falhas: list[str] = []
 
     def por(ref: str, cx: float, cy: float, ang: int = 0,

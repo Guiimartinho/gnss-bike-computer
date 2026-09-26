@@ -31,6 +31,14 @@ import make_pcb as MP  # noqa: E402
 import nets as N  # noqa: E402
 import parts as P  # noqa: E402
 
+_PLACA_PATH = pathlib.Path(__file__).resolve().parent / "gnssbike.kicad_pcb"
+
+
+def redes_do_arquivo() -> dict[str, int]:
+    """Net name -> number, from the board file itself (fp_load explains why)."""
+    return fp_load.redes_da_placa(
+        fp_load.parse(_PLACA_PATH.read_text(encoding="utf-8")))
+
 PCB = HERE / "gnssbike.kicad_pcb"
 
 # --- the rules, with their source -------------------------------------------
@@ -119,6 +127,11 @@ REGRAS = [
      "hardware_gnssbike/04-pcb-e-caixa.md"),
     ("ME2", "altura dos componentes dentro da sombra da bateria e do display",
      "hardware_gnssbike/04-pcb-e-caixa.md#as-duas-sombras"),
+    ("RT1", "toda ligacao da lista de nos existe em cobre: zero itens "
+            "desconectados no DRC completo do KiCad",
+     "kicad-cli pcb drc --severity-all. E a unica contagem que vale: o "
+     "roteador daqui relata o que tentou, e um DRC so de erros esconde os "
+     "desconectados, que sao aviso"),
     ("ME4", "as ilhas de solda de uma peca ficam sob o corpo do modelo 3D "
             "do fabricante",
      "um rabicho de solda fica em cima da sua ilha: se o corpo nao as cobre, "
@@ -139,8 +152,9 @@ CORRENTE = {
     "VBAT_CELULA": (0.8, "idem, do conector da celula"),
     "VBAT_SYS": (0.8, "idem, para o sistema"),
     "VSYS": (0.5, "consumo de pico do aparelho"),
-    "3V0": (0.4, "trilho de 3,0 V: display, sensores, flash"),
-    "1V8": (0.2, "trilho de 1,8 V"),
+    "3V0": (0.4, "trilho de 3,0 V: modulo, display, sensores, flash e, desde "
+                 "2026-09-26, o receptor GNSS (100 mA de pico na partida)"),
+    "1V8": (0.2, "trilho de 1,8 V do BUCK1, montado e sem carga"),
     "SD3V0": (0.2, "trilho comutado do display"),
     "BUCK1_SW": (0.5, "no de chaveamento do buck 1"),
     "BUCK2_SW": (0.5, "no de chaveamento do buck 2"),
@@ -275,8 +289,11 @@ def ler(caminho: pathlib.Path):
             gy = fy - px * math.sin(r) + py * math.cos(r)
             rede = fp_load.kid(p, "net")
             camadas = list(fp_load.kid(p, "layers")[1:])
+            sz = fp_load.kid(p, "size")
             item = {"ref": ref, "pad": p[1], "x": gx, "y": gy,
                     "rede": rede[2] if rede else "",
+                    "hw": float(sz[1]) / 2 if sz else 0.0,
+                    "hh": float(sz[2]) / 2 if sz else 0.0,
                     "smd": p[2] == "smd",
                     "camada": "B.Cu" if any("B.Cu" in c for c in camadas)
                               else "F.Cu"}
@@ -358,16 +375,19 @@ def zona(nome: str):
 
 # --- IPC-2221 ---------------------------------------------------------------
 def largura_ipc(corrente: float, subida: float = 10.0,
-                espessura_um: float = 35.0) -> float:
-    """Minimum external-layer width, in mm, by IPC-2221B 6.2.
+                espessura_um: float = 35.0, interna: bool = False) -> float:
+    """IPC-2221B, 6.2: the width a current needs for a given temperature rise.
 
-    A = (I / (k * dT^b))^(1/c) in mils squared, with k 0.048, b 0.44, c 0.725
-    for an external conductor; the width is A divided by the thickness.
+    I = k * dT^0.44 * A^0.725, with A in square mils. k is 0.048 for an
+    OUTER conductor and 0.024 for an INNER one: an inner track has no air to
+    give its heat to, and the standard asks it to be about 2.6 times wider
+    for the same rise. Until 2026-09-26 this applied the outer curve to every
+    segment, and VBUS runs 37 mm on In2.Cu.
     """
-    k, b, c = 0.048, 0.44, 0.725
-    area_mils2 = (corrente / (k * subida ** b)) ** (1 / c)
-    esp_mils = espessura_um / 25.4
-    return area_mils2 / esp_mils * 0.0254
+    k = 0.024 if interna else 0.048
+    area_mil2 = (corrente / (k * subida ** 0.44)) ** (1 / 0.725)
+    esp_mil = espessura_um / 25.4
+    return area_mil2 / esp_mil * 0.0254
 
 
 def _ilhas_sob_o_corpo(ref: str, pecas: dict):
@@ -635,7 +655,8 @@ def main() -> int:
     # at the wrong width is not a pair - it is two tracks - and nothing else
     # in the chain would ever say so.
     import route as _R
-    _numeros, _ = MP.redes()
+    # from the board's own net table, never from nets.py at run time
+    _numeros = redes_do_arquivo()
     _por_num = {n: r for r, n in _numeros.items()}
     par = {}
     for r in ("USB_DP", "USB_DM"):
@@ -761,7 +782,7 @@ def main() -> int:
                   f"pior de reserva a {piores[0][0]:.2f} mm")
 
     # -- AL2: largura por IPC-2221 -------------------------------------------
-    numeros, _ = MP.redes()
+    numeros = redes_do_arquivo()
     por_num = {n: r for r, n in numeros.items()}
     estreitas = []
     necks = 0
@@ -770,7 +791,7 @@ def main() -> int:
         if rede not in CORRENTE:
             continue
         i, _fonte = CORRENTE[rede]
-        pedida = largura_ipc(i)
+        pedida = largura_ipc(i, interna=s["c"] in ("In1.Cu", "In2.Cu"))
         if s["w"] >= pedida - 1e-6:
             continue
         # A short stretch next to a pad is a neck-down, not an undersized
@@ -878,13 +899,18 @@ def main() -> int:
     # numbers last and connects to ground, and the two that matter here say
     # so by name.
     TERMICOS = {("U104", "5"), ("U103", "25"), ("U101", "33"),
-                ("U505", "7"), ("U302", "15")}
+                ("U505", "7")}
     sobre_termico = []
     for q in pads:
         if (q["ref"], q["pad"]) not in TERMICOS:
             continue
         for v in vias:
-            if abs(v["x"] - q["x"]) < 1.2 and abs(v["y"] - q["y"]) < 1.2:
+            # "sob o pad" e o pad mais 0,5 mm de margem, nao 1,2 mm fixos:
+            # com 1,2 a regra acusou uma via de terra a 1,3 mm do centro de
+            # um pad de 0,58, que esta a 1 mm do cobre dele. A ponte de
+            # mascara entre via e pad e assunto do DRC, que a mede
+            if (abs(v["x"] - q["x"]) < q["hw"] + 0.5
+                    and abs(v["y"] - q["y"]) < q["hh"] + 0.5):
                 sobre_termico.append((q["ref"], q["pad"],
                                       round(math.hypot(v["x"] - q["x"],
                                                        v["y"] - q["y"]), 2)))
@@ -945,6 +971,7 @@ def main() -> int:
              ("SOMBRA_BATERIA_MAX_1-2MM", 1.2, True))
     altos = []
     sem_altura = []
+    sem_zona: set = set()
     for ref, pe in sorted(pecas.items()):
         nome_fp = FPS.FP[ref][0] if ref in FPS.FP else None
         if nome_fp is None:
@@ -958,6 +985,11 @@ def main() -> int:
             try:
                 z = zona(znome)
             except KeyError:
+                # A zona nao existe: ate 2026-09-26 isto era um `continue`
+                # mudo e a regra saia "ok" sem medir peca nenhuma - as
+                # sombras foram tiradas do make_dxf de proposito, porque a
+                # caixa nao esta definida, e a regra continuou passando.
+                sem_zona.add(znome)
                 continue
             if pe["atras"] != atras:
                 continue
@@ -965,7 +997,11 @@ def main() -> int:
                 continue                      # not under this shadow
             if h > teto + 1e-9:
                 altos.append((ref, h, teto, znome))
-    if altos:
+    if sem_zona:
+        falhou("ME2", "nao mede nada: as zonas " + ", ".join(sorted(sem_zona))
+                      + " nao existem no make_dxf - a posicao do display e da "
+                      "celula sobre a placa nao esta definida em arquivo nenhum")
+    elif altos:
         falhou("ME2", f"{len(altos)} pecas mais altas que o teto da sombra em "
                "que estao: " +
                ", ".join(f"{r} {h:.2f} contra {t:.1f} mm"
@@ -1001,6 +1037,48 @@ def main() -> int:
         else:
             ok.append(f"ME4: as {total} ilhas de {ref} ficam sob o corpo do "
                       f"modelo do fabricante")
+
+    # -- RT1: a placa esta inteira? ------------------------------------------
+    # O DRC do KiCad com TODAS as severidades. Ate 2026-09-25 as rodadas a
+    # mao usavam --severity-error, e "0 itens desconectados" saiu impresso
+    # em documento e em pull request enquanto havia 55: item desconectado e
+    # aviso, e o filtro de erros o esconde.
+    import subprocess
+    sys.path.insert(0, str(HERE))
+    import make_3d as _M3
+    rel = HERE / "_drc.json"
+    r = subprocess.run([str(_M3.KICAD_CLI), "pcb", "drc", "--severity-all",
+                        "--format", "json", "--output", str(rel), str(PCB)],
+                       capture_output=True, text=True)
+    if not rel.exists():
+        falhou("RT1", "o kicad-cli nao rodou o DRC: " + r.stderr.strip()[:120])
+    else:
+        import json as _json
+        d = _json.loads(rel.read_text(encoding="utf-8"))
+        soltos = d.get("unconnected_items", [])
+        por_rede: dict[str, int] = {}
+        for u in soltos:
+            for it in u.get("items", []):
+                s = it.get("description", "")
+                if "[" in s and "]" in s:
+                    n = s[s.index("[") + 1:s.index("]")]
+                    por_rede[n] = por_rede.get(n, 0) + 1
+        viol = d.get("violations", [])
+        tipos: dict[str, int] = {}
+        for v in viol:
+            tipos[v.get("type", "?")] = tipos.get(v.get("type", "?"), 0) + 1
+        if soltos:
+            piores = ", ".join(f"{k} {v}" for k, v in
+                               sorted(por_rede.items(), key=lambda kv: -kv[1])[:8])
+            falhou("RT1", f"{len(soltos)} itens desconectados em "
+                          f"{len(por_rede)} redes ({piores}); e o DRC completo "
+                          f"tem {len(viol)} violacoes: "
+                          + ", ".join(f"{k} {v}" for k, v in sorted(tipos.items())))
+        else:
+            ok.append(f"RT1: 0 itens desconectados no DRC completo; "
+                      f"{len(viol)} violacoes de qualquer severidade"
+                      + (" (" + ", ".join(f"{k} {v}" for k, v in sorted(tipos.items())) + ")"
+                         if viol else ""))
 
     # -- resultado -------------------------------------------------------------
     for linha in ok:

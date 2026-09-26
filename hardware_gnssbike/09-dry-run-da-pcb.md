@@ -172,8 +172,12 @@ lado de cada número — sem ela a largura seria um chute.
 
 ## Resultado da posição
 
-Medido em 2026-09-25, na placa de **34 × 90 mm** com 145 peças, 966 segmentos
-e 450 vias:
+Medido em 2026-09-26, na placa de **34 × 90 mm** com 155 peças, 114 redes,
+1.506 segmentos e 544 vias — **18 regras cumpridas, 5 violadas, 4 sem
+medida**. A tabela de 2026-09-25 (145 peças, 22 regras, 21 cumpridas) está
+no histórico do git; três coisas mudaram nela e vale dizer quais: a `ME2`
+passou a medir de verdade (tinha sombra nenhuma para medir), a `RT1`
+nasceu, e a `US1` fechou.
 
 | Id | Medida | Situação |
 |---|---|---|
@@ -183,20 +187,22 @@ e 450 vias:
 | RF5 | o componente de RF alheio mais próximo do receptor é o `E301`, a **6,4 mm** | cumprida |
 | RF7 | caminho de RF do pino à antena de **8,1 mm**, dentro de λ/10 em L1 (10,5); `C302` a 2,5 e `C301` a 3,2 mm do seu nó | cumprida |
 | RF8 | as duas antenas estão a **74,3 mm** de centro a centro, 2,4 quartos de onda de 2,44 GHz | cumprida |
-| RF9 | chaveamento: `U101` a **24,1** de 20 mm. Display e cabo plano: `J402` a **33,3** de 25 mm | cumprida |
+| **RF9** | display, câmera ou cabo plano com fiação: **a própria sombra do display a 6,8 mm** da área da antena do módulo, e a ficha pede 25. Até 2026-09-26 a regra só via o `J402` (a 33,3 mm), porque a sombra do display não existia em arquivo nenhum | **violada** |
 | RF10 | os dois módulos de rádio a **50,8 mm**, acima dos 50 da ficha | cumprida |
-| AL1 | 24 capacitores dentro do limite; o pior de alta frequência a **1,76 mm** e o pior de reserva a **3,30** | cumprida |
-| AL2 | nenhum trecho de alimentação abaixo da largura da IPC-2221; 3 estreitamentos curtos junto a pad, que a norma não cobra | cumprida |
-| AL5 | filtro π do módulo montado como `C105`+`C106`+`C107`+`C108` \| `JP102` \| `C201`+`C210`, com o elemento em série a **3,9 mm** do pino de alimentação | cumprida |
-| AL6 | nenhuma via sobre os 5 pads térmicos | cumprida |
-| GN1 | os **108** pads de terra de superfície estão ligados; **89 (82 %)** por via própria ao plano interno, os outros 19 pelo plano da própria face | cumprida |
-| GN2 | **133 vias** de costura na borda, maior vão **2,7 mm** contra o limite de 5 | cumprida |
+| **AL1** | 23 de 25 capacitores dentro do limite (média 2,42 mm); fora: `C117` a **6,7 mm** do `U103` (limite 5) e `C114` a **2,3** do `U104` (limite 2) | **violada** |
+| **AL2** | **3 segmentos** do `VBAT_SYS` a 0,40 mm onde a IPC-2221 pede 0,57 (0,8 A); os estreitamentos junto a pad não contam | **violada** |
+| AL5 | filtro π do módulo montado como `C129`+`C105`+`C106`+`C107`+`C108` \| `JP102` \| `C201`+`C210`, com o elemento em série a **3,9 mm** do pino de alimentação | cumprida |
+| AL6 | nenhuma via sobre os 4 pads térmicos | cumprida |
+| GN1 | os **114** pads de terra de superfície estão ligados; **106 (93 %)** por via própria ao plano interno, os outros 8 pelo plano da própria face | cumprida |
+| GN2 | **115 vias** de costura na borda, maior vão **4,0 mm** contra o limite de 5 | cumprida |
 | ME1 | a placa de **34 × 90** deixa 12,0 mm de cada lado e 5,0 mm em cima e embaixo | cumprida |
-| ME2 | nenhuma peça passa do teto da sombra em que está; **3 peças sem altura conhecida** | cumprida |
-| ME3 | os **18** encapsulamentos com cota de ficha cabem no footprint desenhado para eles e batem com o contorno | cumprida |
+| **ME2** | **5 peças mais altas que o teto da sombra em que estão**: `J102` 4,25 e `LS601` 3,00 e `U502` 1,86 contra 1,2 mm sob a célula; `J103` 3,75 e `U301` 2,70 contra 2,6 mm sob o display ([04](04-pcb-e-caixa.md#as-duas-sombras-display-e-bateria)) | **violada** |
+| ME3 | os **17** encapsulamentos com cota de ficha cabem no footprint desenhado para eles e batem com o contorno | cumprida |
 | ME4 | as ilhas de `J101` (16), `J103` (6) e `J402` (7) ficam sob o corpo do modelo do fabricante | cumprida |
 | OP1 | nenhuma peça de altura conhecida a menos de duas alturas do sensor de luz | cumprida |
-| **US1** | **o par `USB_DP`/`USB_DM` não está roteado** | **violada** |
+| US1 | o par `USB_DP`/`USB_DM` está roteado, a 0,150 mm nos pescoços dos dois conectores de 0,5 mm de passo e a **0,207 mm** no resto, que é o que dá 90 Ω nesta pilha | cumprida |
+| **RT1** | **44 itens desconectados em 30 redes** no DRC completo (`SRC` 8, `VBAT_SYS` 7, `3V0_SENS` 6, `NTC_SOLAR` 6, `GND` 6, `3V0` 5, `VSYS` 5, `PWR_SCL` 4); e **4 violações de isolamento** de 0,125 contra 0,127 mm (2 µm, arredondamento da grade de 0,15) entre `PWR_SCL` e `VBAT` junto do nPM1300, mais 20 avisos de biblioteca | **violada** |
+| RF2, RF6, AL3, AL4 | o lado de RF do módulo para a borda; terra sob o receptor nas duas primeiras camadas; o laço de chaveamento; os 0,2 Ω em série no `VCC` do GNSS | **sem medida**: precisam de bancada, do empilhamento do fabricante ou de modelo |
 
 
 > [!CAUTION]
@@ -210,9 +216,21 @@ e 450 vias:
 > outras que o fabricante publica em STEP — o HRO TYPE-C-31-M-12 e o
 > HC-FPC-05-10-5RLTAG —, e passar a desenhá-las com esse modelo.
 >
-> **O `US1` continua violado de propósito.** O par diferencial precisa de
-> acabamento à mão, com a largura e o afastamento que dão 90 Ω nesta pilha;
-> o roteador automático não o fecha.
+> **O `US1` fechou em 2026-09-26, e não foi o roteador que o fechou.** Um
+> par de classe USB não sai de uma fileira de contatos a 0,5 mm de passo
+> por busca em labirinto — e esta placa tem duas fileiras dessas em série,
+> a do receptáculo e a do diodo de proteção. O trecho inteiro é desenhado
+> à mão em `route.py` (`ligar_usb()`): os dois contatos de cada sinal
+> amarrados por baixo do conector em `In2.Cu` (o USB-C traz D+ e D− duas
+> vezes, intercalados, B7 A6 A7 B6), a subida em diagonal ao pino de
+> entrada do diodo, a travessia reta do TPD4E05U06 pelos pinos que a ficha
+> reserva para isso (tabela 4-2: 6, 7, 9 e 10, "straight-through routing"),
+> e um toco de saída; a busca só faz o resto, a 0,207 mm. Os pescoços são
+> de 0,150 mm: dentro de um campo de 0,5 mm é a trilha estreita que compra
+> o isolamento. O que destravou a busca no resto do par foi outra coisa,
+> um defeito do próprio roteador: a reserva de cada ilha arredondava para
+> fora nos dois sentidos e fechava toda fileira de 0,5 mm de passo
+> (`Grade._ret`, agora com o centro da célula como critério).
 
 > [!WARNING]
 > **A regra `ME4` nasceu de dois modelos de fabricante que vêm girados, e de
@@ -247,39 +265,48 @@ e 450 vias:
 ## Resultado do roteamento
 
 > [!IMPORTANT]
-> **O roteamento está pela metade, e isso é o que o número diz.** O roteador
-> fechou **121 ligações** e o KiCad ainda conta **105 sem trilha**, agora com
-> as malhas preenchidas — ou seja, esse 105 é real, não é o artefato de
-> zona vazia que a versão anterior deste documento reportava como 261. O que
-> está desenhado passa em todas as regras; o que falta, falta.
+> **O roteamento está a três quartos, e isso é o que o número diz.** Em
+> 2026-09-26 o roteador fechou **204 ligações** e deixou **59 sem trilha, em
+> 26 redes**; o DRC completo do KiCad, com as malhas preenchidas, conta
+> **44 itens desconectados em 30 redes** (a diferença entre os dois números
+> é o que a malha de terra fecha sozinha). Os documentos que este substitui
+> disseram "0 ligações sem trilha" duas vezes, com 47 e 55 em aberto: o DRC
+> rodava com `--severity-error`, que esconde os não roteados porque para o
+> KiCad eles são aviso. A regra `RT1` roda com `--severity-all` e é a
+> única contagem que vale.
 
 | Medida | Valor |
 |---|---|
 | Camadas de roteamento | **3**: `F.Cu`, `In2.Cu` e `B.Cu`; `In1.Cu` é plano de terra |
-| Segmentos | **744** |
-| Vias | **256**, sendo 71 de pad de terra ao plano interno, 72 de costura na borda e o resto de troca de camada |
-| Ligações fechadas | **121** |
-| Ligações sem trilha | **105** |
-| Redes deixadas de fora de propósito | `RF_IN` e `RF_ANT` |
-| **Erros de regra de projeto do KiCad** | **0** |
+| Segmentos | **1.506** |
+| Vias | **544**, sendo 96 de pad de terra ao plano interno, 84 de costura na borda, 127 na malha da área e o resto de troca de camada |
+| Ligações fechadas | **204** |
+| Ligações sem trilha, pelo roteador | **59**, em 26 redes: 19 de `GND` sem lugar para a via junto de (21,0; 44,7); `VBAT_SYS` 4; `VSYS`, `3V0_SENS` e `3V0` 3 cada; `PWR_SCL`, `PWR_SDA`, `SD3V0`, `DIS_SW`, `VBUS` e `NOR_CS` 2 cada; e uma em cada uma de 15 redes (`BUCK2_SW`, `ANT_T1`, `ANT_T2`, `ALRT`, `BL_K2`, `MPPT`, `3V3BL`, `VBUSOUT`, `SRC`, `CC1`, `CC2`, `VBCKP`, `DISP_CS`, `GNSS_RX`, `RF_CHIP`) |
+| Itens desconectados, pelo DRC completo | **44**, em 30 redes (`SRC` 8, `VBAT_SYS` 7, `3V0_SENS` 6, `NTC_SOLAR` 6, `GND` 6, `3V0` 5, `VSYS` 5, `PWR_SCL` 4) |
+| Redes deixadas de fora de propósito | `RF_IN`, `RF_ANT`, `RF_CHIP` e `RF_UFL` |
+| **Erros de regra de projeto do KiCad** | **4**, todos o mesmo: isolamento de 0,125 contra os 0,127 mm da classe de alimentação (2 µm, arredondamento da grade de 0,15) entre `PWR_SCL` e `VBAT` junto do nPM1300. Mais 20 avisos de biblioteca (`lib_footprint_issues` e `lib_footprint_mismatch`), que são os footprints gerados aqui não baterem com a biblioteca do KiCad, de propósito |
 | Conferência geométrica independente | **0** pares perto demais |
-| Traçado | tronco ortogonal com chanfro de 45° nos cantos |
+| Traçado | tronco ortogonal com chanfro de 45° nos cantos; o par USB à mão ([acima](#resultado-da-posição)) |
 
-### Por que `RF_IN` e `RF_ANT` não são roteadas
+### Por que `RF_IN`, `RF_ANT`, `RF_CHIP` e `RF_UFL` não são roteadas
 
 Elas precisam de 50 Ω controlados, e a largura que dá 50 Ω só existe depois
 que o fabricante informa o empilhamento — que é item em aberto em
-[04](04-pcb-e-caixa.md). Desenhar agora com uma largura qualquer seria pior
-que deixar em branco: pareceria pronto.
+[04](04-pcb-e-caixa.md). A conta de Hammerstad com a pilha de
+0,10/0,46/0,10 mm e εr 4,3 dá **0,196 mm** para 50 Ω, mas ignora a
+espessura do cobre, e com ela a linha fica em 44 a 46 Ω: é conta de
+partida, não de fabricação. Desenhar agora com uma largura qualquer seria
+pior que deixar em branco: pareceria pronto.
 
 ### O que o KiCad ainda conta como sem ligação
 
-O relatório do KiCad diz **252 ligações sem trilha**, e **165 delas são de
-terra**. Não são defeito: as zonas de terra estão declaradas no arquivo, mas
-uma zona só é **preenchida** quando a placa é aberta no KiCad, e até lá os
-pads de terra aparecem como soltos. Ao abrir e mandar preencher (tecla `B`),
-elas somem. Fora do terra restam **87**, que são as ligações realmente não
-roteadas.
+Com as malhas preenchidas pelo `fill_zones.py` (que só roda com o Python
+do KiCad: com o do sistema ele avisa e sai, e o DRC passa a contar centenas
+de pads de terra "soltos" que não existem), o DRC completo diz **44 itens
+desconectados em 30 redes**. Seis são de `GND` — pads que a malha da
+própria face não alcança e para os quais o roteador não achou lugar de
+via —; os outros 38 são ligações de sinal e de alimentação realmente sem
+trilha, e a lista por rede está na tabela acima.
 
 ### Por que metade, e o que fazer com a outra metade
 

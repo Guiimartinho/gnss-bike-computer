@@ -58,12 +58,14 @@ Conceito em escala, a partir da caixa da V3: 62 × 104 × 19 mm; a PCB, dimensio
 
 ![A placa em CAD, vista em ângulo: o USB-C na borda de cima, o módulo de rádio à esquerda e o receptor GNSS à direita](hardware_gnssbike/cad/gnssbike-3d-angulo.png)
 
-A placa existe como **arquivo de CAD**, gerado por programa: 144 peças, 112
-redes, 915 segmentos, 430 vias, **0 violações de regra de projeto e 0
-ligações sem trilha**, e 21 das 22 regras que as fichas dos componentes e a
-IPC-2221B impõem, medidas uma a uma. Nenhuma placa foi fabricada e nenhum
-componente passou por bancada. O esquemático, a placa e como se confere cada
-etapa estão em [hardware_gnssbike/](hardware_gnssbike/README.md).
+A placa existe como **arquivo de CAD**, gerado por programa: 155 peças, 114
+redes, 1.506 segmentos, 544 vias, **204 ligações roteadas e 59 ainda sem
+trilha**, 4 violações de isolamento de 2 µm, e 18 das 23 regras que as
+fichas dos componentes e a IPC-2221B impõem, medidas uma a uma
+([dry-run de 2026-09-26](hardware_gnssbike/10-dry-run-2026-09-26.md)). Nenhuma
+placa foi fabricada e nenhum componente passou por bancada. O esquemático,
+a placa e como se confere cada etapa estão em
+[hardware_gnssbike/](hardware_gnssbike/README.md).
 
 ```mermaid
 flowchart LR

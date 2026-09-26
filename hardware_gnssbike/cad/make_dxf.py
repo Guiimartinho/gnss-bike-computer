@@ -75,18 +75,20 @@ RADIUS_DOC14 = 4.0  # docs/14-hardware-placa-nova.md#placa-de-circuito-impresso
 # The first, at (3.2; H/2), is the one that was already here: the freest
 # point on the board, outside every zone, keep-out and shadow.
 #
-# The second exists because one screw does not hold the board. Plugging a
-# USB-C in applies, at worst case of the standard, 20 N at 40.8 mm from that
-# screw - 816 N.mm - while an M2 in a printed plastic boss resists about
+# The second exists because one screw does not quite hold the board.
+# Plugging a USB-C in pushes along y on the line x = 6.9; that line passes
+# 3.7 mm from the first screw, so the worst-case 20 N of the standard is a
+# moment of 74 N.mm, while an M2 in a printed plastic boss resists about
 # 40 N.mm by friction under its head (0.05 N.m of tightening, a 125 N
-# preload, mu 0.2 on a 1.6 mm bearing radius). Twenty times short. A gentle
-# 5 N insertion is still five times short, and pressing the centre key is
-# already 48 N.mm against those 40. With 12 mm of clearance to the cavity
-# wall on each side, the board does not bind on anything before it turns.
+# preload, mu 0.2 on a 1.6 mm bearing radius): 1.85 times short. With 12 mm
+# of clearance to the cavity wall on each side, the board turns before it
+# binds on anything. (The first version of this note said "twenty times",
+# from taking the 40.8 mm to the connector as the lever arm; the arm is the
+# distance to the LINE of the force, and 02-calculos.md carries the fix.)
 #
 # So the second hole goes next to the USB-C receptacle, 10.2 mm from it.
 # The pair then takes the moment as a couple over the 30.8 mm between them -
-# 26.5 N of shear in each screw, which an M2 does not notice - instead of as
+# 2.4 N of shear in each screw, which an M2 does not notice - instead of as
 # friction under one head, which it is not good at.
 #
 # It is on the LEFT, beside the USB, and not in the free corner on the right:
@@ -231,6 +233,27 @@ ZONES = [
     ("ZONA_MODULO_ME54BS13", _f(W - _MOD_LARG, H - _MOD_ALT, W, H), 3,
      "MinewSemi ME54BS13, 16,5 x 12,0 mm, deitado no canto de baixo a direita "
      "com a antena sobre o recorte"),
+    # As duas sombras que a regra ME2 do dry-run mede: PROPOSTA de
+    # 2026-09-26, nao decisao. A posicao do display e da celula sobre ESTA
+    # placa nao esta em arquivo nenhum da caixa (a caixa desenhada e a da
+    # placa antiga, de 55 x 97), e sem as sombras a ME2 passava sem medir
+    # peca nenhuma. O que se sabe vem das outras regras:
+    #  - o display LPM027M128C tem 40,08 x 61,8: mais largo que a placa, entao
+    #    cobre a largura toda. Acaba em y = 64,5, logo acima do corpo das
+    #    teclas (centro em 66, corpo de 3,5), e comeca 61,8 acima, em 2,7 -
+    #    o que o poe sobre a antena GNSS (0 a 9,88), e isso e um CONFLITO;
+    #  - a celula de 36 x 60 x 7, na face de tras, tambem cobre a largura.
+    #    A bolsa e metal: nao pode ficar atras da antena GNSS (ate 9,88), e
+    #    com 60 de altura chega a 69,9, 1,9 mm dentro do canto da area da
+    #    antena do modulo (x >= W-4,7, y >= 68,0), que tambem recusa metal.
+    #    Entre as duas antenas ha 58,1 mm e a celula tem 60: CONFLITO. A
+    #    saida e uma celula de ate 58 mm, e nao mexer nas antenas.
+    ("SOMBRA_DISPLAY_JDI_MAX_2-6MM", _f(0.0, 64.5 - 61.8, W, 64.5), 4,
+     "04#as-duas-sombras-display-e-bateria: teto de 2,6 mm na frente; "
+     "PROPOSTA, a caixa nao esta desenhada para esta placa"),
+    ("SOMBRA_BATERIA_MAX_1-2MM", _f(0.0, 9.9, W, 69.9), 4,
+     "04#as-duas-sombras-display-e-bateria: teto de 1,2 mm atras; "
+     "PROPOSTA, a caixa nao esta desenhada para esta placa"),
 ]
 
 
@@ -243,7 +266,22 @@ ZONES = [
 # were the display's and the battery's shadows fighting the parts - shadows
 # that do not belong in a board floorplan at all, because what sits over the
 # board is a question for the mechanical layout, not for the board's size.
-CONFLITOS: list[tuple] = []
+CONFLITOS: list[tuple] = [
+    # As duas sombras propostas acima contra as duas antenas. Sao desenhadas
+    # para aparecerem no zonas.dxf e no relatorio, nao para serem resolvidas
+    # aqui: o dono decide entre celula menor, display mais baixo ou caixa
+    # diferente.
+    ("CONFLITO_DISPLAY_SOBRE_ANTENA_GNSS",
+     _f(13.25 - 4.96, 64.5 - 61.8, 13.25 + 10.04, 9.88), 1,
+     "o display de 61,8 mm, acabando em 64,5, comeca em 2,7 e cobre 7,2 mm "
+     "da area da antena GNSS; a ficha da Unictron nao diz o que um vidro com "
+     "ITO a poucos milimetros faz ao ganho - so medindo"),
+    ("CONFLITO_CELULA_NA_ANTENA_DO_MODULO",
+     _f(W - _ANT_FAIXA, H - _MOD_ALT - 8.5, W, 69.9), 1,
+     "a celula de 60 mm, comecando em 9,9 para sair da antena GNSS, entra "
+     "1,9 mm no canto da area da antena do modulo (7.4: sem metal); entre as "
+     "duas antenas ha 58,1 mm"),
+]
 
 
 def y(v: float) -> float:

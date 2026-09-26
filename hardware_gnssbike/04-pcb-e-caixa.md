@@ -247,43 +247,79 @@ competem por área de planta, mas **limitam a altura** das peças embaixo
 delas: até 2,6 mm sob o display e até 1,2 mm sob a bateria
 ([14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso)).
 
-| Sombra | Retângulo (coordenadas da placa) | Área (mm²) | % dos 5.335 | Altura permitida |
+> [!IMPORTANT]
+> **A posição do display e da célula sobre esta placa é uma PROPOSTA de
+> 2026-09-26, não uma decisão.** A caixa desenhada em
+> [`tools/docs/case_drawing.py`](../tools/docs/case_drawing.py) é a da
+> placa antiga, de 55 × 97, e nenhum arquivo dizia onde as duas peças caem
+> sobre a placa de 34 × 90 — a tabela abaixo, até essa data, ainda trazia
+> retângulos de 47 mm de largura numa placa de 34. Sem os retângulos a
+> regra `ME2` do dry-run passava **sem medir peça nenhuma**; agora eles
+> estão em `cad/make_dxf.py` (`SOMBRA_DISPLAY_JDI_MAX_2-6MM` e
+> `SOMBRA_BATERIA_MAX_1-2MM`), a regra mede, e o que ela mede está abaixo.
+
+O que fixa cada retângulo, na placa de 34 × 90:
+
+- **O display** LPM027M128C tem 40,08 × 61,8 mm: é **mais largo que a
+  placa**, logo cobre a largura inteira. Em y, ele tem de acabar **acima
+  das teclas**, que ficam em y = 66 com corpo de 3,5 mm (uma tecla debaixo
+  do vidro não se aperta): fim em **64,5**, começo 61,8 acima, em **2,7**.
+- **A célula** de 36 × 60 × 7 também cobre a largura. A bolsa é metal, e
+  metal não pode ficar atrás da antena GNSS (y até 9,88) nem no canto da
+  área da antena do módulo (x ≥ 29,3, y ≥ 68,0; ficha do ME54BS13, 7.4).
+  Entre as duas antenas há **58,1 mm**, e a célula tem **60**: começando
+  logo abaixo da antena GNSS, em **9,9**, ela acaba em **69,9**, 1,9 mm
+  dentro do canto da antena do módulo.
+
+| Sombra | Retângulo (coordenadas da placa) | Área (mm²) | % dos 3.060 | Altura permitida |
 |---|---|---|---|---|
-| Display JDI LPM027M128B (contorno 40,08 × 61,8) | 7,46–47,54, 5,1–66,9 | 2.476,9 | 46,4 % | 2,6 mm |
-| Display Sharp LS027B7DH01A (contorno 42,82 × 62,8) | — | 2.689,1 | 50,4 % | 2,6 mm |
-| Área ativa (35,28 × 58,8), só para referência | 9,86–45,14, 6,6–65,4 | 2.074,5 | 38,9 % | — |
-| Bateria LiPo (36 × 60), na face de trás | 9,5–45,5, 22,5–82,5 | 2.160,0 | 40,5 % | 1,2 mm |
+| Display JDI LPM027M128C (contorno 40,08 × 61,8) | 0–34, 2,7–64,5 | 2.101,2 | 68,7 % | 2,6 mm |
+| Bateria LiPo (36 × 60), na face de trás | 0–34, 9,9–69,9 | 2.040,0 | 66,7 % | 1,2 mm |
 
-Contas de conferência, com o JDI:
+Contas de conferência (**conta**; a placa tem 34 × 90 = 3.060 mm²):
 
 ```
-interseção das duas sombras = 36,0 mm × 44,4 mm = 1.598,4 mm²  (30,0 %)
-união das duas sombras = 2.476,9 + 2.160,0 − 1.598,4 = 3.038,5 mm²  (57,0 %)
-área sem restrição de altura dos dois lados = 5.335 − 3.038,5 = 2.296,5 mm²  (43,0 %)
+interseção das duas sombras = 34 mm × (64,5 − 9,9) = 34 × 54,6 = 1.856,4 mm²  (60,7 %)
+união = 2.101,2 + 2.040,0 − 1.856,4 = 2.284,8 mm²  (74,7 %)
+área sem restrição de altura dos dois lados = 3.060 − 2.284,8 = 775,2 mm²  (25,3 %)
 ```
 
-Ou seja: **30 % da placa tem teto de 2,6 mm na frente e de 1,2 mm atrás ao
-mesmo tempo**, e só 43 % está livre das duas. É apertado, mas o inventário
-de peças altas é curto: o módulo GNSS (2,5 mm, sob o display, dentro do
-limite de 2,6 mm), o **ME54BS13 (2,4 mm, que entra nas duas sombras e por
-isso decide a própria face — abaixo)**, os dois indutores dos bucks em 0806
-e o do AEM10900, o conector USB-C e o soquete FPC — estes últimos na faixa
-de baixo ou na borda, fora da sombra da bateria.
+**61 % da placa tem teto de 2,6 mm na frente e de 1,2 mm atrás ao mesmo
+tempo**, e só um quarto está livre das duas — a faixa de cima (a antena
+GNSS e o receptor) e a de baixo (USB-C, módulo de rádio e teclas). O
+dry-run de 2026-09-26 mediu as peças contra esses tetos (`ME2`), com as
+alturas das fichas, e **cinco não cabem**:
+
+| Peça | Altura | Onde está | Teto | O que fazer |
+|---|---|---|---|---|
+| `J102`, conector da célula | 4,25 mm | face de trás, (4,0; 62,0) | 1,2 mm | sair de baixo da célula: para y ≥ 72, na faixa entre a célula e o USB-C |
+| `LS601`, buzzer | 3,00 mm | face de trás, zona `ZONA_BUZZER` (y 62 a 73) | 1,2 mm | idem: a zona precisa descer para y ≥ 70 |
+| `U502`, BMP585 | 1,86 mm | face de trás, no respiro (y 67 a 71) | 1,2 mm | descer com o respiro para y ≥ 70 |
+| `J103`, conector do painel | 3,75 mm | frente, (29,0; 32,0) | 2,6 mm | sair de baixo do display: só há lugar na faixa de cima (y < 2,7 não existe) ou na de baixo, ou ir para a face de trás abaixo da célula |
+| `U301`, MAX-F10S | 2,70 mm | frente, sob a antena (y 10,5 a 22) | 2,6 mm | **não tem para onde ir**: o receptor fica junto da antena, e a antena fica sob o display. O teto de 2,6 mm da caixa tem de subir pelo menos 0,1 mm — mais a folga |
+
+E dois conflitos que não são de altura, desenhados em `zonas.dxf`
+(`CONFLITOS` em `cad/make_dxf.py`) para ninguém esquecer:
+
+- **o display cobre 7,2 mm da área da antena GNSS** (y de 2,7 a 9,88): a
+  ficha da Unictron não diz o que um vidro com ITO a poucos milímetros faz
+  ao ganho, e a regra `RF9` do dry-run também reclama do display a 6,8 mm
+  da área da antena do módulo, onde a ficha do ME54BS13 pede 25;
+- **a célula entra 1,9 mm no canto da área da antena do módulo.** As
+  saídas são uma célula de até 58 mm, ou não mexer nas antenas e aceitar
+  o canto — decisão do dono, com medição de S21 na bancada.
+
+O inventário de peças altas fora dessas cinco é curto: o **ME54BS13
+(2,4 mm)**, na frente sob o display, com 0,2 mm de folga; os dois indutores
+dos bucks em 0805, o `L103` do ADP5091, o conector USB-C e os soquetes FPC,
+na faixa de baixo ou na borda, fora da sombra da célula.
 
 > [!CAUTION]
-> **O ME54BS13 vai na face da frente, e agora não há alternativa.** A zona
-> dele entra **105,4 mm²** dentro da sombra da bateria (**conta**: x de
-> 37,2 a 45,5, 8,3 mm, por y de 58,7 a 71,4, 12,7 mm), onde o teto é 1,2 mm
-> e o módulo tem **2,4 mm** de altura. Com o módulo antigo a sobreposição
-> era de 5,5 mm² e dava para escapar andando 0,5 mm para a direita; com
-> esta, não: **o módulo fica na frente**, o que também decide a ordem do
-> forno ([Montagem](#montagem)).
->
-> Na frente ele cai na sombra do display: **84,8 mm²** (**conta**: x de
-> 37,2 a 47,54, 10,34 mm, por y de 58,7 a 66,9, 8,2 mm), onde o teto é
-> 2,6 mm. Os 2,4 mm do módulo cabem, com **0,2 mm de folga** — e essa folga
-> sai de ficha, não de peça medida. Não medido: a altura real do módulo e a
-> do pack de bateria comprado.
+> **O ME54BS13 vai na face da frente, e não há alternativa.** Atrás, o
+> teto sob a célula é 1,2 mm e o módulo tem 2,4; na frente ele cai na
+> sombra do display, onde o teto é 2,6 mm: cabe com **0,2 mm de folga** —
+> e essa folga sai de ficha, não de peça medida. Não medido: a altura real
+> do módulo e a do pack de bateria comprado.
 
 ### A ordem de montagem
 
