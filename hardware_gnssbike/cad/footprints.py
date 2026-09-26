@@ -773,6 +773,19 @@ MODELO_GIRADO = {
     # exatamente o F.Fab do footprint, e os rabichos ficam a 3,3 mm do
     # centro pelo lado das ilhas.
     "JST_ZH_S4B-ZR-SM4A-TF_1x04-1MP_P1.50mm_Horizontal": (0, 2.25, -2.0),
+    # The HCTL FPC connector's STEP (J402) comes 180 degrees off the
+    # footprint, and the owner saw it in the 3D on 2026-09-26. Measured in
+    # the exported GLB, by colour: as it comes, the five gold contacts run
+    # from x 3,14 to 6,33 of the board, their solder tails sticking out of
+    # the white housing (x 3,71..6,53) at the LEFT, over nothing, while the
+    # signal pads sit at x 6,63 on the right and the two mounting pads at
+    # 3,82 on the left; the metal nail plate reached x 7,75, on the pads'
+    # side, and it is what fooled ME5 and ME6 - two nails outweigh five
+    # 0,3 mm tails. Turned 180 with no offset, the contacts run 3,87..7,06:
+    # the tails leave the housing (3,67..6,49, the F.Fab to 0,06) on the
+    # right, over the pads. On the front at 270 degrees the offset maps
+    # x -> +y and y -> +x, measured with test exports; none is needed.
+    "HC-FPC-05-10-5RLTAG": (180, 0.0, 0.0),
 }
 
 # The same model on the BACK face needs another turn AND another offset, and
@@ -1695,12 +1708,11 @@ def _com_modelo() -> None:
         # E, ao contrario do .wrl, o STEP chega ao GLB e ao STEP exportados,
         # que e o que o mecanico abre.
         real = modelo_de_verdade(base)
-        modelo = (
-            '\t(model "${KIPRJMOD}/' + (real if real else "3d/" + base + ".wrl") + '"\n'
-            '\t\t(offset (xyz 0 0 0))\n'
-            '\t\t(scale (xyz 1 1 1))\n'
-            '\t\t(rotate (xyz 0 0 0))\n'
-            '\t)\n')
+        # through linha_de_modelo(), so that MODELO_GIRADO applies to the
+        # generated footprints too: this block wrote its own model line with
+        # a fixed rotate of 0, and the HCTL FPC's 180 degrees (J402) were
+        # written in the table and never reached the board (2026-09-26)
+        modelo = linha_de_modelo(real if real else "3d/" + base + ".wrl")
         texto = GERADOS[nome]
         GERADOS[nome] = texto[:texto.rindex(")")] + modelo + ")\n"
 

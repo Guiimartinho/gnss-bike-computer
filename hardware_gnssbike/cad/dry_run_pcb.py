@@ -474,6 +474,73 @@ def _ilhas_sob_o_corpo(ref: str, pecas: dict):
 # Os conectores cujos rabichos de solda a ME5 confere: os que tem modelo do
 # fabricante ou da biblioteca do KiCad no GLB e ilhas de sinal numa fileira.
 RABICHOS_CONFERIDOS = ("J101", "J102", "J103", "J401", "J402")
+
+# Models whose solder contacts have a colour of their own in the maker's
+# STEP, so that the contacts can be told from the nails' plate. Measured in
+# the exported GLB on 2026-09-26: the HCTL FPC's five contacts are pure
+# yellow (1, 1, 0), the housing white, the lid black, the nail plate grey.
+# The general method of ME5 and ME6 - material touching the board outside
+# the F.Fab, weighed by area - took the nail plate, which lay on the pads'
+# side in the WRONG orientation, for the tails, and it outweighs five 0,3 mm
+# contacts: both rules passed the model turned 180 degrees, and the owner
+# saw it in the 3D. With the colour the question is direct: the coloured
+# faces that touch the board have to lie on the pads' side of the body.
+CONTATOS_POR_COR = {"HC-FPC-05-10-5RLTAG": (1.0, 1.0, 0.0)}
+
+
+def _modelo_base(ref: str):
+    """The base name of the maker's model this part carries, or None."""
+    nome_fp = FPS.FP[ref][0] if ref in FPS.FP else None
+    if not nome_fp or ":" not in nome_fp:
+        return None
+    real = FPS.modelo_de_verdade(nome_fp.split(":", 1)[1])
+    if not real:
+        return None
+    return real.rsplit("/", 1)[-1].rsplit(".", 1)[0]
+
+
+def _contatos_por_cor(ref: str, pe: dict, corpos, ux: float, uy: float, fc):
+    """The signed position, along the pad axis from the F.Fab centre, of the
+    faces with the contacts' colour that touch the board (positive is the
+    pads' side), with their count; None when the model is not in
+    CONTATOS_POR_COR or has no such face near the board."""
+    import numpy as np
+    base = _modelo_base(ref)
+    if base not in CONTATOS_POR_COR:
+        return None
+    alvo = CONTATOS_POR_COR[base]
+    x0, y0, x1, y1 = pe["caixa"]
+    atras = pe.get("atras", False)
+    soma = peso = 0.0
+    n = 0
+    for tris, cor in corpos:
+        c = tuple(round(float(v), 2) for v in np.array(cor).reshape(-1)[:3])
+        if c != alvo:
+            continue
+        X = tris[..., 0] * 1000.0 - MP.ORIGEM[0]
+        Y = -tris[..., 1] * 1000.0 - MP.ORIGEM[1]
+        H = tris[..., 2] * 1000.0
+        if X.max() < x0 or X.min() > x1 or Y.max() < y0 or Y.min() > y1:
+            continue
+        cx = X.mean(axis=1)
+        cy = Y.mean(axis=1)
+        dentro = (cx > x0) & (cx < x1) & (cy > y0) & (cy < y1)
+        if atras:
+            toca = (H.min(axis=1) < -0.08) & (H.max(axis=1) < 0.001) & (H.max(axis=1) > -1.2)
+        else:
+            toca = (H.max(axis=1) > 0.9) & (H.min(axis=1) > 0.80) & (H.min(axis=1) < 2.0)
+        sel = dentro & toca
+        if not sel.any():
+            continue
+        a = tris[sel]
+        area = 0.5 * np.linalg.norm(np.cross(a[:, 1] - a[:, 0], a[:, 2] - a[:, 0]), axis=1)
+        proj = (cx[sel] - fc[0]) * ux + (cy[sel] - fc[1]) * uy
+        soma += float((proj * area).sum())
+        peso += float(area.sum())
+        n += int(sel.sum())
+    if peso <= 0.0:
+        return None
+    return (soma / peso, n)
 _GLB_CACHE: dict = {}
 
 
@@ -508,7 +575,9 @@ def _rabichos_sobre_as_ilhas(ref: str, pecas: dict):
     pe = pecas[ref]
 
     def mecanica(nome: str) -> bool:
-        return nome in ("", "MP") or nome.startswith("S")
+        # "MP1"/"MP2" (the HCTL FPC's nails) were counted as signal pads
+        # until 2026-09-26, and pulled the pads' centre towards the nails
+        return nome in ("", "MP") or nome.startswith("S") or nome.startswith("MP")
 
     ilhas = [(q["x"], q["y"]) for q in pe.get("pads", [])
              if q["smd"] and not mecanica(q["pad"])]
@@ -545,6 +614,11 @@ def _rabichos_sobre_as_ilhas(ref: str, pecas: dict):
         return None
     ux, uy = ux / norma, uy / norma
     meio = abs(ux) * (fab[2] - fab[0]) / 2.0 + abs(uy) * (fab[3] - fab[1]) / 2.0
+    # a model whose contacts have their own colour is measured by them,
+    # not by whatever metal touches the board (CONTATOS_POR_COR says why)
+    por_cor = _contatos_por_cor(ref, pe, corpos, ux, uy, fc)
+    if por_cor is not None:
+        return (por_cor[0], por_cor[1], ci, meio)
     soma = 0.0
     peso = 0.0
     n_faces = 0
@@ -726,6 +800,21 @@ def _corpo_bate_com_o_footprint(ref: str, pecas: dict):
     # 2. legs per side, only where the pad rows are asymmetric
     ilhas = [(q["x"], q["y"]) for q in pe.get("pads", []) if q["smd"]]
     out["lados"] = "sem medida"
+    # a model with coloured contacts: the contacts decide the side (the
+    # area count below took the HCTL FPC's nail plate for its tails)
+    sinal = [(q["x"], q["y"]) for q in pe.get("pads", [])
+             if q["smd"] and not (q["pad"] in ("", "MP") or q["pad"].startswith(("S", "MP")))]
+    if sinal and _modelo_base(ref) in CONTATOS_POR_COR:
+        fc = ((fab[0] + fab[2]) / 2.0, (fab[1] + fab[3]) / 2.0)
+        ci = (sum(p[0] for p in sinal) / len(sinal), sum(p[1] for p in sinal) / len(sinal))
+        ux, uy = ci[0] - fc[0], ci[1] - fc[1]
+        norma = math.hypot(ux, uy)
+        if norma >= 0.3:
+            por_cor = _contatos_por_cor(ref, pe, corpos, ux / norma, uy / norma, fc)
+            if por_cor is not None:
+                out["lados"] = "ok" if por_cor[0] > 0.0 else "girado 180"
+                out["lados_n"] = ("contatos pela cor", round(por_cor[0], 3), por_cor[1])
+                return out
     if len(ilhas) >= 3:
         xs = sorted(set(round(p[0], 2) for p in ilhas))
         ys = sorted(set(round(p[1], 2) for p in ilhas))
