@@ -245,7 +245,7 @@ As quantidades por placa saem do esquemático; a compra sugerida cobre 5 placas 
 | Tag-Connect TC2030-CTX-NL e TC2030-CLIP | SWD pelo footprint TC2030-NL | na loja da Tag-Connect | — | 42,95 (cabo) |
 | SEGGER J-Link 9-pin Cortex-M Adapter (ou um cabo IDC de 10 vias a 1,27 mm) | SWD pelo `J202`, o conector Cortex de 10 vias que o dono pediu em 2026-09-26; o J-Link já está na máquina | SEGGER, DigiKey ou Mouser | — | a cotar |
 
-O J-Link da SEGGER já está na máquina de desenvolvimento ([CLAUDE.md](../CLAUDE.md)). Um Nordic PPK2, para medir consumo por trilho, não foi conferido hoje.
+O J-Link da SEGGER já está na máquina de desenvolvimento ([armadilhas do firmware](../.claude/contexto/armadilhas-firmware.md)). Um Nordic PPK2, para medir consumo por trilho, não foi conferido hoje.
 
 ## Custo
 

@@ -79,7 +79,7 @@ python tools/docs/links_check.py        # links relativos e âncoras
 | Assunto | Arquivo |
 |---|---|
 | visão geral do projeto | `README.md` |
-| contexto para IA | `CLAUDE.md`, `AGENTS.md`, `.claude/skills/` |
+| contexto para IA | `CLAUDE.md`, `AGENTS.md`, `.claude/contexto/`, `.claude/skills/` |
 | histórico de mudanças | `CHANGELOG.md` |
 | índice da documentação | `docs/README.md` |
 | produto e modos | `docs/01-visao-geral.md` |

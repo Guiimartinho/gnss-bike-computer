@@ -145,7 +145,7 @@ flowchart TB
     ROOT --> HW["hardware/<br/>Eagle da myStravaB V3 (Gerbers da V2)"]
     ROOT --> HWN["hardware_gnssbike/<br/>a placa nova: docs 01 a 10, cad (KiCad e geradores),<br/>esquematico, placa, caixa (PDF, STL, dry run), datasheets"]
     ROOT --> DOCS["docs/<br/>documentação numerada, img (telas, hardware), historico"]
-    ROOT --> AI["CLAUDE.md · AGENTS.md · .claude/skills/"]
+    ROOT --> AI["CLAUDE.md · AGENTS.md · .claude/skills/ · .claude/contexto/"]
     ROOT --> BAT["build.bat · flash.bat · recover.bat · serial.bat"]
 ```
 
