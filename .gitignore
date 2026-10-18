@@ -18,8 +18,11 @@ node_modules/
 *~
 .vs/
 
-# Configuração local do Claude Code (permissões pessoais)
+# Configuração local do Claude Code (permissões pessoais), notas privadas do
+# assistente (links e outros projetos do dono) e a saída bruta das revisões
 .claude/settings.local.json
+.claude/local/
+.claude/reviews/
 
 # ANT+ profile material: the ANT+ Adopter Agreement forbids redistributing
 # device profiles, and this repository is public. The page decoding of the

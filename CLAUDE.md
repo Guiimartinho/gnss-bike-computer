@@ -1,6 +1,6 @@
 # CLAUDE.md · GNSS Bike Computer
 
-Contexto e regras para assistentes de IA que trabalham neste repositório. Este arquivo traz o que vale em toda sessão: leia inteiro antes de mexer em qualquer coisa. O detalhe (estado, mapa, comandos, armadilhas) fica em [`.claude/contexto/`](.claude/contexto/) e é lido quando a tarefa pede; os procedimentos passo a passo estão nas skills de [`.claude/skills/`](.claude/skills/), cuja lista já vem carregada; a documentação técnica está em [`docs/`](docs/README.md).
+Contexto e regras para assistentes de IA que trabalham neste repositório. Este arquivo traz o que vale em toda sessão: leia inteiro antes de mexer em qualquer coisa. O detalhe (estado, mapa, comandos, armadilhas, regras do dono) fica em [`.claude/contexto/`](.claude/contexto/) e é lido quando a tarefa pede; os procedimentos passo a passo estão nas skills de [`.claude/skills/`](.claude/skills/), cuja lista já vem carregada; a documentação técnica está em [`docs/`](docs/README.md).
 
 ## 1. Missão
 
@@ -53,6 +53,7 @@ O dono do projeto é um desenvolvedor brasileiro de eletrônica embarcada que qu
 - **Nunca use WSL**, máquinas virtuais nem Docker local.
 - Não instale pacotes na máquina do dono sem perguntar (downloads de dependência de build, como o Unity via FetchContent, são aceitos).
 - **CI desligado:** `.github/workflows/ci.yml` só roda à mão (`workflow_dispatch`), para não gastar minutos do GitHub Actions. Não acrescente gatilhos (push, pull request, agendamento) nem outros workflows sem o dono pedir. A verificação é local.
+- **Tudo do assistente fica dentro do projeto** (regra do dono, 2026-10-18): skills em `.claude/skills/`, contexto e regras em `.claude/contexto/` (as regras do dono em [`regras-do-dono.md`](.claude/contexto/regras-do-dono.md)), notas com link privado ou sobre outro projeto em `.claude/local/`, fora do git. Nada na pasta global do usuário (`~/.claude/`), que entra em toda sessão e gasta tokens.
 
 ### Licença
 
@@ -121,4 +122,4 @@ Cada pedido ao modelo relê a conversa inteira: 75% do consumo da conta era essa
 - **Agentes.** Agente novo com briefing curto, não fork (o fork copia o contexto inteiro). Workflow só quando o usuário pedir. No máximo 3 agentes ao mesmo tempo.
 - **Web.** WebFetch/WebSearch só quando a resposta depende da web, uma vez na fonte primária.
 - **Imagem.** Só quando for preciso olhar, em resolução baixa.
-- **Sessão por tarefa.** Ao trocar de assunto, ou quando a sessão passar de ~200 mil tokens, salvar na memória o que importa e sugerir ao usuário `/compact` ou `/clear`.
+- **Sessão por tarefa.** Ao trocar de assunto, ou quando a sessão passar de ~200 mil tokens, salvar o que importa em `.claude/contexto/` (ou em `.claude/local/`, se for privado) e sugerir ao usuário `/compact` ou `/clear`.
