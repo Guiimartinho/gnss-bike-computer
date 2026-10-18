@@ -119,7 +119,7 @@ Cada pedido ao modelo relê a conversa inteira: 75% do consumo da conta era essa
 
 - **Saída de ferramenta curta.** Limitar todo comando (`| tail -n 40`, `| head -n 40`, `cut -c1-200`, `grep -c`, `--quiet`). Ler arquivo por trecho (offset/limit), nunca inteiro sem precisar. Diff, log, JSON ou listagem grande vai para arquivo, e só o trecho que importa entra na conversa.
 - **Menos chamadas.** Juntar comandos relacionados numa chamada só; não repetir leitura de arquivo já lido.
-- **Agentes.** Agente novo com briefing curto, não fork (o fork copia o contexto inteiro). Workflow só quando o usuário pedir. No máximo 3 agentes ao mesmo tempo.
+- **Agentes.** Agente novo com briefing curto, não fork (o fork copia o contexto inteiro). Workflow só quando o usuário pedir. **No máximo 15 agentes por tarefa**, somando workflow e agentes avulsos (regra do dono, 2026-10-18, depois de uma revisão que passou de 100), e no máximo 3 ao mesmo tempo.
 - **Web.** WebFetch/WebSearch só quando a resposta depende da web, uma vez na fonte primária.
 - **Imagem.** Só quando for preciso olhar, em resolução baixa.
 - **Sessão por tarefa.** Ao trocar de assunto, ou quando a sessão passar de ~200 mil tokens, salvar o que importa em `.claude/contexto/` (ou em `.claude/local/`, se for privado) e sugerir ao usuário `/compact` ou `/clear`.
