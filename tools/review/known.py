@@ -4,8 +4,8 @@
 Usage: known.py <review dir> [<workflow output json> ...]
 
 Reads out/findings/*.json (what each reviewer wrote), the verdicts in
-out/verdicts/ (<id>--<lens>.json, or <key>--minor-batch.json with one item per
-id) and, when given, the output files of the workflows. Writes
+out/verdicts/ (<id>--<lens>.json, or any file holding {"items": [...]} with one
+item per id) and, when given, the output files of the workflows. Writes
 
     out/register.json       every finding with a stable id and its status
     out/known-findings.md   compact list for reviewers who must not repeat them
@@ -59,7 +59,7 @@ for path in sorted((REVIEW / "out" / "verdicts").glob("*.json")):
     except Exception as exc:
         print("unreadable verdict:", path.name, exc)
         continue
-    if path.stem.endswith("--minor-batch"):
+    if isinstance(data, dict) and isinstance(data.get("items"), list):  # a batch: one item per id
         for it in data.get("items", []):
             written.setdefault(it.get("id", ""), []).append({"lens": "batch", **it})
     elif "--" in path.stem:
