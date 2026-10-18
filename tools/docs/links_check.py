@@ -20,6 +20,8 @@ from urllib.parse import unquote
 SKIP_DIRS = {".git", "node_modules", "Lib", "Scripts", "legacy", "libraries", "tools", "hardware", "historico"}
 # Project files that live inside skipped folders.
 OWN_FILES = {"legacy/README.md", "docs/historico/README.md"}
+# The assistant's working folders, outside git: review material and private notes.
+SKIP_PREFIXES = (".claude/reviews/", ".claude/local/")
 LINK = re.compile(r"(?<!!)\[[^\]]*\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
 IMAGE = re.compile(r"!\[[^\]]*\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
 HEADING = re.compile(r"^\s{0,3}#{1,6}\s+(.*?)\s*#*\s*$")
@@ -61,6 +63,8 @@ def anchors_of(path: pathlib.Path) -> set:
 def markdown_files(root: pathlib.Path):
     for path in sorted(root.rglob("*.md")):
         parts = path.relative_to(root).parts
+        if path.relative_to(root).as_posix().startswith(SKIP_PREFIXES):
+            continue
         if path.relative_to(root).as_posix() not in OWN_FILES and (
                 SKIP_DIRS.intersection(parts) or any(p.startswith("build") for p in parts[:-1])):
             continue

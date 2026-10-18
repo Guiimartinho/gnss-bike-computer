@@ -33,6 +33,8 @@ import sys
 SKIP_DIRS = {".git", "node_modules", "Lib", "Scripts", "legacy", "libraries", "tools", "hardware", "historico"}
 # Project files that live inside skipped folders.
 OWN_FILES = {"legacy/README.md", "docs/historico/README.md"}
+# The assistant's working folders, outside git: review material and private notes.
+SKIP_PREFIXES = (".claude/reviews/", ".claude/local/")
 FENCE = re.compile(r"^\s*(`{3,}|~{3,})\s*([\w+-]*)")
 PLAIN_DIAGRAM = re.compile(r"[─-╿]|[←-⇿]|-->|<--|\+--|--\+|\+=+\+|^\s*\|.*\|\s*$")
 WORKERS = 4
@@ -41,6 +43,8 @@ WORKERS = 4
 def markdown_files(root: pathlib.Path):
     for path in sorted(root.rglob("*.md")):
         parts = path.relative_to(root).parts
+        if path.relative_to(root).as_posix().startswith(SKIP_PREFIXES):
+            continue
         if path.relative_to(root).as_posix() not in OWN_FILES and (
                 SKIP_DIRS.intersection(parts) or any(p.startswith("build") for p in parts[:-1])):
             continue
