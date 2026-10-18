@@ -3,8 +3,9 @@
 
 Usage: known.py <review dir> [<workflow output json> ...]
 
-Reads out/findings/*.json (what each reviewer wrote) and, when given, the
-output files of the workflows (which hold the verification verdicts). Writes
+Reads out/findings/*.json (what each reviewer wrote), the verdicts in
+out/verdicts/ (<id>--<lens>.json, or <key>--minor-batch.json with one item per
+id) and, when given, the output files of the workflows. Writes
 
     out/register.json       every finding with a stable id and its status
     out/known-findings.md   compact list for reviewers who must not repeat them
@@ -48,6 +49,42 @@ for path in OUTPUTS:
                               "corrected_claim": item.get("corrected_claim", ""), "verdicts": item.get("verdicts", []),
                               "title": item.get("title"), "from": item.get("from", "")}
 
+# Verdicts written by the verifiers themselves, settled the way the workflows do:
+# a majority of confirmed or partly against refuted, the others count as open.
+RANK_UP = {"none": 0, "info": 1, "minor": 2, "major": 3, "blocker": 4}
+written: dict[str, list[dict]] = {}
+for path in sorted((REVIEW / "out" / "verdicts").glob("*.json")):
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        print("unreadable verdict:", path.name, exc)
+        continue
+    if path.stem.endswith("--minor-batch"):
+        for it in data.get("items", []):
+            written.setdefault(it.get("id", ""), []).append({"lens": "batch", **it})
+    elif "--" in path.stem:
+        fid, lens = path.stem.rsplit("--", 1)
+        written.setdefault(fid, []).append({"lens": lens, **data})
+for fid, vs in written.items():
+    if fid in status or not fid:
+        continue
+    yes = [v for v in vs if v.get("verdict") in ("confirmed", "partly")]
+    no = [v for v in vs if v.get("verdict") == "refuted"]
+    open_ = len(vs) - len(yes) - len(no)
+    st = "open"
+    if len(yes) > len(no) and len(yes) >= open_:
+        st = "confirmed"
+    elif len(no) > len(yes) and len(no) >= open_:
+        st = "refuted"
+    pool = sorted((v.get("severity") for v in (yes if st == "confirmed" else vs) if v.get("severity") in RANK_UP),
+                  key=lambda s: -RANK_UP[s])
+    corrected = [v.get("corrected_claim") for v in vs if v.get("corrected_claim")]
+    status[fid] = {"status": st, "severity": pool[0] if pool else None,
+                   "corrected_claim": corrected[-1] if corrected else "",
+                   "verdicts": [{"lens": v.get("lens"), "verdict": v.get("verdict"), "severity": v.get("severity"),
+                                 "reasoning": (v.get("reasoning") or "")[:700]} for v in vs],
+                   "title": None, "from": ""}
+
 register = []
 for path in sorted((REVIEW / "out" / "findings").glob("*.json")):
     try:
@@ -56,8 +93,8 @@ for path in sorted((REVIEW / "out" / "findings").glob("*.json")):
         print("unreadable:", path.name, exc)
         continue
     source = path.stem
-    key = re.sub(r"^(part|dim|sheet|scen|crit|known)-", "", source)
-    prefix = {"part": "a", "dim": "d", "sheet": "s", "scen": "w", "crit": "c", "known": "k"}.get(source.split("-", 1)[0], "f")
+    key = re.sub(r"^(part|cross|dim|sheet|scen|crit|known)-", "", source)
+    prefix = {"part": "a", "cross": "x", "dim": "d", "sheet": "s", "scen": "w", "crit": "c", "known": "k"}.get(source.split("-", 1)[0], "f")
     for i, f in enumerate(data.get("findings", []), start=1):
         fid = f"{key}-{prefix}{i}"
         st = status.get(fid, {})
