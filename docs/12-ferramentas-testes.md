@@ -1,8 +1,8 @@
 # Ferramentas e testes
 
-As ferramentas herdadas do stravaV10 em `tools/` (simulador de host, scripts Node, debug em monitor mode, emulador), as ferramentas novas do projeto (`tools/fw/`, `tools/docs/`, `tools/ui/`), os testes de host do port, o renderizador das telas e as bibliotecas de terceiros com suas licenças.
+As ferramentas herdadas do stravaV10 em `tools/` (simulador de host, scripts Node, debug em monitor mode, emulador), as ferramentas novas do projeto (`tools/fw/`, `tools/docs/`, `tools/ui/`, `tools/review/`), os testes de host do port, o renderizador das telas e as bibliotecas de terceiros com suas licenças.
 
-**Nesta página:** [Mapa de tools/](#mapa-de-tools) · [Testes de host do port](#testes-de-host-do-port) · [Renderizador de telas](#renderizador-de-telas) · [Simulador TDD do legacy](#simulador-tdd-do-legacy) · [Outras ferramentas herdadas](#outras-ferramentas-herdadas) · [Bibliotecas e licenças](#bibliotecas-e-licenças)
+**Nesta página:** [Mapa de tools/](#mapa-de-tools) · [Testes de host do port](#testes-de-host-do-port) · [Renderizador de telas](#renderizador-de-telas) · [Revisão do esquemático](#revisão-do-esquemático) · [Simulador TDD do legacy](#simulador-tdd-do-legacy) · [Outras ferramentas herdadas](#outras-ferramentas-herdadas) · [Bibliotecas e licenças](#bibliotecas-e-licenças)
 
 ## Mapa de tools/
 
@@ -11,6 +11,7 @@ As ferramentas herdadas do stravaV10 em `tools/` (simulador de host, scripts Nod
 | `tools/fw/` | projeto | `ncs_env.sh`/`.bat` (ambiente do NCS), `fw.sh` (build, flash, recover, devices, size), `host_tests.sh`, `board_check.py` (confere o mapa de pinos de uma placa do projeto: pino em dois lugares, SCL de TWIM ou SCK de SPIM fora dos pinos de clock da tabela 79, pads do NFC e do cristal, limite de cada porta, dois periféricos no mesmo bloco serial e apelido faltando) |
 | `tools/docs/` | projeto | `mermaid_check.py` e `links_check.py` (skill `docs-gnss`); `assembly_manual.py` gera o [manual de montagem](img/manual-de-montagem.svg) e `solar_harness_drawing.py` o [chicote solar](img/chicote-solar.svg) da placa nova; `screens_drawing.py`, as maquetes das [telas](18-interface-telas.md#telas). O `case_drawing.py`, desenho do conceito da caixa, foi retirado em 2026-09-26: a proposta medida está em [`hardware_gnssbike/caixa/`](../hardware_gnssbike/caixa/README.md) |
 | `tools/ui/` | projeto | `font_gen.py` (fontes de 1 bit da interface) e `render_screens.py` (compila e roda o [renderizador de telas](#renderizador-de-telas) e gera `docs/img/telas-lvgl/`) |
+| `tools/review/` | projeto `35.esp32-s3_power_meter`, do mesmo autor (lá sob MIT) | material da [revisão do esquemático](#revisão-do-esquemático): `prepare.py` e os resumos do netlist, o registro de achados, a leitura de fichas em PDF e o ngspice do KiCad ([README](../tools/review/README.md)) |
 | `tools/TDD/`, `tools/TDDW/` | stravaV10 | simulador de host do firmware original (Linux e Windows) |
 | `tools/zpm/` | stravaV10 | scripts Node: posição do Zwift (`$LOC`), download de logs, conversão para GPX |
 | `tools/MMD/` | stravaV10 | monitor mode debugging do J-Link |
@@ -126,6 +127,18 @@ python tools/ui/render_screens.py --no-build   # pula o CMake e usa o ui_render 
 - O aviso do LVGL sobre as conferências de objeto e de estilo (`LV_USE_ASSERT_OBJ`, `LV_USE_ASSERT_STYLE`) é esperado: estão ligadas de propósito, para pegar uso errado da API.
 - O clangd usa a base de compilação de `build/ui` pelos `.clangd` de `zephyr_app/tests/ui` e `zephyr_app/src/ui`, depois da primeira execução.
 - O teste confere o desenho, não o painel: tempo de SPI, COM, luz e leitura ao sol ficam para a bancada.
+
+## Revisão do esquemático
+
+A revisão do esquemático da placa nova é feita por agentes, folha por folha e peça por peça, contra as fichas dos fabricantes, com cada achado grave conferido por dois revisores independentes. O método vem do projeto `35.esp32-s3_power_meter`. O `python tools/review/prepare.py` monta o material numa pasta fora do git (`.claude/reviews/<data>-esquematico/`), sem mudar nada no repositório:
+
+- uma cópia do projeto do KiCad e das fontes do gerador;
+- o netlist em XML, o PDF e as páginas em PNG;
+- o ERC com todas as severidades (o `check_sch.py` só olha os erros);
+- o DRC com paridade de esquemático;
+- resumos por folha, por tipo de peça e de redes, e o `lint.md`.
+
+Os scripts e a pasta estão descritos no [README](../tools/review/README.md).
 
 ## Simulador TDD do legacy
 
