@@ -792,12 +792,17 @@ add("J302", "Hirose U.FL-R-SMT-1", [
 # 100 MHz, 1,3 A, 150 mOhm - 15 mV no pico de 100 mA e 3,9 mV nos 26 mA de
 # regime. Em 0402 nao existe 600 ohm com DCR abaixo de 200 mOhm no catalogo,
 # que e por que o encapsulamento subiu; 371 mil pecas em estoque na consulta.
-passive("FB301", "600 R @100 MHz", "ferrite do 3V0 junto do receptor: Murata "
-                                   "BLM18KG601SN1D, 0603, 1,3 A, DCR 150 mOhm "
-                                   "- dentro dos 0,2 ohm do manual (4.1.1). "
-                                   "Fechado em 2026-09-25; era o BLM15PX601SN1D "
-                                   "de 0402 e 230 mOhm",
-        lcsc="C85833")
+# The MAX-F10S manual (4.1.1) allows 0.2 ohm in series on VCC. Measured on
+# the routed board on 2026-10-19 (dry run AL4): 75 mOhm of copper from the
+# BUCK2 inductor to the pin, mostly on the 0.5 oz inner layer, plus up to
+# 50 of JP103 - so the ferrite may take 75 at most. The BLM18KG601SN1D of
+# 2026-09-25 (150 mOhm max) made 275; the 221 of the same series makes 175.
+passive("FB301", "220 R @100 MHz", "ferrite do 3V0 junto do receptor: Murata "
+                                   "BLM18KG221SN1D, 0603, 2,2 A, DCR maximo "
+                                   "50 mOhm - com o cobre e o JP103, 175 mOhm "
+                                   "dos 0,2 ohm do manual (4.1.1). Trocada em "
+                                   "2026-10-19; era a BLM18KG601SN1D, 150 mOhm",
+        lcsc="C88980")
 passive("C301", "1,5 pF", "shunt [1] da rede de casamento. O valor depende "
                           "de QUAL antena for montada: 1,5 pF e o que a "
                           "Unictron recomenda para a antena de chip; com "

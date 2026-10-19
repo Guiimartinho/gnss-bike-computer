@@ -36,7 +36,7 @@ lê as tabelas desta página e as compara com o devicetree da placa em
 | `VSYS` | `VBAT` ou `VBUS` | nPM1300 `VSYS` | entradas de `BUCK1`, `BUCK2` e `LDSW2`; anodos do LED RGB e do LED de carga | alim |
 | `3V0` | 3,0 V | nPM1300 `BUCK2` | `VDD` do ME54BS13 (pad 19); BMP585, BMI270, MMC5633NJL e OPT3001; buzzer; entrada da `LDSW1`; o `VDD`/`VDDA` do display pelo `JP401`; o receptor GNSS pelo `JP103` (nós `3V0_BLOCO` e `3V0_GNSS`, abaixo); e o `IN` do REG710 **só no plano B** | alim |
 | `3V0_BLOCO` | 3,0 V | `JP103`, do `3V0` | `FB301`: é o nó em que se mede a corrente do receptor | alim |
-| `3V0_GNSS` | 3,0 V | `FB301`, ferrite de 600 Ω e 150 mΩ | MAX-F10S `VCC` **e** `V_IO` (opção 1 da tabela 35 do manual de integração: os dois juntos, `VIO_SEL` aberto); 10 µF e 100 nF | alim |
+| `3V0_GNSS` | 3,0 V | `FB301`, ferrite de 220 Ω e 50 mΩ | MAX-F10S `VCC` **e** `V_IO` (opção 1 da tabela 35 do manual de integração: os dois juntos, `VIO_SEL` aberto); 10 µF e 100 nF | alim |
 | `1V8` | 1,8 V | nPM1300 `BUCK1`, por filtro LC | **nada**, desde 2026-09-26: o receptor passou ao `3V0`. Montado, sem carga, desligado pelo firmware ([01](01-esquematico.md#folha-3--gnss)) | alim |
 | `SD3V0` | 3,0 V | nPM1300 `LDSW1`, do `3V0` | sem carga desde 2026-10-18: só o `TP107` (a flash foi para o `3V0`, pelo `JP106`) | alim |
 | `3V3BL` | 3,3 V | nPM1300 `LDSW2`, do `VSYS` | anodo da luz do painel, por `R_BL` de 39 Ω; o catodo volta ao dreno do `Q401`. Com o JDI o LED está **dentro do painel** e os dois fios chegam pelo **`J402`, um FPC próprio de 5 vias e passo 0,5 mm** ([06](06-conectores-e-pontos-de-teste.md#j402--luz-da-jdi)) | alim |

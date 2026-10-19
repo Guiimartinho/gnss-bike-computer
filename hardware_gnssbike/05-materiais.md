@@ -157,7 +157,7 @@ Receptor no `3V0`, duas antenas possíveis e um jumper que escolhe uma
 | U301 | Receptor GNSS L1 + L5, `VCC` e `V_IO` no `3V0`, `VIO_SEL` aberto | u-blox MAX-F10S, LCSC C30005563 | 1 | [GNSS](../docs/19-lista-de-compras.md#gnss) |
 | U301 (alternativa) | Receptor L1, mesmo footprint | u-blox MAX-M10N-10B | — | [GNSS](../docs/19-lista-de-compras.md#gnss) — 2 peças para o teste A/B |
 | JP103 | Jumper de corrente do GNSS, do `3V0` ao `3V0_BLOCO` | 0 Ω, 0402; LCSC C17168 | 1 | [Passivos](../docs/19-lista-de-compras.md#passivos) |
-| FB301 | Ferrite do `3V0` junto do receptor | Murata BLM18KG601SN1D, 600 Ω a 100 MHz, 150 mΩ, 0603, LCSC C85833 | 1 | [GNSS](../docs/19-lista-de-compras.md#gnss) |
+| FB301 | Ferrite do `3V0` junto do receptor | Murata BLM18KG221SN1D, 220 Ω a 100 MHz, 50 mΩ, 0603, LCSC C88980 | 1 | [GNSS](../docs/19-lista-de-compras.md#gnss) |
 | C303, C304 | Volume e desacoplamento do `3V0_GNSS`, depois do ferrite | 10 µF, 25 V, X5R, 0603 (LCSC C386081); 100 nF, 10 V, X7R, 0402 (LCSC C71687) | 2 | [Passivos](../docs/19-lista-de-compras.md#passivos) |
 | E301 | Antena de chip cerâmica L1 + L5, 5,0 × 3,0 × 0,5 mm, na borda de cima | Unictron H2UJ4U1H2Q0100, LCSC C6569550; no lugar da TE L000670-01 desde 2026-09-24 | 1 | [GNSS](../docs/19-lista-de-compras.md#gnss) |
 | C305, C306 | Sintonia dos pinos de terra da antena, valores de partida da Unictron (posições [9] e [8] da figura 8-1) | 6,8 pF (LCSC C88896) e 2,7 pF (LCSC C76904), C0G | 2 | [GNSS](../docs/19-lista-de-compras.md#gnss) |
