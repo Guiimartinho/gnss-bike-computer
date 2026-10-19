@@ -149,7 +149,7 @@ tamanho: o capacitor de desacoplamento cai ao lado do CI que ele desacopla.
 | Planos de terra | **3**, em `In1.Cu` e nas duas faces, preenchidos pelo `fill_zones.py` (com o Python do KiCad) |
 | Roteamento | **completo** em 2026-10-19: 2.702 segmentos e 774 vias, 374 delas de terra; 1.341 mm de trilha na frente, 1.760 na `In2.Cu` e 1.582 no verso. O `route.py` faz a placa base e o `acabar.py` fecha o resto ([abaixo](#o-acabamento-uma-ligação-de-cada-vez)); o par USB vai à mão, num corredor reservado de `D102` a `J101`, e `RF_IN`, `RF_ANT`, `RF_CHIP` e `RF_UFL` têm rotina própria |
 | Ligações sem trilha | **0**: o DRC completo (`--severity-all`), com as malhas preenchidas, não acha item desconectado, nem trilha ou via solta — a regra `RT1` do `dry_run_pcb.py`. Eram 58 em 2026-09-26 e 48 na manhã de 2026-10-19 |
-| Erros de DRC | **0**; 25 avisos, os mesmos do arquivo de antes do roteamento: 23 de biblioteca de footprint e 2 de uma linha de serigrafia a 1,2 mm da borda de baixo. Os 3 do par USB contra o ponto de teste `TP101` saíram com o corredor do par em 2026-09-26 |
+| Erros de DRC | **0**, com a ponte mínima de máscara da JLCPCB (0,1 mm) no setup da placa desde 2026-10-19; 25 avisos, os mesmos do arquivo de antes do roteamento: 23 de biblioteca de footprint e 2 de uma linha de serigrafia a 1,2 mm da borda de baixo. Os 3 do par USB contra o ponto de teste `TP101` saíram com o corredor do par em 2026-09-26 |
 
 ### O que decide a posição de cada peça
 
@@ -187,6 +187,7 @@ python hardware_gnssbike/cad/acabar.py                    # 3. fecha o resto, um
 "D:/KiCAD/bin/python.exe" hardware_gnssbike/cad/fill_zones.py   # 4. preenche as malhas de terra
 python hardware_gnssbike/cad/check_pcb.py --como-esta      # 5. confere o arquivo como esta
 python hardware_gnssbike/cad/dry_run_pcb.py               # 6. as regras das fichas
+python hardware_gnssbike/cad/impedancia.py                # a impedancia das linhas na pilha do fabricante
 ```
 
 O `route.py` é um labirinto A\* numa grade de 0,15 mm: faz bem o que pede
@@ -258,9 +259,15 @@ Uma troca só fica se nada que estava ligado se soltar. Onde a grade de
 do `JP102` e o `DIS_SW` do ADP5091) e quatro trechos desenhados (`MAO`,
 `TIRAR` e `VIAS_MAO`): os dois I²C nas bolas de 0,4 mm do MAX17262, com
 0,1365 mm até o cobre mais perto, e o `VSYS` e o `VBUS` do lado direito do
-nPM1300, cada um com a sua via. No fim, ele corta o que o DRC chamaria de
-solto: a ponta de trilha que nada pega volta até o último ponto que outra
-parte da rede toca, e a via ligada a uma camada só sai.
+nPM1300, cada um com a sua via. O par USB vai inteiro à mão, do diodo de
+proteção ao módulo (`REFAZER` tira o que o `route.py` desenhou fora da área
+do conector): o `route.py` roteava as duas linhas separadas, e o D− dava a
+volta pela borda esquerda, com 67,6 mm contra 32,4. O cobre de outra rede
+no caminho do cobre à mão sai e é religado; e as linhas de RF ficam na
+largura que o `route.py` dá hoje (0,15 mm), no mesmo eixo. No fim, ele
+corta o que o DRC chamaria de solto: a ponta de trilha que nada pega volta
+até o último ponto que outra parte da rede toca, e a via ligada a uma
+camada só sai.
 
 Ligado e solto são medidos como o KiCad mede, e é por isso que a conta do
 `acabar.py` bate com a do DRC: cobre que se sobrepõe está ligado (a ponta de
@@ -272,12 +279,39 @@ inteiros.
 
 **Medido em 2026-10-19**, na placa do repositório: o DRC completo com as
 malhas preenchidas dá **0 itens desconectados, 0 erros e nenhuma trilha ou
-via solta**. O dry run cumpre 24 regras, deixa 4 sem medir e viola 2, as
-mesmas de antes do roteamento: a `RF9` (a sombra do display a 13,4 mm da
-antena do módulo, contra os 25 da ficha) e a `AL1` (o `C304` a 2,0 mm do
-`U301`). Os trilhos de carga correm com 0,25 mm nas faces de fora e
-estreitam a 0,15 só junto de pino: 30 estreitamentos curtos, que a `AL2`
-aceita.
+via solta**. O dry run mede as 32 regras e não viola nenhuma; duas têm
+desvio aceito pelo dono, com conferência de bancada
+([09](../09-dry-run-da-pcb.md#resultado-de-2026-10-19-com-o-roteamento-fechado)).
+Os trilhos de carga correm com 0,25 mm nas faces de fora e estreitam a 0,15
+só junto de pino: 30 estreitamentos curtos, que a `AL2` aceita.
+
+### A pilha e o pedido de fabricação
+
+A placa é para a JLCPCB, na pilha **JLC04081H-3313** (0,8 mm, 4 camadas),
+pedida com **impedância controlada** (±10 %) e com as vias em ilha de SMD
+**cheias e tampadas** (POFV, *Epoxy Filled & Capped*). As três coisas estão
+em `dry_run_pcb.FABRICACAO`, que a regra `FA1` cobra, e numa nota da própria
+placa em `Cmts.User`.
+
+| O quê | Valor | De onde |
+|---|---|---|
+| Cobre | 35 µm nas faces de fora; 15,2 µm (0,5 oz) nas de dentro | página de impedância da JLCPCB |
+| Da `F.Cu` ao plano da `In1.Cu` | prepreg 3313 de 0,0994 mm, Dk 4,05; núcleo de Dk 4,6 fecha os 0,8 mm | idem |
+| Máscara | 0,5 mil sobre a trilha, 0,8 mil sobre o laminado, Dk 3,8 | idem |
+| Linhas de RF | **0,15 mm: 51,1 Ω** (eram 0,196 mm, 44 Ω) | `impedancia.py`, campo 2D da seção real, conferido contra Wheeler e Hammerstad-Jensen |
+| Par USB | **0,15 mm a 0,2 mm de vão: 93,6 Ω** diferenciais | idem |
+| Na outra pilha de 0,8 mm (JLC7628, 0,21 mm de prepreg) | a linha de 0,15 mm daria 66 Ω | idem: o pedido tem de nomear a 3313 |
+| Trilha e vão mínimos | 0,1 mm (a ponte de terra do `ALRT`) e 0,127 mm; a JLCPCB faz 0,09/0,09 | capacidades da JLCPCB |
+| Via | 0,45 mm com furo de 0,25 (anel de 0,20, o recomendado); a JLCPCB faz 0,25/0,15 | idem |
+| Cobre até a borda fresada | 0,31 mm no mínimo (as ilhas da antena de chip); a JLCPCB pede 0,2 | medido na placa |
+| Ponte de máscara | 0,1 mm, no setup da placa; dentro de um footprint as aberturas podem se juntar (o u.FL abre uma janela sobre os próprios pads) | idem |
+
+A janela de máscara que o footprint do u.FL (`J302`) traz sob o corpo
+deixava exposto o terra despejado a 0,2 mm do pino de RF, sem máscara entre
+os dois, além de uma trilha e duas vias de terra. Desde 2026-10-19 toda
+janela de máscara de footprint ganha uma área proibida de cobre na face dela
+(`make_pcb.janelas_de_mascara`, `SEM_COBRE_JANELA_J302`), e o plano da
+`In1.Cu` continua por baixo como referência.
 
 A placa do repositório é essa rodada do `route.py` acabada pelo
 `acabar.py` em vários passes, enquanto as regras e o cobre à mão entravam;
@@ -528,8 +562,9 @@ lugar de mudar é o gerador.
       desconectados e 0 erros no DRC completo ([acima](#o-acabamento-uma-ligação-de-cada-vez)).
       As linhas de RF têm rotina própria, porque impedância e caminho delas
       não são negociáveis.
-- [ ] **Os 25 mm entre o módulo de rádio e o display** (`RF9`): decidir entre
-      blindagem, camada ou aceitar e medir na bancada.
+- [x] **Os 25 mm entre o módulo de rádio e o display** (`RF9`): aceito
+      pelo dono em 2026-10-19 como desvio, a conferir na bancada (RSSI e taxa
+      do BLE com a tela atualizando).
 - [x] **O desenho cotado do conector do display.** O Hirose FH28 saiu; os
       três conectores do display são Molex 503480 desde 2026-10-18, com o
       land do desenho SD-503480-001. O que fica em aberto é a dobra das fitas
@@ -542,7 +577,9 @@ lugar de mudar é o gerador.
       ser necessários: as peças saíram do desenho.
 - [x] ~~Escolher a mola dos contatos do painel solar e da antena~~: o painel
       chega pelo `J103`, um JST ZH, e a antena é a de chip ou o u.FL `J302`.
-- [ ] A pilha de camadas do fabricante, e com ela as larguras de 50 Ω e 90 Ω.
+- [x] A pilha de camadas do fabricante, e com ela as larguras de 50 Ω e 90 Ω: JLC04081H-3313, 2026-10-19.
+- [ ] Encurtar as amarrações entre os contatos duplicados do USB-C (5,4 mm no D+, 7,7 mm no D−), que fazem a
+      diferença de comprimento do par depender do lado do plugue; e medir o USB High-Speed na bancada.
 - [ ] As pendências que os documentos já carregam: o lado do sensor do
       MAX17262, a polaridade do LED do Azumo (jumpers `JP402` a `JP405`) e a
       dobra das fitas das telas. A ordem das cinco vias da luz da JDI saiu da

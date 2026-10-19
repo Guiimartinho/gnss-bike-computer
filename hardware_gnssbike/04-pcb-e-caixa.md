@@ -979,7 +979,7 @@ montagem, que não existe.**
 
 | Em aberto | Por que não fecha aqui | Onde |
 |---|---|---|
-| **A pilha do fabricante** | sem as espessuras de dielétrico não há largura de trilha para 50 Ω nem para 90 Ω diferencial; 0,66 mm repartido em 3 vãos admite pilhas muito diferentes | [Camadas](#camadas), [02](02-calculos.md#o-que-não-foi-calculado) |
+| **A pilha do fabricante** | escolhida em 2026-10-19: JLCPCB JLC04081H-3313 (0,8 mm, 4 camadas, 0,0994 mm de prepreg 3313 com Dk 4,05 até o plano), pedida com impedância controlada; as larguras de 50 Ω e de 90 Ω diferencial saem dela ([`cad/impedancia.py`](cad/impedancia.py)). Falta a medida do fabricante | [Camadas](#camadas), [02](02-calculos.md#o-que-não-foi-calculado) |
 | **4 camadas em 0,8 mm** | o USB-C manda a espessura e o resto manda as camadas; falta confirmar que o fabricante faz a combinação | [Camadas](#camadas) |
 | **A antena GNSS de verdade** | a TE L000670, que não cabia, saiu em 2026-09-24; a Unictron H2UJ4U1H2Q0100 cabe na borda, mas a ficha dá 70 % de eficiência típica numa placa de 80 × 40 mm e esta tem 34 mm de largura, e a rede de casamento é de partida: só o VNA, dentro da caixa, fecha os valores | [01](01-esquematico.md#folha-3--gnss) |
 | **Isolação entre as duas antenas** | a conta dá 67,2 mm, 0,55 λ em 2,44 GHz, 20 mm menos do que com o módulo antigo; a isolação real depende do plano, da caixa e das correntes de retorno. Medir o S21 antes de ligar o rádio na potência cheia | [As duas antenas](#as-duas-antenas), [15](../docs/15-avaliacao-componentes.md#bancada-antes-do-layout) |

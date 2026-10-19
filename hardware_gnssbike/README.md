@@ -32,11 +32,11 @@ componente.
 > arquivo de CAD — 166 peças, 118 redes, 2.702 segmentos, 774 vias, **todas
 > as ligações roteadas** (0 itens desconectados e 0 erros no DRC completo,
 > [CAD](cad/README.md#o-acabamento-uma-ligação-de-cada-vez), 2026-10-19) e
-> 24 das 30 regras das fichas cumpridas, 2 violadas e 4 sem medir
+> as 32 regras das fichas medidas, nenhuma violada e 2 com desvio aceito
 > ([09](09-dry-run-da-pcb.md))
 > —, e a caixa existe como proposta medida por um dry run próprio (12
 > regras cumpridas, 0 violadas, [04](04-pcb-e-caixa.md#a-placa-de-hoje-dentro-da-caixa-do-conceito));
-> mas nenhuma foi feita e nenhum componente passou por bancada. A revisão do esquemático de 2026-10-18 ([11](11-revisao-do-esquematico.md)) achou 6 bloqueios, e as correções entraram no gerador no mesmo dia; a placa ainda não vai para a fábrica: o roteamento fechou em 2026-10-19, mas o dry run ainda viola a `RF9` (a sombra do display perto da antena do módulo) e a `AL1` (o `C304` longe do `U301`), e a dobra das fitas das telas e a polaridade do LED do Azumo só se confirmam com as peças na mão. Este aviso já disse "0 ligações sem trilha" com 47 em aberto:
+> mas nenhuma foi feita e nenhum componente passou por bancada. A revisão do esquemático de 2026-10-18 ([11](11-revisao-do-esquematico.md)) achou 6 bloqueios, e as correções entraram no gerador no mesmo dia; a placa ainda não vai para a fábrica: o roteamento fechou em 2026-10-19 e o dry run não viola regra nenhuma, mas faltam escolhas e confirmações da lista abaixo (o módulo e o espelhamento do mapa de pads dele, o domínio de tensão dos pinos do nPM1300, o conector SWD, a pinagem da bateria com o fabricante do pack), os arquivos de fábrica, e a dobra das fitas das telas e a polaridade do LED do Azumo só se confirmam com as peças na mão. Este aviso já disse "0 ligações sem trilha" com 47 em aberto:
 > o DRC rodava só com erros, e os não roteados são aviso. Todo valor
 > abaixo vem de ficha ou de conta feita aqui, e está marcado como tal. O
 > que depende de decisão, de ficha por ler ou de medida está na lista de
@@ -279,7 +279,8 @@ esquemático não está pronto para virar layout**.
 
 ### O que falta definir
 
-- [ ] **Pilha de camadas do fabricante** — sem ela não há largura de trilha, nem 50 Ω da antena, nem 90 Ω do USB ([02](02-calculos.md#corrente-por-trilho-e-largura-de-trilha)).
+- [x] **Pilha de camadas do fabricante** — JLCPCB JLC04081H-3313, com impedância controlada e vias em ilha cheias e tampadas (POFV); as larguras saem de [`cad/impedancia.py`](cad/impedancia.py): 0,15 mm para 50 Ω e o par USB de 0,15 mm a 0,2 de vão para 90 Ω ([CAD](cad/README.md#a-pilha-e-o-pedido-de-fabricação)).
+- [ ] **Bancada do rádio com a tela** — o RSSI e a taxa do BLE com a tela atualizando, e o USB High-Speed nos dois lados do plugue: os desvios aceitos da `RF9` e do `C210` e as amarrações do USB-C ([09](09-dry-run-da-pcb.md#resultado-de-2026-10-19-com-o-roteamento-fechado)).
 - [x] **Atribuição das quatro vias do conector da luz do Azumo** — pelo desenho T7, a fita tem dois pads de 0,80 mm a passo de 1,00 mm, e cada um cobre duas vias do `J403` (1-2 e 3-4); qual par é o anodo fica nos jumpers de polaridade, logo acima ([06](06-conectores-e-pontos-de-teste.md#j403--luz-do-azumo-no-verso)).
 - [x] **Redesenhar a área da antena de chip pela figura 5-1 da Unictron** — feito em 2026-10-19: o `C305` e o `C306` deitados na borda, nas pontas do recorte, cada um no fim da faixa de 0,35 mm que vem do pino de terra da antena, com a outra ponta no terra de fora do recorte, e os valores no pino que a figura 8-1 manda ([11](11-revisao-do-esquematico.md#correções-aplicadas)). A sintonia é de bancada.
 - [x] **Terminar o roteamento** — fechado em 2026-10-19: o `route.py` faz a placa base e o `acabar.py` fecha o resto, uma ligação de cada vez; o DRC completo dá 0 itens desconectados e 0 erros, sem trilha nem via solta ([CAD](cad/README.md#o-acabamento-uma-ligação-de-cada-vez)).

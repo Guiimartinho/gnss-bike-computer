@@ -387,14 +387,10 @@ def _pe(p, a, b) -> tuple:
     return (round(a[0] + u * dx, 4), round(a[1] + u * dy, 4))
 
 
-def _corte(i, segs, outros) -> tuple | None:
-    """What to do with track i when KiCad would call it dangling: None when
-    both ends are taken in, else ("cortar", new track) back to the last
-    point along it that other copper of the net touches, or ("tirar",) when
-    nothing touches it past the end that holds. Each item counts for one
-    end only, the nearer, as KiCad counts it: a short spur whose two ends
-    sit in one via is dangling."""
-    p0, p1, c, r, w = segs[i]
+def _pontas(p0, p1, c, w, outros) -> tuple[int, int]:
+    """How many items take in each end of a track from p0 to p1, counted
+    as KiCad's dangling test counts them: an item that takes in both ends
+    counts for one only, the one nearer its own ends (_perto_de)."""
     n0 = n1 = 0
     for tipo, it in outros:
         a0, a1 = _alcance(p0, w, c, tipo, it), _alcance(p1, w, c, tipo, it)
@@ -407,6 +403,19 @@ def _corte(i, segs, outros) -> tuple | None:
             n0 += 1
         elif a1 > 0:
             n1 += 1
+    return n0, n1
+
+
+def _corte(i, segs, outros) -> tuple | None:
+    """What to do with track i when KiCad would call it dangling: None when
+    both ends are taken in, else ("cortar", new track) back to a point
+    along it that other copper of the net touches, or ("tirar",) when no
+    such cut leaves both ends taken in. The cut points are tried from the
+    farthest to the nearest, each with KiCad's own count (_pontas): a short
+    spur whose two ends sit in one via is dangling, a spur cut back to the
+    end of the track that holds it is not."""
+    p0, p1, c, r, w = segs[i]
+    n0, n1 = _pontas(p0, p1, c, w, outros)
     if n0 and n1:
         return None
     fixa, solta = (p0, p1) if n1 == 0 else (p1, p0)
@@ -414,13 +423,8 @@ def _corte(i, segs, outros) -> tuple | None:
     if comp < 1e-6:
         return ("tirar",)
     ux, uy = (solta[0] - fixa[0]) / comp, (solta[1] - fixa[1]) / comp
-    # the copper that holds the fixed end does not count along the track:
-    # cutting back to it would leave a spur with both ends in one item
-    segura = n0 and n1 == 0 or n1 and n0 == 0
-    melhor = 0.0
+    cortes = []
     for tipo, it in outros:
-        if segura and _alcance(fixa, w, c, tipo, it) > 0:
-            continue
         if tipo == "s":
             if it[2] != c:
                 continue
@@ -433,26 +437,28 @@ def _corte(i, segs, outros) -> tuple | None:
             pts, lim = ((it[2] - MP.ORIGEM[0], it[3] - MP.ORIGEM[1]),), None
         for q in pts:
             d = min(max((q[0] - fixa[0]) * ux + (q[1] - fixa[1]) * uy, 0.0), comp)
-            pt = (fixa[0] + ux * d, fixa[1] + uy * d)
+            pt = (round(fixa[0] + ux * d, 4), round(fixa[1] + uy * d, 4))
             if lim is None:
                 if _alcance(pt, w, c, "p", it) <= w / 2:
                     continue                  # not inside the pad itself
             elif math.hypot(pt[0] - q[0], pt[1] - q[1]) >= lim - NM:
                 continue
-            melhor = max(melhor, d)
-    if melhor < 0.01:
-        # the loose end may sit on a track KiCad counted for the other end
-        # (it takes in both, and its own ends are nearer the other): a short
-        # jog from the end of one track onto the middle of another. The jog
-        # then goes the shortest way, square onto it (SENS_SCL, 2026-10-19)
-        for tipo, it in outros:
-            if tipo == "s" and _alcance(solta, w, c, tipo, it) > 0 and _alcance(fixa, w, c, tipo, it) > 0:
-                pe = _pe(fixa, it[0], it[1])
-                if math.hypot(pe[0] - fixa[0], pe[1] - fixa[1]) > 0.01:
-                    return ("cortar", (fixa, pe, c, r, w))
-        return ("tirar",)
-    pt = (round(fixa[0] + ux * melhor, 4), round(fixa[1] + uy * melhor, 4))
-    return ("cortar", (fixa, pt, c, r, w))
+            if 0.01 <= d < comp - 1e-6:
+                cortes.append((d, pt))
+    for d, pt in sorted(cortes, reverse=True):
+        a, b = _pontas(fixa, pt, c, w, outros)
+        if a and b:
+            return ("cortar", (fixa, pt, c, r, w))
+    # the loose end may sit on a track KiCad counted for the other end
+    # (it takes in both, and its own ends are nearer the other): a short
+    # jog from the end of one track onto the middle of another. The jog
+    # then goes the shortest way, square onto it (SENS_SCL, 2026-10-19)
+    for tipo, it in outros:
+        if tipo == "s" and _alcance(solta, w, c, tipo, it) > 0 and _alcance(fixa, w, c, tipo, it) > 0:
+            pe = _pe(fixa, it[0], it[1])
+            if math.hypot(pe[0] - fixa[0], pe[1] - fixa[1]) > 0.01:
+                return ("cortar", (fixa, pe, c, r, w))
+    return ("tirar",)
 
 
 def podar(por_rede, segs, vias) -> int:
@@ -603,6 +609,12 @@ TIRAR: list[tuple[str, tuple, tuple]] = [
     ("CC2", (19.5, 43.8), (19.5, 45.15)), ("CC2", (19.5, 45.15), (19.8, 45.45)),
     ("CC2", (19.8, 48.0), (19.8, 45.45)), ("CC2", (19.8, 48.0), (20.1, 48.3)),
     ("CC2", (20.1, 48.3), (20.1, 57.0)),
+    # what route.py's D- left inside the receptacle's box on its way round
+    # the left edge (REFAZER keeps the box whole)
+    ("USB_DM", (5.25, 89.4), (5.4, 89.4)),
+    # under the U.FL's own mask opening (make_pcb.janelas_de_mascara): the
+    # ground stub of its upper pad, which has its own via inside the pad
+    ("GND", (23.545, 10.925), (23.55, 11.85)),
 ]
 MAO: list[tuple[str, str, list[tuple], float]] = [
     # the two left bumps of the 0,4 mm WLP, one above the other: B1 out to
@@ -615,16 +627,61 @@ MAO: list[tuple[str, str, list[tuple], float]] = [
     # keeps the via inside its pad)
     ("VSYS", "F.Cu", [(19.6, 46.75), (20.1, 46.75), (20.3, 46.95)], 0.25),
     ("VBUS", "B.Cu", [(19.55, 46.25), (19.55, 46.65), (19.65, 46.8)], 0.175),
+    # The USB pair from the protection diode to the module, side by side:
+    # 0.15 mm with a 0.2 mm gap, 93.6 ohm differential on the JLC3313 stack
+    # (impedancia.py). D- north of D+ the whole way, so the two right turns
+    # bring D- to the east pin with no crossing. route.py routed the two
+    # apart and D- went round by the left edge of the board: 67.6 mm against
+    # 32.4, 35 mm of skew, where TI's layout guide asks 50 mil (SPRAAR7J,
+    # table A-1; 2026-10-19). D- runs outside on every turn and lands 1.1 mm
+    # further east, so D+ takes it back in a loop between R114 and the
+    # mounting pad of J202, where the front is free to y 77.
+    ("USB_DM", "F.Cu", [(4.5, 78.7), (4.5, 77.655), (7.205, 74.95), (21.35, 74.95),
+                        (21.65, 75.25), (21.65, 76.5)], 0.15),
+    ("USB_DP", "F.Cu", [(5.4, 77.25), (7.35, 75.3), (10.055, 75.3), (10.055, 76.315),
+                        (10.45, 76.315), (10.45, 75.3), (20.4, 75.3), (20.55, 75.45),
+                        (20.55, 76.5)], 0.15),
 ]
+# Nets whose route MAO gives whole: their copper comes out except inside the
+# boxes (board mm, x0 y0 x1 y1), where route.py's own hand drawing stays - the
+# USB pair from the receptacle through the diode, and the ties between the
+# two contacts of each line under the receptacle.
+REFAZER: dict[str, list[tuple[float, float, float, float]]] = {
+    "USB_DM": [(4.3, 78.6, 6.0, 87.1), (5.0, 88.1, 6.9, 91.4)],
+    "USB_DP": [(4.8, 77.2, 6.4, 87.1), (5.7, 88.1, 7.7, 90.3)],
+}
 VIAS_MAO: list[tuple[float, float, str]] = [(20.3, 46.95, "VSYS"), (19.55, 46.25, "VBUS")]
 # vias of the router that come out with TIRAR: (net, x, y)
-TIRAR_VIAS: list[tuple[str, float, float]] = []
+TIRAR_VIAS: list[tuple[str, float, float]] = [
+    # the two ground vias under the U.FL's mask opening
+    ("GND", 23.55, 11.85), ("GND", 23.1, 12.45),
+]
+
+
+def _dist_seg_seg(a0, a1, b0, b1) -> float:
+    """Shortest distance between two segments, 0 when they cross."""
+    def lado(p, q, r):
+        return (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0])
+    if (lado(a0, a1, b0) * lado(a0, a1, b1) < 0
+            and lado(b0, b1, a0) * lado(b0, b1, a1) < 0):
+        return 0.0
+    return min(R._dist_ponto_seg(a0, b0, b1), R._dist_ponto_seg(a1, b0, b1),
+               R._dist_ponto_seg(b0, a0, a1), R._dist_ponto_seg(b1, a0, a1))
 
 
 def aplicar_mao(segs, vias) -> None:
-    """TIRAR out, MAO and VIAS_MAO in."""
+    """REFAZER and TIRAR out, MAO and VIAS_MAO in, and the copper of every
+    other net in the way of the hand copper out too: that net is then in
+    pieces, and the finish joins it again round the hand copper."""
     def igual(a, b):
         return abs(a[0] - b[0]) < 0.01 and abs(a[1] - b[1]) < 0.01
+
+    def na_caixa(p, caixas):
+        return any(c[0] <= p[0] <= c[2] and c[1] <= p[1] <= c[3] for c in caixas)
+    for rede, caixas in REFAZER.items():
+        segs[:] = [s_ for s_ in segs if s_[3] != rede or
+                   (na_caixa(s_[0], caixas) and na_caixa(s_[1], caixas))]
+        vias[:] = [v for v in vias if v[2] != rede or na_caixa(v, caixas)]
     for rede, a, b in TIRAR:
         segs[:] = [s_ for s_ in segs if not (s_[3] == rede and (
             (igual(s_[0], a) and igual(s_[1], b)) or (igual(s_[0], b) and igual(s_[1], a))))]
@@ -640,6 +697,41 @@ def aplicar_mao(segs, vias) -> None:
     for v in VIAS_MAO:
         if not any(u[2] == v[2] and abs(u[0] - v[0]) < 0.01 and abs(u[1] - v[1]) < 0.01 for u in vias):
             vias.append(v)
+    # what of the other nets is too close to the hand copper
+    maos = [(tuple(pts[k]), tuple(pts[k + 1]), R.CAMADAS.index(cam), rede, w)
+            for rede, cam, pts, w in MAO for k in range(len(pts) - 1)]
+    fora: dict[str, int] = {}
+    for i, t in enumerate(segs):
+        if t[3] in FIXAS:
+            continue
+        for m in maos:
+            if m[3] == t[3] or m[2] != t[2]:
+                continue
+            lim = m[4] / 2 + t[4] / 2 + max(folga_real(m[3]), folga_real(t[3]))
+            if _dist_seg_seg(m[0], m[1], t[0], t[1]) < lim - 1e-6:
+                fora[t[3]] = fora.get(t[3], 0) + 1
+                segs[i] = None
+                break
+    segs[:] = [t for t in segs if t is not None]
+    for i, v in enumerate(vias):
+        if v[2] in FIXAS:
+            continue
+        for m in maos:
+            if m[3] == v[2]:
+                continue
+            lim = m[4] / 2 + R.VIA_D / 2 + max(folga_real(m[3]), folga_real(v[2]))
+            if R._dist_ponto_seg((v[0], v[1]), m[0], m[1]) < lim - 1e-6:
+                fora[v[2]] = fora.get(v[2], 0) + 1
+                vias[i] = None
+                break
+    vias[:] = [v for v in vias if v is not None]
+    for rede, n in sorted(fora.items()):
+        print(f"  {rede}: {n} pedacos no caminho do cobre a mao sairam", flush=True)
+    # the RF lines at the width route.py gives them now: same centre line,
+    # narrower copper, so nothing gets closer to anything
+    for i, t in enumerate(segs):
+        if t[3] in R.NAO_ROTEAR and abs(t[4] - R.largura(t[3])) > 1e-6:
+            segs[i] = (t[0], t[1], t[2], t[3], R.largura(t[3]))
 
 
 def folga_real(rede: str) -> float:
