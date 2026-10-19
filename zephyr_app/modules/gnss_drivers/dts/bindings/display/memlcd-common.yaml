@@ -44,4 +44,4 @@ properties:
     type: phandle-array
     description: |
       Enable of the panel supply, when the board switches it (the 5 V
-      REG710 of the Sharp on the new board).
+      TPS610997 boost of the Sharp on the new board; the JDI leaves it out).

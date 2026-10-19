@@ -437,10 +437,12 @@ temp_sensor: &temp {
  * the interface is drawn for. It costs 24 kB of RAM, because the frame of
  * an eight-colour panel is 36,482 B against the 12,482 B of a mono one.
  *
- * The Sharp stays the fallback and the same connector takes it: it needs
- * 5 V from a REG710 that `power-gpios` enables, and its compatible is
- * "sharp,ls027b7dh01". Changing the panel is changing that one line and
- * fitting the regulator.
+ * The Sharp stays the fallback and the same connector takes it: since
+ * 2026-10-18 J401 is one dual-contact connector for either panel, whose
+ * signal tails land on the same spot. The Sharp needs 5 V, from the
+ * TPS610997 boost that `power-gpios` enables, with JP401 moved to the 5V0
+ * side; its compatible is "sharp,ls027b7dh01", in
+ * zephyr_app/boards/gnssbike_sharp.overlay (TELA=sharp in tools/fw/fw.sh).
  *
  * EXTMODE is high on the panel side, so the COM inverts on the rising edges
  * of EXTCOMIN. Timing (datasheet 4.2): 1 MHz typical and 2 MHz at most,
@@ -463,7 +465,13 @@ temp_sensor: &temp {
 		height = <240>;
 		disp-gpios = <&gpio3 5 GPIO_ACTIVE_HIGH>;
 		extcomin-gpios = <&gpio3 6 GPIO_ACTIVE_HIGH>;
-		power-gpios = <&gpio3 7 GPIO_ACTIVE_HIGH>;
+		/*
+		 * No power-gpios here: P3.07 enables the 5 V boost of the
+		 * Sharp, and the JDI lives on 3V0. Left alone, the pin stays
+		 * low on R403 and the boost off with its output disconnected,
+		 * so a JP401 left on the 5V0 side under a JDI finds 0 V instead
+		 * of 5 V. The Sharp's overlay adds it.
+		 */
 	};
 };
 
