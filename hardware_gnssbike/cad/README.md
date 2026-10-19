@@ -188,6 +188,7 @@ python hardware_gnssbike/cad/acabar.py                    # 3. fecha o resto, um
 python hardware_gnssbike/cad/check_pcb.py --como-esta      # 5. confere o arquivo como esta
 python hardware_gnssbike/cad/dry_run_pcb.py               # 6. as regras das fichas
 python hardware_gnssbike/cad/impedancia.py                # a impedancia das linhas na pilha do fabricante
+python hardware_gnssbike/cad/make_fab.py                  # Gerber, furacao, BOM e CPL da JLCPCB em ../fabricacao/
 ```
 
 O `route.py` é um labirinto A\* numa grade de 0,15 mm: faz bem o que pede
@@ -312,6 +313,22 @@ os dois, além de uma trilha e duas vias de terra. Desde 2026-10-19 toda
 janela de máscara de footprint ganha uma área proibida de cobre na face dela
 (`make_pcb.janelas_de_mascara`, `SEM_COBRE_JANELA_J302`), e o plano da
 `In1.Cu` continua por baixo como referência.
+
+O `make_fab.py` gera, da placa roteada e preenchida, o que se manda para a
+JLCPCB, em `hardware_gnssbike/fabricacao/` (fora do git, porque é gerado):
+
+| Arquivo | O que é |
+|---|---|
+| `gnssbike-gerber-jlcpcb.zip` | Gerber das 4 camadas de cobre, máscara, pasta, serigrafia e contorno, e a furação Excellon (com e sem metalização separadas), nas opções do guia da JLCPCB para o KiCad: extensões Protel, sem X2, máscara subtraída da serigrafia, milímetros com zeros decimais |
+| `bom-jdi.csv`, `cpl-jdi.csv` | BOM e posições para a tela JDI: sem o boost de 5 V nem a luz do Azumo, o `JP401` entre `COMUM` e `3V0` |
+| `bom-sharp.csv`, `cpl-sharp.csv` | idem para a Sharp com a luz do Azumo: sem o `J402`, o `JP401` entre `COMUM` e `5V0` |
+| `LEIA-ME.txt` | as opções do pedido (pilha, impedância, POFV, ENIG) e o que conferir na prévia |
+
+O `JP301` e o `JP401` são três ilhas que levam um 0402 entre duas delas: o
+CPL põe a peça no meio do par que a variante pede, não no centro do
+footprint. O `U201` (o módulo) não existe na LCSC e vai na BOM sem código,
+para consignar; o `C302`, o `JP404`, o `JP405` e o `J202` (conector SWD
+ainda não escolhido) ficam sem peça.
 
 A placa do repositório é essa rodada do `route.py` acabada pelo
 `acabar.py` em vários passes, enquanto as regras e o cobre à mão entravam;
