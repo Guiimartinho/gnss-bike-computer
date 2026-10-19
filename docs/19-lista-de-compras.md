@@ -241,10 +241,11 @@ A placa aceita **duas telas no mesmo conector de sinal** desde 2026-10-18 ([revi
 
 As quantidades por placa saem do esquemático. Os resistores são de filme espesso, 0402 e ±1 %, salvo onde a linha diz outra coisa. Os códigos da LCSC vêm de [`cad/parts.py`](../hardware_gnssbike/cad/parts.py): os capacitores têm todos (menos o `C302`, que não é montado); dos resistores, só `R116`, `R123` e `R410`.
 
-> [!IMPORTANT]
-> **Faltam os códigos da LCSC de 48 resistores e de seis jumpers de 0 Ω**,
-> e sem eles a JLCPCB não monta. Os valores estão fechados; o trabalho é
-> achar o código de cada um e conferir o estoque no dia do pedido.
+> [!NOTE]
+> Desde 2026-10-18 toda peça montada tem código da LCSC no gerador, menos o
+> módulo `U201`, que vai consignado; o estoque se confere no dia do pedido.
+> O fabricante e o código de fabricante de cada peça, para comprar fora da
+> LCSC, estão em [`cad/mpn.py`](../hardware_gnssbike/cad/mpn.py).
 
 Capacitores:
 
@@ -345,6 +346,47 @@ O que não sai do estoque da LCSC para a montagem na JLCPCB, e onde comprar:
 | Bateria | fabricante de packs | 60 × 36 × 7 mm, PCM, NTC de 10 kΩ B3380, cabo com a JST SHR-06V-S-B, UN38.3 |
 | Tag-Connect | loja da Tag-Connect | a DigiKey tem só as versões com pernas, que pedem outro footprint |
 | BM20C direto | Fanstel, por e-mail | só se a alternativa for usada: US$ 6,50 (US$ 5,94 no lote de mil) |
+
+## Compra na Mouser
+
+Para fazer a placa na JLCPCB e comprar as peças na Mouser (pedido do dono em
+2026-10-19), o [`cad/mouser.py`](../hardware_gnssbike/cad/mouser.py) monta o
+pedido da BOM de cada tela: o código de fabricante de cada linha vem do
+[`cad/mpn.py`](../hardware_gnssbike/cad/mpn.py), e a API de busca da Mouser dá
+o código dela, o estoque, o prazo e o preço na quantidade. A chave da API é
+pessoal: fica em `.claude/local/mouser_api_key` ou em `MOUSER_API_KEY`, fora
+do git.
+
+```sh
+python hardware_gnssbike/cad/make_fab.py              # as BOMs
+python hardware_gnssbike/cad/mouser.py jdi 2          # tela e numero de placas
+```
+
+O resultado vai para `hardware_gnssbike/fabricacao/mouser-<tela>.csv`, no
+formato que a ferramenta de BOM da Mouser aceita. Os passivos levam cinco de
+sobra, com mínimo de dez. Medido em 2026-10-19, para duas placas:
+
+| Tela | Linhas na Mouser | Total no preço da quantidade |
+|---|---|---|
+| JDI | 63 | US$ 148,03 |
+| Sharp com a luz do Azumo | 65 | US$ 153,19 |
+
+Trocado só na Mouser, com o mesmo valor, tamanho e tolerância, porque o
+fabricante da peça da LCSC estava sem estoque lá: o 4,87 kΩ (Panasonic
+ERJ-2RKF4871X), o 2,67 MΩ (Vishay CRCW04022M67FKED), o NTC (Murata
+NCP15XH103F03RC, 10 kΩ e B 3380 a 1 %), o 4,7 µF de 0402 (TDK
+C1005X5R1A475M050BC) e o 100 nF de 0603 (TDK C1608X7R1H104K080AA).
+
+Sem estoque na Mouser em 2026-10-19, com o prazo dela: o TPD4E05U06 (`D102`,
+84 dias), o OPT3001 (`U505`, 84), o conector da bateria JST SM06B-SRSS-TB
+(`J102`, 112), o TLV7031 (`U105`, 140), a MX25R6435F (`U501`, 364) e o
+PESD3V3S1UB (`D105`, 365). Esses valem a DigiKey ou a LCSC.
+
+A Mouser não vende, e vêm da LCSC: o LED RGB TUOZHAN (`D601`), as chaves
+XunPu (`SW601` a `SW603`), o USB-C HRO (`J101`), o indutor Sunlord (`L103`),
+a antena de chip Unictron (`E301`) e o 18 MΩ (`R116`), que não existe em
+0402 a 1 % em marca nenhuma dela. Os footprints são dessas peças, e por isso
+elas não foram trocadas. O módulo `U201` vem da DigiKey ou da MinewSemi.
 
 ## Antes de fechar o pedido
 
