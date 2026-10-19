@@ -384,7 +384,6 @@ passive("R106", "4,87 k", "limiar de 45 graus do corte termico: o NTC 10 k B3380
 passive("R107", "4,7 k", "pull-up do PWR_SDA")
 passive("R108", "4,7 k", "pull-up do PWR_SCL")
 passive("R109", "10 k", "pull-up do PMIC_INT")
-passive("R110", "10 k", "pull-up do ALRT do MAX17262")
 passive("R112", "10 k", "pull-up do INT do OPT3001")
 
 for n, v in (("C101", "10 uF"), ("C102", "10 uF"), ("C103", "10 uF"), ("C104", "10 uF"),
@@ -732,10 +731,19 @@ passive("C120", "100 nF", "desacoplamento de alta frequencia do SYS, em "
                           "paralelo com o C116; a ficha pede os DOIS")
 passive("C121", "4,7 uF", "REG_OUT do regulador desabilitado; footprint "
                           "mantido, pode ficar NAO MONTADO")
-passive("C305", "2,7 pF", "sintonia do pino 1 da antena ao terra; valor de "
-                          "partida da ficha, a ajustar na bancada")
-passive("C306", "6,8 pF", "sintonia do pino 2 da antena ao terra; valor de "
-                          "partida da ficha, a ajustar na bancada")
+# Which value goes on which pin is decided by the figure, not by the pin
+# number: the figure 8-1 puts [9] (6,8 pF) at the end of the WIDE side of the
+# cut-out and [8] (2,7 pF) at the end of the narrow one. Pin 1 faces the wide
+# side here (footprints.antena_unictron), so C305 is [9]. Until 2026-10-19
+# the two values were the other way round, read as "pin 1, then pin 2".
+# 0402 and not the figure's 0201: the same Murata C0G series, and the bench
+# tuning the datasheet asks for takes up the difference.
+passive("C305", "6,8 pF", "sintonia [9] do pino 1 da antena ao terra, na ponta "
+                          "do lado largo do recorte; valor de partida da "
+                          "ficha, a ajustar na bancada")
+passive("C306", "2,7 pF", "sintonia [8] do pino 2 da antena ao terra, na ponta "
+                          "do lado estreito do recorte; valor de partida da "
+                          "ficha, a ajustar na bancada")
 # The board carries BOTH ways of feeding the receiver, and a 0 ohm chooses.
 # The chip soldered on the edge is the shorter path and has no connector in
 # it; the u.FL lets an external element be tried without touching the board.
@@ -1121,7 +1129,7 @@ LCSC_PASSIVOS = {
     # 4,7 uF 0603, 16 V X5R, Samsung CL10A475KO8NNNC
     "C210": "C19666", "C502": "C19666",
     # RF, C0G 50 V, Murata GJM15: 1,5, 2,7 e 6,8 pF
-    "C301": "C76900", "C305": "C76904", "C306": "C88896",
+    "C301": "C76900", "C305": "C88896", "C306": "C76904",
     # 1 nF 0603, 50 V X7R, Samsung CL10B102KB8NNNC
     **{r: "C1588" for r in ("C601", "C602", "C603")},
     "JP101": "C190124",   # 0 ohm 1206, Vishay CRCW12060000Z0EA
@@ -1139,7 +1147,7 @@ LCSC_PASSIVOS = {
     "R105": "C25760",                                                    # 180 k
     "R106": "C25902",                                                    # 4,87 k
     **{r: "C25900" for r in ("R107", "R108", "R504", "R505")},           # 4,7 k
-    **{r: "C25744" for r in ("R109", "R110", "R112")},                   # 10 k
+    **{r: "C25744" for r in ("R109", "R112")},                   # 10 k
     **{r: "C25082" for r in ("R406", "R407", "R408", "R409")},           # 150 R
     **{r: "C25105" for r in ("R506", "R507", "R508")},                   # 33 R
     **{r: "C11702" for r in ("R601", "R602", "R603", "R607", "R608")},   # 1 k

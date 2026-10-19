@@ -49,8 +49,16 @@ net("VBUSOUT", ("U101", "VBUSOUT"), ("U201", "VBUS"), ("R104", "1"), ("C110", "1
 # 4 e o 6 ao 5.
 net("CC1", ("J101", "CC1"), ("U101", "CC1"), ("D102", "D1P"), ("D102", "NC4"))
 net("CC2", ("J101", "CC2"), ("U101", "CC2"), ("D102", "D1N"), ("D102", "NC3"))
-net("USB_DP", ("J101", "DP_A6"), ("J101", "DP_B6"), ("U201", "USB_DP"), ("D102", "D2P"), ("D102", "NC2"))
-net("USB_DM", ("J101", "DM_A7"), ("J101", "DM_B7"), ("U201", "USB_DM"), ("D102", "D2N"), ("D102", "NC1"))
+# D+ through the diode's channel on pins 5 and 6, and D- through 4 and 7, the
+# other way round from the pin names (D2P, D2N): the four channels of the
+# TPD4E05U06 are the same diode to ground each, and the names are labels.
+# The order is what the board needs: the pair leaves the diode going up with
+# D- on the left and enters the module's pins going down with D+ on the
+# west, and a pair keeps its left and right through every turn, so with the
+# names followed it could only reach the module by crossing itself, on a
+# layer where it may not take a via. USB_DP never routed (2026-10-19).
+net("USB_DP", ("J101", "DP_A6"), ("J101", "DP_B6"), ("U201", "USB_DP"), ("D102", "D2N"), ("D102", "NC1"))
+net("USB_DM", ("J101", "DM_A7"), ("J101", "DM_B7"), ("U201", "USB_DM"), ("D102", "D2P"), ("D102", "NC2"))
 
 # The cell reaches the gauge through the measuring jumper; the gauge's 7 mOhm
 # sense sits INSIDE the chip, between BATT and SYS, so those are two nodes.
@@ -100,7 +108,7 @@ net("3V0", ("L102", "2"), ("U101", "VOUT2"), ("U101", "LSIN1"),
     # a flash no 3V0, sempre ligada, em deep power-down (mx25r6435f-a1)
     ("JP106", "1"), ("R501", "1"), ("R502", "1"), ("R503", "1"),
     ("JP102", "1"), ("JP104", "1"), ("JP105", "1"),
-    ("R107", "1"), ("R108", "1"), ("R109", "1"), ("R110", "1"),
+    ("R107", "1"), ("R108", "1"), ("R109", "1"),
     ("J201", "VTref"), ("J202", "VTref"))
 net("3V0_MOD", ("JP102", "2"), ("U201", "VDD"), ("C201", "1"), ("C210", "1"))
 net("3V0_SENS", ("JP105", "2"), ("R112", "1"), ("C123", "1"), ("C124", "1"),
@@ -204,7 +212,11 @@ net("RVSET2", ("U101", "VSET2"), ("R103", "1"))
 net("REG_GAUGE", ("U102", "REG"), ("C118", "1"))
 net("LED_CHG", ("U101", "LED1"), ("D103", "K"))
 net("LED_ERR", ("U101", "LED0"), ("D104", "K"))
-net("ALRT", ("U102", "ALRT"), ("R110", "2"))
+# ALRT of the MAX17262 goes to GND: "Connect to GND if not used" (datasheet,
+# pin description), and no MCU pin reads it. Until 2026-10-19 it had a
+# 10 k pull-up, R110, and nothing else - and as the MIDDLE bump of a 3 x 3
+# WLP at 0.4 mm it could only reach that pull-up through a via in the pad.
+# Its GND neighbour is the bump on the diagonal (route.PONTES).
 # O ADP5091 nao tem pino de interrupcao. O R111, que fazia o pull-up do IRQ
 # do AEM10900, ficou sem funcao em 2026-09-25 e saiu da lista em
 # 2026-09-26: o TLV7031 do corte termico tem saida push-pull e nao precisa
@@ -299,8 +311,9 @@ net("RF_ANT", ("L301", "1"), ("C301", "1"), ("JP301", "COMUM"))
 net("RF_UFL", ("JP301", "UFL"), ("J302", "FEED"))
 net("RF_CHIP", ("JP301", "CHIP"), ("E301", "FEED"))
 # Os pinos 1 e 2 da antena de chip sao terra E sintonia: vao ao plano
-# por C305 e C306, nao direto. Sao as posicoes [8] e [9] do circuito da
-# ficha da Unictron.
+# por C305 e C306, nao direto. Sao as posicoes [9] e [8] do circuito da
+# ficha da Unictron: o pino 1 fica do lado largo do recorte, onde a figura
+# 8-1 poe a [9].
 net("ANT_T1", ("E301", "GND_T1"), ("C305", "1"))
 net("ANT_T2", ("E301", "GND_T2"), ("C306", "1"))
 
@@ -339,7 +352,7 @@ net("GND",
     ("J101", "SHELL"),
     ("D101", "GND"), ("D102", "GND1"), ("D102", "GND2"),
     ("U402", "GND"), ("U402", "FB"), ("C405", "2"), ("C406", "2"), ("C407", "2"),
-    ("U101", "AVSS"), ("U101", "PVSS1"), ("U101", "PVSS2"), ("U102", "GND"), ("U103", "AGND"), ("U103", "PGND"), ("U103", "AGND2"),
+    ("U101", "AVSS"), ("U101", "PVSS1"), ("U101", "PVSS2"), ("U102", "GND"), ("U102", "ALRT"), ("U103", "AGND"), ("U103", "PGND"), ("U103", "AGND2"),
     ("U103", "SETBK"), ("U103", "REG_D0"), ("U103", "REG_D1"),
     ("R116", "2"), ("R119", "2"), ("R121", "2"),
     ("R122", "2"), ("R123", "2"), ("C119", "2"), ("C120", "2"),

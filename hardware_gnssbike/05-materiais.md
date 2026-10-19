@@ -61,7 +61,7 @@ da carga solar ([01](01-esquematico.md#folha-1--energia)). São 79 posições.
 | C101 a C109 | 10 µF do nPM1300: `C101` no `VBUS`, `C102` no `VBAT_SYS`, `C103` no `VSYS`, `C104` e `C109` no `1V8`, `C105` e `C106` no `3V0`, **`C107` no `PVDD`** (o `VSYS`, junto do pino 4) e **`C108` no `3V3BL`** (os dois desde 2026-10-18) | 10 µF, 25 V, X5R, 0603, Taiyo Yuden TMK107BBJ106MA-T, LCSC C386081 | 9 | [Passivos](../docs/19-lista-de-compras.md#passivos) |
 | C110, C111 | 1 µF do `VBUSOUT` e do `3V3BL` | 1 µF, 25 V, X5R, 0402, LCSC C52923 | 2 | [Passivos](../docs/19-lista-de-compras.md#passivos) |
 | C129 | `VDDIO` do nPM1300, o `C13` da referência | 100 nF, 50 V, X7R, 0603, LCSC C1591 | 1 | [Passivos](../docs/19-lista-de-compras.md#passivos) |
-| R109, R110 | Pull-ups do `PMIC_INT` e do `ALRT` do MAX17262, ao `3V0` | 10 kΩ; LCSC C25744 | 2 | [Passivos](../docs/19-lista-de-compras.md#passivos) |
+| R109 | Pull-up do `PMIC_INT`, ao `3V0` (o `R110`, pull-up do `ALRT` do MAX17262, saiu em 2026-10-19: o pino vai ao GND, como a ficha pede) | 10 kΩ; LCSC C25744 | 1 | [Passivos](../docs/19-lista-de-compras.md#passivos) |
 | U102 | Medidor de carga, **com o sensor de 7 mΩ dentro do CI** | Analog Devices MAX17262REWL+T, WLP-9, LCSC C5328777 | 1 | [Energia](../docs/19-lista-de-compras.md#energia) |
 | C118, C122 | `REG` do MAX17262 e bypass do `BATT` | 0,47 µF, 10 V, 0402 (LCSC C77003); 100 nF, 50 V, X7R, 0603 (LCSC C1591) | 2 | [Passivos](../docs/19-lista-de-compras.md#passivos) |
 | JP101 | Jumper de medição da corrente da célula | 0 Ω, 1206, Vishay CRCW12060000Z0EA, LCSC C190124 | 1 | [Passivos](../docs/19-lista-de-compras.md#passivos) |
@@ -160,7 +160,7 @@ Receptor no `3V0`, duas antenas possíveis e um jumper que escolhe uma
 | FB301 | Ferrite do `3V0` junto do receptor | Murata BLM18KG601SN1D, 600 Ω a 100 MHz, 150 mΩ, 0603, LCSC C85833 | 1 | [GNSS](../docs/19-lista-de-compras.md#gnss) |
 | C303, C304 | Volume e desacoplamento do `3V0_GNSS`, depois do ferrite | 10 µF, 25 V, X5R, 0603 (LCSC C386081); 100 nF, 10 V, X7R, 0402 (LCSC C71687) | 2 | [Passivos](../docs/19-lista-de-compras.md#passivos) |
 | E301 | Antena de chip cerâmica L1 + L5, 5,0 × 3,0 × 0,5 mm, na borda de cima | Unictron H2UJ4U1H2Q0100, LCSC C6569550; no lugar da TE L000670-01 desde 2026-09-24 | 1 | [GNSS](../docs/19-lista-de-compras.md#gnss) |
-| C305, C306 | Sintonia dos pinos de terra da antena, valores de partida da Unictron | 2,7 pF (LCSC C76904) e 6,8 pF (LCSC C88896), C0G | 2 | [GNSS](../docs/19-lista-de-compras.md#gnss) |
+| C305, C306 | Sintonia dos pinos de terra da antena, valores de partida da Unictron (posições [9] e [8] da figura 8-1) | 6,8 pF (LCSC C88896) e 2,7 pF (LCSC C76904), C0G | 2 | [GNSS](../docs/19-lista-de-compras.md#gnss) |
 | J302 | u.FL para uma antena externa de 50 Ω | Hirose U.FL-R-SMT-1, LCSC C88374 | 1 | [GNSS](../docs/19-lista-de-compras.md#gnss) |
 | JP301 | Escolhe a antena: `COMUM` no pad do meio, `UFL` e `CHIP` nas pontas (2026-10-18) | 0 Ω, 0402, **um só**; LCSC C17168 | 1 | [Passivos](../docs/19-lista-de-compras.md#passivos) |
 | C301 | Paralelo [1] da rede de casamento, com a antena de chip | 1,5 pF, C0G, LCSC C76900; com o u.FL, não se monta | 1 | [GNSS](../docs/19-lista-de-compras.md#gnss) |

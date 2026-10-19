@@ -361,8 +361,11 @@ subir.
   valores são os de partida da Unictron para a placa de avaliação dela: o
   `C301` de 1,5 pF em paralelo, o `L301` em série — que é um **capacitor**
   C0G de 3,6 pF, apesar do nome (o código de antes era o de um indutor de
-  3,9 nH) —, o `C302` sem peça, e o `C305` (2,7 pF) e o `C306` (6,8 pF) nos
-  dois pinos de terra da antena. Com o u.FL, o `C301` sai e o `L301` vira
+  3,9 nH) —, o `C302` sem peça, e o `C305` (6,8 pF, posição [9]) e o
+  `C306` (2,7 pF, posição [8]) nos dois pinos de terra da antena. Quem diz
+  que valor vai em que pino é a figura 8-1 da ficha, não o número do pino:
+  o [9] fica na ponta do lado largo do recorte, que é a do pino 1, e o [8]
+  na do lado estreito. Até 2026-10-19 os dois estavam trocados. Com o u.FL, o `C301` sai e o `L301` vira
   0 Ω. Quem fecha os valores é o VNA **dentro da caixa final**.
 - **A UART do GNSS abre a 9.600 Bd**, que é como o MAX-F10S sai de fábrica:
   o devicetree abria a 38.400 até 2026-10-18 (achado G13).

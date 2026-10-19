@@ -368,10 +368,20 @@ BORDA_FIXA: dict[str, tuple[float, float, int]] = {
     # fica em y = 1,80. O x e o do resto da cadeia de RF, para o
     # caminho ser o mais curto possivel.
     "E301": (13.25, 1.8, 0),
-    # Os dois capacitores de sintonia, encostados nos pinos de terra
-    # da antena: eles SAO parte da antena, nao desacoplamento.
-    "C305": (17.55, 1.8, 90),
-    "C306": (8.95, 1.8, 90),
+    # The two tuning capacitors are part of the antenna, not decoupling, and
+    # since 2026-10-19 they sit where Unictron draws them (H2UJ4U1H2Q0100
+    # rev. E, figures 5-1 and 8-1, positions [8] and [9]): lying along the
+    # board edge at the two ends of the cut-out, one pad inside it, on the
+    # 0,35 mm strip that comes along the edge from the antenna's end pin, and
+    # the other outside it, on the ground beside the cut-out. Standing in
+    # the middle of the cut-out, where they were, the ground pad of C305 had
+    # no ground within reach and stayed loose. x is the keep-out's edge
+    # (13,25 - 4,96 and 13,25 + 10,04), which leaves each pad a quarter of a
+    # millimetre clear of it, the inner one inside and the outer one outside;
+    # y leaves the pads 0,33 mm from the board edge. C305, on the wide side
+    # of the cut-out, is [9]; C306, on the narrow side, is [8].
+    "C305": (23.30, 0.65, 0),
+    "C306": (8.30, 0.65, 180),
     # +2,67 with the receiver and the pi network (2026-10-18)
     "J302": (23.07, 12.4, 0),
     # The pi network, IN LINE between the antenna contact and the receiver's

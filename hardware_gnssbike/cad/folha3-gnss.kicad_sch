@@ -745,7 +745,7 @@
 				(at -1.270 2.540 0)
 				(effects (font (size 1.27 1.27)) (justify left bottom))
 			)
-			(property "Value" "2,7 pF"
+			(property "Value" "6,8 pF"
 				(at -1.270 -2.540 0)
 				(effects (font (size 1.27 1.27)) (justify left top))
 			)
@@ -757,7 +757,7 @@
 				(at 0 0 0)
 				(effects (font (size 1.27 1.27)) (hide yes))
 			)
-			(property "Description" "sintonia do pino 1 da antena ao terra; valor de partida da ficha, a ajustar na bancada"
+			(property "Description" "sintonia [9] do pino 1 da antena ao terra, na ponta do lado largo do recorte; valor de partida da ficha, a ajustar na bancada"
 				(at 0 0 0)
 				(effects (font (size 1.27 1.27)) (hide yes))
 			)
@@ -808,7 +808,7 @@
 				(at -1.270 2.540 0)
 				(effects (font (size 1.27 1.27)) (justify left bottom))
 			)
-			(property "Value" "6,8 pF"
+			(property "Value" "2,7 pF"
 				(at -1.270 -2.540 0)
 				(effects (font (size 1.27 1.27)) (justify left top))
 			)
@@ -820,7 +820,7 @@
 				(at 0 0 0)
 				(effects (font (size 1.27 1.27)) (hide yes))
 			)
-			(property "Description" "sintonia do pino 2 da antena ao terra; valor de partida da ficha, a ajustar na bancada"
+			(property "Description" "sintonia [8] do pino 2 da antena ao terra, na ponta do lado estreito do recorte; valor de partida da ficha, a ajustar na bancada"
 				(at 0 0 0)
 				(effects (font (size 1.27 1.27)) (hide yes))
 			)
@@ -2271,7 +2271,7 @@
 			(at 148.590 73.564 0)
 			(effects (font (size 1.27 1.27)) (justify left bottom))
 		)
-		(property "Value" "2,7 pF"
+		(property "Value" "6,8 pF"
 			(at 148.590 76.296 0)
 			(effects (font (size 1.27 1.27)) (justify left top))
 		)
@@ -2283,7 +2283,7 @@
 			(at 149.86 74.93 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
-		(property "Description" "sintonia do pino 1 da antena ao terra; valor de partida da ficha, a ajustar na bancada"
+		(property "Description" "sintonia [9] do pino 1 da antena ao terra, na ponta do lado largo do recorte; valor de partida da ficha, a ajustar na bancada"
 			(at 149.86 74.93 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
@@ -2311,7 +2311,7 @@
 			(at 151.130 79.914 0)
 			(effects (font (size 1.27 1.27)) (justify left bottom))
 		)
-		(property "Value" "6,8 pF"
+		(property "Value" "2,7 pF"
 			(at 151.130 82.646 0)
 			(effects (font (size 1.27 1.27)) (justify left top))
 		)
@@ -2323,7 +2323,7 @@
 			(at 152.4 81.28 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
-		(property "Description" "sintonia do pino 2 da antena ao terra; valor de partida da ficha, a ajustar na bancada"
+		(property "Description" "sintonia [8] do pino 2 da antena ao terra, na ponta do lado estreito do recorte; valor de partida da ficha, a ajustar na bancada"
 			(at 152.4 81.28 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)

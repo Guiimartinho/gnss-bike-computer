@@ -139,7 +139,7 @@ O nRF Fuel Gauge da Nordic roda no MCU e usa a corrente que o nPM1300 mede no pr
 | Consumo | 5,2 µA em hibernação (12 µA no máximo), 16 µA ativo, 0,5 µA desligado |
 | Medição de tensão | erro de ±7,5 mV a 25 °C (±20 mV de −40 a 85 °C) |
 | Temperatura | TH no BATT, usando o sensor interno de ±1 °C: os dois NTC da célula já estão ocupados; o CI fica junto do conector da bateria. A configuração de fábrica (0x2210) liga o ETHRM, e o firmware grava ETHRM = 0 com TSel = 0 |
-| Outros pinos | REG (1,8 V interno) com 0,47 µF, sem carga externa; ALRT em dreno aberto para o MCU |
+| Outros pinos | REG (1,8 V interno) com 0,47 µF, sem carga externa; ALRT ao GND, como a ficha pede quando o alerta não é usado (até 2026-10-19, dreno aberto com pull-up) |
 | I2C | 0x36; binding `maxim,max17262`, que pede capacidade, tensões de projeto, de carga e de vazio, e a corrente de carga |
 
 ### Convivência das duas cargas

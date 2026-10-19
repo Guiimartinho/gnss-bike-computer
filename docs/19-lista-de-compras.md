@@ -186,7 +186,7 @@ Colunas: função (com o designador), peça, código da LCSC, código da DigiKey
 | Antena de chip (`E301`) | Unictron H2UJ4U1H2Q0100 (L1 + L5, 5,0 × 3,0 × 0,5 mm) | C6569550 | não conferido | preço e estoque não conferidos | — | 1 | 6 | no lugar da TE L000670-01 desde 2026-09-24; 70 % de eficiência típica em L1 e L5 numa placa de 80 × 40 mm, e esta tem 34 mm de largura: só a bancada diz |
 | Conector da antena externa (`J302`) | Hirose U.FL-R-SMT-1 | C88374 | não conferido | preço e estoque não conferidos | — | 1 | 6 | a outra posição do `JP301`, para uma antena de 50 Ω por cabo |
 | Ferrite do `3V0` do receptor (`FB301`) | Murata BLM18KG601SN1D | C85833 | — | LCSC: 371.955 (2026-09-25) | 0,019 | 1 | 10 | **trocada em 2026-09-25**: 600 Ω a 100 MHz, 1,3 A, **DCR 150 mΩ** (a BLM15PX601SN1D de 0402 tinha 230 mΩ, acima dos 0,2 Ω que o manual do MAX-F10S, 4.1.1, permite em série no VCC); 0603 |
-| Rede de casamento e sintonia (`C301`, `L301`, `C305`, `C306`) | Murata GJM15 C0G de 50 V: 1,5, 2,7 e 6,8 pF; e o 3,6 pF ± 0,1 pF C0G do `L301`, que é capacitor | C76900, C76904, C88896 e C161320 | não conferido | preço e estoque não conferidos | — | 1 de cada | 10 de cada | valores de partida da Unictron; com o u.FL, o `C301` fica sem peça e o `L301` vira 0 Ω. O VNA decide os valores finais |
+| Rede de casamento e sintonia (`C301`, `L301`, `C305`, `C306`) | Murata GJM15 C0G de 50 V: 1,5, 6,8 e 2,7 pF; e o 3,6 pF ± 0,1 pF C0G do `L301`, que é capacitor | C76900, C88896, C76904 e C161320 | não conferido | preço e estoque não conferidos | — | 1 de cada | 10 de cada | valores de partida da Unictron; com o u.FL, o `C301` fica sem peça e o `L301` vira 0 Ω. O VNA decide os valores finais |
 
 ### Sensores
 
@@ -260,7 +260,7 @@ Capacitores:
 | 100 nF, 50 V, X7R, 0603 | `C122` a `C126`, `C129` | Samsung CL10B104KB8NNNC | C1591 | não conferido | preço e estoque não conferidos | — | 6 | 50 |
 | 10 nF, 50 V, X7R, 0402 | `C119` | Samsung CL05B103KB5NNNC | C15195 | não conferido | preço e estoque não conferidos | — | 1 | 10 |
 | 1 nF, 50 V, X7R, 0603 | `C601` a `C603` | Samsung CL10B102KB8NNNC | C1588 | não conferido | preço e estoque não conferidos | — | 3 | 20 |
-| 1,5 pF, 2,7 pF e 6,8 pF, C0G, 50 V | `C301`, `C305`, `C306` | Murata GJM15 | C76900, C76904 e C88896 | não conferido | preço e estoque não conferidos | — | 1 de cada | 10 de cada |
+| 1,5 pF, 6,8 pF e 2,7 pF, C0G, 50 V | `C301`, `C305`, `C306` | Murata GJM15 | C76900, C88896 e C76904 | não conferido | preço e estoque não conferidos | — | 1 de cada | 10 de cada |
 | 3,6 pF ± 0,1 pF, C0G, 0402 | `L301`, que é capacitor apesar do nome | — | C161320 | não conferido | preço e estoque não conferidos | — | 1 | 10 |
 
 Resistores e jumpers:
@@ -271,7 +271,7 @@ Resistores e jumpers:
 | 47 kΩ | `R102`, `R502`, `R503` | Yageo RC0402FR-0747KL | C25792 | 311-47.0KLRCT-ND | 2.038.082 | 0,10 / 0,021 | 3 | 50 |
 | 150 kΩ | `R103` | Yageo RC0402FR-07150KL | C25755 | 311-150KLRCT-ND | 219.429 | 0,10 / 0,021 | 1 | 10 |
 | 180 kΩ | `R105` | — | C25760 | não conferido | preço e estoque não conferidos | — | 1 | 10 |
-| 10 kΩ | `R109`, `R110`, `R112` | Yageo RC0402FR-0710KL | C25744 | 311-10.0KLRCT-ND | 11.449.482 | 0,10 / 0,021 | 3 | 50 |
+| 10 kΩ | `R109`, `R112` | Yageo RC0402FR-0710KL | C25744 | 311-10.0KLRCT-ND | 11.449.482 | 0,10 / 0,021 | 2 | 50 |
 | 4,87 kΩ | `R106` | — | C25902 | não conferido | preço e estoque não conferidos | — | 1 | 10 |
 | 4,7 kΩ | `R107`, `R108`, `R504`, `R505` | Panasonic ERJ-2RKF4701X | C25900 | P4.70KLCT-ND | 685.748 | 0,10 / 0,031 | 4 | 50 |
 | 1 kΩ | `R601` a `R603` (a recalcular para o S4-3528), `R607`, `R608` | Yageo RC0402FR-071KL | C11702 | 311-1.00KLRTR-ND (fita cortada na mesma página) | 5.428.413 | 0,10 / 0,021 | 5 | 50 |

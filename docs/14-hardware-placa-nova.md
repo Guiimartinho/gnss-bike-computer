@@ -235,7 +235,7 @@ Pinos de configuração e ligações que a validação ([19](19-lista-de-compras
 | AEM10900 | TH_REF e TH_MON | RDIV de 22 kΩ e o NTC na face de trás, sob a célula | corte fora de 0 a 45 °C |
 | MAX17262 | TH | BATT | temperatura pelo sensor interno; o firmware grava ETHRM = 0 |
 | MAX17262 | REG | 0,47 µF ao GND | regulador interno de 1,8 V, sem carga |
-| MAX17262 | ALRT | pull-up de 10 kΩ, para o MCU | dreno aberto |
+| MAX17262 | ALRT | ao GND, como a ficha pede quando o alerta não é usado | dreno aberto; nenhum pino do MCU lê o alerta, e a bola do meio do WLP vai à bola de GND vizinha por uma ponte de 0,1 mm (até 2026-10-19, pull-up de 10 kΩ) |
 | MAX-F10S | VIO_SEL | **aberto** | V_IO de 2,7 a 3,6 V (opção 1 da tabela 35 do manual de integração); no GND o máximo absoluto do V_IO cai para 1,98 V e o 3V0 queima o módulo |
 | MAX-F10S | TIMEPULSE (SAFEBOOT_N) | sem pull-down | nível baixo na partida põe o módulo em safeboot |
 | MAX-F10S | RESET_N | pino do MCU em dreno aberto | pull-up interno do módulo |
