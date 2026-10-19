@@ -9,6 +9,7 @@ indutor de conversor chaveado não vai irradiar.
 
 **Nesta página:** [O que é medido](#o-que-é-medido) ·
 [Como rodar](#como-rodar) · [As regras e a origem de cada uma](#as-regras-e-a-origem-de-cada-uma) ·
+[Resultado de 2026-10-19](#resultado-de-2026-10-19-com-o-roteamento-fechado) ·
 [Resultado da posição](#resultado-da-posição) ·
 [Resultado do roteamento](#resultado-do-roteamento) ·
 [Defeitos achados e corrigidos nesta passagem](#defeitos-achados-e-corrigidos-nesta-passagem) ·
@@ -71,21 +72,23 @@ trilhas de uma colocação que pode já ter mudado.
 | RF4 | a placa **vazada** sob a área da antena, deixando-a suspensa | ficha ME54BS13 V1.0.0, **7.4** |
 | RF5 | **5 mm** entre o receptor GNSS e qualquer componente de RF | u-blox MAX-F10S Integration Manual UBXDOC-963802114-12892, **4.4** |
 | RF6 | terra sob o módulo GNSS na primeira e na segunda camada, sem trilha de sinal cruzando por baixo nessas duas | u-blox MAX-F10S IM, **4.4** |
-| RF7 | o **caminho de RF** do pino `RF_IN` até o contato da antena, passando pela rede π, dentro de **λ/10 em L1 (10,5 mm)**; cada shunt a menos de **λ/20 (5,3 mm)** do nó em que pendura | u-blox MAX-F10S IM, **4.4** ("as short as possible"); o limite é λ/10 e λ/20, calculados abaixo |
+| RF7 | o **caminho de RF** do pino `RF_IN` até o contato da antena, passando pela rede π, dentro de **λ/10 em L1 (10,9 mm)**; cada shunt a menos de **λ/20 (5,5 mm)** do nó em que pendura | u-blox MAX-F10S IM, **4.4** ("as short as possible"); o limite é λ/10 e λ/20, calculados abaixo |
 | RF8 | as duas antenas o mais longe possível uma da outra | u-blox MAX-F10S IM, **4.4** |
-| RF9 | a **tabela de isolação** do módulo: **20 mm** de fonte chaveada, indutor de potência ou transformador; 20 mm de USB 3.0/HDMI/DDR/SDIO rápido; 15 mm de clock rápido de MCU ou PHY Ethernet; **25 mm** de display, câmera ou cabo FPC com fiação | ficha ME54BS13 V1.0.0, **7.2**, `Interference Isolation Rule` |
+| RF9 | a **tabela de isolação** do módulo: **20 mm** de fonte chaveada, indutor de potência ou transformador; 20 mm de USB 3.0/HDMI/DDR/SDIO rápido; 15 mm de clock rápido de MCU ou PHY Ethernet; **25 mm** de display, câmera ou cabo FPC com fiação. A ficha chama a tabela de *Minimum **Recommended** Isolation Distance*, de fontes *strong*, e aceita camada diferente ou blindagem no lugar da distância | ficha ME54BS13 V1.0.0, **7.2**, `Interference Isolation Rule` |
 | RF10 | **50 mm** entre dois módulos de rádio na mesma placa | ficha ME54BS13 V1.0.0, **7.2**, `Multiple Modules on the Same PCB` |
-| US1 | o par `USB_DP`/`USB_DM` **roteado**, com a largura e o afastamento que dão **90 Ω diferenciais** nesta pilha | USB 2.0, 7.1.6 (90 Ω ±15 %); a geometria sai do empilhamento, calculada em [`cad/route.py`](cad/route.py) |
-| AL1 | desacoplamento do **módulo de rádio a 0,5 mm** do pino; dos demais CIs, 2 mm o de alta frequência e 5 mm o de reserva | ficha ME54BS13 V1.0.0, **7.2**; fichas do nPM1300, AEM10900, TPS7A02 |
-| AL2 | largura de trilha suficiente para a corrente, com 10 °C de subida | IPC-2221B, 6.2, curva de condutor externo |
-| AL3 | laço de chaveamento curto: `SW` ao indutor e ao capacitor de saída | ficha do nPM1300, layout recomendado |
-| AL4 | no máximo **0,2 Ω** em série na linha `VCC` do GNSS | u-blox MAX-F10S IM, **4.1.1** |
+| US1 | o par `USB_DP`/`USB_DM` **roteado**, com a largura e o afastamento que dão **90 Ω diferenciais** nesta pilha | USB 2.0, 7.1.6 (90 Ω ±15 %); a geometria sai do campo calculado em [`cad/impedancia.py`](cad/impedancia.py) na pilha JLC04081H-3313 |
+| US2 | as duas linhas do par com o **mesmo comprimento** do diodo de proteção ao módulo: no máximo **50 mil (1,27 mm)** de diferença | TI SPRAAR7J, tabela A-1 (*skew within any USB2.0 differential pair*) |
+| AL1 | desacoplamento do **módulo de rádio a 0,5 mm** do pino; dos demais CIs, 2 mm o de alta frequência e 5 mm o de reserva; tudo de **borda a borda** das ilhas, que é o cobre que o laço atravessa | ficha ME54BS13 V1.0.0, **7.2** (*trace length ... ≤ 0.5 mm*); os 2 e 5 mm são do projeto: as fichas do nPM1300, AEM10900, TPS7A02 e MAX-F10S dizem "o mais perto possível" |
+| AL2 | largura de trilha suficiente para a corrente, com 10 °C de subida, no cobre de cada camada (35 µm por fora, 15,2 µm por dentro) | IPC-2221B, 6.2, curvas de condutor externo e interno |
+| AL3 | laço de chaveamento curto: no nó `SW`, no máximo **3 mm** de cobre e **nenhuma via**, e o indutor a no máximo **2 mm** do pino | nPM1300 PS v1.1, 9.3.4, e ADP5091, layout (*as close as possible*); os números são do projeto |
+| AL4 | no máximo **0,2 Ω** em série na linha `VCC` do GNSS, contando o cobre do indutor do BUCK2 ao pino e o máximo de ficha de cada peça em série | u-blox MAX-F10S IM, **4.1.1** (*Do not add series resistance greater than 0.2 Ω*) |
 | AL5 | **footprint de filtro π reservado** junto ao pino de alimentação do módulo de rádio, por ele vir de fonte chaveada | ficha ME54BS13 V1.0.0, **7.2** |
 | GN1 | uma via de terra junto de **cada** pad de terra do módulo, e todo pad de terra de superfície ligado ao terra | ficha ME54BS13 V1.0.0, **7.2** |
 | GN2 | costura de vias de terra na borda a cada 5 mm no máximo | λ/10 a 2,44 GHz em FR-4 são 6,1 mm |
 | ME1 | a placa **cabe** dentro da caixa. Não é o que define o tamanho dela — placa e caixa são independentes —, é só a conferência de que uma entra na outra | [04](04-pcb-e-caixa.md) |
 | ME2 | altura dos componentes dentro da sombra da bateria e do display | [04](04-pcb-e-caixa.md#as-duas-sombras-display-e-bateria) |
 | ME4 | as ilhas de solda de uma peça ficam **sob o corpo** do modelo 3D do fabricante | um rabicho de solda fica em cima da sua ilha: se o corpo não as cobre, o modelo está fora de posição ou fora de orientação |
+| FA1 | via dentro de ilha de SMD só com **enchimento e tampa (POFV)** no pedido: sem eles a solda escorre pelo furo | JLCPCB, *via-in-pad* (*Epoxy Filled & Capped*, cobrado em 4 camadas) |
 | ME5 | o que **sai do corpo** do modelo junto da placa — os rabichos de solda — sai pelo **lado das ilhas de sinal**, não pelo oposto | um corpo simétrico passa na ME4 girado 180°: o JST ZH do `J103` passou, e o dono viu no 3D as pernas para a borda e as ilhas para dentro. Medido nas faces do GLB acima do cobre, fora do F.Fab, ao longo do eixo corpo → ilhas |
 | ME6 | o corpo 3D de **cada** peça tem o eixo do F.Fab (comprimento onde o footprint tem comprimento) e, onde as fileiras de ilhas são desiguais, as pernas saem pelos mesmos lados | a pergunta do dono sobre passivos e CIs "girados", peça a peça: um 0402 é duas vezes mais comprido que largo, e a troca de eixo não passa despercebida. Foi assim que os quatro SOT-523 apareceram deitados sobre as ilhas |
 
@@ -127,11 +130,13 @@ A ficha não dá número: escreve "as short as possible". Um número tem de sair
 de física, e o que decide é quando a linha deixa de ser eletricamente curta.
 
 ```text
-microstrip de 0,196 mm sobre 0,10 mm de FR-4 (a pilha assimetrica desta placa)
-eps_eff = (4,3+1)/2 + (4,3-1)/2 x (1 + 12 x 0,10/0,196)^-0,5 = 3,27
-lambda em L1 (1,575 GHz) = c / (f x raiz(eps_eff)) = 105,3 mm
-lambda/10 = 10,5 mm   -> o caminho inteiro, do pino ao contato da antena
-lambda/20 =  5,3 mm   -> o toco de cada shunt, que tem de se comportar como
+linha de 0,15 mm sobre 0,0994 mm de prepreg 3313 (Dk 4,05), com mascara e
+o terra despejado a 0,2 mm (JLC04081H-3313; cad/impedancia.py)
+eps_eff = 3,04 (da solucao de campo; ate 2026-10-19, 3,27 pela formula
+          fechada da linha antiga de 0,196 mm com Dk 4,3)
+lambda em L1 (1,575 GHz) = c / (f x raiz(eps_eff)) = 109,2 mm
+lambda/10 = 10,9 mm   -> o caminho inteiro, do pino ao contato da antena
+lambda/20 =  5,5 mm   -> o toco de cada shunt, que tem de se comportar como
                          o capacitor concentrado com que a rede foi calculada
 ```
 
@@ -167,10 +172,40 @@ A = (I / (k × ΔT^b))^(1/c)      com k = 0,048, b = 0,44 e c = 0,725
 largura = A / espessura
 ```
 
-com a área `A` em mil², a subida `ΔT` em °C e a espessura do cobre de 35 µm
-(cobre de 1 oz), convertida para mil. A corrente de cada
+com a área `A` em mil², a subida `ΔT` em °C e a espessura do cobre da
+camada, convertida para mil: 35 µm nas faces de fora e os 15,2 µm do cobre
+interno de 0,5 oz da JLC04081H-3313, com k = 0,024 por dentro (até
+2026-10-19 toda camada contava 35 µm, e uma trilha interna parecia aguentar
+o dobro do que aguenta). A corrente de cada
 trilho vem da tabela `CORRENTE` do próprio arquivo, com a origem escrita ao
 lado de cada número — sem ela a largura seria um chute.
+
+## Resultado de 2026-10-19, com o roteamento fechado
+
+Medido na placa roteada: **32 medidas cumpridas, 2 regras com desvio aceito
+pelo dono, 0 violadas, 0 sem medida**. O DRC completo do KiCad, com as
+malhas preenchidas e a ponte mínima de máscara da JLCPCB (0,1 mm), dá 0 itens
+desconectados e 0 erros.
+
+| Id | O que mediu |
+|---|---|
+| RF2 | a ponta de RF do módulo encosta na borda direita (0,0 mm), com o corpo para dentro |
+| RF6 | nenhuma trilha de sinal sob o receptor na `F.Cu` e na `In1.Cu`; o terra cobre 90 % e 99 % do corpo fora das ilhas (a regra pede 80 %) |
+| RF7 | 8,1 mm do pino à antena, contra os 10,9 mm de λ/10 |
+| US1 | o par a 0,15 mm, junto a 0,2 mm de vão por 15,4 mm: **93,6 Ω** diferenciais na JLC3313 |
+| US2 | do diodo ao módulo, 20,69 mm nas duas linhas. As amarrações entre os contatos duplicados do USB-C somam 5,4 mm no D+ e 7,7 mm no D−, e uma delas entra no caminho conforme o lado do plugue |
+| AL1 | 28 capacitores, de borda a borda: o pior de alta frequência a 1,14 mm (`C118`), o pior de reserva a 3,65 mm (`C107`), e o de alta frequência do módulo a 0,44 mm (`C201`). O `C304`, que falhava a 2,008 mm de centro a centro, está a 0,74 mm |
+| AL3 | `BUCK1_SW` 0,8 mm, `BUCK2_SW` 2,3, `SW_DCDC` 2,2 e `SW_5V0` 2,9, nenhum com via; os indutores a 0,6, 1,0, 0,9 e 1,9 mm dos pinos |
+| AL4 | **169 mΩ** no pior caso: 69 de cobre (o `3V0` do indutor do BUCK2 até o `JP103`, quase todo na camada interna), 50 da ferrite `FB301` e 50 do `JP103` |
+| FA1 | 94 vias dentro de ilha de SMD, as térmicas do pad central do nPM1300 entre elas; o pedido pede POFV |
+
+**Desvios aceitos pelo dono em 2026-10-19**, cada um com a conferência de
+bancada que o fecha:
+
+| Id | Desvio | Por que foi aceito | Conferência |
+|---|---|---|---|
+| RF9 | o corpo da tela a 13,4 mm do módulo, e a fita da luz do Azumo (`J403`) a 16,0 mm, contra 25 mm | a tabela é de distância **recomendada** de fonte **forte**, e a ficha aceita camada diferente ou blindagem; a tela é um LCD de memória em SPI de 2 MHz, com imagem parada, fora da placa; a fita do `J403` leva só o LED, em PWM de kHz. As fitas de sinal (`J401`, `J402`) estão a 42,8 e 58,3 mm | RSSI e taxa do BLE com a tela atualizando |
+| AL1 | o `C210` (4,7 µF, reserva do módulo) a 0,98 mm do pino, contra 0,5 | o de alta frequência, `C201`, está a 0,44 mm; a ficha pede a combinação inteira | a mesma |
 
 ## Resultado da posição
 
@@ -327,11 +362,11 @@ saídas, nesta ordem:
 2. **Exportar Specctra DSN e passar pelo FreeRouting.** Precisa de Java e de
    um download, que é decisão do dono.
 
-### O laço de chaveamento (AL3), que ninguém mediu
+### O laço de chaveamento (AL3)
 
-O `dry_run_pcb.py` **não** mede o laço `SW` → indutor → capacitor de saída,
-porque ele depende do roteamento final e o roteamento não está fechado.
-Quando estiver, essa regra entra na medição.
+Até 2026-10-19 o `dry_run_pcb.py` não media o laço, porque o roteamento não
+estava fechado. Desde então mede: cobre do nó `SW`, vias nele e o vão do pino
+ao indutor ([resultado](#resultado-de-2026-10-19-com-o-roteamento-fechado)).
 
 ## Defeitos achados e corrigidos nesta passagem
 
@@ -352,10 +387,11 @@ Quando estiver, essa regra entra na medição.
 
 | Id | O que falta | Por quê |
 |---|---|---|
-| RF2 | a antena do módulo olhando para fora da borda | `orientacao.py` mede a geometria do footprint, mas quem confirma que aquele lado é o da antena é a ficha; **conferir na ficha impressa antes de fabricar** |
-| AL3 | laço de chaveamento `SW` → indutor → capacitor de saída | depende do roteamento final, que ainda não está fechado |
+| RF2 | que o lado que o footprint chama de antena é o da antena | a regra mede o footprint; **conferir na ficha impressa antes de fabricar** que aquele lado é o da antena |
+| RF9 | o rádio com a tela atualizando | bancada: RSSI e taxa do BLE (desvio aceito) |
+| US2 | o olho do USB High-Speed nos dois lados do plugue | bancada; as amarrações do USB-C somam 5,4 e 7,7 mm |
 | ME2 | altura dos componentes sob a bateria e sob o display | as peças sem modelo do fabricante entram como caixa do encapsulamento, não como o corpo real |
-| — | impedância de 50 Ω das linhas de RF | depende do empilhamento do fabricante, que é item em aberto em [04](04-pcb-e-caixa.md) |
+| — | impedância de 50 Ω das linhas de RF | calculada em [`cad/impedancia.py`](cad/impedancia.py) para a JLC04081H-3313 (51,1 Ω com 0,15 mm); a medida é do fabricante, no pedido com impedância controlada |
 | — | isolamento entre as duas antenas | bancada |
 
 ---

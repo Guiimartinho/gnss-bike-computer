@@ -31,17 +31,23 @@ import nets as N  # noqa: E402
 import parts as P  # noqa: E402
 
 ORIGEM = (25.0, 25.0)          # where the board's top left sits on the sheet
-CU = 0.035
+CU = 0.035                     # outer copper, 1 oz finished
+CU_INTERNO = 0.0152            # inner copper, JLCPCB's 0.5 oz finished
 # The stack-up is ASYMMETRIC, and that is the point. Section 4.4 of the
 # MAX-F10S integration manual says to "select the stack-up, copper, and
 # dielectric properties of the PCB accordingly to fulfil this condition" -
 # the condition being 50 ohm on the RF line. With the dielectric split
 # evenly, 0.22 mm each, a 50 ohm microstrip is 0.431 mm wide and does not fit
 # between the module's pads: it cannot leave its own pin. A thin prepreg to
-# the ground plane and a thick core in the middle brings it to 0.196 mm,
+# the ground plane and a thick core in the middle brings it to 0.15 mm,
 # which routes, and it is the usual four layer stack-up for a board with RF.
-DIEL_RF = 0.10                 # F.Cu to the ground plane on In1.Cu
-DIEL_NUCLEO = 0.80 - 4 * CU - 2 * DIEL_RF    # In1.Cu to In2.Cu
+# Since 2026-10-19 it is the fabricator's own: JLCPCB JLC04081H-3313, 3313
+# prepreg of 0.0994 mm with Dk 4.05 to the plane, and a core with Dk 4.6 that
+# closes the 0.8 mm (JLCPCB lists it as 0.45 mm with its copper); route.py
+# takes its widths from impedancia.py on this stack.
+DIEL_RF = 0.0994               # F.Cu to the ground plane on In1.Cu
+ER_PREPREG, ER_NUCLEO = 4.05, 4.6
+DIEL_NUCLEO = round(0.80 - 2 * CU - 2 * CU_INTERNO - 2 * DIEL_RF, 4)   # In1.Cu to In2.Cu
 DIEL = (DIEL_RF, DIEL_NUCLEO, DIEL_RF)
 CU_LAYERS = ("F.Cu", "In1.Cu", "In2.Cu", "B.Cu")
 KEEPOUTS = {"KEEPOUT_ANTENA_GNSS", "KEEPOUT_ANTENA_MODULO"}
@@ -1308,6 +1314,30 @@ def colocar() -> tuple[dict[str, tuple[float, float, int, bool]], list[str]]:
     return lugar, falhas
 
 
+def pilha_texto() -> list[str]:
+    """The board's stack-up block, layer by layer, as KiCad 8 writes it."""
+    pilha = [('\t\t\t(layer "F.SilkS"\n\t\t\t\t(type "Top Silk Screen")\n\t\t\t)'),
+             ('\t\t\t(layer "F.Paste"\n\t\t\t\t(type "Top Solder Paste")\n\t\t\t)'),
+             ('\t\t\t(layer "F.Mask"\n\t\t\t\t(type "Top Solder Mask")\n'
+              '\t\t\t\t(thickness 0.01)\n\t\t\t)')]
+    for i, nm in enumerate(CU_LAYERS):
+        esp = CU if i in (0, 3) else CU_INTERNO
+        pilha.append(f'\t\t\t(layer "{nm}"\n\t\t\t\t(type "copper")\n'
+                     f'\t\t\t\t(thickness {esp})\n\t\t\t)')
+        if i < 3:
+            tipo = "core" if i == 1 else "prepreg"
+            er = ER_NUCLEO if i == 1 else ER_PREPREG
+            pilha.append(f'\t\t\t(layer "dielectric {i + 1}"\n\t\t\t\t(type "{tipo}")\n'
+                         f'\t\t\t\t(thickness {DIEL[i]:.4f})\n\t\t\t\t(material "FR4")\n'
+                         f'\t\t\t\t(epsilon_r {er})\n\t\t\t\t(loss_tangent 0.02)\n\t\t\t)')
+    pilha += [('\t\t\t(layer "B.Mask"\n\t\t\t\t(type "Bottom Solder Mask")\n'
+               '\t\t\t\t(thickness 0.01)\n\t\t\t)'),
+              ('\t\t\t(layer "B.Paste"\n\t\t\t\t(type "Bottom Solder Paste")\n\t\t\t)'),
+              ('\t\t\t(layer "B.SilkS"\n\t\t\t\t(type "Bottom Silk Screen")\n\t\t\t)'),
+              '\t\t\t(copper_finish "None")\n\t\t\t(dielectric_constraints no)']
+    return pilha
+
+
 def cabecalho(n_redes: int, nomes: dict[str, int]) -> str:
     lay = [(0, "F.Cu", "signal", "top_cu"), (1, "In1.Cu", "signal", "gnd"),
            (2, "In2.Cu", "signal", "pwr"), (31, "B.Cu", "signal", "bottom_cu"),
@@ -1322,23 +1352,7 @@ def cabecalho(n_redes: int, nomes: dict[str, int]) -> str:
            (48, "B.Fab", "user", None), (49, "F.Fab", "user", None)]
     rows = "\n".join(f'\t\t({n} "{nm}" {ty}' + (f' "{al}")' if al else ")")
                      for n, nm, ty, al in lay)
-    pilha = [('\t\t\t(layer "F.SilkS"\n\t\t\t\t(type "Top Silk Screen")\n\t\t\t)'),
-             ('\t\t\t(layer "F.Paste"\n\t\t\t\t(type "Top Solder Paste")\n\t\t\t)'),
-             ('\t\t\t(layer "F.Mask"\n\t\t\t\t(type "Top Solder Mask")\n'
-              '\t\t\t\t(thickness 0.01)\n\t\t\t)')]
-    for i, nm in enumerate(CU_LAYERS):
-        pilha.append(f'\t\t\t(layer "{nm}"\n\t\t\t\t(type "copper")\n'
-                     f'\t\t\t\t(thickness {CU})\n\t\t\t)')
-        if i < 3:
-            tipo = "core" if i == 1 else "prepreg"
-            pilha.append(f'\t\t\t(layer "dielectric {i + 1}"\n\t\t\t\t(type "{tipo}")\n'
-                         f'\t\t\t\t(thickness {DIEL[i]:.4f})\n\t\t\t\t(material "FR4")\n'
-                         f'\t\t\t\t(epsilon_r 4.5)\n\t\t\t\t(loss_tangent 0.02)\n\t\t\t)')
-    pilha += [('\t\t\t(layer "B.Mask"\n\t\t\t\t(type "Bottom Solder Mask")\n'
-               '\t\t\t\t(thickness 0.01)\n\t\t\t)'),
-              ('\t\t\t(layer "B.Paste"\n\t\t\t\t(type "Bottom Solder Paste")\n\t\t\t)'),
-              ('\t\t\t(layer "B.SilkS"\n\t\t\t\t(type "Bottom Silk Screen")\n\t\t\t)'),
-              '\t\t\t(copper_finish "None")\n\t\t\t(dielectric_constraints no)']
+    pilha = pilha_texto()
     ax = P_(0.0, 0.0)
     redes_txt = "\n".join(f'\t(net {i} "{nome}")'
                           for nome, i in sorted(nomes.items(), key=lambda kv: kv[1]))
@@ -1347,6 +1361,11 @@ def cabecalho(n_redes: int, nomes: dict[str, int]) -> str:
             "\t\t(legacy_teardrops no)\n\t)\n\t(paper \"A4\")\n\t(layers\n" + rows + "\n\t)\n"
             "\t(setup\n\t\t(stackup\n" + "\n".join(pilha) + "\n\t\t)\n"
             "\t\t(pad_to_mask_clearance 0)\n"
+            # JLCPCB's smallest solder mask web: the DRC flags two openings
+            # closer than this, which would merge. Inside one footprint they
+            # merge by design (the U.FL's opening runs over its own pads)
+            "\t\t(solder_mask_min_width 0.1)\n"
+            "\t\t(allow_soldermask_bridges_in_footprints yes)\n"
             f"\t\t(aux_axis_origin {ax[0]:.4f} {ax[1]:.4f})\n"
             f"\t\t(grid_origin {ax[0]:.4f} {ax[1]:.4f})\n\t)\n" + redes_txt)
 
@@ -1452,7 +1471,8 @@ def sem_plano_no_chaveamento(lugar: dict, por_pad: dict) -> list[tuple]:
 
 
 def keepout(nome: str, x0: float, y0: float, x1: float, y1: float,
-            so_plano: bool = False) -> str:
+            so_plano: bool = False, camadas_ko: tuple = CU_LAYERS,
+            na_placa: bool = False) -> str:
     """A forbidden area. With so_plano, only the pour is forbidden.
 
     An antenna zone forbids every kind of copper. A switching node is
@@ -1469,9 +1489,10 @@ def keepout(nome: str, x0: float, y0: float, x1: float, y1: float,
     pads, never drew them.
     """
     trilhas = so_plano or nome in COM_TRILHA_PROPRIA
-    pts = [P_(x0, y0), P_(x1, y0), P_(x1, y1), P_(x0, y1)]
+    pts = [(x0, y0), (x1, y0), (x1, y1), (x0, y1)] if na_placa else \
+        [P_(x0, y0), P_(x1, y0), P_(x1, y1), P_(x0, y1)]
     poly = "\n".join(f"\t\t\t\t(xy {px:.4f} {py:.4f})" for px, py in pts)
-    camadas = " ".join(f'"{ly}"' for ly in CU_LAYERS)
+    camadas = " ".join(f'"{ly}"' for ly in camadas_ko)
     return (f'\t(zone\n\t\t(net 0)\n\t\t(net_name "")\n\t\t(layers {camadas})\n'
             f'\t\t(uuid "{uid("z", nome)}")\n\t\t(name "{nome}")\n\t\t(hatch edge 0.5)\n'
             '\t\t(connect_pads\n\t\t\t(clearance 0)\n\t\t)\n\t\t(min_thickness 0.25)\n'
@@ -1623,6 +1644,36 @@ def com_redes(corpo: str, ref: str, por_pad: dict, numeros: dict) -> str:
     return "\n".join(saida)
 
 
+def janelas_de_mascara(texto: str) -> list[str]:
+    """A keep-out on the copper under every mask opening a footprint brings
+    of its own: the opening bares whatever lies there. The U.FL's opening
+    under its body had the front ground pour in it, 0.2 mm from the RF pin
+    with no mask between them, and a ground track and two vias besides
+    (KiCad's solder_mask_bridge at JLCPCB's 0.1 mm web, 2026-10-19). Only
+    the face of the opening is kept clear: the plane on In1.Cu stays under
+    the connector as the line's reference."""
+    arv = fp_load.parse(texto)
+    zonas = []
+    for f in fp_load.kids(arv, "footprint"):
+        ref = next((pr[2] for pr in fp_load.kids(f, "property") if pr[1] == "Reference"), "")
+        at = fp_load.kid(f, "at")
+        fx, fy = float(at[1]), float(at[2])
+        r = math.radians(float(at[3]) if len(at) > 3 else 0.0)
+        for g in fp_load.kids(f, "fp_rect"):
+            lay = fp_load.kid(g, "layer")
+            if not lay or lay[1] not in ("F.Mask", "B.Mask"):
+                continue
+            a, b = fp_load.kid(g, "start"), fp_load.kid(g, "end")
+            cantos = [(float(a[1]), float(a[2])), (float(b[1]), float(a[2])),
+                      (float(b[1]), float(b[2])), (float(a[1]), float(b[2]))]
+            xs = [fx + px * math.cos(r) + py * math.sin(r) for px, py in cantos]
+            ys = [fy - px * math.sin(r) + py * math.cos(r) for px, py in cantos]
+            zonas.append(keepout(f"SEM_COBRE_JANELA_{ref}", min(xs), min(ys), max(xs), max(ys),
+                                 camadas_ko=("F.Cu" if lay[1] == "F.Mask" else "B.Cu",),
+                                 na_placa=True))
+    return zonas
+
+
 def main() -> int:
     numeros, por_pad = redes()
     lugar, falhas = colocar()
@@ -1738,7 +1789,8 @@ def main() -> int:
         "(painel, antena e modulos solares vivem na caixa)",
         f"{len(M.FUROS_DOC)} furos M2; empilhamento assimetrico {DIEL_RF:g} / "
         f"{DIEL_NUCLEO:.2f} / {DIEL_RF:g} mm, para os 50 ohm da linha de RF",
-        "ROTEAMENTO PARCIAL; NADA FABRICADO, NADA MEDIDO",
+        "FABRICAR NA PILHA JLC04081H-3313, IMPEDANCIA CONTROLADA, VIAS EM ILHA COM POFV",
+        "NADA FABRICADO, NADA MEDIDO",
     ]
     for i, s in enumerate(notas):
         p = P_(0.0, M.H + 3.0 + i * 2.0)
@@ -1748,6 +1800,8 @@ def main() -> int:
                      '(justify left top))\n\t)')
 
     out = HERE / "gnssbike.kicad_pcb"
+    texto = cabecalho(len(numeros), numeros) + "\n" + "\n".join(saida) + "\n)\n"
+    saida += janelas_de_mascara(texto)
     out.write_text(cabecalho(len(numeros), numeros) + "\n" + "\n".join(saida) + "\n)\n",
                    encoding="utf-8", newline="\n")
     print(f"{out.name}: {len(lugar)} pecas, {len(numeros) - 1} redes, "

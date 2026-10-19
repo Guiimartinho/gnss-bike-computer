@@ -106,6 +106,7 @@ As trocas depois da validação, pela data em que entraram no CAD:
 | 2026-10-18 | HCTL HC-FPC-05-10-5RLTAG | Molex 503480-0540 (`J402`) | pedia 3,0 mm de condutor exposto, e a fita da luz tem 2,2 a 2,8 |
 | 2026-10-18 | Murata PKLCS1212E4001-R1 | Same Sky CPT-12123-81-SMT-TR (`LS601`) | *Last Time Buy* até 31/03/2027 em toda a linha de sounders piezo da Murata |
 | 2026-10-18 | TI REG710NA-5/3K (plano B) | TI TPS610997 (`U402`) | o REG710 dá 4,7 V no mínimo, abaixo dos 4,8 V da Sharp |
+| 2026-10-19 | Murata BLM18KG601SN1D | Murata BLM18KG221SN1D (`FB301`) | medido na placa roteada: 75 mΩ de cobre do indutor do BUCK2 ao pino, mais até 50 mΩ do `JP103`, deixam no máximo 75 mΩ para a ferrite nos 0,2 Ω do manual do MAX-F10S; a de 150 mΩ somava 275 |
 
 ## Correções de integração
 
@@ -185,7 +186,7 @@ Colunas: função (com o designador), peça, código da LCSC, código da DigiKey
 | Módulo do teste A/B | u-blox MAX-M10N-10B | não conferido | 672-MAX-M10N-10BCT-ND | 1.571 | 14,52 / — | — | 2 | mesmo footprint; a alternativa econômica, só L1 |
 | Antena de chip (`E301`) | Unictron H2UJ4U1H2Q0100 (L1 + L5, 5,0 × 3,0 × 0,5 mm) | C6569550 | não conferido | preço e estoque não conferidos | — | 1 | 6 | no lugar da TE L000670-01 desde 2026-09-24; 70 % de eficiência típica em L1 e L5 numa placa de 80 × 40 mm, e esta tem 34 mm de largura: só a bancada diz |
 | Conector da antena externa (`J302`) | Hirose U.FL-R-SMT-1 | C88374 | não conferido | preço e estoque não conferidos | — | 1 | 6 | a outra posição do `JP301`, para uma antena de 50 Ω por cabo |
-| Ferrite do `3V0` do receptor (`FB301`) | Murata BLM18KG601SN1D | C85833 | — | LCSC: 371.955 (2026-09-25) | 0,019 | 1 | 10 | **trocada em 2026-09-25**: 600 Ω a 100 MHz, 1,3 A, **DCR 150 mΩ** (a BLM15PX601SN1D de 0402 tinha 230 mΩ, acima dos 0,2 Ω que o manual do MAX-F10S, 4.1.1, permite em série no VCC); 0603 |
+| Ferrite do `3V0` do receptor (`FB301`) | Murata BLM18KG221SN1D | C88980 | — | estoque não conferido | preço não conferido | 1 | 10 | **trocada em 2026-10-19**: 220 Ω a 100 MHz, 2,2 A, **DCR máximo 50 mΩ**. O manual do MAX-F10S (4.1.1) permite 0,2 Ω em série no VCC, e a placa roteada já tem 75 mΩ de cobre e até 50 mΩ do `JP103` nesse caminho: com a BLM18KG601SN1D (150 mΩ, a de 2026-09-25) dava 275 mΩ, com esta dá 175; 0603 |
 | Rede de casamento e sintonia (`C301`, `L301`, `C305`, `C306`) | Murata GJM15 C0G de 50 V: 1,5, 6,8 e 2,7 pF; e o 3,6 pF ± 0,1 pF C0G do `L301`, que é capacitor | C76900, C88896, C76904 e C161320 | não conferido | preço e estoque não conferidos | — | 1 de cada | 10 de cada | valores de partida da Unictron; com o u.FL, o `C301` fica sem peça e o `L301` vira 0 Ω. O VNA decide os valores finais |
 
 ### Sensores

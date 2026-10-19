@@ -97,8 +97,11 @@ REGRAS = [
      "calculada em route.py"),
     ("AL1", "desacoplamento do modulo de radio a 0,5 mm do pino de "
             "alimentacao; dos demais CIs, 2 mm para o de alta frequencia e "
-            "5 mm para o de reserva",
-     "MinewSemi ME54BS13 V1.0.0, 7.2; fichas do nPM1300, AEM10900, TPS7A02"),
+            "5 mm para o de reserva; tudo de borda a borda das ilhas, que e o "
+            "cobre que o laco atravessa",
+     "MinewSemi ME54BS13 V1.0.0, 7.2 (\"trace length ... <= 0.5 mm\"); os 2 e "
+     "5 mm sao do projeto (as fichas do nPM1300, AEM10900, TPS7A02 e MAX-F10S "
+     "dizem \"o mais perto possivel\")"),
     ("AL4", "no maximo 0,2 ohm em serie na linha VCC do GNSS",
      "u-blox MAX-F10S Integration Manual UBXDOC-963802114-12892, 4.1.1"),
     ("AL5", "footprint de filtro pi reservado junto ao pino de alimentacao "
@@ -106,8 +109,10 @@ REGRAS = [
      "MinewSemi ME54BS13 V1.0.0, 7.2"),
     ("AL2", "largura de trilha suficiente para a corrente, 10 C de subida",
      "IPC-2221B, 6.2, curva de condutor externo"),
-    ("AL3", "laco de chaveamento curto: SW ao indutor e ao capacitor de saida",
-     "ficha do nPM1300, layout recomendado"),
+    ("AL3", "laco de chaveamento curto: no no SW, no maximo 3 mm de cobre "
+            "e nenhuma via, e o indutor a no maximo 2 mm do pino",
+     "nPM1300 PS v1.1, 9.3.4, e ADP5091, layout (\"as close as possible\"); "
+     "os numeros sao do projeto"),
     ("GN1", "uma via de terra junto de cada pad de terra do modulo de radio, "
             "e todo pad de terra de superficie ligado ao terra",
      "MinewSemi ME54BS13 V1.0.0, 7.2"),
@@ -150,6 +155,14 @@ REGRAS = [
             "do fabricante",
      "um rabicho de solda fica em cima da sua ilha: se o corpo nao as cobre, "
      "o modelo esta fora de posicao ou fora de orientacao"),
+    ("US2", "as duas linhas do par USB com o mesmo comprimento do diodo de "
+            "protecao ao modulo: no maximo 50 mil (1,27 mm) de diferenca",
+     "TI SPRAAR7J, tabela A-1 (\"skew within any USB2.0 differential pair: "
+     "50 mils\")"),
+    ("FA1", "via dentro de ilha de SMD so com enchimento e tampa (POFV) no "
+            "pedido: sem eles a solda escorre pelo furo",
+     "JLCPCB, via-in-pad e via covering (\"Epoxy Filled & Capped\"; cobrado "
+     "em 4 camadas, sem custo de 6 em diante)"),
 ]
 
 # As pecas cujo corpo vem de um modelo do fabricante: sao as unicas em que
@@ -183,10 +196,14 @@ CORRENTE = {
     # gave VSYS 671 mA, the charge added in
     "VSYS": (0.5, "reguladores do VSYS na corrente nominal; a carga nao sai "
                   "pelo pino (nPM1300 PS v1.1)"),
-    "3V0": (0.4, "trilho de 3,0 V: modulo, display, sensores, flash e, desde "
-                 "2026-09-26, o receptor GNSS (100 mA de pico na partida)"),
-    "1V8": (0.2, "trilho de 1,8 V do BUCK1, montado e sem carga"),
-    "SD3V0": (0.2, "trilho comutado do display"),
+    # 3V0 is BUCK2's output, and the nPM1300 has "two ... 200 mA BUCK
+    # regulators" (PS v1.1, p. 2): the module, the display, the sensors, the
+    # flash and the receiver share those 200 mA. Until 2026-10-19 this was
+    # 0,4 A, more than the regulator gives. 1V8 (BUCK1) and SD3V0 (LDSW1)
+    # carry nothing on this board - 1V8 reaches only its inductor and two
+    # capacitors, SD3V0 only its test point (nets.py) - and are left out
+    "3V0": (0.2, "trilho de 3,0 V do BUCK2, 200 mA (nPM1300 PS v1.1): modulo, "
+                 "display, sensores, flash e receptor GNSS"),
     "BUCK1_SW": (0.5, "no de chaveamento do buck 1"),
     "BUCK2_SW": (0.5, "no de chaveamento do buck 2"),
     "SW_DCDC": (0.3, "no de chaveamento do AEM10900"),
@@ -233,12 +250,51 @@ CHAVEADOS = ["L101", "L102", "L103", "U101", "U103"]
 #
 # Rows with nothing on this board to match are left out of the table on
 # purpose rather than carried empty: there is no USB 3.0, HDMI, DDR or
-# high-speed SDIO here (the USB is 2.0 full speed), and the only
+# high-speed SDIO here (the USB is 2.0, 480 Mbit/s at most), and the only
 # high-frequency MCU clock is inside the module itself.
 ISOLACAO = (
     ("fonte chaveada, indutor de potencia ou transformador", 20.0, CHAVEADOS),
-    ("display, camera ou cabo FPC com fiacao", 25.0, ["J401", "J402"]),
+    ("display, camera ou cabo FPC com fiacao", 25.0, ["J401", "J402", "J403"]),
 )
+# Deviations the owner accepted on 2026-10-19, each with why and the bench
+# check that closes it: a measured rule that hits one says so as a
+# deviation, neither a pass nor a failure. The 7.2 table is of RECOMMENDED
+# distances from STRONG sources, and names layers and shields as the other
+# way; the display here is a memory LCD on a 2 MHz SPI, with a still image,
+# above the board and not on it.
+DESVIOS = {
+    ("RF9", "a propria sombra do display"):
+        "LCD de memoria em SPI de 2 MHz, imagem parada, fora da placa; "
+        "conferir na bancada o RSSI e a taxa do BLE com a tela atualizando",
+    ("RF9", "J403"):
+        "a fita da luz do Azumo leva so o LED, em PWM de kHz; mesma "
+        "conferencia de bancada",
+    ("AL1", "C210"):
+        "4,7 uF de reserva do modulo: o de alta frequencia, C201, cumpre os "
+        "0,5 mm; a ficha pede a combinacao inteira",
+}
+# AL4: what sits in series on the GNSS supply besides copper, at its
+# datasheet maximum: the ferrite (Murata BLM18KG221SN1D, 50 mOhm) and the
+# current jumper of the block (0 ohm in 0402, 50 mOhm, Panasonic ERJ-2GE)
+SERIE_VCC_GNSS = {"FB301": 0.050, "JP103": 0.050}
+LIMITE_VCC_GNSS = 0.200           # MAX-F10S integration manual, 4.1.1
+FONTE_3V0 = ("L102", "3V0")       # the BUCK2 inductor's output pad
+RHO_COBRE = 1.72e-8 * 1e3         # ohm mm (copper at 20 C)
+RESISTENCIA_VIA = 0.0006          # ohm, one plated barrel of 0.25 mm
+# AL3: the converters' switching nodes, chip and inductor
+CONVERSORES = (("BUCK1_SW", "U101", "L101"), ("BUCK2_SW", "U101", "L102"),
+               ("SW_DCDC", "U103", "L103"), ("SW_5V0", "U402", "L401"))
+LIMITE_SW_COBRE, LIMITE_SW_INDUTOR = 3.0, 2.0
+# RF6: how much of the receiver's body ground must cover on F.Cu and In1.Cu
+COBERTURA_TERRA_GNSS = 0.80
+# US2: TI SPRAAR7J, table A-1
+LIMITE_SKEW_USB = 1.27
+# What goes in the fabrication order (2026-10-19): the stack-up the widths
+# were computed on (impedancia.py), with impedance control, and the vias in
+# SMD pads filled and capped. FA1 holds the order to this.
+FABRICACAO = {"pilha": "JLCPCB JLC04081H-3313, 0,8 mm, 4 camadas",
+              "impedancia": "controlada, +-10 %",
+              "via_em_pad": "POFV (Epoxy Filled & Capped)"}
 # and the display itself, which is not a part on the board but a rectangle
 # over it - the 25 mm row applies to it more than to its connector
 ZONA_DISPLAY = "SOMBRA_DISPLAY_JDI_MAX_3-0MM"
@@ -333,6 +389,7 @@ def ler(caminho: pathlib.Path):
             camadas = list(fp_load.kid(p, "layers")[1:])
             sz = fp_load.kid(p, "size")
             item = {"ref": ref, "pad": p[1], "x": gx, "y": gy,
+                    "ang": float(a[3]) if len(a) > 3 else 0.0,
                     "rede": rede[2] if rede else "",
                     "hw": float(sz[1]) / 2 if sz else 0.0,
                     "hh": float(sz[2]) / 2 if sz else 0.0,
@@ -411,6 +468,145 @@ def dist_caixas(a, b) -> float:
     return math.hypot(max(dx, 0), max(dy, 0))
 
 
+def caixa_pad(q) -> tuple:
+    """A pad as a box on the board. The angle in the file is the pad's own
+    on the board, footprint and pad together: 90 and 270 swap the sides."""
+    hw, hh = (q["hh"], q["hw"]) if int(round(q.get("ang", 0.0))) % 180 == 90 \
+        else (q["hw"], q["hh"])
+    return (q["x"] - hw, q["y"] - hh, q["x"] + hw, q["y"] + hh)
+
+
+def vao_pads(a, b) -> float:
+    """Copper gap between two pads, edge to edge."""
+    return max(dist_caixas(caixa_pad(a), caixa_pad(b)), 0.0)
+
+
+def _grafo_rede(n: int, seg, vias, pads_rede) -> tuple[list, list]:
+    """Nodes and edges (i, j, length mm, resistance ohm) of one net's copper:
+    track ends per layer, vias joining the four layers, and the pads,
+    each tied to every node inside it."""
+    nos: list[tuple] = []
+
+    def no(x, y, cam):
+        for i, (a, b, c) in enumerate(nos):
+            if c == cam and abs(a - x) < 0.02 and abs(b - y) < 0.02:
+                return i
+        nos.append((x, y, cam))
+        return len(nos) - 1
+    esp = {"F.Cu": MP.CU, "B.Cu": MP.CU, "In1.Cu": MP.CU_INTERNO, "In2.Cu": MP.CU_INTERNO}
+    arestas = []
+    meus = [q for q in seg if q["n"] == n]
+    for q in meus:
+        comp = math.hypot(q["b"][0] - q["a"][0], q["b"][1] - q["a"][1])
+        r = RHO_COBRE * comp / (q["w"] * esp[q["c"]]) if comp > 0 else 1e-9
+        arestas.append((no(*q["a"], q["c"]), no(*q["b"], q["c"]), comp, r))
+    for q in meus:            # a track that ends on the middle of another
+        for ponta in (q["a"], q["b"]):
+            for t in meus:
+                if t is not q and t["c"] == q["c"] and \
+                        _dist_ponto_seg(ponta, t["a"], t["b"]) < min(q["w"], t["w"]) / 2:
+                    arestas.append((no(*ponta, q["c"]), no(*t["a"], t["c"]),
+                                    math.hypot(ponta[0] - t["a"][0], ponta[1] - t["a"][1]), 1e-6))
+    for v in vias:
+        if v["n"] != n:
+            continue
+        ids = [no(v["x"], v["y"], c) for c in esp]
+        for k in range(3):
+            arestas.append((ids[k], ids[k + 1], 0.0, RESISTENCIA_VIA))
+        for q in meus:
+            for ponta in (q["a"], q["b"]):
+                if math.hypot(ponta[0] - v["x"], ponta[1] - v["y"]) < 0.25:
+                    arestas.append((no(*ponta, q["c"]), ids[list(esp).index(q["c"])], 0.0, 1e-6))
+    for q in pads_rede:
+        k = no(q["x"], q["y"], q["camada"])
+        cx = caixa_pad(q)
+        for i, (x, y, c) in enumerate(list(nos)):
+            if i != k and c == q["camada"] and cx[0] - 0.01 <= x <= cx[2] + 0.01 \
+                    and cx[1] - 0.01 <= y <= cx[3] + 0.01:
+                arestas.append((i, k, 0.0, 1e-6))
+    return nos, arestas
+
+
+def _dist_ponto_seg(p, a, b) -> float:
+    vx, vy = b[0] - a[0], b[1] - a[1]
+    nn = vx * vx + vy * vy
+    u = 0.0 if nn == 0 else max(0.0, min(1.0, ((p[0] - a[0]) * vx + (p[1] - a[1]) * vy) / nn))
+    return math.hypot(p[0] - a[0] - u * vx, p[1] - a[1] - u * vy)
+
+
+def _no_do_pad(nos, q) -> int:
+    return next(i for i, (x, y, c) in enumerate(nos)
+                if c == q["camada"] and abs(x - q["x"]) < 0.02 and abs(y - q["y"]) < 0.02)
+
+
+def comprimento(n: int, seg, vias, pa, pb, ilhas=()) -> float:
+    """The routed length (mm) between two pads of one net: the shortest way
+    through its copper (Dijkstra), via barrels counted as nothing."""
+    import heapq
+    nos, arestas = _grafo_rede(n, seg, vias, list(ilhas) + [pa, pb])
+    viz: dict = {}
+    for i, j, comp, _r in arestas:
+        viz.setdefault(i, []).append((j, comp))
+        viz.setdefault(j, []).append((i, comp))
+    a, b = _no_do_pad(nos, pa), _no_do_pad(nos, pb)
+    dist = {a: 0.0}
+    fila = [(0.0, a)]
+    while fila:
+        d, i = heapq.heappop(fila)
+        if i == b:
+            return d
+        if d > dist.get(i, float("inf")):
+            continue
+        for j, c in viz.get(i, ()):
+            if d + c < dist.get(j, float("inf")):
+                dist[j] = d + c
+                heapq.heappush(fila, (d + c, j))
+    return float("inf")
+
+
+def resistencia(n: int, seg, vias, pa, pb, ilhas=()) -> float:
+    """DC resistance (ohm) of one net's copper between two pads: the whole
+    network of its tracks and vias, solved, not one path."""
+    import numpy as np
+    nos, arestas = _grafo_rede(n, seg, vias, list(ilhas) + [pa, pb])
+    m = len(nos)
+    L = np.zeros((m, m))
+    for i, j, _c, r in arestas:
+        if i != j:
+            g = 1.0 / r
+            L[i, i] += g
+            L[j, j] += g
+            L[i, j] -= g
+            L[j, i] -= g
+    Lp = np.linalg.pinv(L)
+    a, b = _no_do_pad(nos, pa), _no_do_pad(nos, pb)
+    return float(Lp[a, a] + Lp[b, b] - 2 * Lp[a, b])
+
+
+def terra_preenchida(arv) -> dict:
+    """The filled polygons of the ground pours, by layer, in board mm."""
+    import numpy as np
+    out: dict = {}
+    for z in fp_load.kids(arv, "zone"):
+        nn = fp_load.kid(z, "net_name")
+        if not nn or nn[1] != "GND":
+            continue
+        for fp in fp_load.kids(z, "filled_polygon"):
+            lay = fp_load.kid(fp, "layer")[1]
+            xy = [(float(q[1]) - MP.ORIGEM[0], float(q[2]) - MP.ORIGEM[1])
+                  for q in fp_load.kid(fp, "pts")[1:] if q[0] == "xy"]
+            out.setdefault(lay, []).append(np.array(xy))
+    return out
+
+
+def dentro_poligono(x, y, xy) -> bool:
+    import numpy as np
+    px, py = xy[:, 0], xy[:, 1]
+    qx, qy = np.roll(px, 1), np.roll(py, 1)
+    corta = ((py > y) != (qy > y)) & (x < (qx - px) * (y - py) / (qy - py + 1e-30) + px)
+    return int(np.count_nonzero(corta)) % 2 == 1
+
+
 def zona(nome: str):
     for n, r, _c, _s in M.ZONES:
         if n == nome:
@@ -420,7 +616,7 @@ def zona(nome: str):
 
 # --- IPC-2221 ---------------------------------------------------------------
 def largura_ipc(corrente: float, subida: float = 10.0,
-                espessura_um: float = 35.0, interna: bool = False) -> float:
+                espessura_um: float | None = None, interna: bool = False) -> float:
     """IPC-2221B, 6.2: the width a current needs for a given temperature rise.
 
     I = k * dT^0.44 * A^0.725, with A in square mils. k is 0.048 for an
@@ -428,7 +624,13 @@ def largura_ipc(corrente: float, subida: float = 10.0,
     give its heat to, and the standard asks it to be about 2.6 times wider
     for the same rise. Until 2026-09-26 this applied the outer curve to every
     segment, and VBUS runs 37 mm on In2.Cu.
+
+    The copper is the stack-up's (make_pcb): 35 um outside and JLCPCB's
+    0.5 oz, 15.2 um, inside. Until 2026-10-19 every layer was taken as 35 um,
+    which made an inner track look twice as able as it is.
     """
+    if espessura_um is None:
+        espessura_um = (MP.CU_INTERNO if interna else MP.CU) * 1000.0
     k = 0.024 if interna else 0.048
     area_mil2 = (corrente / (k * subida ** 0.44)) ** (1 / 0.725)
     esp_mil = espessura_um / 25.4
@@ -868,6 +1070,7 @@ def main() -> int:
     pecas, pads, seg, vias, cortes = ler(PCB)
     achados: list[tuple[str, str]] = []
     ok: list[str] = []
+    desvios: list[tuple[str, str, str]] = []
 
     def falhou(rid: str, msg: str) -> None:
         achados.append((rid, msg))
@@ -909,6 +1112,20 @@ def main() -> int:
         else:
             ok.append(f"RF1: a area da antena ({ant[2]-ant[0]:.2f} x "
                       f"{ant[3]-ant[1]:.2f} mm) esta livre de componente")
+
+    # -- RF2: a ponta de RF do modulo virada para a borda --------------------
+    if ant and MODULO in pecas:
+        lados = {"esquerda": ant[0], "de cima": ant[1], "direita": M.W - ant[2],
+                 "de baixo": M.H - ant[3]}
+        lado, d = min(lados.items(), key=lambda kv: kv[1])
+        cm = pecas[MODULO]["caixa"]
+        centro = {"esquerda": (cm[0] + cm[2]) / 2, "de cima": (cm[1] + cm[3]) / 2,
+                  "direita": M.W - (cm[0] + cm[2]) / 2, "de baixo": M.H - (cm[1] + cm[3]) / 2}
+        if d > 0.5 or centro[lado] <= d:
+            falhou("RF2", f"a ponta de RF do modulo fica a {d:.1f} mm da borda {lado}")
+        else:
+            ok.append(f"RF2: a ponta de RF do modulo encosta na borda {lado} "
+                      f"({d:.1f} mm), com o corpo para dentro")
 
     # -- RF3: 5 mm em volta da area da antena --------------------------------
     if ant:
@@ -959,6 +1176,49 @@ def main() -> int:
             ok.append(f"RF5: o componente de RF alheio mais proximo do receptor "
                       f"e {alheios[0][1]} a {alheios[0][0]:.1f} mm")
 
+    # -- RF6: terra sob o receptor, sem sinal cruzando ----------------------
+    if GNSS in pecas:
+        arv_rf6 = fp_load.parse(PCB.read_text(encoding="utf-8"))
+        nomes6 = {nn: r for r, nn in fp_load.redes_da_placa(arv_rf6).items()}
+        corpo = pecas[GNSS]["fab"] or pecas[GNSS]["caixa"]
+        # the pins run round the edge of the body: crossing below it means
+        # through the middle, 1.2 mm in from every side
+        meio = (corpo[0] + 1.2, corpo[1] + 1.2, corpo[2] - 1.2, corpo[3] - 1.2)
+        cruzam = set()
+        for q in seg:
+            rede = nomes6.get(q["n"], "")
+            if q["c"] not in ("F.Cu", "In1.Cu") or rede == "GND":
+                continue
+            for k in range(21):
+                x = q["a"][0] + (q["b"][0] - q["a"][0]) * k / 20
+                y = q["a"][1] + (q["b"][1] - q["a"][1]) * k / 20
+                if meio[0] <= x <= meio[2] and meio[1] <= y <= meio[3]:
+                    cruzam.add(f"{rede} ({q['c']})")
+                    break
+        terra = terra_preenchida(arv_rf6)
+        cobre = {}
+        for cam in ("F.Cu", "In1.Cu"):
+            tot = cob = 0
+            y = corpo[1] + 0.1
+            while y < corpo[3]:
+                x = corpo[0] + 0.1
+                while x < corpo[2]:
+                    if not any(caixa_pad(q)[0] <= x <= caixa_pad(q)[2] and
+                               caixa_pad(q)[1] <= y <= caixa_pad(q)[3] for q in pecas[GNSS]["pads"]):
+                        tot += 1
+                        cob += any(dentro_poligono(x, y, xy) for xy in terra.get(cam, []))
+                    x += 0.25
+                y += 0.25
+            cobre[cam] = cob / max(tot, 1)
+        if cruzam or min(cobre.values()) < COBERTURA_TERRA_GNSS:
+            falhou("RF6", ("sinal cruzando sob o receptor: " + ", ".join(sorted(cruzam)) + "; " if cruzam else "")
+                   + "terra cobre " + ", ".join(f"{c} {v:.0%}" for c, v in cobre.items())
+                   + f" do corpo fora das ilhas (pede {COBERTURA_TERRA_GNSS:.0%})")
+        else:
+            ok.append("RF6: nenhuma trilha de sinal sob o receptor na F.Cu e na In1.Cu; o terra cobre "
+                      + " e ".join(f"{v:.0%} na {c}" for c, v in cobre.items())
+                      + " do corpo fora das ilhas")
+
     # -- RF7: a rede pi do GNSS ----------------------------------------------
     if GNSS in pecas and all(r in pecas for r in PI_GNSS):
         rf_in = [q for q in pecas[GNSS]["pads"] if q["rede"] == "RF_IN"]
@@ -973,10 +1233,12 @@ def main() -> int:
             # series element) -> the antenna contact's FEED pad, with each
             # shunt measured against the node it hangs on. The limit is
             # lambda/10 at L1, which is where a line stops being electrically
-            # short: with eps_eff 3.27 for a 0.196 mm microstrip over the
-            # 0.10 mm prepreg of this stack-up, lambda at 1.575 GHz is
-            # 105.3 mm, so lambda/10 is 10.5 mm.
-            LIMITE_RF = 10.5
+            # short: with eps_eff 3.04 for the 0.15 mm line over the 0.0994 mm
+            # prepreg of JLC04081H-3313, under the mask and beside the pour
+            # (impedancia.py), lambda at 1.575 GHz is 109.2 mm, so lambda/10
+            # is 10.9 mm. Until 2026-10-19: 3.27, 105.3 and 10.5, from the
+            # closed form for the old 0.196 mm line.
+            LIMITE_RF = 10.9
             p0 = (rf_in[0]["x"], rf_in[0]["y"])
 
             def perto(ref, ponto):
@@ -997,7 +1259,7 @@ def main() -> int:
                                 (pa if alim else p0)))
                       for r in ("C302", "C301") if r in pecas]
             mal = [t for t in trechos if t[1] > LIMITE_RF]
-            # The shunt's own stub, against lambda/20 = 5.3 mm. A number and
+            # The shunt's own stub, against lambda/20 = 5.5 mm. A number and
             # not a feeling: a stub much shorter than an eighth of a
             # wavelength behaves as the lumped capacitor the network was
             # designed with, and lambda/20 is half of that with margin. The
@@ -1031,26 +1293,24 @@ def main() -> int:
         cm = pecas[MODULO]["caixa"]
         perto_demais, medidos = [], []
         for tipo, limite_mm, refs in ISOLACAO:
-            pior = None
-            for r in refs:
-                if r not in pecas:
-                    continue
-                d = dist_caixas(cm, pecas[r]["caixa"])
-                if pior is None or d < pior[0]:
-                    pior = (d, r)
+            itens = [(dist_caixas(cm, pecas[r]["caixa"]), r) for r in refs if r in pecas]
             if tipo.startswith("display"):
                 try:
-                    z = zona(ZONA_DISPLAY)
-                    d = dist_caixas(cm, z)
-                    if pior is None or d < pior[0]:
-                        pior = (d, "a propria sombra do display")
+                    itens.append((dist_caixas(cm, zona(ZONA_DISPLAY)), "a propria sombra do display"))
                 except KeyError:
                     pass
-            if pior is None:
+            if not itens:
                 continue
-            medidos.append((tipo, limite_mm, pior))
-            if pior[0] < limite_mm:
-                perto_demais.append((tipo, limite_mm, pior))
+            if all(d >= limite_mm for d, _n in itens):
+                medidos.append((tipo, limite_mm, min(itens)))
+            for d, nome in sorted(itens):
+                if d >= limite_mm:
+                    continue
+                if ("RF9", nome) in DESVIOS:
+                    desvios.append(("RF9", f"{tipo}: {nome} a {d:.1f} mm, a ficha recomenda "
+                                           f"{limite_mm:.0f}", DESVIOS[("RF9", nome)]))
+                else:
+                    perto_demais.append((tipo, limite_mm, (d, nome)))
         if perto_demais:
             falhou("RF9", "; ".join(
                 f"{t}: {p[1]} a {p[0]:.1f} mm, a ficha pede {lim:.0f}"
@@ -1088,24 +1348,62 @@ def main() -> int:
         larg = sorted({round(q["w"], 3) for q in sg})
         par[r] = (len(sg), comp, larg)
     alvo = _R.LARGURA_USB_CALC
+    entre_eixos = _R.LARGURA_USB_CALC + _R.PASSO_PAR
     faltando = [r for r, v in par.items() if v[0] == 0]
     if faltando:
         falhou("US1", "o par nao esta roteado: " + ", ".join(faltando))
     else:
         larguras = sorted({w for v in par.values() for w in v[2]})
-        maior = max(larguras)
-        if maior < alvo - 1e-6:
-            falhou("US1", "o par esta roteado a " +
-                   ", ".join(f"{w:.3f}" for w in larguras) +
-                   f" mm, e 90 ohm diferenciais nesta pilha pedem "
-                   f"{alvo:.3f} mm com {_R.PASSO_PAR:.1f} de afastamento. "
-                   f"Comprimentos: " +
-                   ", ".join(f"{r} {v[1]:.1f} mm" for r, v in par.items()) +
-                   ". Tem de ser terminado a mao")
+        # where the two run side by side, at the gap the impedance was
+        # computed for (impedancia.py: 0.15 mm 0.2 apart, 93.6 ohm)
+        dp = [q for q in seg if _por_num.get(q["n"]) == "USB_DP" and q["c"] == "F.Cu"]
+        dm = [q for q in seg if _por_num.get(q["n"]) == "USB_DM" and q["c"] == "F.Cu"]
+        juntos = 0.0
+        for a in dp:
+            ax, ay = a["b"][0] - a["a"][0], a["b"][1] - a["a"][1]
+            la = math.hypot(ax, ay)
+            if la < 0.3:
+                continue
+            for b in dm:
+                bx, by = b["b"][0] - b["a"][0], b["b"][1] - b["a"][1]
+                lb = math.hypot(bx, by)
+                if lb < 0.3 or abs(ax * by - ay * bx) / (la * lb) > 0.02:
+                    continue
+                d = abs((b["a"][0] - a["a"][0]) * -ay / la + (b["a"][1] - a["a"][1]) * ax / la)
+                t = sorted([((b["a"][0] - a["a"][0]) * ax + (b["a"][1] - a["a"][1]) * ay) / la,
+                            ((b["b"][0] - a["a"][0]) * ax + (b["b"][1] - a["a"][1]) * ay) / la])
+                if abs(d - entre_eixos) < 0.01:
+                    juntos += max(0.0, min(la, t[1]) - max(0.0, t[0]))
+        if max(larguras) > alvo + 1e-6 or min(larguras) < alvo - 1e-6:
+            falhou("US1", "o par esta roteado a " + ", ".join(f"{w:.3f}" for w in larguras) +
+                   f" mm, e 90 ohm diferenciais nesta pilha pedem {alvo:.3f} mm com "
+                   f"{_R.PASSO_PAR:.1f} de vao (impedancia.py)")
         else:
-            ok.append("US1: o par esta roteado a " +
-                      ", ".join(f"{w:.3f}" for w in larguras) +
-                      f" mm, contra os {alvo:.3f} que dao 90 ohm")
+            ok.append(f"US1: o par esta roteado a {alvo:.3f} mm, e corre junto a "
+                      f"{_R.PASSO_PAR:.1f} mm de vao por {juntos:.1f} mm: 93,6 ohm "
+                      f"diferenciais na JLC3313 (impedancia.py)")
+
+    # -- US2: o par com o mesmo comprimento ------------------------------------
+    def pad_de(ref, num):
+        return next((q for q in pecas.get(ref, {}).get("pads", []) if str(q["pad"]) == num), None)
+    n_dp, n_dm = _numeros.get("USB_DP"), _numeros.get("USB_DM")
+    pontas = {"USB_DP": (pad_de("D102", "6"), pad_de("U201", "8")),
+              "USB_DM": (pad_de("D102", "7"), pad_de("U201", "7"))}
+    if None not in pontas["USB_DP"] + pontas["USB_DM"]:
+        l_dp = comprimento(n_dp, seg, vias, *pontas["USB_DP"])
+        l_dm = comprimento(n_dm, seg, vias, *pontas["USB_DM"])
+        # the receptacle has each line twice (A6 and B6, A7 and B7): which
+        # one the plug touches decides which line goes through its tie
+        laco_dp = comprimento(n_dp, seg, vias, pad_de("J101", "A6"), pad_de("J101", "B6"))
+        laco_dm = comprimento(n_dm, seg, vias, pad_de("J101", "B7"), pad_de("J101", "A7"))
+        nota = (f"; as amarracoes dos contatos duplicados do USB-C somam {laco_dp:.1f} mm no "
+                f"D+ e {laco_dm:.1f} no D-, e uma delas entra no caminho conforme o lado do plugue")
+        if abs(l_dp - l_dm) > LIMITE_SKEW_USB:
+            falhou("US2", f"do diodo ao modulo o D+ tem {l_dp:.2f} mm e o D- {l_dm:.2f}: "
+                          f"{abs(l_dp - l_dm):.2f} mm de diferenca" + nota)
+        else:
+            ok.append(f"US2: do diodo ao modulo o D+ tem {l_dp:.2f} mm e o D- {l_dm:.2f} "
+                      f"({abs(l_dp - l_dm):.2f} mm de diferenca)" + nota)
 
     # -- AL5: o filtro pi no pino de alimentacao do modulo -------------------
     # 7.2, Power Supply Design: "For switching power supply applications, a
@@ -1186,22 +1484,75 @@ def main() -> int:
         alvo = [q for q in pecas[chip]["pads"] if q["rede"] in redes]
         if not alvo:
             continue
-        d = min(min(math.hypot(a["x"] - b["x"], a["y"] - b["y"])
-                    for b in alvo) for a in pecas[cap]["pads"])
-        piores.append((d, cap, chip))
+        # edge to edge: the copper the loop has to cross. Pad centre to pad
+        # centre, as this rule measured until 2026-10-19, adds half of each
+        # pad - 1.27 mm for C304 against the receiver's 1.8 mm pin
+        d = min(vao_pads(a, b) for b in alvo for a in pecas[cap]["pads"] if a["rede"] in redes)
+        lim = LIMITE_MODULO if chip == MODULO else limite(cap)
+        piores.append((d, cap, chip, lim))
     piores.sort(reverse=True)
-    acima = [t for t in piores if t[0] > limite(t[1])]
-    media = sum(t[0] for t in piores) / len(piores) if piores else 0.0
-    hf = [t for t in piores if limite(t[1]) == 2.0]
+    acima = []
+    for d, c, u, lim in piores:
+        if d <= lim:
+            continue
+        if ("AL1", c) in DESVIOS:
+            desvios.append(("AL1", f"{c} a {d:.2f} mm do pino do {u}, a ficha pede {lim:g}",
+                            DESVIOS[("AL1", c)]))
+        else:
+            acima.append((d, c, u, lim))
+    hf = [t for t in piores if t[3] == LIMITE_HF]
+    res = [t for t in piores if t[3] == LIMITE_RESERVA]
+    mod = [t for t in piores if t[3] == LIMITE_MODULO]
     if acima:
-        falhou("AL1", f"{len(acima)} de {len(piores)} capacitores alem do limite "
-               f"(media geral {media:.2f} mm): " +
-               ", ".join(f"{c}->{u} {d:.1f} de {limite(c):.0f}"
-                         for d, c, u in acima[:6]))
+        falhou("AL1", f"{len(acima)} de {len(piores)} capacitores alem do limite: " +
+               ", ".join(f"{c}->{u} {d:.2f} de {lim:g}" for d, c, u, lim in acima[:6]))
     else:
-        ok.append(f"AL1: {len(piores)} capacitores dentro do limite; o pior de "
-                  f"alta frequencia esta a {max(t[0] for t in hf):.2f} mm e o "
-                  f"pior de reserva a {piores[0][0]:.2f} mm")
+        mhf = min(mod, key=lambda t: t[0])
+        ok.append(f"AL1: {len(piores)} capacitores, de borda a borda: o pior de alta frequencia "
+                  f"a {hf[0][0]:.2f} mm ({hf[0][1]}), o pior de reserva a {res[0][0]:.2f} "
+                  f"({res[0][1]}), e o de alta frequencia do modulo a {mhf[0]:.2f} ({mhf[1]})")
+
+    # -- AL3: o laco de chaveamento -----------------------------------------
+    _nums = redes_do_arquivo()
+    laco = []
+    for rede, chip, ind in CONVERSORES:
+        n = _nums.get(rede)
+        if n is None or chip not in pecas or ind not in pecas:
+            continue
+        cobre = sum(math.hypot(q["b"][0] - q["a"][0], q["b"][1] - q["a"][1])
+                    for q in seg if q["n"] == n)
+        nv = sum(1 for v in vias if v["n"] == n)
+        gap = min(vao_pads(a, b) for a in pecas[chip]["pads"] if a["rede"] == rede
+                  for b in pecas[ind]["pads"] if b["rede"] == rede)
+        laco.append((rede, cobre, nv, gap))
+    ruins = [t for t in laco if t[1] > LIMITE_SW_COBRE or t[2] or t[3] > LIMITE_SW_INDUTOR]
+    texto = ", ".join(f"{r} {c:.1f} mm, {v} vias, indutor a {g:.1f}" for r, c, v, g in laco)
+    if ruins:
+        falhou("AL3", "no de chaveamento longo demais: " + texto)
+    elif laco:
+        ok.append("AL3: " + texto)
+
+    # -- AL4: resistencia em serie no VCC do receptor -------------------------
+    p_l = next((q for q in pecas.get(FONTE_3V0[0], {}).get("pads", []) if q["rede"] == FONTE_3V0[1]), None)
+    p_jp = {q["rede"]: q for q in pecas.get("JP103", {}).get("pads", [])}
+    p_fb = {q["rede"]: q for q in pecas.get("FB301", {}).get("pads", [])}
+    p_vcc = next((q for q in pecas.get(GNSS, {}).get("pads", [])
+                  if q["rede"] == "3V0_GNSS" and q["pad"] == next(
+                      pn.number for pn in P.PARTS[GNSS].pins if pn.name == "VCC")), None)
+    if p_l and p_vcc and "3V0" in p_jp and "3V0_BLOCO" in p_fb:
+        trechos = [("3V0", p_l, p_jp["3V0"]), ("3V0_BLOCO", p_jp["3V0_BLOCO"], p_fb["3V0_BLOCO"]),
+                   ("3V0_GNSS", p_fb["3V0_GNSS"], p_vcc)]
+        cobre = {r: resistencia(_nums[r], seg, vias, a, b, [q for q in pads if q["rede"] == r])
+                 for r, a, b in trechos}
+        total = sum(cobre.values()) + sum(SERIE_VCC_GNSS.values())
+        texto = (f"{total * 1000:.0f} mOhm no pior caso, do indutor do BUCK2 ao pino VCC: "
+                 f"cobre {sum(cobre.values()) * 1000:.0f} ("
+                 + ", ".join(f"{r} {v * 1000:.1f}" for r, v in cobre.items()) + ") e "
+                 + ", ".join(f"{r} {v * 1000:.0f}" for r, v in SERIE_VCC_GNSS.items()))
+        if total > LIMITE_VCC_GNSS:
+            falhou("AL4", texto + f", acima dos {LIMITE_VCC_GNSS * 1000:.0f}")
+        else:
+            ok.append("AL4: " + texto)
 
     # -- AL2: largura por IPC-2221 -------------------------------------------
     numeros = redes_do_arquivo()
@@ -1245,7 +1596,7 @@ def main() -> int:
                          for r, (w, p) in sorted(piores_l.items())[:6]))
     elif seg:
         ok.append("AL2: nenhum trecho de alimentacao abaixo da largura IPC-2221 "
-                  f"(10 C de subida, cobre de 35 um); {necks} estreitamentos "
+                  f"(10 C de subida, cobre de {MP.CU * 1000:.0f} um por fora e {MP.CU_INTERNO * 1000:.1f} por dentro); {necks} estreitamentos "
                   "curtos junto a pad, que a norma nao cobra")
     else:
         falhou("AL2", "sem trilhas: nada a medir")
@@ -1539,6 +1890,22 @@ def main() -> int:
                   f"e as pernas do lado das ilhas; {len(sem_corpo)} pecas sem "
                   "corpo ou sem F.Fab para medir")
 
+    # -- FA1: via em ilha de SMD so com POFV ---------------------------------
+    em_ilha = []
+    for v in vias:
+        for q in pads:
+            if not q["smd"] or q["rede"] == "" or _nums.get(q["rede"]) != v["n"]:
+                continue
+            cx = caixa_pad(q)
+            if cx[0] <= v["x"] <= cx[2] and cx[1] <= v["y"] <= cx[3]:
+                em_ilha.append(f"{q['ref']}.{q['pad']}")
+                break
+    if em_ilha and "POFV" not in FABRICACAO["via_em_pad"]:
+        falhou("FA1", f"{len(em_ilha)} vias dentro de ilha de SMD, e o pedido nao pede POFV")
+    else:
+        ok.append(f"FA1: {len(em_ilha)} vias dentro de ilha de SMD; o pedido pede "
+                  f"{FABRICACAO['via_em_pad']}, na pilha {FABRICACAO['pilha']}")
+
     # -- RT1: a placa esta inteira? ------------------------------------------
     # O DRC do KiCad com TODAS as severidades. Ate 2026-09-25 as rodadas a
     # mao usavam --severity-error, e "0 itens desconectados" saiu impresso
@@ -1585,12 +1952,18 @@ def main() -> int:
     for linha in ok:
         print(f"  ok      {linha}")
     print()
+    for rid, msg, porque in desvios:
+        print(f"  desvio  {rid}: {msg}")
+        print(f"          aceito pelo dono em 2026-10-19: {porque}")
+    if desvios:
+        print()
     for rid, msg in achados:
         fonte = next((f for i, _d, f in REGRAS if i == rid), "")
         print(f"  FALHA   {rid}: {msg}")
         print(f"          fonte: {fonte}")
     print()
-    medidas = {r for r, _ in achados} | {linha.split(":")[0] for linha in ok}
+    medidas = ({r for r, _ in achados} | {linha.split(":")[0] for linha in ok}
+               | {r for r, _m, _p in desvios})
     naomedidas = [(i, d, f) for i, d, f in REGRAS if i not in medidas]
     if naomedidas:
         print("  nao medido aqui (precisa de bancada, do empilhamento do "
@@ -1598,8 +1971,9 @@ def main() -> int:
         for i, d, _f in naomedidas:
             print(f"    {i}: {d}")
     print()
-    print(f"{len(ok)} regras medidas e cumpridas, {len(achados)} violadas, "
-          f"{len(naomedidas)} nao medidas")
+    com_desvio = len({r for r, _m, _p in desvios})
+    print(f"{len(ok)} regras medidas e cumpridas, {com_desvio} com desvio aceito, "
+          f"{len(achados)} violadas, {len(naomedidas)} nao medidas")
     return 1 if achados else 0
 
 

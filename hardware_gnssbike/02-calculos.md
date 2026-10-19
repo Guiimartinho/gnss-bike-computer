@@ -172,7 +172,7 @@ a partir das seções acima):
 | `VSYS` | 74 mA; 0,47 A com os reguladores na corrente nominal | **energia** | a carga da célula não sai pelo pino `VSYS`: o carregador fica entre o `VSYS` interno e o `VBAT` (ficha do nPM1300, PS v1.1, CHARGER). O pior caso de projeto soma o BUCK1 e o BUCK2 a 200 mA, a `LDSW2` a 100 mA e os LED, com a célula a 3,0 V; até 2026-10-19 esta linha dizia 671 mA, sistema mais carga |
 | `VBAT` | 600 mA | **energia** | carga |
 | `1V8` | 0 | sinal | montado, sem carga, desde 2026-09-26 |
-| `3V0` | 47 mA; 123 mA no pico de partida do receptor | média | o receptor está aqui desde 2026-09-26 |
+| `3V0` | 47 mA; 123 mA no pico de partida do receptor | média | o receptor está aqui desde 2026-09-26; o CAD dimensiona o cobre para 200 mA, o máximo do BUCK2 |
 | `3V3BL` | 16 mA | sinal | luz acesa |
 | `SD3V0_FLASH` (o `3V0` pelo `JP106`) | 3,1 mA | sinal | apagando um setor; até 2026-10-18 era o `SD3V0` da `LDSW1`, que ficou sem carga |
 | `VBCKP` | 28 µA | sinal | backup do receptor |
@@ -180,11 +180,12 @@ a partir das seções acima):
 
 > [!IMPORTANT]
 > **A largura em milímetros não sai daqui.** Ela depende da espessura do
-> cobre e da pilha do fabricante, que [04](04-pcb-e-caixa.md#camadas) ainda
-> não tem. O que este documento fixa é a **corrente**; a largura sai da
-> IPC-2152 quando a pilha existir. Os três nós marcados como "energia" são
-> os que não podem sair com largura de sinal nem passar por dentro da placa
-> ([08](08-layout.md#largura-de-trilha)).
+> cobre e da pilha do fabricante, que desde 2026-10-19 é a JLCPCB
+> JLC04081H-3313: 35 µm de cobre nas faces de fora e 15,2 µm (0,5 oz) nas de
+> dentro. O que este documento fixa é a **corrente**; o CAD confere a
+> largura pela IPC-2221 no cobre de cada camada. Os três nós marcados como
+> "energia" são os que não podem sair com largura de sinal nem passar por
+> dentro da placa ([08](08-layout.md#largura-de-trilha)).
 
 ## Pull-ups do I²C
 
@@ -838,8 +839,8 @@ Dito aqui para não passar por esquecimento.
 | Não calculado | Por quê | Quando vira necessário |
 |---|---|---|
 | Ondulação e resposta transitória dos bucks | os valores vêm da lista de referência da Nordic, tabelas 39 e 40 | se algum componente sair dessa lista |
-| Largura de trilha em milímetros | depende da pilha do fabricante, que [04](04-pcb-e-caixa.md#camadas) ainda não tem; a [corrente](#corrente-por-trilho-e-largura-de-trilha) está fixada, e o CAD usa três classes conferidas pela IPC-2221 com cobre de 35 µm ([08](08-layout.md#largura-de-trilha)) | quando a pilha do fabricante chegar |
-| Impedância da linha da antena GNSS e o par de 90 Ω do USB | idem | no layout |
+| Largura de trilha pela IPC-2152 | o CAD confere pela IPC-2221 na pilha JLC04081H-3313 (35 µm por fora, 15,2 µm por dentro), com a [corrente](#corrente-por-trilho-e-largura-de-trilha) fixada aqui ([08](08-layout.md#largura-de-trilha)); a 2152, que conta o plano vizinho, daria trilhas mais finas | se algum trilho ficar no limite |
+| Impedância da linha da antena GNSS e o par de 90 Ω do USB | calculada desde 2026-10-19 em [`cad/impedancia.py`](cad/impedancia.py), por campo, na JLC04081H-3313: 51,1 Ω com 0,15 mm e 93,6 Ω no par de 0,15 mm a 0,2 de vão | a medida é do fabricante, no pedido com impedância controlada |
 | Integridade de sinal do SPI do display | 2 MHz no máximo, trilha curta: não é regime crítico | se a FPC ficar longa |
 | **Caminho elétrico da luz do LPM027M128C** | o FPC de 10 vias não tem par de LED e nenhuma fonte do projeto diz se o C traz um FPC maior ou um rabicho próprio ([luz do display](#luz-do-display)) | **antes do layout** |
 | Comportamento térmico da caixa fechada | precisa do material e da geometria reais | no protótipo |

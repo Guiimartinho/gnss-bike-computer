@@ -18,7 +18,7 @@ How a four layer board of this kind is routed, and what this does:
            (FORA_DA_INTERNA), 0.25 for 3V0 and its branches on any layer,
            signal width for the rails of microamps to a few tens of mA.
   RF       goes FIRST, on the front layer only, at the calculated 50 ohm
-           width for this stack-up (0.196 mm), with ground vias down both
+           width for this stack-up (0.15 mm, impedancia.py), with ground vias down both
            sides. First because its path is the one that is not negotiable
            and it has to leave the receiver's pin before anything else takes
            the room; front only because a via in the middle of an RF run is
@@ -273,76 +273,37 @@ def e_alimentacao(rede: str) -> bool:
 # the RF signal line must be 50 ohm; select the stack-up, copper, and
 # dielectric properties of the PCB accordingly").
 #
-# The stack-up is in the board file, so the width is a calculation and not an
-# open question: four copper layers of 35 um in 0.80 mm, which leaves
-# (0.80 - 4 x 0.035) / 3 = 0.22 mm of dielectric between F.Cu and the ground
-# plane on In1.Cu. What is NOT known is the dielectric constant - it is the
-# fabricator's, and 4.3 is the usual value for FR-4 at these frequencies.
-# That assumption is the reason the result is printed with its inputs.
-ER_FR4 = 4.3                 # ASSUMIDO: confirmar com o fabricante
-H_DIEL = MP.DIEL_RF           # F.Cu ao plano de terra, do empilhamento
+# The stack-up is the fabricator's: JLCPCB JLC04081H-3313, 0.8 mm and four
+# layers, ordered with impedance control (+-10 %). F.Cu is 35 um of copper
+# over 0.0994 mm of 3313 prepreg with Dk 4.05 to the ground plane on In1.Cu,
+# under 0.5 mil of solder mask with Dk 3.8 (JLCPCB's impedance page, read on
+# 2026-10-19). The widths come from impedancia.py, a 2D field solution of the
+# real cross-section - copper thickness, the mask, and the ground pour 0.2
+# mm beside the line - checked against Hammerstad-Jensen and Wheeler within
+# 1 %:
+#
+#     0.196 mm, alone        44.0 ohm   what this file gave until 2026-10-19,
+#                                       from Hammerstad's closed form with
+#                                       Dk 4.3 and no mask, copper or pour
+#     0.150 mm, alone        51.1 ohm   LARGURA_RF
+#     0.150 mm pair, 0.2 gap 93.6 ohm differential: LARGURA_USB_CALC, PASSO_PAR
+#
+# On JLCPCB's other 0.8 mm stack (7628 prepreg, 0.21 mm) the 0.15 mm line is
+# 66 ohm: the order has to name JLC04081H-3313.
+H_DIEL = 0.0994              # F.Cu to the plane, 3313 prepreg
+ER_PREPREG = 4.05
 T_CU = 0.035
-
-
-def z0_microstrip(w: float, h: float = H_DIEL, er: float = ER_FR4) -> float:
-    """Hammerstad's microstrip impedance, in ohm."""
-    u = w / h
-    ef = (er + 1) / 2 + (er - 1) / 2 * (1 + 12 / u) ** -0.5
-    if u <= 1:
-        return 60 / math.sqrt(ef) * math.log(8 / u + u / 4)
-    return 120 * math.pi / (math.sqrt(ef) * (u + 1.393 + 0.667 * math.log(u + 1.444)))
-
-
-def largura_para(z_alvo: float) -> float:
-    """The width that gives this impedance, by bisection on the formula."""
-    lo, hi = 0.05, 3.0
-    for _ in range(60):
-        meio = (lo + hi) / 2
-        # a narrower track has HIGHER impedance, so overshooting the target
-        # means the track has to get wider, not narrower
-        if z0_microstrip(meio) > z_alvo:
-            lo = meio
-        else:
-            hi = meio
-    return round((lo + hi) / 2, 3)
-
-
-LARGURA_RF = largura_para(50.0)
-# A coplanar waveguide with its ground far enough away behaves as a plain
-# microstrip; the datasheets ask for CPWG, so the pour stays beside the line
-# with a gap of at least three widths, and the ground vias go along both
-# sides. Closer than that and this number would have to be recomputed with
-# the coplanar formula.
+LARGURA_RF = 0.15
+# The ME54BS13 asks for no other signal within three widths of an RF line
+# (7.2); the ground pour sits 0.2 mm from it, and the solver counts it.
 FOLGA_CPWG = 3.0 * LARGURA_RF
-# The USB pair is 90 ohm DIFFERENTIAL, and that is not two 45 ohm lines: a
-# 0.2 mm gap over 0.22 mm of dielectric couples them, and coupling lowers the
-# differential impedance. The usual closed form for an edge-coupled
-# microstrip is used here,
-#
-#     Zdiff = 2 x Z0 x (1 - 0.48 x exp(-0.96 x S/H))
-#
-# which is an approximation: the real number comes from the fabricator's
-# field solver together with the real dielectric constant. Both assumptions
-# are printed by the dry-run so that neither hides.
+# The USB pair is 90 ohm DIFFERENTIAL, coupled: 0.15 mm tracks 0.2 mm apart,
+# which is also the clearance of the USB class, so the pair needs no rule of
+# its own. Until 2026-10-19 the width here came from a closed form for a
+# 0.2 mm gap and the router kept the two 0.39 mm apart: 0.207 mm tracks,
+# 84 ohm where they ran together.
 PASSO_PAR = 0.2              # gap between the two tracks of the pair
-
-
-def z_diferencial(w: float, s: float = PASSO_PAR) -> float:
-    return 2 * z0_microstrip(w) * (1 - 0.48 * math.exp(-0.96 * s / H_DIEL))
-
-
-def largura_par(z_alvo: float = 90.0) -> float:
-    lo, hi = 0.05, 3.0
-    for _ in range(60):
-        meio = (lo + hi) / 2
-        if z_diferencial(meio) > z_alvo:
-            lo = meio
-        else:
-            hi = meio
-    return round((lo + hi) / 2, 3)
-
-
-LARGURA_USB_CALC = largura_par(90.0)
+LARGURA_USB_CALC = 0.15
 
 
 # The finish, one connection at a time (the owner, 2026-10-19: one track at
@@ -382,8 +343,9 @@ def largura(rede: str) -> float:
     if rede in NAO_ROTEAR:
         return LARGURA_RF
     if rede.startswith("USB_D"):
-        # A largura que da 90 ohm diferenciais NESTA pilha, calculada logo
-        # acima: 0,207 mm com 0,2 de afastamento. Ela cabe.
+        # A largura que da 90 ohm diferenciais NESTA pilha, calculada no
+        # impedancia.py: 0,15 mm com 0,2 de afastamento, 93,6 ohm (ate
+        # 2026-10-19, 0,207 mm de uma formula fechada).
         #
         # Este comentario dizia 0,352 mm, e isso ficou aqui desde
         # 2026-09-24 sem nunca ter sido conta: 0,352 e a largura de 90 ohm
@@ -1180,6 +1142,28 @@ def base(arv, todos):
         ys = [float(q[2]) - MP.ORIGEM[1] for q in fp_load.kids(pts, "xy")]
         ix0, iy0 = g.cel(min(xs), min(ys))
         ix1, iy1 = g.cel(max(xs), max(ys))
+        for c in range(NC):
+            for ix in range(ix0 - folga_v, ix1 + folga_v + 1):
+                for iy in range(iy0 - folga_v, iy1 + folga_v + 1):
+                    g.v[(c, ix, iy)] = BLOQUEADO
+
+    # Nor any copper at all under a footprint's own mask opening, on its face
+    # (make_pcb.janelas_de_mascara): the opening bares it next to the pads
+    for z in fp_load.kids(arv, "zone"):
+        nm = fp_load.kid(z, "name")
+        if not nm or not nm[1].startswith("SEM_COBRE_JANELA"):
+            continue
+        cams = [CAMADAS.index(c_) for c_ in fp_load.kid(z, "layers")[1:] if c_ in CAMADAS]
+        pts = fp_load.kid(fp_load.kid(z, "polygon"), "pts")
+        xs = [float(q[1]) - MP.ORIGEM[0] for q in fp_load.kids(pts, "xy")]
+        ys = [float(q[2]) - MP.ORIGEM[1] for q in fp_load.kids(pts, "xy")]
+        ix0, iy0 = g.cel(min(xs), min(ys))
+        ix1, iy1 = g.cel(max(xs), max(ys))
+        for c in cams:
+            for ix in range(ix0, ix1 + 1):
+                for iy in range(iy0, iy1 + 1):
+                    if (c, ix, iy) not in g.t:
+                        g.t[(c, ix, iy)] = BLOQUEADO
         for c in range(NC):
             for ix in range(ix0 - folga_v, ix1 + folga_v + 1):
                 for iy in range(iy0 - folga_v, iy1 + folga_v + 1):
@@ -2743,7 +2727,9 @@ def conferir(segmentos, vias) -> list[str]:
         for (q0, q1, c2, r2, w2) in segmentos[i + 1:]:
             if c != c2 or r == r2:
                 continue
-            exigido = w / 2 + w2 / 2 + max(folga_de(r), folga_de(r2)) - 0.01
+            # 1 nm of slack, as KiCad compares in whole nanometres: the USB
+            # pair runs exactly at its class clearance
+            exigido = w / 2 + w2 / 2 + max(folga_de(r), folga_de(r2)) - 0.01 - 1e-6
             d = dist_seg(p0, p1, q0, q1)
             if d < exigido:
                 problemas.append(

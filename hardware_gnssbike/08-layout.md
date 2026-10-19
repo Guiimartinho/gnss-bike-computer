@@ -98,8 +98,10 @@ USB.
 O que mais importa nesta placa, e o que menos perdoa.
 
 - Linha de **50 Ω** do `RF_IN` do MAX-F10S à rede em π e daí à antena. A
-  largura sai da pilha do fabricante; sem a pilha **não há como desenhar
-  esta trilha**.
+  largura sai da pilha do fabricante, a JLC04081H-3313: **0,15 mm** dão
+  51,1 Ω com a máscara e o terra despejado a 0,2 mm
+  ([`cad/impedancia.py`](cad/impedancia.py); até 2026-10-19 a trilha tinha
+  0,196 mm, 44 Ω, de uma fórmula fechada sem máscara nem terra ao lado).
 - **Sem via, sem curva viva, sem passar por baixo de nada.** Se a linha
   precisar trocar de camada, o projeto do posicionamento está errado.
 - A rede em π (três posições) fica **junto da antena**, não junto do
@@ -186,13 +188,13 @@ das duas antenas ([04](04-pcb-e-caixa.md#posicionamento)).
 O [cálculo](02-calculos.md#corrente-por-trilho-e-largura-de-trilha) fixa a
 corrente de cada nó. Desde 2026-10-19 o `route.py` dá a largura por essa
 corrente, em três classes, e a regra `AL2` do `dry_run_pcb.py` confere cada
-trecho pela IPC-2221 (10 °C de subida, cobre de 35 µm, que ainda é
-suposição até a pilha do fabricante):
+trecho pela IPC-2221 (10 °C de subida, no cobre da pilha JLC04081H-3313:
+35 µm nas faces de fora e 15,2 µm, 0,5 oz, nas de dentro):
 
 | Classe | Largura | Nós | Por quê |
 |---|---|---|---|
-| energia | 0,25 mm, só nas faces de fora | `VBUS`, `VSYS`, `VBAT`, `VBAT_SYS`, `VBAT_CELULA` | de 0,5 a 0,8 A. Pela IPC-2221, 0,25 mm levam 0,87 A por fora e 0,44 A numa camada interna: por fora bastam de 0,12 a 0,22 mm, por dentro seriam precisos de 0,30 a 0,57 mm, e por isso esses nós não entram na `In2.Cu` |
-| média | 0,25 mm | `3V0` e os ramos `3V0_*` | 123 mA no pico de partida do receptor; 0,25 mm levam 0,44 A numa camada interna |
+| energia | 0,25 mm, só nas faces de fora | `VBUS`, `VSYS`, `VBAT`, `VBAT_SYS`, `VBAT_CELULA` | de 0,5 a 0,8 A. Pela IPC-2221, 0,25 mm levam 0,87 A por fora e só 0,24 A numa camada interna de 0,5 oz: por fora bastam de 0,12 a 0,22 mm, por dentro seriam precisos mais de 0,5 mm, e por isso esses nós não entram na `In2.Cu` |
+| média | 0,25 mm | `3V0` e os ramos `3V0_*` | 123 mA no pico de partida do receptor, e o cobre dimensionado para os 200 mA do BUCK2; 0,25 mm levam 0,24 A numa camada interna de 0,5 oz |
 | sinal | 0,15 mm | `1V8`, `3V3BL`, `SD3V0`, `SD3V0_FLASH`, `VBCKP`, `VBUSOUT` | de microampères a 16 mA; a `VBUSOUT` passa por uma chave de 7,5 Ω dentro do nPM1300 e só alimenta a detecção de USB do módulo e um divisor |
 
 Até 2026-10-19 todo trilho saía com 0,4 mm, o backup de 28 µA também, e
