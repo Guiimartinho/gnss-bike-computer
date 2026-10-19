@@ -44,7 +44,9 @@ pico de partida do receptor — folga de 1,6× no pico e de 4× em regime. Até
 > NOR soldada, decidida em 2026-09-20, o armazenamento passou de até 100 mA
 > para **3,1 mA**, e o pico do trilho caiu de cerca de 120 mA para cerca de
 > 23 mA. Os 100 mA da `LDSW1` deixaram de ser o que dimensiona qualquer
-> coisa.
+> coisa. Desde 2026-10-18 a flash nem passa mais pela `LDSW1`: fica no `3V0`,
+> pelo `JP106`, sempre ligada e em deep power-down (achado mx25r6435f-a1 da
+> [revisão](11-revisao-do-esquematico.md#correções-aplicadas)).
 
 ### O receptor no `3V0`, e o `1V8` sem carga
 
@@ -172,7 +174,7 @@ a partir das seções acima):
 | `1V8` | 0 | sinal | montado, sem carga, desde 2026-09-26 |
 | `3V0` | 47 mA; 123 mA no pico de partida do receptor | média | o receptor está aqui desde 2026-09-26 |
 | `3V3BL` | 16 mA | sinal | luz acesa |
-| `SD3V0` | 3,1 mA | sinal | apagando um setor |
+| `SD3V0_FLASH` (o `3V0` pelo `JP106`) | 3,1 mA | sinal | apagando um setor; até 2026-10-18 era o `SD3V0` da `LDSW1`, que ficou sem carga |
 | `VBCKP` | 28 µA | sinal | backup do receptor |
 
 > [!IMPORTANT]
@@ -600,7 +602,7 @@ de cada CI**, mais o volume que a ficha de cada peça pede.
 | `VBUS` | 10 µF, 25 V | ficha do nPM1300 (o CI tolera 22 V em transitório) |
 | `3V0_GNSS`, junto do módulo GNSS | ferrite + 10 µF | ficha do MAX-F10S, ondulação abaixo de 50 mV; o ferrite tem 150 mΩ, dentro dos 0,2 Ω que o manual (4.1.1) permite em série com o `VCC` |
 | `MMC5633NJL` `VDD` | pelo menos 2,2 µF | ficha |
-| `SD3V0`, junto da flash | 22 µF | [14](../docs/14-hardware-placa-nova.md#alimentação) |
+| `SD3V0_FLASH`, junto da flash | 22 µF | [14](../docs/14-hardware-placa-nova.md#alimentação) |
 | `CSRC` e `CINT` do AEM10900 | 22 µF, 6,3 V, 0402 | lista mínima da e-peas |
 | `CSTO` do AEM10900 | 22 µF, 10 V, 0603 | dá cerca de 9 µF com 4 V aplicados, acima dos 5 µF efetivos que a ficha pede |
 | Saída do TPS7A02 | pelo menos 0,5 µF efetivos | ficha |
