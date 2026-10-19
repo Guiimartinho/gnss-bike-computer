@@ -228,10 +228,14 @@ temp_sensor: &temp {
  * the receiver runs at 3.0 V on the same rail as the MCU (VCC and V_IO
  * tied, VIO_SEL open: option 1 of table 35 of the integration manual), so
  * the UART, EXTINT, TIMEPULSE and RESET_N go pin to pin, without the
- * TXU0204 level shifter of the 1.8 V design. The part leaves the factory at
- * 38400 baud; the driver turns NMEA off and asks for one UBX-NAV-PVT and
- * one UBX-NAV-SAT a second. The footprint also takes the MAX-M10N-10B,
- * which has LEAP; the compatible is what tells the two apart.
+ * TXU0204 level shifter of the 1.8 V design. The MAX-F10S leaves the factory
+ * at 9600 baud, not at the 38400 of the M10 firmware default (integration
+ * manual UBXDOC-963802114-12892, p. 12 and p. 22; schematic review of
+ * 2026-10-18, max-f10s-a3). The driver turns NMEA off and asks for one
+ * UBX-NAV-PVT and one UBX-NAV-SAT a second: about 600 B with 40 satellites
+ * in view, two thirds of the 960 B/s of the line. The footprint also takes
+ * the MAX-M10N-10B, which has LEAP; the compatible is what tells the two
+ * apart.
  *
  * vcc-supply points at BUCK2, which is always on: the driver's
  * regulator_disable() in standby becomes a no-op and the receiver only
@@ -245,7 +249,7 @@ temp_sensor: &temp {
  */
 &uart21 {
 	status = "okay";
-	current-speed = <38400>;
+	current-speed = <9600>;
 	pinctrl-0 = <&uart21_default>;
 	pinctrl-1 = <&uart21_sleep>;
 	pinctrl-names = "default", "sleep";
@@ -378,7 +382,10 @@ temp_sensor: &temp {
 				regulator-always-on;
 			};
 
-			/* Load switch of the microSD, on the prototype only */
+			/*
+			 * LDSW1 (SD3V0): unloaded since 2026-10-18, when the flash
+			 * moved to the 3V0 rail (mx25r6435f-a1); it stays off.
+			 */
 			npm1300_ldo1: LDO1 {
 				regulator-initial-mode = <NPM13XX_LDSW_MODE_LDSW>;
 			};
@@ -395,6 +402,13 @@ temp_sensor: &temp {
 		 * 600 mA (0.3C of the cell), end at 4.20 V and at 60 mA, 500 mA
 		 * from VBUS until the USB-C source says it can give more, JEITA
 		 * with the 10k B3380 thermistor of the pack.
+		 *
+		 * The cell charges only from 0 to 45 C. The nPM1300 defaults
+		 * are warm 45 C and hot 60 C, and the warm region still charges
+		 * at the full current (PS v1.1, tables 13 and 14), so warm and
+		 * hot are both 45 C: no warm region, charging stops above 45 C
+		 * (p. 29 allows adjacent thresholds to be equal; schematic
+		 * review of 2026-10-18, npm1300-a5).
 		 */
 		npm1300_charger: charger {
 			compatible = "nordic,npm1300-charger";
@@ -404,6 +418,9 @@ temp_sensor: &temp {
 			vbus-limit-microamp = <500000>;
 			thermistor-ohms = <10000>;
 			thermistor-beta = <3380>;
+			thermistor-cold-millidegrees = <0>;
+			thermistor-warm-millidegrees = <45000>;
+			thermistor-hot-millidegrees = <45000>;
 			charging-enable;
 		};
 	};
