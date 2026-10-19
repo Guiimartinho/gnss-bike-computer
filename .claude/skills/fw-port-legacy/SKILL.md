@@ -36,7 +36,7 @@ Glossário dos nomes em francês: `docs/04-arquitetura-legacy.md#glossário`.
 6. **Ligue ao fluxo**: um módulo sem chamador não conta como portado. Confira no `zephyr.map` que ele não caiu em "Discarded input sections".
 7. **Não porte os defeitos do legacy** listados nos documentos (por exemplo `Vecteur::project`, o `ind_P1` velho, o rtime com divisão inteira); se corrigir algo que o original fazia errado, registre a decisão.
 8. **Verifique**: testes de host (e mutação no ponto novo), build sem aviso novo, cppcheck nos arquivos tocados.
-9. **Atualize** a matriz e os defeitos em `docs/10-status-do-port.md`, as fórmulas em `docs/06-algoritmos.md`, a seção "Estado" do `CLAUDE.md` e o `CHANGELOG.md`.
+9. **Atualize** a matriz e os defeitos em `docs/10-status-do-port.md`, as fórmulas em `docs/06-algoritmos.md`, o estado em `.claude/contexto/estado.md` (e o resumo na seção 3 do `CLAUDE.md`) e o `CHANGELOG.md`.
 
 ## Armadilhas de fidelidade já vistas
 

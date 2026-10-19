@@ -16,6 +16,10 @@
 # ANT=1 compila com o ANT: o add-on sdk-ant em SDK_ANT_DIR (padrão
 # $NCS_ROOT/sdk-ant), zephyr_app/modules/ant_ncs33_compat e zephyr_app/ant.conf;
 # ao trocar ANT, use pristine ou outra BUILD_DIR.
+# TELA=sharp, só com BOARD=gnssbike/nrf54lm20a/cpuapp, compila para a Sharp
+# LS027B7DH01A (ou o módulo Azumo 11103-06) no lugar da JDI, pelo overlay
+# zephyr_app/boards/gnssbike_sharp.overlay; na placa, o JP401 vai para o
+# lado do 5V0. Ao trocar TELA, use pristine.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -90,6 +94,14 @@ case "$cmd" in
             ZEPHYR_EXTRA_MODULES="$(cygpath -m "$SDK_ANT_DIR");$(cygpath -m "$APP_DIR/modules/ant_ncs33_compat")"
             export ZEPHYR_EXTRA_MODULES
             extra=(-Dzephyr_app_EXTRA_CONF_FILE=ant.conf)
+        fi
+        if [ "${TELA:-jdi}" = "sharp" ]; then
+            case "$BOARD" in
+                gnssbike*) ;;
+                *) echo "fw.sh: TELA=sharp é da placa própria (BOARD=gnssbike/nrf54lm20a/cpuapp)" >&2
+                   exit 1 ;;
+            esac
+            extra+=(-Dzephyr_app_EXTRA_DTC_OVERLAY_FILE=boards/gnssbike_sharp.overlay)
         fi
         # A placa própria (gnssbike) mora em zephyr_app/boards/gnss/gnssbike;
         # o BOARD_ROOT é a pasta que contém "boards", e precisa chegar também

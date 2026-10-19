@@ -6,3 +6,6 @@ __pycache__/
 gnssbike.rpt
 _drc_all.json
 *.glb
+# arquivos de troca do Freerouting (autoroute.py)
+_gnssbike.dsn
+_gnssbike.ses

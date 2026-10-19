@@ -8,7 +8,7 @@ essa lacuna que este documento fecha, porque ela é a forma clássica de
 inverter a polaridade da bateria na primeira montagem — e de descobrir
 isso pelo cheiro.
 
-**Nesta página:** [Como ler](#como-ler) · [De onde vem cada pinagem](#de-onde-vem-cada-pinagem) · [J101 · USB-C](#j101--usb-c) · [J102 · Bateria](#j102--bateria) · [J201 · Depuração SWD](#j201--depuração-swd) · [J401 · Display](#j401--display) · [A luz do LPM027M128C](#j402--luz-do-lpm027m128c) · [JP401 · Tensão do display](#jp401--tensão-do-display) · [JP101 · Jumper de medição de corrente](#jp101--jumper-de-medição-de-corrente) · [Pontos de teste](#pontos-de-teste) · [O que falta conferir](#o-que-falta-conferir)
+**Nesta página:** [Como ler](#como-ler) · [De onde vem cada pinagem](#de-onde-vem-cada-pinagem) · [J101 · USB-C](#j101--usb-c) · [J102 · Bateria](#j102--bateria) · [J201 · Depuração SWD](#j201--depuração-swd) · [J401 · Display](#j401--display) · [J402 · Luz da JDI](#j402--luz-da-jdi) · [J403 · Luz do Azumo](#j403--luz-do-azumo-no-verso) · [JP401 · Tensão do display](#jp401--tensão-do-display) · [JP101 · Jumper de medição de corrente](#jp101--jumper-de-medição-de-corrente) · [Pontos de teste](#pontos-de-teste) · [O que falta conferir](#o-que-falta-conferir)
 
 > [!WARNING]
 > **Nada disto foi montado, medido ou fabricado.** Não existe placa, não
@@ -44,7 +44,7 @@ flowchart LR
     end
     CABO --> J101["J101 · USB-C<br/>Molex 2036150003<br/>16 contatos"]
     PACK --> J102["J102 · bateria<br/>JST SM06B-SRSS-TB<br/>6 vias"]
-    PAINEL --> J401["J401 · display<br/>Hirose FH28-10S<br/>10 vias"]
+    PAINEL --> J401["J401 · display<br/>Molex 503480-1000<br/>10 vias, JDI ou Sharp"]
     PAINEL -.->|"por onde?"| LUZ["conector da luz<br/>não definido"]
     SONDA --> J201["J201 · SWD<br/>Tag-Connect TC2030-NL<br/>6 pads, sem peça"]
     SONDA --> J202["J202 · SWD<br/>Cortex Debug 2 × 5, 1,27 mm<br/>adaptador de 9 vias do J-Link"]
@@ -406,159 +406,138 @@ uma coisa de protótipo, e é o que o dono quis. Onde ficou na placa está em
 
 ## J401 · Display
 
-**Hirose FH28-10S-0.5SH(05)**, 10 vias, passo de 0,5 mm, contato por
-baixo. O mesmo conector aparece nas fichas das duas telas.
+**Molex 503480-1000** (LCSC C127355), 10 vias, passo de 0,5 mm, ZIF com
+atuador traseiro, 1,0 mm de altura e **contato dos dois lados**. Desde
+2026-10-18 serve **as duas telas**: a JDI LPM027M128C e a Sharp
+LS027B7DH01A, nua ou como o módulo Azumo 11103-06, que é a Sharp com luz
+frontal ([11](11-revisao-do-esquematico.md)).
 
-**A ordem dos dez pinos é a mesma nas fichas da Sharp e da JDI**, e está
-registrada em [15](../docs/15-avaliacao-componentes.md#display): `SCLK`,
-`SI`, `SCS`, `EXTCOMIN`, `DISP`, `VDDA`, `VDD`, `EXTMODE`, `VSS`, `VSSA`.
-**É ficha de fabricante, não escolha deste projeto** — e é ela que permite
-um conector só para duas telas.
+**Um conector só, porque as duas fitas caem no mesmo lugar.** A fita de
+sinal das duas telas sai do meio da borda longa, com o centro no centro da
+área ativa, e a área ativa das duas é a mesma (58,8 × 35,28 mm). Dois
+conectores ali se sobreporiam. **A ordem dos dez pinos também é a mesma**
+nas fichas da JDI (spec 1.4.1) e da Sharp (LCP-2110015A e LD-28305A):
+`SCLK`, `SI`, `SCS`, `EXTCOMIN`, `DISP`, `VDDA`, `VDD`, `EXTMODE`, `VSS`,
+`VSSA`. O que muda entre as duas é a tensão, e quem a escolhe é o
+[`JP401`](#jp401--tensão-do-display).
 
-**Repare no que não está nesses dez:** não há par para o LED da luz. Na
-Sharp isso não incomodava, porque a luz era um filme separado com cauda
-própria; com o **JDI LPM027M128C**, decidido em 2026-09-23, a luz é do
-painel e **por onde ela se liga é pendência aberta**
-([abaixo](#j402--luz-do-lpm027m128c)).
+**Contato dos dois lados, porque a fita chega dobrada.** O vidro fica sobre
+a placa, colado sob a tampa, e passa da borda esquerda; a fita sai do vidro
+para fora, dobra para baixo e volta por baixo dele até o conector, e chega
+com os contatos para cima. O Hirose FH12 de antes tinha contato por baixo,
+e nenhum contato encostava (`display-a1` da revisão). O 503480 aceita a fita
+dos dois jeitos, com 2 mm de condutor exposto e 3 mm de reforço no mínimo:
+a JDI tem 3,8 mm e a Sharp 3,5.
 
-| Contato | Sinal | Direção | Nota |
-|---|---|---|---|
-| 1 | `SCLK` | saída | `DISP_SCK`, P3.03, `spi22`; 1 MHz típico, 2 MHz máximo |
-| 2 | `SI` | saída | `DISP_MOSI`, P3.00 |
-| 3 | `SCS` | saída | `DISP_CS`, P3.02, **ativo alto**; pull-down de 100 kΩ ao `GND` |
-| 4 | `EXTCOMIN` | saída | `DISP_EXTCOMIN`, P3.06; 1 Hz sem luz, cerca de 120 Hz com luz |
-| 5 | `DISP` | saída | `DISP_ON`, P3.05; liga a matriz; pull-down de 100 kΩ |
-| 6 | `VDDA` | alim | do **`JP401`**, que com o JDI é um 0 Ω fixo no `3V0`; `5V0` só no plano B, com a Sharp |
-| 7 | `VDD` | alim | do **`JP401`**, mesmo trilho do contato 6 |
-| 8 | `EXTMODE` | alim | **ao contato 7 em cobre**, seja qual for a tensão: é isso que põe a inversão do VCOM no `EXTCOMIN` |
-| 9 | `VSS` | alim | `GND` |
-| 10 | `VSSA` | alim | `GND` |
+| Onde | Valor |
+|---|---|
+| Posição | boca virada para a borda esquerda, em x = 1,27 mm; centro em y = 31,5 mm |
+| Alcance da fita | a boca pode ficar de 0 a 1,87 mm da borda com a JDI e de 0,57 a 2,17 mm com a Sharp |
+| Pino 1 | o pino 1 das duas fitas cai na ponta do lado das teclas (y maior), que é o **circuito 10** do conector: a fita entra pelo lado dos pregos de fixação, e o circuito 1 da Molex fica na outra ponta |
 
-**Os contatos 6 e 7 são a razão de o `JP401` existir.** Os dois recebem o
-mesmo trilho, e qual trilho é isso decide se a tela vive ou morre: o JDI
-tem máximo absoluto de 3,6 V.
+| Pino da tela | Circuito do J401 | Sinal | Direção | Nota |
+|---|---|---|---|---|
+| 1 | 10 | `SCLK` | saída | `DISP_SCK`, P3.03, `spi22`; 1 MHz típico, 2 MHz máximo |
+| 2 | 9 | `SI` | saída | `DISP_MOSI`, P3.00 |
+| 3 | 8 | `SCS` | saída | `DISP_CS`, P3.02, **ativo alto**; pull-down de 100 kΩ ao `GND` |
+| 4 | 7 | `EXTCOMIN` | saída | `DISP_EXTCOMIN`, P3.06; a Sharp pede de 1 a 20 Hz, a JDI aceita até 140 Hz |
+| 5 | 6 | `DISP` | saída | `DISP_ON`, P3.05; liga a matriz; pull-down de 100 kΩ |
+| 6 | 5 | `VDDA` | alim | do `JP401`: 3,0 V para a JDI, 5,0 V para a Sharp |
+| 7 | 4 | `VDD` | alim | do `JP401`, o mesmo trilho do pino 6 |
+| 8 | 3 | `EXTMODE` | alim | ao `VDD` em cobre: alto, o VCOM inverte nas bordas do `EXTCOMIN` nas duas telas |
+| 9 | 2 | `VSS` | alim | `GND` |
+| 10 | 1 | `VSSA` | alim | `GND` |
 
-**O `EXTMODE` no contato 8 vai ao contato 7, não ao `GND`.** Com ele alto,
-o VCOM inverte nas bordas do `EXTCOMIN`; com ele baixo, a inversão teria
-de sair por comando de SPI, que é o que a V3 faz
-([01](01-esquematico.md#folha-4--display)).
+A entrada lógica da Sharp sobe a partir de 2,7 V com VDD em 5 V, e o MCU dá
+pelo menos 2,85 V a 3,0 V: 0,15 V de margem, sem tradutor de nível.
 
 > [!CAUTION]
-> **Qual face da FPC tem os contatos decide se o pino 1 do painel encontra
-> o contato 1 ou o 10.** O FH28-10S-0.5SH(05) tem contato **por baixo**; se
-> a cauda do painel for dobrada na montagem, ou se a amostra vier com o
-> cobre para o outro lado, o conector inteiro fica espelhado e o `SCLK`
-> encosta no `VSSA`. A [avaliação](../docs/15-avaliacao-componentes.md#bancada-antes-do-layout)
-> já lista "lado do contato do FPC" como item de bancada, e ele **também é
-> item de layout**: é a orientação do conector na placa que resolve, não o
-> firmware.
+> **5 V na JDI a queima** (máximo absoluto de 3,6 V). A tensão do painel é
+> uma posição de solda, não firmware: ver o `JP401`.
 
-## J402 · Luz do LPM027M128C
+## J402 · Luz da JDI
 
-**Ficha do fabricante, achada em 2026-09-23.** A JDI tirou as fichas de MIP
-do ar (os dois PDF dela respondem 404), mas a Switch Science, que vendia o
-módulo, publica as especificações citando a ficha `3LPM027M128C
-specification ver.02`:
+**Molex 503480-0540** (LCSC C5527934), 5 vias, passo de 0,5 mm, 1,0 mm de
+altura, contato dos dois lados: a série que a JDI nomeia no desenho de
+contorno (o 503480-0500 dela está fora de linha na LCSC). A fita da luz tem
+2,2 a 2,8 mm de condutor exposto; o HCTL HC-FPC-05-10-5RLTAG de antes pedia
+3,0 (`display-a4`), e este pede 2,0.
+
+A ficha da tela (spec 1.4.2) dá a pinagem: **1 a 4 são os catodos**, um por
+LED, e **5 é o anodo comum**, no `3V3BL` (os 3,3 V da `LDSW2`). O pino 1
+fica do lado da fita de sinal, e a fita chega como a de sinal, dobrada sob o
+vidro: a boca também fica em x = 1,27 mm, com o centro em y = 16,8 mm. Como
+no `J401`, os circuitos do conector correm ao contrário dos pinos da fita: o
+catodo 1 cai no circuito 5 e o anodo no circuito 1.
 
 | Especificação | Valor |
 |---|---|
-| Interface do display | **FPC de 10 vias, passo 0,5 mm**, compatível com conector ZIF |
-| **Interface da luz** | **FPC de 5 vias, passo 0,5 mm**, compatível com conector ZIF |
-| Alimentação | 3,0 V |
-| **Tensão direta da luz** | **2,67 V** (típica) |
-| **Corrente da luz** | **16 mA**, com VDD = VDDA = VIH = 3,0 V |
-| Consumo do painel | 5 µW parado · 30 µW a 1 quadro/s · 180 µW a 10 quadros/s |
+| Tensão direta da luz | 2,67 V típica, a 4 mA por LED |
+| Corrente | um resistor de 150 Ω por catodo (`R406` a `R409`): cerca de 4 mA por LED, 16 mA no total |
+| Acionamento | `BL_PWM` (P3.08) na porta do `Q401`, que fecha os quatro catodos ao `GND` |
 
-**É esta a peça que faltava.** A luz do C **não** passa pelo FPC de 10
-vias, como se suspeitava: ela tem **um conector próprio, de cinco vias e
-passo de 0,5 mm**. O `J402`, que antes existia para o filme da Sharp, passa
-a ser o conector da luz do painel — com cinco vias em vez das quatro do
-Molex 5034800440.
+## J403 · Luz do Azumo, no verso
 
-### O que isso confirma
+**Molex 503480-0440** (LCSC C3170007), 4 vias, passo de 0,5 mm, contato dos
+dois lados, **na face de trás**. O Azumo 11103-06 é a Sharp com uma luz
+frontal, e a fita da luz sai da mesma borda longa, na ponta do pino 1 da
+Sharp, com 27,8 mm além do vidro: contorna a borda esquerda da placa e chega
+ao conector por baixo, em (17,07; 58,18), com a boca para a borda.
 
-Os **39 Ω** do `R_BL` que [02](02-calculos.md#luz-do-display) calculou
-**estão certos**, e agora com número de ficha e não de hipótese:
+**A fita tem dois pads, não quatro**: 0,80 mm de largura a 1,00 mm de passo
+(desenho T7 de 2022-01-10). Cada pad cobre duas vias de 0,5 mm: 1-2 e 3-4.
 
-```
-R = (3,3 − 2,67 − 0,05) / 16 mA = 36,2 Ω  →  39 Ω
-com 39 Ω: 14,9 mA, 93 % do nominal
-```
-
-E confirma o trilho: a luz é alimentada do **`3V3BL`**, os 3,3 V da
-`LDSW2`, e não do `3V0`. Com 3,0 V o resistor cairia para **17,5 Ω** e a
-corrente ficaria refém da tolerância da tensão direta — os 300 mV a mais do
-`3V3BL` é que dão margem.
-
-### Como se aciona
-
-Um sinal só, com PWM. É o que o
-[`pizero_bikecomputer`](https://github.com/hishizuka/pizero_bikecomputer),
-um ciclocomputador que usa exatamente este painel, faz: um GPIO com PWM por
-hardware a 64 Hz. Na nossa placa é o `BL_PWM` (P3.08) na porta do `Q401`
-([03](03-netlist.md#display--spi22-e-pwm20)).
-
-### O que ainda falta
-
-| Em aberto | Por quê |
+| Item | Valor |
 |---|---|
-| **Qual das cinco vias é anodo, qual é catodo e quais não se usam** | os dois PDF da JDI estão 404 e o arquivo histórico está bloqueado; sai da ficha ou de uma amostra |
-| **O conector de 5 vias, peça** | o `J402` de hoje é um Molex 5034800440 de **4** vias, do filme da Sharp: não serve. Precisa de um FPC de 5 vias, passo 0,5 mm, tipo ZIF |
+| Polaridade pelo desenho T7 | anodo no par do lado das teclas, que no verso são os circuitos 1-2 do conector: `JP402` e `JP403` montados |
+| Polaridade pela folha de 2020 | o contrário: `JP404` e `JP405` no lugar deles |
+| Corrente | `R410` de 39,2 Ω do `3V3BL`: 13 mA com V_F de 2,8 V, 8 mA com 3,0 V; máximo de 25 mA |
+| Acionamento | o mesmo `Q401` da luz da JDI |
 
-> [!NOTE]
-> Uma placa de referência para o **LPM027M128B** com luz
-> ([`Gbertaz/JDI_MIP_Display`](https://github.com/Gbertaz/JDI_MIP_Display),
-> com esquemático, BOM e Gerber públicos) usa um FPC de **4** vias, o
-> MINTRON XW05200-04, e um transistor digital com resistor em série. O
-> autor registra que os 820 Ω dele deixaram a luz fraca e que trocou por
-> 27 Ω — o que é coerente com ele alimentar a luz de 3,3 V **sem** o
-> `V_DS` e a margem que a nossa conta tem, e com o painel dele não ser o C.
-> Serve de referência de topologia, **não de pinagem**.
+> [!IMPORTANT]
+> **As duas fichas do Azumo se contradizem sobre a polaridade.** Antes de
+> ligar, meça o LED da fita com o multímetro em teste de diodo e monte o par
+> de jumpers certo. Montar os quatro põe o `3V3BL` em curto com o `Q401`
+> pelo `R410`.
 
-### No plano B, o filme e o conector de 4 vias
+O Azumo tem uma barra de 6,9 × 38,1 mm atrás do vidro, perto da ponta da
+fita da luz, que desce até 0,59 mm da placa: **entre y = 53,6 e 60,5 mm não
+há peça na face da frente**, só cobre e pads. O posicionador garante, e o
+CX3 do [dry run da caixa](caixa/README.md) mede.
 
 ## JP401 · Tensão do display
 
-**Escolha deste projeto.** Um jumper de 0 Ω (Panasonic ERJ-2GE0R00X) que
-liga os contatos 6 e 7 do `J401` ao `3V0` **ou** ao `5V0`. Com o JDI
-decidido, **só a posição do `3V0` é montada** e a do `5V0` fica vazia.
+**Escolha deste projeto.** Um jumper de 0 Ω em **três pads em linha**: o do
+meio vai aos contatos 6, 7 e 8 do `J401`, um lado ao `3V0` e o outro ao
+`5V0` do boost da Sharp. **Com a JDI, monta-se o lado do `3V0`**; com a
+Sharp ou o Azumo, o do `5V0`. A serigrafia diz `3V0 · JDI` de um lado e
+`5V0 · SHARP` do outro.
 
 ```mermaid
 flowchart LR
-    A["pad A<br/>3V0, do BUCK2"] -->|"0 Ω montado"| B["pad B<br/>VDD e VDDA do painel<br/>J401 contatos 6 e 7"]
-    C["pad C<br/>5V0, do REG710NA-5<br/>não montado"] -.->|"posição vazia · plano B"| B
+    A["pad 1<br/>3V0, do BUCK2"] -->|"0 Ω montado · JDI"| B["pad 2<br/>VDD, VDDA e EXTMODE<br/>J401 contatos 6, 7 e 8"]
+    C["pad 3<br/>5V0, do TPS610997"] -.->|"posição vazia · Sharp"| B
     B --> J401["J401"]
 ```
 
-**São três pads em linha, com o do meio ligado ao display.** O resistor de
-0 Ω ocupa A–B ou B–C, e **não existe montagem em que ocupe os dois**: o
-pad do meio é um só. A serigrafia diz `3V0 · JDI` de um lado e
-`5V0 · SHARP` do outro.
-
-**Por que manter o footprint do jumper, agora que há uma tela só.** Ele
-custa um resistor de 0 Ω e um pad, e é o que faz o plano B ser uma troca de
-montagem: o JDI **não tem canal autorizado de compra** e vem de revendedor
-sem garantia, de modo que a chance de a Sharp precisar entrar não é
-teórica. Apagar o jumper e ligar o `3V0` ao painel em cobre seria mais
-seguro contra erro de montagem — e transformaria o plano B em corte de
-trilha. **A posição do 5 V fica não montada, não apagada.**
+**O 5 V vem de um TPS610997** (`U402`, LCSC C2072359), boost de saída fixa
+em 5,0 V (4,90 a 5,10), dentro dos 4,8 a 5,5 V da Sharp; o REG710NA-5 do
+plano antigo dá 4,7 V no mínimo. Ele gasta cerca de 1 µA ligado e 0,5 µA
+desligado, e **desligado desconecta a saída**. O `EN` é o `DISP_PWR_EN`
+(P3.07), com o pull-down `R403`, e **só o firmware da Sharp o liga**: com o
+firmware da JDI o boost fica desligado, e um `JP401` esquecido na posição
+do `5V0` dá 0 V à JDI em vez de 5 V. Em volta dele: `L401` de 2,2 µH (o
+mesmo indutor dos bucks), 10 µF na entrada e 2 × 10 µF na saída (a ficha
+pede 20 µF nominais).
 
 > [!CAUTION]
-> **Por que não duas posições independentes de 0 Ω.** É o arranjo que
-> parece mais simples e é o perigoso: dois footprints separados, um do
-> `3V0` ao display e outro do `5V0` ao display, deixam a montagem com
-> **quatro** estados em vez de dois — nenhum resistor, só o do `3V0`, só o
-> do `5V0`, e **os dois**. Os dois primeiros são benignos ou corretos, o
-> terceiro é correto com a Sharp, e o quarto destrói a placa: o painel
-> recebe 5 V — e o **máximo absoluto do JDI é 3,6 V**, de modo que ele
-> queima na primeira energização —, e ainda por cima o `5V0` do REG710
-> fica em curto com a saída do BUCK2, empurrando corrente para dentro de
-> um conversor que não a aceita. A posição única **apaga esse quarto
-> estado do mapa**: não é que ele fique improvável, é que deixa de ter
-> como acontecer. É a única forma de proteção que não depende de alguém
-> prestar atenção. O que ela **não** resolve, e nenhum jumper resolveria,
-> é montar o 0 Ω na posição do `5V0` com um painel JDI no `J401`: contra
-> isso só a serigrafia e o procedimento de montagem.
+> **Por que não duas posições independentes de 0 Ω.** Dois footprints
+> separados, um do `3V0` ao display e outro do `5V0`, deixam quatro estados
+> em vez de dois, e o quarto, com os dois montados, põe 5 V na JDI e o
+> boost em curto com o BUCK2. O pad do meio único apaga esse estado. O que
+> ele não resolve é montar o 0 Ω na posição do `5V0` com a JDI no `J401`
+> **e** gravar o firmware da Sharp: contra isso, a serigrafia e o
+> procedimento de montagem.
 
 ## JP101 · Jumper de medição de corrente
 
@@ -638,11 +617,10 @@ designadores da folha: `TP1xx` na folha 1 (energia), `TP2xx` na folha 2
 | `TP104` | `VSYS` | saída do power path | **chega a 5,5 V com cabo**; é a referência do LED RGB |
 | `TP105` | `3V0` | BUCK2, o trilho do MCU | sem ele o aparelho não liga |
 | `TP106` | `1V8` | BUCK1 | **máximo absoluto de 1,98 V** no `V_IO` do receptor |
-| `TP107` | `SD3V0` | `LDSW1` | a flash; desligado, deve estar em 0 V de verdade |
+| `TP107` | `SD3V0` | `LDSW1` | sem carga desde 2026-10-18, quando a flash foi para o `3V0`; o firmware não liga o `LDSW1`, e o ponto deve estar em 0 V |
 | `TP108` | `3V3BL` | `LDSW2` | a luz; sai de regulação com o `VSYS` perto de 3,4 V |
 | `TP109` | `VBCKP` | TPS7A02 | **deve continuar de pé com o aparelho desligado** |
-| `TP110` | `VINT` | interno do AEM10900 | é a referência dos pinos de configuração; ponto de leitura, **não** de alimentação |
-| `TP111` | `ST_STO` | estado do colhedor | [lista de nós](03-netlist.md#nós-sem-ligação-ao-mcu) |
+| `TP110` | `SRC` | entrada do painel | em regime fica em 80,7 % da tensão em aberto, onde o MPPT do ADP5091 trabalha. Era o `VINT` do AEM10900, que saiu; o ADP5091 não tem trilho interno em pino nenhum |
 | `TP112` | `GND` | referência do bloco de energia | via própria ao plano |
 
 ### Folha 2 · MCU e console
@@ -661,9 +639,9 @@ placa, porque o que importa é a distância do laço.
 
 ### Folha 4 · Display
 
-| Ponto | Sinal | O que se vê ali | Nota |
-|---|---|---|---|
-| `TP401` | `5V0` | saída do REG710NA-5 | **sem sinal na placa montada**: o REG710 não é montado com o JDI. O ponto existe para o plano B, e é o trilho que jamais pode chegar a um painel JDI |
+A folha 4 não tem ponto de teste. O `TP401` do REG710 saiu com ele; o `5V0`
+do boost da Sharp se mede no pad do `5V0` do `JP401`, que é o trilho que
+jamais pode chegar a um painel JDI.
 
 ### Como os pads são
 
@@ -691,10 +669,9 @@ Honesto, item a item:
 | **`J102`: para que lado sai o cabo** | o prefixo `SM` da JST é entrada lateral; no footprint do KiCad as ilhas de sinal ficam em y −2 e as de fixação em y +1,875, e a boca é do lado das de fixação (+y). Com 270° na placa a boca aponta para a esquerda. O desenho da JST **não foi lido aqui**: conferir a boca no catálogo eSH antes de fabricar | catálogo SH da JST |
 | **`TH_MON`: ordem do divisor** | [14](../docs/14-hardware-placa-nova.md#ligações-fixas-dos-cis) registra "`RDIV` de 22 kΩ" e o NTC, mas não diz qual perna fica no `TH_REF` e qual no `GND`. Trocar inverte o sentido da leitura de temperatura | ficha do AEM10900 |
 | **`J201`: a que pad do ME54BS13 levar o `SWO`** | o contato 6 do TC2030 é o `SWO` e hoje está sem ligação. Levá-lo a um pad de trace daria `printf` por ITM no bring-up, e qual pad do módulo expõe o `SWO` não está na ficha dele | ficha do ME54BS13 |
-| **Por onde a luz do LPM027M128C se liga** | **alta prioridade, e bloqueia o layout**: o FPC de 10 vias não tem par de LED, e nenhum documento do projeto diz se o C traz um FPC maior ou um rabicho próprio. A ficha lida é a do **B**, que não tem luz ([acima](#j402--luz-do-lpm027m128c)) | ficha do **LPM027M128C**, ou uma amostra |
-| **`J401`: de que lado a FPC do painel tem os contatos** | decide se o pino 1 do painel encontra o contato 1 ou o 10 | amostra, e [15](../docs/15-avaliacao-componentes.md#bancada-antes-do-layout) |
-| **`J402`: o que recebe cada uma das quatro vias** | só importa no plano B; **não está em arquivo nenhum do projeto** | desenho 12369-01_T4 da Azumo |
+| **Por onde a luz do LPM027M128C se liga** | **resolvido em 2026-10-18**: conector próprio de 5 vias, o [`J402`](#j402--luz-da-jdi), com a pinagem da spec 1.4.2 | ficha da tela, [11](11-revisao-do-esquematico.md) |
+| **A dobra das fitas sob o vidro** | o alcance de cada fita até a boca do conector está calculado com folga de cerca de 0,6 mm; a dobra real só uma maquete de papel ou a tela na mão confirma | amostra das telas ([11](11-revisao-do-esquematico.md#decisões-do-dono)) |
+| **`J403`: a polaridade do LED do Azumo** | o desenho T7 e a folha de 2020 da Azumo se contradizem; os jumpers `JP402` a `JP405` escolhem | teste de diodo na fita, antes de ligar |
 | **`R401` com o filme** | só no plano B: depende da tensão direta da amostra; 25 mA é o máximo do LED. Com o JDI são 39 Ω, fechados | medida na amostra |
 | **`JP101`: existir ou não** | é uma junta a mais no caminho da célula, que é o caminho mais crítico da placa; ganha-se medição, perde-se um ponto de falha | decisão do dono |
 | **`JP101` e os pontos de teste novos** | o `JP101` e os pontos de teste entraram em [03](03-netlist.md) e em [05](05-materiais.md) na mesma rodada, que estão sendo editados em paralelo | próxima passagem nesses dois |
-| **`TP1`, `TP2` e `TP3`** | [03](03-netlist.md) e [04](04-pcb-e-caixa.md) ainda usam a numeração antiga; aqui eles são `TP201`, `TP202` e `TP111`, que é o esquema de [05](05-materiais.md) | próxima passagem nesses dois |

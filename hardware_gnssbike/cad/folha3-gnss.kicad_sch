@@ -435,11 +435,11 @@
 			(in_bom yes)
 			(on_board yes)
 			(property "Reference" "JP301"
-				(at -8.890 6.350 0)
+				(at -7.620 7.620 0)
 				(effects (font (size 1.27 1.27)) (justify left bottom))
 			)
 			(property "Value" "0 R"
-				(at -8.890 -6.350 0)
+				(at -7.620 -7.620 0)
 				(effects (font (size 1.27 1.27)) (justify left top))
 			)
 			(property "Footprint" "gnssbike:JumperRF_3x0402"
@@ -456,27 +456,27 @@
 			)
 			(symbol "JP301_0_1"
 				(rectangle
-					(start -8.890 -5.080)
-					(end 8.890 5.080)
+					(start -7.620 -6.350)
+					(end 7.620 6.350)
 					(stroke (width 0.254) (type default))
 					(fill (type background))
 				)
 			)
 			(symbol "JP301_1_1"
 				(pin passive line
-					(at -11.430 2.540 0)
+					(at -10.160 3.810 0)
 					(length 2.54)
-					(name "COMUM" (effects (font (size 1.016 1.016))))
+					(name "UFL" (effects (font (size 1.016 1.016))))
 					(number "1" (effects (font (size 1.016 1.016))))
 				)
 				(pin passive line
-					(at -6.350 7.620 270)
+					(at -5.080 8.890 270)
 					(length 2.54)
-					(name "UFL" (effects (font (size 1.016 1.016))))
+					(name "COMUM" (effects (font (size 1.016 1.016))))
 					(number "2" (effects (font (size 1.016 1.016))))
 				)
 				(pin passive line
-					(at 11.430 2.540 180)
+					(at 10.160 3.810 180)
 					(length 2.54)
 					(name "CHIP" (effects (font (size 1.016 1.016))))
 					(number "3" (effects (font (size 1.016 1.016))))
@@ -745,7 +745,7 @@
 				(at -1.270 2.540 0)
 				(effects (font (size 1.27 1.27)) (justify left bottom))
 			)
-			(property "Value" "2,7 pF"
+			(property "Value" "6,8 pF"
 				(at -1.270 -2.540 0)
 				(effects (font (size 1.27 1.27)) (justify left top))
 			)
@@ -757,7 +757,7 @@
 				(at 0 0 0)
 				(effects (font (size 1.27 1.27)) (hide yes))
 			)
-			(property "Description" "sintonia do pino 1 da antena ao terra; valor de partida da ficha, a ajustar na bancada"
+			(property "Description" "sintonia [9] do pino 1 da antena ao terra, na ponta do lado largo do recorte; valor de partida da ficha, a ajustar na bancada"
 				(at 0 0 0)
 				(effects (font (size 1.27 1.27)) (hide yes))
 			)
@@ -808,7 +808,7 @@
 				(at -1.270 2.540 0)
 				(effects (font (size 1.27 1.27)) (justify left bottom))
 			)
-			(property "Value" "6,8 pF"
+			(property "Value" "2,7 pF"
 				(at -1.270 -2.540 0)
 				(effects (font (size 1.27 1.27)) (justify left top))
 			)
@@ -820,7 +820,7 @@
 				(at 0 0 0)
 				(effects (font (size 1.27 1.27)) (hide yes))
 			)
-			(property "Description" "sintonia do pino 2 da antena ao terra; valor de partida da ficha, a ajustar na bancada"
+			(property "Description" "sintonia [8] do pino 2 da antena ao terra, na ponta do lado estreito do recorte; valor de partida da ficha, a ajustar na bancada"
 				(at 0 0 0)
 				(effects (font (size 1.27 1.27)) (hide yes))
 			)
@@ -959,7 +959,7 @@
 				(at 0 0 0)
 				(effects (font (size 1.27 1.27)) (hide yes))
 			)
-			(property "Description" "conector coaxial u.FL da antena GNSS L1+L5. Substitui o contato de mola que 04:271 tinha decidido: mola nao tem impedancia definida, e a 4.4 do manual do MAX-F10S pede 50 ohm em TODO o caminho de RF. CONFERIR o cabo e o conector da outra ponta antes de fabricar | PINAGEM NAO CONFIRMADA NA FICHA"
+			(property "Description" "conector coaxial u.FL da antena GNSS L1+L5. Substitui o contato de mola que 04:271 tinha decidido: mola nao tem impedancia definida, e a 4.4 do manual do MAX-F10S pede 50 ohm em TODO o caminho de RF. CONFERIR o cabo e o conector da outra ponta antes de fabricar"
 				(at 0 0 0)
 				(effects (font (size 1.27 1.27)) (hide yes))
 			)
@@ -1133,7 +1133,7 @@
 				(at 0 0 0)
 				(effects (font (size 1.27 1.27)) (hide yes))
 			)
-			(property "Description" "serie [2] da rede de casamento, com a antena de chip. Com o u.FL, 0 ohm. A serie de indutores de RF 2,2 a 5,6 nH esta toda na LCSC para ajuste de bancada"
+			(property "Description" "serie [2] da rede de casamento, com a antena de chip: CAPACITOR C0G de 3,6 pF +-0,1 pF. Com o u.FL, 0 ohm. O codigo era o de um indutor de 3,9 nH (C98063, max-f10s-a2); a serie de indutores de RF fica para ajuste de bancada"
 				(at 0 0 0)
 				(effects (font (size 1.27 1.27)) (hide yes))
 			)
@@ -1227,7 +1227,7 @@
 			(exclude_from_sim no)
 			(in_bom no)
 			(on_board yes)
-			(property "Reference" "#PWR003"
+			(property "Reference" "#PWR002"
 				(at 0 0 0)
 				(effects (font (size 1.27 1.27)) (hide yes))
 			)
@@ -1265,7 +1265,7 @@
 			(exclude_from_sim no)
 			(in_bom no)
 			(on_board yes)
-			(property "Reference" "#PWR007"
+			(property "Reference" "#PWR008"
 				(at 0 0 0)
 				(effects (font (size 1.27 1.27)) (hide yes))
 			)
@@ -1301,7 +1301,7 @@
 			(exclude_from_sim no)
 			(in_bom no)
 			(on_board yes)
-			(property "Reference" "#PWR008"
+			(property "Reference" "#PWR009"
 				(at 0 0 0)
 				(effects (font (size 1.27 1.27)) (hide yes))
 			)
@@ -1337,7 +1337,7 @@
 			(exclude_from_sim no)
 			(in_bom no)
 			(on_board yes)
-			(property "Reference" "#PWR010"
+			(property "Reference" "#PWR011"
 				(at 0 0 0)
 				(effects (font (size 1.27 1.27)) (hide yes))
 			)
@@ -1484,10 +1484,10 @@
 	)
 	(rectangle
 		(start 113.030 34.290)
-		(end 234.950 92.710)
+		(end 236.220 91.440)
 		(stroke (width 0.1524) (type dash))
 		(fill (type none))
-		(uuid "20a6005d-46e1-49b5-814b-5457fab52102")
+		(uuid "ce4e673a-66ea-441d-8086-b8a8b5982933")
 	)
 	(wire
 		(pts
@@ -1505,10 +1505,10 @@
 	)
 	(wire
 		(pts
-			(xy 189.230 69.850) (xy 189.230 72.390)
+			(xy 227.330 48.260) (xy 229.870 48.260)
 		)
 		(stroke (width 0) (type default))
-		(uuid "6bff1348-ec88-498a-87a3-cd0d7dda7f6e")
+		(uuid "95ae86cf-ff56-4b2b-8423-e71d05e87aa0")
 	)
 	(wire
 		(pts
@@ -1526,17 +1526,24 @@
 	)
 	(wire
 		(pts
-			(xy 153.670 76.200) (xy 156.210 76.200)
+			(xy 153.670 74.930) (xy 156.210 74.930)
 		)
 		(stroke (width 0) (type default))
-		(uuid "5e16ea92-cfb2-43f7-8da5-dcca9eb84edf")
+		(uuid "a05828f2-f642-4ae1-8f46-b942eae3d52b")
 	)
 	(wire
 		(pts
-			(xy 156.210 82.550) (xy 158.750 82.550)
+			(xy 156.210 81.280) (xy 158.750 81.280)
 		)
 		(stroke (width 0) (type default))
-		(uuid "f2684c22-959b-49a0-810e-0e724b86d9e4")
+		(uuid "ac3a2cc0-89ac-4e9a-8450-cceedb4e3c9f")
+	)
+	(wire
+		(pts
+			(xy 199.390 55.880) (xy 199.390 58.420)
+		)
+		(stroke (width 0) (type default))
+		(uuid "fe4c34c5-f54c-4196-8d08-d8c75386a4e9")
 	)
 	(wire
 		(pts
@@ -1589,17 +1596,17 @@
 	)
 	(wire
 		(pts
-			(xy 189.230 62.230) (xy 189.230 59.690)
+			(xy 219.710 48.260) (xy 217.170 48.260)
 		)
 		(stroke (width 0) (type default))
-		(uuid "b03b6149-8cdf-4a9d-803a-a2568021827d")
+		(uuid "545edce1-2d29-48b6-8350-24f26a0eb7ed")
 	)
 	(wire
 		(pts
-			(xy 204.470 59.690) (xy 201.930 59.690)
+			(xy 209.550 53.340) (xy 209.550 50.800)
 		)
 		(stroke (width 0) (type default))
-		(uuid "fed12552-f5c6-4a97-8815-30ec444f3b4f")
+		(uuid "fb8e2589-fabd-47b7-80b5-3e1cc1d9a6de")
 	)
 	(wire
 		(pts
@@ -1635,13 +1642,6 @@
 		)
 		(stroke (width 0) (type default))
 		(uuid "8ed52d23-e088-4ed5-82f9-4ef99f5ad721")
-	)
-	(wire
-		(pts
-			(xy 214.630 52.070) (xy 218.440 52.070)
-		)
-		(stroke (width 0) (type default))
-		(uuid "71ad8dc4-bd5b-46d5-86cb-0d7981ccbbf9")
 	)
 	(wire
 		(pts
@@ -1694,122 +1694,129 @@
 	)
 	(wire
 		(pts
-			(xy 209.550 46.990) (xy 209.550 49.530)
+			(xy 148.590 81.280) (xy 148.590 85.090)
 		)
 		(stroke (width 0) (type default))
-		(uuid "6b85caf6-4f4e-4444-809d-4731ec8de665")
+		(uuid "e6dabe7a-dc4b-41ad-8c99-63dadd1ed2bf")
 	)
 	(wire
 		(pts
-			(xy 193.040 49.530) (xy 209.550 49.530)
+			(xy 148.590 85.090) (xy 167.640 85.090)
 		)
 		(stroke (width 0) (type default))
-		(uuid "47608aee-2ce8-4832-83f8-dc9b49dcc1a4")
+		(uuid "dffd1324-efbd-4ecd-8f2c-6a720234e2d6")
 	)
 	(wire
 		(pts
-			(xy 193.040 49.530) (xy 193.040 54.610)
+			(xy 167.640 85.090) (xy 167.640 85.090)
 		)
 		(stroke (width 0) (type default))
-		(uuid "41e2756c-e4fd-4fbf-820b-ba41b51a96ed")
+		(uuid "4f88ea11-fc15-4a10-8964-75cade1a540c")
 	)
 	(wire
 		(pts
-			(xy 193.040 54.610) (xy 209.550 54.610)
+			(xy 167.640 71.120) (xy 167.640 85.090)
 		)
 		(stroke (width 0) (type default))
-		(uuid "dab85e0d-2e16-48cc-8b8d-5b2734c31d6a")
+		(uuid "e31e801a-d670-4c2d-8709-dbaca015a14c")
 	)
 	(wire
 		(pts
-			(xy 148.590 82.550) (xy 148.590 86.360)
+			(xy 148.590 71.120) (xy 167.640 71.120)
 		)
 		(stroke (width 0) (type default))
-		(uuid "a09ff3f3-ae18-4b76-8906-4528b6416a05")
+		(uuid "d1e809c2-86f5-4a53-8287-8422ffd3d3b3")
 	)
 	(wire
 		(pts
-			(xy 148.590 86.360) (xy 167.640 86.360)
+			(xy 167.640 71.120) (xy 167.640 71.120)
 		)
 		(stroke (width 0) (type default))
-		(uuid "edda67db-cf4e-401d-8b8f-670e8a923534")
+		(uuid "845f14ba-c874-4b90-8d99-ff5481d318fe")
 	)
 	(wire
 		(pts
-			(xy 167.640 86.360) (xy 167.640 86.360)
+			(xy 194.310 45.720) (xy 194.310 50.800)
 		)
 		(stroke (width 0) (type default))
-		(uuid "e4c9dd90-4f2b-491e-864c-47f36e87cd5d")
+		(uuid "80503a05-9c9e-4a38-83a1-4e21c9816e1c")
 	)
 	(wire
 		(pts
-			(xy 167.640 72.390) (xy 167.640 86.360)
+			(xy 194.310 45.720) (xy 215.900 45.720)
 		)
 		(stroke (width 0) (type default))
-		(uuid "eb4a55ba-e6ba-4e99-8c97-cbe48f0e07ca")
+		(uuid "072b07e5-9f88-416c-8e88-3694a01e1f16")
 	)
 	(wire
 		(pts
-			(xy 148.590 72.390) (xy 167.640 72.390)
+			(xy 215.900 45.720) (xy 215.900 53.340)
 		)
 		(stroke (width 0) (type default))
-		(uuid "45a6b8fb-7d2f-4a20-8ca0-1a924b929122")
+		(uuid "ef4356b2-1221-40b4-85c6-fbbdfc38409f")
 	)
 	(wire
 		(pts
-			(xy 167.640 72.390) (xy 167.640 72.390)
+			(xy 215.900 53.340) (xy 228.600 53.340)
 		)
 		(stroke (width 0) (type default))
-		(uuid "9ef9a99d-2177-47f2-8153-188a0d04c71d")
+		(uuid "a05ddbec-20e0-4d69-8079-45aefdda7d79")
 	)
 	(wire
 		(pts
-			(xy 146.050 72.390) (xy 146.050 76.200)
+			(xy 228.600 53.340) (xy 228.600 71.120)
 		)
 		(stroke (width 0) (type default))
-		(uuid "918cee77-1fff-4152-88c1-c6391f377793")
+		(uuid "e3b37722-3c3b-4349-8a68-93601f5b65cb")
 	)
 	(wire
 		(pts
-			(xy 179.070 59.690) (xy 187.960 59.690)
+			(xy 204.470 71.120) (xy 228.600 71.120)
 		)
 		(stroke (width 0) (type default))
-		(uuid "7b060445-dfd8-4f2a-88e1-b312d70d947c")
+		(uuid "4aab7724-b871-476b-8799-946709284b47")
 	)
 	(wire
 		(pts
-			(xy 187.960 58.420) (xy 187.960 59.690)
+			(xy 204.470 58.420) (xy 204.470 71.120)
 		)
 		(stroke (width 0) (type default))
-		(uuid "f129e687-89f9-4dd6-8aab-66a65713262d")
+		(uuid "a0c65aa7-2541-45ed-8d3b-6a42f8856a9a")
 	)
 	(wire
 		(pts
-			(xy 187.960 58.420) (xy 200.660 58.420)
+			(xy 146.050 71.120) (xy 146.050 74.930)
 		)
 		(stroke (width 0) (type default))
-		(uuid "a472f344-ffc8-43c8-888e-6084de06e724")
+		(uuid "3fb16ac2-9cce-4632-833a-f749841692af")
 	)
 	(wire
 		(pts
-			(xy 200.660 58.420) (xy 200.660 69.850)
+			(xy 179.070 58.420) (xy 198.120 58.420)
 		)
 		(stroke (width 0) (type default))
-		(uuid "96263684-da0c-4b42-83e6-409359a4c6b6")
+		(uuid "6190558b-a03b-4d87-824a-e512ecf9a3bc")
 	)
 	(wire
 		(pts
-			(xy 200.660 69.850) (xy 227.330 69.850)
+			(xy 198.120 58.420) (xy 198.120 72.390)
 		)
 		(stroke (width 0) (type default))
-		(uuid "fa233bd6-3d89-45ed-8ead-f7f9d4111d89")
+		(uuid "faee22ab-3d79-4155-8d56-6aebebe4d59c")
 	)
 	(wire
 		(pts
-			(xy 227.330 59.690) (xy 227.330 69.850)
+			(xy 198.120 72.390) (xy 224.790 72.390)
 		)
 		(stroke (width 0) (type default))
-		(uuid "f533efb5-c5d2-4a96-8aab-e5b5a95772e6")
+		(uuid "5df4d882-9ad3-4f8f-80bc-050ad0aa082b")
+	)
+	(wire
+		(pts
+			(xy 224.790 58.420) (xy 224.790 72.390)
+		)
+		(stroke (width 0) (type default))
+		(uuid "4690c75c-6e7c-43c1-830e-46d9d34f8398")
 	)
 	(wire
 		(pts
@@ -1870,16 +1877,16 @@
 		(uuid "fc92b5f9-1531-4749-8d02-18df099c8c34")
 	)
 	(junction
-		(at 167.640 86.360)
+		(at 167.640 85.090)
 		(diameter 0)
 		(color 0 0 0 0)
-		(uuid "65579c6c-c069-4a28-89ce-79f16d896ae6")
+		(uuid "3678ed53-5318-4e3b-8e12-9e1df0f76fee")
 	)
 	(junction
-		(at 167.640 72.390)
+		(at 167.640 71.120)
 		(diameter 0)
 		(color 0 0 0 0)
-		(uuid "19b96555-1e84-471b-821a-755801e5d9cf")
+		(uuid "98a754a9-4d9a-49d4-8829-ba3a2d9e486f")
 	)
 	(junction
 		(at 77.470 59.690)
@@ -1924,16 +1931,16 @@
 		(uuid "9bbca3c2-20d6-4c2a-8dc1-f204b82775c3")
 	)
 	(label "RF_ANT"
-		(at 189.230 59.690 0)
-		(fields_autoplaced yes)
-		(effects (font (size 1.27 1.27)) (justify left bottom))
-		(uuid "0699c33b-1a94-4301-82ef-eaace933513b")
-	)
-	(label "RF_ANT"
-		(at 201.930 59.690 180)
+		(at 217.170 48.260 180)
 		(fields_autoplaced yes)
 		(effects (font (size 1.27 1.27)) (justify right bottom))
-		(uuid "fa4c2e9b-ba7e-4d07-8790-58b94cb8120f")
+		(uuid "f8691ea2-b9f2-4406-8053-6f4e898aac85")
+	)
+	(label "RF_ANT"
+		(at 209.550 50.800 0)
+		(fields_autoplaced yes)
+		(effects (font (size 1.27 1.27)) (justify left bottom))
+		(uuid "d1a71b7d-e3b5-4845-8be1-e243aed49039")
 	)
 	(text "Receptor MAX-F10S"
 		(exclude_from_sim no)
@@ -2011,7 +2018,7 @@
 	)
 	(symbol
 		(lib_id "gnssbike:E301")
-		(at 160.020 63.500 0)
+		(at 160.020 62.230 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -2019,23 +2026,23 @@
 		(dnp no)
 		(uuid "55b27d92-848b-4402-852c-b3d24546f9c8")
 		(property "Reference" "E301"
-			(at 143.510 56.350 0)
+			(at 143.510 55.080 0)
 			(effects (font (size 1.27 1.27)) (justify left bottom))
 		)
 		(property "Value" "Unictron H2UJ4U1H2Q0100"
-			(at 145.350 70.650 0)
+			(at 145.350 69.380 0)
 			(effects (font (size 1.27 1.27)) (justify right top))
 		)
 		(property "Footprint" "gnssbike:Antena_Unictron_H2UJ4U1H2Q0100_5x3mm"
-			(at 160.02 63.5 0)
+			(at 160.02 62.230000000000004 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
 		(property "Datasheet" ""
-			(at 160.02 63.5 0)
+			(at 160.02 62.230000000000004 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
 		(property "Description" "antena de chip ceramica L1+L5, 5,0 x 3,0 x 0,5 mm, na borda da placa. Substitui a TE L000670-01 (estoque zero e recorte de 40,5 x 14,5). Uma das duas opcoes, escolhida pelo JP301"
-			(at 160.02 63.5 0)
+			(at 160.02 62.230000000000004 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
 		(pin "1" (uuid "5cbd1ad1-86db-4e5f-82f8-db1141035ba4"))
@@ -2052,7 +2059,7 @@
 	)
 	(symbol
 		(lib_id "gnssbike:JP301")
-		(at 215.900 62.230 0)
+		(at 214.630 62.230 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -2060,23 +2067,23 @@
 		(dnp no)
 		(uuid "db2003f7-634a-4aa7-816d-b415b2ad48e8")
 		(property "Reference" "JP301"
-			(at 208.850 56.350 0)
+			(at 208.850 55.080 0)
 			(effects (font (size 1.27 1.27)) (justify right bottom))
 		)
 		(property "Value" "0 R"
-			(at 207.010 68.110 0)
+			(at 207.010 69.380 0)
 			(effects (font (size 1.27 1.27)) (justify left top))
 		)
 		(property "Footprint" "gnssbike:JumperRF_3x0402"
-			(at 215.9 62.230000000000004 0)
+			(at 214.63 62.230000000000004 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
 		(property "Datasheet" ""
-			(at 215.9 62.230000000000004 0)
+			(at 214.63 62.230000000000004 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
 		(property "Description" "escolhe a antena: 0 ohm entre COMUM e UFL, ou entre COMUM e CHIP. Monta-se UM so"
-			(at 215.9 62.230000000000004 0)
+			(at 214.63 62.230000000000004 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
 		(pin "1" (uuid "2e6ef7f8-6b0e-44bb-8716-d56cc7ac972c"))
@@ -2093,7 +2100,7 @@
 	)
 	(symbol
 		(lib_id "gnssbike:C301")
-		(at 189.230 66.040 270)
+		(at 223.520 48.260 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -2101,23 +2108,23 @@
 		(dnp no)
 		(uuid "0523d329-7dfd-47b7-8dcf-8200ed601cd2")
 		(property "Reference" "C301"
-			(at 190.846 65.790 90)
+			(at 222.250 46.894 0)
 			(effects (font (size 1.27 1.27)) (justify left bottom))
 		)
 		(property "Value" "1,5 pF"
-			(at 190.846 66.290 90)
+			(at 222.250 49.626 0)
 			(effects (font (size 1.27 1.27)) (justify left top))
 		)
 		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
-			(at 189.23 66.04 0)
+			(at 223.52 48.26 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
 		(property "Datasheet" ""
-			(at 189.23 66.04 0)
+			(at 223.52 48.26 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
 		(property "Description" "shunt [1] da rede de casamento. O valor depende de QUAL antena for montada: 1,5 pF e o que a Unictron recomenda para a antena de chip; com o u.FL e uma antena externa de 50 ohm, nao se monta"
-			(at 189.23 66.04 0)
+			(at 223.52 48.26 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
 		(pin "1" (uuid "4d194499-2e7e-47e8-8bed-6183e760288d"))
@@ -2253,7 +2260,7 @@
 	)
 	(symbol
 		(lib_id "gnssbike:C305")
-		(at 149.860 76.200 0)
+		(at 149.860 74.930 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -2261,23 +2268,23 @@
 		(dnp no)
 		(uuid "c534d2bb-8d09-4fe6-8a50-d9aa281c052a")
 		(property "Reference" "C305"
-			(at 148.590 74.834 0)
+			(at 148.590 73.564 0)
 			(effects (font (size 1.27 1.27)) (justify left bottom))
 		)
-		(property "Value" "2,7 pF"
-			(at 148.590 77.566 0)
+		(property "Value" "6,8 pF"
+			(at 148.590 76.296 0)
 			(effects (font (size 1.27 1.27)) (justify left top))
 		)
 		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
-			(at 149.86 76.2 0)
+			(at 149.86 74.93 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
 		(property "Datasheet" ""
-			(at 149.86 76.2 0)
+			(at 149.86 74.93 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
-		(property "Description" "sintonia do pino 1 da antena ao terra; valor de partida da ficha, a ajustar na bancada"
-			(at 149.86 76.2 0)
+		(property "Description" "sintonia [9] do pino 1 da antena ao terra, na ponta do lado largo do recorte; valor de partida da ficha, a ajustar na bancada"
+			(at 149.86 74.93 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
 		(pin "1" (uuid "9048e99a-3956-48b3-8bb1-8381fadfb622"))
@@ -2293,7 +2300,7 @@
 	)
 	(symbol
 		(lib_id "gnssbike:C306")
-		(at 152.400 82.550 0)
+		(at 152.400 81.280 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -2301,23 +2308,23 @@
 		(dnp no)
 		(uuid "d47ec34a-a17a-4d39-8754-30b9fbef4fc7")
 		(property "Reference" "C306"
-			(at 151.130 81.184 0)
+			(at 151.130 79.914 0)
 			(effects (font (size 1.27 1.27)) (justify left bottom))
 		)
-		(property "Value" "6,8 pF"
-			(at 151.130 83.916 0)
+		(property "Value" "2,7 pF"
+			(at 151.130 82.646 0)
 			(effects (font (size 1.27 1.27)) (justify left top))
 		)
 		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
-			(at 152.4 82.55 0)
+			(at 152.4 81.28 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
 		(property "Datasheet" ""
-			(at 152.4 82.55 0)
+			(at 152.4 81.28 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
-		(property "Description" "sintonia do pino 2 da antena ao terra; valor de partida da ficha, a ajustar na bancada"
-			(at 152.4 82.55 0)
+		(property "Description" "sintonia [8] do pino 2 da antena ao terra, na ponta do lado estreito do recorte; valor de partida da ficha, a ajustar na bancada"
+			(at 152.4 81.28 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
 		(pin "1" (uuid "40bb7990-9d29-484b-88e9-3ee5df2642e7"))
@@ -2373,7 +2380,7 @@
 	)
 	(symbol
 		(lib_id "gnssbike:J302")
-		(at 214.630 46.990 0)
+		(at 199.390 50.800 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -2381,23 +2388,23 @@
 		(dnp no)
 		(uuid "ecf8a5b6-87fe-41ff-8ad9-a65cb0d598ed")
 		(property "Reference" "J302"
-			(at 212.090 43.650 0)
+			(at 196.850 47.460 0)
 			(effects (font (size 1.27 1.27)) (justify left bottom))
 		)
 		(property "Value" "Hirose U.FL-R-SMT-1"
-			(at 213.930 50.330 0)
+			(at 198.690 54.140 0)
 			(effects (font (size 1.27 1.27)) (justify right top))
 		)
 		(property "Footprint" "Connector_Coaxial:U.FL_Hirose_U.FL-R-SMT-1_Vertical"
-			(at 214.63 46.99 0)
+			(at 199.39000000000001 50.8 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
 		(property "Datasheet" ""
-			(at 214.63 46.99 0)
+			(at 199.39000000000001 50.8 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
-		(property "Description" "conector coaxial u.FL da antena GNSS L1+L5. Substitui o contato de mola que 04:271 tinha decidido: mola nao tem impedancia definida, e a 4.4 do manual do MAX-F10S pede 50 ohm em TODO o caminho de RF. CONFERIR o cabo e o conector da outra ponta antes de fabricar | PINAGEM NAO CONFIRMADA NA FICHA"
-			(at 214.63 46.99 0)
+		(property "Description" "conector coaxial u.FL da antena GNSS L1+L5. Substitui o contato de mola que 04:271 tinha decidido: mola nao tem impedancia definida, e a 4.4 do manual do MAX-F10S pede 50 ohm em TODO o caminho de RF. CONFERIR o cabo e o conector da outra ponta antes de fabricar"
+			(at 199.39000000000001 50.8 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
 		(pin "1" (uuid "7c888c20-6c58-43dc-8c01-d1ef89b96d45"))
@@ -2477,7 +2484,7 @@
 			(at 83.82000000000001 52.07 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
-		(property "Description" "serie [2] da rede de casamento, com a antena de chip. Com o u.FL, 0 ohm. A serie de indutores de RF 2,2 a 5,6 nH esta toda na LCSC para ajuste de bancada"
+		(property "Description" "serie [2] da rede de casamento, com a antena de chip: CAPACITOR C0G de 3,6 pF +-0,1 pF. Com o u.FL, 0 ohm. O codigo era o de um indutor de 3,9 nH (C98063, max-f10s-a2); a serie de indutores de RF fica para ajuste de bancada"
 			(at 83.82000000000001 52.07 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
@@ -2528,31 +2535,31 @@
 		)
 	)
 	(symbol
-		(lib_id "power:GND_D")
-		(at 189.230 72.390 0)
+		(lib_id "power:GND_R")
+		(at 229.870 48.260 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom no)
 		(on_board yes)
 		(dnp no)
-		(uuid "41e7c680-743d-4bef-8de9-25413387c12b")
+		(uuid "597c00e8-ba0f-4612-83fd-e4563abbfa33")
 		(property "Reference" "#PWR002"
-			(at 189.23 72.39 0)
+			(at 229.87 48.26 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
 		(property "Value" "GND"
-			(at 189.230 75.690 0)
-			(effects (font (size 1.27 1.27)) (justify top))
+			(at 233.170 48.260 0)
+			(effects (font (size 1.27 1.27)) (justify left))
 		)
 		(property "Footprint" ""
-			(at 189.23 72.39 0)
+			(at 229.87 48.26 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
 		(property "Datasheet" ""
-			(at 189.23 72.39 0)
+			(at 229.87 48.26 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
-		(pin "1" (uuid "be3f008d-24e7-40d9-8e3e-c643a26ec5c9"))
+		(pin "1" (uuid "2210d758-c323-4b2a-8588-35dd2cf9159d"))
 		(instances
 			(project "gnssbike"
 				(path "/9c874366-f223-4aef-8b18-3e2a2bab2b25/2876718e-81a5-441d-8f57-8355947cf79b"
@@ -2634,30 +2641,30 @@
 	)
 	(symbol
 		(lib_id "power:GND_R")
-		(at 156.210 76.200 0)
+		(at 156.210 74.930 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom no)
 		(on_board yes)
 		(dnp no)
-		(uuid "dc947b81-212b-44cb-8906-b88a7a8e53ab")
+		(uuid "0e9920b5-2121-4c0b-8daa-49e3b5d47baf")
 		(property "Reference" "#PWR005"
-			(at 156.20999999999998 76.2 0)
+			(at 156.20999999999998 74.93 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
 		(property "Value" "GND"
-			(at 159.510 76.200 0)
+			(at 159.510 74.930 0)
 			(effects (font (size 1.27 1.27)) (justify left))
 		)
 		(property "Footprint" ""
-			(at 156.20999999999998 76.2 0)
+			(at 156.20999999999998 74.93 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
 		(property "Datasheet" ""
-			(at 156.20999999999998 76.2 0)
+			(at 156.20999999999998 74.93 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
-		(pin "1" (uuid "dfa02d1c-d20a-4c66-8ac0-575dec063fd5"))
+		(pin "1" (uuid "3544e8c2-d890-42d5-846e-b7e8f8eacaf5"))
 		(instances
 			(project "gnssbike"
 				(path "/9c874366-f223-4aef-8b18-3e2a2bab2b25/2876718e-81a5-441d-8f57-8355947cf79b"
@@ -2669,34 +2676,69 @@
 	)
 	(symbol
 		(lib_id "power:GND_R")
-		(at 158.750 82.550 0)
+		(at 158.750 81.280 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom no)
 		(on_board yes)
 		(dnp no)
-		(uuid "b3bac1c5-914c-43a0-8139-8b2715e66c0f")
+		(uuid "7aef97ff-dc21-4da8-8a4f-91687dcd8a7d")
 		(property "Reference" "#PWR006"
-			(at 158.75 82.55 0)
+			(at 158.75 81.28 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
 		(property "Value" "GND"
-			(at 162.050 82.550 0)
+			(at 162.050 81.280 0)
 			(effects (font (size 1.27 1.27)) (justify left))
 		)
 		(property "Footprint" ""
-			(at 158.75 82.55 0)
+			(at 158.75 81.28 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
 		(property "Datasheet" ""
-			(at 158.75 82.55 0)
+			(at 158.75 81.28 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
-		(pin "1" (uuid "a454d88e-d27e-4251-85e8-825c6dd98800"))
+		(pin "1" (uuid "b5c88f74-4f93-457a-8903-57417c6763ca"))
 		(instances
 			(project "gnssbike"
 				(path "/9c874366-f223-4aef-8b18-3e2a2bab2b25/2876718e-81a5-441d-8f57-8355947cf79b"
 					(reference "#PWR006")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND_D")
+		(at 199.390 58.420 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(dnp no)
+		(uuid "d0cc888d-a764-459e-89d9-eac75226748b")
+		(property "Reference" "#PWR007"
+			(at 199.39 58.42 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Value" "GND"
+			(at 199.390 61.720 0)
+			(effects (font (size 1.27 1.27)) (justify top))
+		)
+		(property "Footprint" ""
+			(at 199.39 58.42 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(property "Datasheet" ""
+			(at 199.39 58.42 0)
+			(effects (font (size 1.27 1.27)) (hide yes))
+		)
+		(pin "1" (uuid "f05b1b5b-fcbf-43a4-81be-399b61af932c"))
+		(instances
+			(project "gnssbike"
+				(path "/9c874366-f223-4aef-8b18-3e2a2bab2b25/2876718e-81a5-441d-8f57-8355947cf79b"
+					(reference "#PWR007")
 					(unit 1)
 				)
 			)
@@ -2711,7 +2753,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "fabe2d92-b5c6-4e15-85d2-befee90c3bce")
-		(property "Reference" "#PWR007"
+		(property "Reference" "#PWR008"
 			(at 38.1 97.79 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
@@ -2731,7 +2773,7 @@
 		(instances
 			(project "gnssbike"
 				(path "/9c874366-f223-4aef-8b18-3e2a2bab2b25/2876718e-81a5-441d-8f57-8355947cf79b"
-					(reference "#PWR007")
+					(reference "#PWR008")
 					(unit 1)
 				)
 			)
@@ -2746,7 +2788,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "9198498b-e8f6-4d37-8d2d-bb67730dd338")
-		(property "Reference" "#PWR008"
+		(property "Reference" "#PWR009"
 			(at 55.88 39.37 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
@@ -2766,7 +2808,7 @@
 		(instances
 			(project "gnssbike"
 				(path "/9c874366-f223-4aef-8b18-3e2a2bab2b25/2876718e-81a5-441d-8f57-8355947cf79b"
-					(reference "#PWR008")
+					(reference "#PWR009")
 					(unit 1)
 				)
 			)
@@ -2781,7 +2823,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "7455ea3b-cf64-4b7f-8fc9-5fdb67706ab6")
-		(property "Reference" "#PWR009"
+		(property "Reference" "#PWR010"
 			(at 69.85 85.08999999999999 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
@@ -2801,7 +2843,7 @@
 		(instances
 			(project "gnssbike"
 				(path "/9c874366-f223-4aef-8b18-3e2a2bab2b25/2876718e-81a5-441d-8f57-8355947cf79b"
-					(reference "#PWR009")
+					(reference "#PWR010")
 					(unit 1)
 				)
 			)
@@ -2816,7 +2858,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "e32b7de2-3104-4b39-8772-40e524cad274")
-		(property "Reference" "#PWR010"
+		(property "Reference" "#PWR011"
 			(at 38.1 85.08999999999999 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
@@ -2833,41 +2875,6 @@
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
 		(pin "1" (uuid "9a4a47b9-0da7-4b9d-8fa8-470ba353c43b"))
-		(instances
-			(project "gnssbike"
-				(path "/9c874366-f223-4aef-8b18-3e2a2bab2b25/2876718e-81a5-441d-8f57-8355947cf79b"
-					(reference "#PWR010")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "power:GND_R")
-		(at 218.440 52.070 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom no)
-		(on_board yes)
-		(dnp no)
-		(uuid "47578c12-2858-45a0-84c4-145cbda8bf61")
-		(property "Reference" "#PWR011"
-			(at 218.44 52.07 0)
-			(effects (font (size 1.27 1.27)) (hide yes))
-		)
-		(property "Value" "GND"
-			(at 221.740 52.070 0)
-			(effects (font (size 1.27 1.27)) (justify left))
-		)
-		(property "Footprint" ""
-			(at 218.44 52.07 0)
-			(effects (font (size 1.27 1.27)) (hide yes))
-		)
-		(property "Datasheet" ""
-			(at 218.44 52.07 0)
-			(effects (font (size 1.27 1.27)) (hide yes))
-		)
-		(pin "1" (uuid "1abd25d0-7775-4d8a-8e13-ff2b773c737c"))
 		(instances
 			(project "gnssbike"
 				(path "/9c874366-f223-4aef-8b18-3e2a2bab2b25/2876718e-81a5-441d-8f57-8355947cf79b"

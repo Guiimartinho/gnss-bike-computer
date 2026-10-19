@@ -85,12 +85,17 @@ add("J101", "HRO TYPE-C-31-M-12", [
 # survivable. The bidirectional part that is in stock, TPD1E10B06DPYR
 # (C48260, 299.830 units), costs 12 pF instead of 0,42 - fine for CC, which
 # is hundreds of kbps, and not fine for D+/D-.
-add("D101", "TPD1E05U06DPYR", [
+# Decisao D2 do dono (2026-10-18): TVS de 24 V de trabalho. O TPD1E05U06
+# rompia entre 6,5 e 8,5 V, e um carregador fora da norma que o nPM1300
+# aguenta (22 V) queimava o D101 e podia deixar o VBUS em curto
+# (protection-a1). Agora o nPM1300 cuida da sobretensao continua e o TVS so
+# da descarga eletrostatica.
+add("D101", "PESD24VS1UL,315", [
     (1, "IO", "passive", L), (2, "GND", "passive", B),
-], confirmed=True, lcsc="C436349",
-    note="TVS do VBUS, X1SON-2, 0,42 pF, 5,5 V de trabalho, clamp em 14 V. "
-         "UNIDIRECIONAL: o ESD761 que estava aqui era bidirecional de 24 V e "
-         "esta com estoque zero. Orientacao passa a importar")
+], confirmed=True, lcsc="C477994",
+    note="TVS do VBUS, Nexperia, SOD-882, 24 V de trabalho, 26,5 a 27,5 V de "
+         "ruptura, 23 kV de ESD por contato. UNIDIRECIONAL: pino 1 = catodo, "
+         "com a barra, no VBUS")
 
 # TPD4E05U06 in DQA is a USON of TEN pins, 1.0 x 2.5 mm: four ESD channels,
 # two grounds and four pins TI means to be used for straight-through routing,
@@ -125,8 +130,10 @@ add("U101", "nPM1300-QEAA", [
     (31, "LSOUT2", "power_out", R), (32, "VOUT2", "power_out", R),
     (33, "AVSS", "power_in", B),
 ], confirmed=True,
-    note="PMIC: carregador, 2 bucks, 2 chaves de carga. FICA no QFN-32 e vai "
-         "por CONSIGNACAO na JLCPCB: estoque zero na LCSC nos dois carreteis. "
+    lcsc="C7466043",
+    note="PMIC: carregador, 2 bucks, 2 chaves de carga. FICA no QFN-32. A "
+         "LCSC tinha 51 em 2026-10-18 (C7466043); sem estoque, vai por "
+         "CONSIGNACAO na JLCPCB. "
          "A versao WLCSP-35 (C25346894) tem estoque, mas o passo de bolas de "
          "0,419 x 0,440 mm e menor que a via de 0,45 da placa e obrigaria "
          "via-in-pad na placa inteira, provavel ida para 6 camadas, dobro da "
@@ -255,8 +262,9 @@ add("U103", "ADP5091ACPZ-2", [
 # corrente de saturacao ao menos 30 % acima do pico esperado - com os 300 mA
 # de pico da variante -2, Isat >= 390 mA. O 4,7 uH que estava aqui era do
 # AEM10900 e NAO SERVE. O encapsulamento sobe de 2,5 x 2,0 para 3 x 3 mm.
-passive("L103", "22 uH", "indutor do boost do ADP5091, entre VIN e SW; "
-                       "Isat >= 390 mA. ESCOLHER a peca na LCSC")
+passive("L103", "22 uH", "indutor do boost do ADP5091, entre VIN e SW: "
+                       "Sunlord SPH252012H220MT, 22 uH, Isat 0,45 A, 1008",
+        lcsc="C98385")
 
 # TPS7A02 in DQN is an X2SON of four pins, 1.0 x 1.0 mm, not a SOT-563.
 add("U104", "TPS7A0218PDQN", [
@@ -362,7 +370,10 @@ passive("R122", "402 k", "MINOP: para o boost com o painel abaixo de 1,0 V")
 
 # VID define a tensao do regulador que NAO usamos. Flutuando ele daria 2,5 V;
 # um resistor deixa o pino em estado definido, que e o que importa aqui.
-passive("R123", "111 k", "VID: estado definido do regulador desabilitado")
+passive("R123", "110 k", "VID: estado definido do regulador desabilitado. "
+                          "111 k da tabela 7 nao tem estoque; 110 k a 1 % "
+                          "fica a 0,9 % dele, e os codigos vizinhos sao "
+                          "55,6 k e 221 k")
 
 # O divisor de temperatura do comparador: o NTC RT101 e o R106 que ja
 # estavam na placa para o TH_MON do AEM10900. VALORES A CONFERIR contra o
@@ -373,7 +384,6 @@ passive("R106", "4,87 k", "limiar de 45 graus do corte termico: o NTC 10 k B3380
 passive("R107", "4,7 k", "pull-up do PWR_SDA")
 passive("R108", "4,7 k", "pull-up do PWR_SCL")
 passive("R109", "10 k", "pull-up do PMIC_INT")
-passive("R110", "10 k", "pull-up do ALRT do MAX17262")
 passive("R112", "10 k", "pull-up do INT do OPT3001")
 
 for n, v in (("C101", "10 uF"), ("C102", "10 uF"), ("C103", "10 uF"), ("C104", "10 uF"),
@@ -514,7 +524,7 @@ TESTE = (
     ("TP104", "VSYS", "saida do power path; chega a 5,5 V com cabo"),
     ("TP105", "3V0", "BUCK2, o trilho do MCU"),
     ("TP106", "1V8", "BUCK1; maximo absoluto de 1,98 V no V_IO do receptor"),
-    ("TP107", "SD3V0", "LDSW1, a flash; desligado tem de estar em 0 V"),
+    ("TP107", "SD3V0", "LDSW1, sem carga desde 2026-10-18 (a flash foi para o 3V0)"),
     ("TP108", "3V3BL", "LDSW2, a luz"),
     ("TP109", "VBCKP", "TPS7A02; continua de pe com o aparelho desligado"),
     # Era o VINT, o trilho interno do AEM10900. O ADP5091 nao tem trilho
@@ -561,7 +571,7 @@ for n, v in (("C201", "100 nF"), ("C210", "4,7 uF")):
 add("J103", "JST S4B-ZR-SM4A-TF", [
     (1, "PV_A", "passive", R), (2, "PV_B", "passive", R),
     (3, "PV_C", "passive", R), (4, "GND", "passive", B),
-], confirmed=False,
+], confirmed=True,
     note="entrada dos seis modulos solares, em tres grupos de dois: frente, "
          "chanfro esquerdo, chanfro direito, mais o terra comum. ZH de "
          "1,5 mm, 4 vias, SMD lateral, com trava. CONFERIR o estoque na LCSC "
@@ -583,7 +593,7 @@ for _n in ("R113", "R114", "R115"):
 # que segura. Contra polaridade trocada protege, por ser unidirecional.
 add("D105", "PESD3V3S1UB-N", [
     (1, "IO", "passive", L), (2, "GND", "passive", B),
-], confirmed=False, lcsc="C920299",
+], confirmed=True, lcsc="C920299",
     note="grampo do SRC: ESD unidirecional de 3,3 V em SOD-523, 1 uA de fuga "
          "no maximo a 3,3 V (bem menos nos 2,07 V de circuito aberto do "
          "painel), 160 pF, 100 W a 8/20 us. UNIDIRECIONAL de proposito: o "
@@ -607,22 +617,30 @@ add("D105", "PESD3V3S1UB-N", [
 #   SRC ---[RT101 10k NTC]---+---[R106 4,87k]--- GND     IN+ = VIN/2 a 45 C
 #   SRC ---[R124 100k]-------+---[R125 100k]---- GND     IN- = VIN/2
 #   U105 OUT ---|>|--- DIS_SW                             D106
+# A pinagem e a da TLV7031DCKR, a peca pedida (ficha SLVSE13J, DCK "North
+# West"): 1 OUT, 2 V-, 3 IN+, 4 IN-, 5 V+. O desenho tinha a da TLV7031S,
+# que e outra variante, com OUT, IN+ e IN- nos pinos errados, e o codigo da
+# LCSC era o da DBVR em SOT-23-5, que nao cabe no SC-70 (tlv7031-a1, -a2,
+# -x1, -x2 da revisao de 2026-10-18; o dono escolheu renumerar, D4).
+#
+# O V+ sai do VSYS para o VBAT_SYS (npm1300-a1, tlv7031-a3, adp5091-a1): em
+# ship mode o nPM1300 desliga o VSYS, o comparador ficava sem alimentacao e
+# o ADP5091 seguia carregando a celula quente. O VBAT_SYS existe sempre que
+# existe celula, entre 3,0 e 4,45 V, dentro dos 1,6 a 6,5 V da ficha.
 add("U105", "TLV7031DCKR", [
-    (1, "IN+", "input", L), (2, "GND", "power_in", B), (3, "IN-", "input", L),
-    (4, "OUT", "output", R), (5, "V+", "power_in", T),
-], confirmed=False, lcsc="C2869832",
-    note="comparador de 315 nA com saida push-pull, SC70-5; alimentado pelo "
-         "VSYS. A PINAGEM E A DO SC70 PADRAO DE COMPARADOR (IN+, GND, IN-, "
-         "OUT, V+) e tem de ser CONFERIDA na ficha SNOSD54 antes de fabricar; "
-         "o comentario antigo desta lista o dava como dreno aberto, e e o "
-         "TLV7041 que e dreno aberto")
+    (1, "OUT", "output", R), (2, "GND", "power_in", B), (3, "IN+", "input", L),
+    (4, "IN-", "input", L), (5, "V+", "power_in", T),
+], confirmed=True, lcsc="C2863637",
+    note="comparador de 315 nA com saida push-pull, SC70-5 (DCK); alimentado "
+         "pelo VBAT_SYS, que nao some em ship mode. Pinagem da TLV7031DCKR: "
+         "1 OUT, 2 V-, 3 IN+, 4 IN-, 5 V+ (SLVSE13J)")
 passive("R124", "100 k", "referencia do corte termico: metade do VIN do painel")
 passive("R125", "100 k", "referencia do corte termico, ao GND")
 add("D106", "BAT54WS-7-F", [
     (1, "K", "passive", L), (2, "A", "passive", R),
-], confirmed=False, lcsc="C124205",
+], confirmed=True, lcsc="C124205",
     note="Schottky do OU no DIS_SW: anodo na saida do comparador, catodo no "
-         "DIS_SW. SOD-323; catodo no terminal 1 CONFERIR pela marca do desenho")
+         "DIS_SW. SOD-323; catodo no terminal 1, conferido na revisao de 2026-10-18")
 
 # A tecla central. Decidido pelo dono em 2026-09-26: o P1.27 do MCU le o
 # no da tecla por um Schottky, anodo no MCU (pull-up interno) e catodo no
@@ -633,9 +651,10 @@ add("D106", "BAT54WS-7-F", [
 # PMIC lia tecla pressionada - o aparelho nao ficava desligado.
 add("D107", "BAT54WS-7-F", [
     (1, "K", "passive", L), (2, "A", "passive", R),
-], confirmed=False, lcsc="C124205",
+], confirmed=True, lcsc="C124205",
     note="Schottky que isola o P1.27 do no da tecla central; catodo no no, "
-         "anodo no MCU. SOD-323; catodo no terminal 1 CONFERIR pela marca")
+         "anodo no MCU. SOD-323; catodo no terminal 1, conferido na revisao de "
+         "2026-10-18")
 
 # ---- desacoplamento que as fichas pedem e faltava (revisao de 2026-09-26)
 passive("C122", "100 nF", "bypass do BATT do MAX17262, junto do CI (ficha, p. 12)")
@@ -663,7 +682,7 @@ add("U301", "u-blox MAX-F10S", [
     (14, "VCC_RF", "power_out", R), (15, "VIO_SEL", "input", L),
     (16, "SDA", "bidirectional", L), (17, "SCL", "input", L),
     (18, "SAFEBOOT_N", "input", L),
-], confirmed=True,
+], confirmed=True, lcsc="C30005563",
     note="receptor L1+L5 no 3V0, VCC e V_IO juntos e VIO_SEL aberto (opcao 1 da "
          "tabela 35 do manual de integracao): V_IO de 2,7 a 3,6 V, e as quatro "
          "linhas digitais vao direto ao MCU, que tambem e de 3,0 V")
@@ -712,10 +731,19 @@ passive("C120", "100 nF", "desacoplamento de alta frequencia do SYS, em "
                           "paralelo com o C116; a ficha pede os DOIS")
 passive("C121", "4,7 uF", "REG_OUT do regulador desabilitado; footprint "
                           "mantido, pode ficar NAO MONTADO")
-passive("C305", "2,7 pF", "sintonia do pino 1 da antena ao terra; valor de "
-                          "partida da ficha, a ajustar na bancada")
-passive("C306", "6,8 pF", "sintonia do pino 2 da antena ao terra; valor de "
-                          "partida da ficha, a ajustar na bancada")
+# Which value goes on which pin is decided by the figure, not by the pin
+# number: the figure 8-1 puts [9] (6,8 pF) at the end of the WIDE side of the
+# cut-out and [8] (2,7 pF) at the end of the narrow one. Pin 1 faces the wide
+# side here (footprints.antena_unictron), so C305 is [9]. Until 2026-10-19
+# the two values were the other way round, read as "pin 1, then pin 2".
+# 0402 and not the figure's 0201: the same Murata C0G series, and the bench
+# tuning the datasheet asks for takes up the difference.
+passive("C305", "6,8 pF", "sintonia [9] do pino 1 da antena ao terra, na ponta "
+                          "do lado largo do recorte; valor de partida da "
+                          "ficha, a ajustar na bancada")
+passive("C306", "2,7 pF", "sintonia [8] do pino 2 da antena ao terra, na ponta "
+                          "do lado estreito do recorte; valor de partida da "
+                          "ficha, a ajustar na bancada")
 # The board carries BOTH ways of feeding the receiver, and a 0 ohm chooses.
 # The chip soldered on the edge is the shorter path and has no connector in
 # it; the u.FL lets an external element be tried without touching the board.
@@ -726,8 +754,11 @@ passive("C306", "6,8 pF", "sintonia do pino 2 da antena ao terra; valor de "
 # THREE pads and one 0 ohm, not two jumpers: the branch that is not chosen
 # has to be an open pad, not a stub. A stub on a 50 ohm line at 1,6 GHz is
 # a quarter wave at 23 mm and a short at the receiver long before that.
+# COMUM e o pad do MEIO, o 2: o 0 ohm liga o meio a uma das pontas. Ate
+# 2026-10-18 o COMUM estava no pad 1, numa ponta, e nenhum 0402 ligava o
+# receptor a antena de chip, no pad 3 da outra ponta (max-f10s-a1).
 add("JP301", "0 R", [
-    (1, "COMUM", "passive", L), (2, "UFL", "passive", T),
+    (1, "UFL", "passive", L), (2, "COMUM", "passive", T),
     (3, "CHIP", "passive", R),
 ], confirmed=True,
     note="escolhe a antena: 0 ohm entre COMUM e UFL, ou entre COMUM e CHIP. "
@@ -746,7 +777,7 @@ add("JP301", "0 R", [
 # here because nothing else records it.
 add("J302", "Hirose U.FL-R-SMT-1", [
     (1, "FEED", "passive", R), (2, "GND", "passive", B),
-], confirmed=False, lcsc="C88374",
+], confirmed=True, lcsc="C88374",
     note="conector coaxial u.FL da antena GNSS L1+L5. Substitui o contato de "
          "mola que 04:271 tinha decidido: mola nao tem impedancia definida, "
          "e a 4.4 do manual do MAX-F10S pede 50 ohm em TODO o caminho de RF. "
@@ -779,9 +810,11 @@ passive("C302", "NP", "shunt [3] da rede de casamento: a Unictron manda "
 # 50 ohm pede um 0 ohm ou um indutor. O footprint e 0402 nos dois casos,
 # entao a placa nao muda - so o que se solda nela.
 passive("L301", "3,6 pF", "serie [2] da rede de casamento, com a antena de "
-                          "chip. Com o u.FL, 0 ohm. A serie de indutores "
-                          "de RF 2,2 a 5,6 nH esta toda na LCSC para "
-                          "ajuste de bancada", lcsc="C98063")
+                          "chip: CAPACITOR C0G de 3,6 pF +-0,1 pF. Com o "
+                          "u.FL, 0 ohm. O codigo era o de um indutor de "
+                          "3,9 nH (C98063, max-f10s-a2); a serie de "
+                          "indutores de RF fica para ajuste de bancada",
+        lcsc="C161320")
 passive("C303", "10 uF")
 passive("C304", "100 nF")
 
@@ -799,12 +832,27 @@ passive("C304", "100 nF")
 # Os dois sao BOTTOM CONTACT: a cauda do display entra com as trilhas
 # viradas para a placa. E os dois sao flip-lock rotativo - o atuador gira
 # para cima, entao o FPC tem de ser travado ANTES de fechar a caixa.
-add("J401", "Hirose FH12-10S-0.5SH(55)", [
-    (1, "SCLK", "input", R), (2, "SI", "input", R), (3, "SCS", "input", R),
-    (4, "EXTCOMIN", "input", R), (5, "DISP", "input", R), (6, "VDDA", "power_in", R),
-    (7, "VDD", "power_in", R), (8, "EXTMODE", "input", R), (9, "VSS", "power_in", R),
-    (10, "VSSA", "power_in", R),
-], confirmed=True, lcsc="C506791", note="FPC de sinal do painel, 10 vias; ordem de 03-netlist.md")
+# O J401 serve as DUAS telas desde 2026-10-18 (pedido do dono: escolher a
+# tela sem refazer a placa). A fita de sinal da Sharp LS027B7DH01A sai do
+# meio da borda longa, com o centro no centro da area ativa, e a area ativa
+# das duas telas e a mesma (58,8 x 35,28): as duas fitas caem no MESMO
+# lugar, e dois conectores ali se sobrepoem. A ordem das 10 vias e a mesma
+# (Sharp LCP-2110015A p. 23 e LD-28305A; JDI spec 1.4.1). As duas fitas
+# chegam dobradas sob o vidro com os contatos para cima, e o Molex 503480
+# tem contato dos dois lados (SD-503480-001 J, nota 9). O que muda e a
+# tensao: a Sharp quer 4,8 a 5,5 V em VDD e VDDA, e a JDI queima acima de
+# 3,6 V; o JP401 escolhe.
+# Os pinos do conector vao ao contrario dos da tela: o circuito 1 da Molex
+# fica na ponta de y menor da placa, e o pino 1 das duas fitas chega na de y
+# maior (conferencia cega de 2026-10-18, com o footprint redesenhado).
+add("J401", "Molex 503480-1000", [
+    (10, "SCLK", "input", R), (9, "SI", "input", R), (8, "SCS", "input", R),
+    (7, "EXTCOMIN", "input", R), (6, "DISP", "input", R), (5, "VDDA", "power_in", R),
+    (4, "VDD", "power_in", R), (3, "EXTMODE", "input", R), (2, "VSS", "power_in", R),
+    (1, "VSSA", "power_in", R),
+], confirmed=True, lcsc="C127355",
+    note="FPC de sinal da JDI OU da Sharp, 10 vias, contato dos dois lados; "
+         "ordem de 03-netlist.md, pino 1 na ponta do lado das teclas")
 
 # LPM027M128C specification ver.02: the signal FPC in 1.4.1 (page 4) and the
 # backlight FPC in 1.4.2 (page 5). The light is four white LEDs in parallel
@@ -828,15 +876,65 @@ add("DS401", "JDI LPM027M128C", [
 # esta na LCSC, e a placa e montada na JLCPCB. Este e o equivalente com
 # estoque: 45.619 pecas, contato inferior como o J401 do sinal, e corpo bem
 # menor - 4,27 x 2,90 x 1,00 contra 7,93 x 4,40 x 1,20.
-add("J402", "HCTL HC-FPC-05-10-5RLTAG", [
-    (1, "1", "passive", L), (2, "2", "passive", L), (3, "3", "passive", L),
-    (4, "4", "passive", L), (5, "5", "passive", L),
-], confirmed=True, lcsc="C5213728", note="conector da luz do painel, 5 vias, passo 0,5 mm, "
-                        "recomendado pela propria JDI no desenho de contorno")
+# Molex 503480-0540 desde 2026-10-18: a serie que a JDI nomeia (503480-0500,
+# fora de linha na LCSC) com contato dos dois lados; o HCTL de antes pedia
+# 3,0 mm de condutor exposto e a fita da luz tem 2,2 a 2,8 (display-a4).
+# Pinos 1 a 4 sao os catodos e o 5 o anodo comum (spec 1.4.2), e o pino 1
+# fica do lado da fita de sinal (desenho de contorno, vista de tras).
+# E o mesmo vale aqui: o pino 1 da fita (o primeiro catodo) cai no circuito 5.
+add("J402", "Molex 503480-0540", [
+    (5, "K1", "passive", L), (4, "K2", "passive", L), (3, "K3", "passive", L),
+    (2, "K4", "passive", L), (1, "ANODO", "passive", L),
+], confirmed=True, lcsc="C5527934", note="conector da luz da JDI, 5 vias, passo 0,5 mm, "
+                        "contato dos dois lados; os catodos da fita nos circuitos 5 a 2, "
+                        "o anodo comum no 1")
+
+# A Sharp com luz frontal e um modulo so, o Azumo 11103-06 (a lista de pecas
+# do desenho T7 inclui a LS027B7DH01A). A fita da luz sai da mesma borda
+# longa, na ponta do pino 1 da Sharp, com 27,8 mm alem do vidro: contorna a
+# borda da placa e chega a um conector no VERSO. Tem dois pads de 0,80 a
+# passo 1,00, e cada um cobre duas vias de 0,5 (1-2 e 3-4). A polaridade
+# fica em quatro jumpers porque o desenho T7 e a folha de 2020 se
+# contradizem: pela T7 o anodo e o par do lado das teclas, que no verso e o
+# par 1-2 do conector (JP402 e JP403 montados); a outra polaridade e JP404 e
+# JP405. Testar o LED com multimetro antes.
+add("J403", "Molex 503480-0440", [
+    (1, "1", "passive", R), (2, "2", "passive", R), (3, "3", "passive", R),
+    (4, "4", "passive", R),
+], confirmed=True, lcsc="C3170007", note="conector da luz do Azumo 11103-06, 4 vias, "
+                        "passo 0,5 mm, contato dos dois lados, no verso")
+
+add("DS402", "Sharp LS027B7DH01A ou Azumo 11103-06", [
+    (1, "SCLK", "input", L), (2, "SI", "input", L), (3, "SCS", "input", L),
+    (4, "EXTCOMIN", "input", L), (5, "DISP", "input", L), (6, "VDDA", "power_in", L),
+    (7, "VDD", "power_in", L), (8, "EXTMODE", "input", L), (9, "VSS", "power_in", B),
+    (10, "VSSA", "power_in", B),
+    ("LA", "LUZ_A", "passive", R), ("LK", "LUZ_K", "passive", R),
+], confirmed=True,
+    note="plano B no mesmo conector: MIP monocromatico 400 x 240, VDD e VDDA "
+         "de 4,8 a 5,5 V, entrada alta a partir de 2,7 V; no Azumo, LED de luz "
+         "frontal de 10 a 20 mA e V_F de 2,8 a 3,0 V")
+
+# The 5 V of the Sharp: TI TPS610997, a fixed 5,0 V boost (4,90 to 5,10 V)
+# with a true output disconnect, about 1 uA running and 0,5 uA off. The
+# REG710NA-5 of the earlier plan gives 4,7 V at its minimum, below the
+# Sharp's 4,8 (schematic review of 2026-10-18). FB goes to GND on the
+# fixed version (SLVSD88M, table 5-1).
+add("U402", "TPS610997YFFR", [
+    ("A1", "VIN", "power_in", L), ("B1", "SW", "passive", R),
+    ("C1", "EN", "input", L), ("A2", "GND", "power_in", B),
+    ("B2", "VOUT", "power_out", R), ("C2", "FB", "input", B),
+], confirmed=True, lcsc="C2072359",
+    note="boost de 5,0 V da Sharp; EN no DISP_PWR_EN (P3.07), ativo alto, com o "
+         "pull-down R403; desligado, a saida fica desconectada")
+passive("L401", "2,2 uH", "indutor do boost de 5 V: Murata DFE201610E-2R2M", lcsc="C337891")
+passive("C405", "10 uF", "entrada do boost de 5 V")
+passive("C406", "10 uF", "saida do boost: 20 uF nominais no minimo (SLVSD88M, 8.2.2.3)")
+passive("C407", "10 uF", "saida do boost, o segundo")
 
 add("Q401", "DMG1012T-7", [
     (1, "G", "input", L), (2, "S", "passive", B), (3, "D", "passive", T),
-], confirmed=False, lcsc="C20512",
+], confirmed=True, lcsc="C20512",
     note="chave de canal N da luz. A Diodes NAO publica numero de pino: o "
          "diagrama so mostra a posicao, e a numeracao vem do padrao SOT-523")
 
@@ -844,7 +942,17 @@ passive("R402", "100 k", "pull-down da porta do Q401")
 passive("R403", "100 k", "pull-down do DISP_PWR_EN")
 passive("R404", "100 k", "pull-down do DISP_ON")
 passive("R405", "100 k", "pull-down do DISP_CS")
-passive("JP401", "0 R", "VDD do painel: 0 R fixo na posicao do 3V0")
+add("JP401", "0 R", [
+    (1, "3V0", "passive", L), (2, "COMUM", "passive", T), (3, "5V0", "passive", R),
+], confirmed=True, lcsc="C17168",
+    note="tensao do painel: 0 ohm entre COMUM e 3V0 para a JDI (montado), ou "
+         "entre COMUM e 5V0 para a Sharp. Monta-se UM so: 5 V na JDI a queima")
+passive("JP402", "0 R", "luz do Azumo: anodo no par 1-2 do J403 (desenho T7)", lcsc="C17168")
+passive("JP403", "0 R", "luz do Azumo: catodo no par 3-4 do J403 (desenho T7)", lcsc="C17168")
+passive("JP404", "NP", "luz do Azumo, polaridade invertida: anodo no par 3-4")
+passive("JP405", "NP", "luz do Azumo, polaridade invertida: catodo no par 1-2")
+passive("R410", "39,2 R", "corrente da luz do Azumo pelo 3V3BL: 13 mA com V_F de "
+                          "2,8 V, 8 mA com 3,0 V; maximo de 25 mA", lcsc="C45323")
 passive("C404", "100 nF")
 
 # ---------------------------------------------------------------- folha 5
@@ -853,7 +961,9 @@ add("U501", "MX25R6435F", [
     (3, "WP_N_IO2", "bidirectional", R), (4, "GND", "power_in", B),
     (5, "SI_IO0", "bidirectional", L), (6, "SCLK", "input", L),
     (7, "HOLD_N_IO3", "bidirectional", R), (8, "VCC", "power_in", T),
-], confirmed=True, lcsc="C2802844", note="flash NOR SPI; numeros 1, 2, 5 e 6 vem de 03-netlist.md")
+], confirmed=True, lcsc="C2802844", note="flash NOR SPI no 3V0; numeros 1, 2, 5 e 6 vem de "
+                                         "03-netlist.md. A JLCPCB tinha 2 em 2026-10-18: vai "
+                                         "consignada (a DigiKey tinha 2.480)")
 
 # BMP585: BST-BMP585-DS003-02 rev 1.2, section 6.1, table 26, page 45.
 # LGA of 8 pins, 3.25 x 3.25 mm - not the 2.0 x 2.0 this project assumed.
@@ -899,12 +1009,17 @@ add("U504", "Memsic MMC5603NJ", [
 add("U505", "TI OPT3001DNPR", [
     (1, "VDD", "power_in", T), (2, "ADDR", "input", L), (3, "GND", "power_in", B),
     (4, "SCL", "input", L), (5, "INT", "open_collector", R),
-    (6, "SDA", "bidirectional", L),
-], confirmed=True, lcsc="C90462", note="luz ambiente, 0x44 com ADDR no GND")
+    (6, "SDA", "bidirectional", L), (7, "EP", "power_in", B),
+], confirmed=True, lcsc="C90462", note="luz ambiente, 0x44 com ADDR no GND; "
+                                       "pad termico exposto (7) soldado ao GND")
 
-passive("R501", "100 k", "pull-up do NOR_CS ao SD3V0")
-passive("R502", "47 k", "pull-up do WP ao SD3V0")
-passive("R503", "47 k", "pull-up do HOLD ao SD3V0")
+# A flash passou para o 3V0 em 2026-10-18 (mx25r6435f-a1, docs-k3, docs-k4):
+# com o SD3V0 desligado, o P2.05 punha 3,0 V no CS# sem resistor, acima do
+# maximo absoluto da entrada, e alimentava a flash de volta. No 3V0 ela
+# dorme em deep power-down: 0,35 uA no maximo, 0,15 % da celula por ano.
+passive("R501", "100 k", "pull-up do NOR_CS ao 3V0")
+passive("R502", "47 k", "pull-up do WP ao 3V0")
+passive("R503", "47 k", "pull-up do HOLD ao 3V0")
 passive("R504", "4,7 k", "pull-up do SENS_SDA")
 passive("R505", "4,7 k", "pull-up do SENS_SCL")
 passive("R506", "33 R", "serie do NOR_SCK, junto do MCU")
@@ -942,11 +1057,15 @@ for n in ("SW601", "SW602", "SW603"):
 # O furo de som e uma FENDA LATERAL de 1,9 x 0,9 mm, com a aresta de baixo a
 # 0,30 mm da placa, e a face inferior tem um canal saindo pela parede oposta.
 # A caixa precisa de duto lateral, nao de furo na tampa.
-add("LS601", "Murata PKLCS1212E4001-R1",
+# O Murata PKLCS1212E4001-R1 esta em Last Time Buy ate 31/03/2027, com toda a
+# linha de sounders piezo da Murata (aviso PTNMUR08491; buzzer-a1 e
+# sourcing-d2 da revisao de 2026-10-18). O Same Sky CPT-12123-81-SMT-TR e
+# ativo, tem o mesmo corpo de 12 x 12 x 3,0 e cabe no mesmo land.
+add("LS601", "Same Sky CPT-12123-81-SMT-TR",
     [(1, "A", "passive", L), (2, "B", "passive", R)],
-    confirmed=True, lcsc="C113159",
-    note="buzzer piezo passivo, 12 x 12 x 3,0 mm, 84 dB a 4 kHz, acionado em "
-         "contrafase. Sem polaridade. Furo de som LATERAL, rente a placa")
+    confirmed=True, lcsc="C3812179",
+    note="buzzer piezo passivo, 12 x 12 x 3,0 mm, 81 dB a 4 kHz, acionado em "
+         "contrafase. Sem polaridade. Furo de som LATERAL")
 
 add("D601", "TUOZHAN S4-3528RGBTA-A", [
     ("A", "ANODO", "passive", T), ("KR", "K_R", "passive", B),
@@ -961,7 +1080,7 @@ add("D601", "TUOZHAN S4-3528RGBTA-A", [
 for n in ("Q601", "Q602", "Q603"):
     add(n, "DMG1012T-7", [
         (1, "G", "input", L), (2, "S", "passive", B), (3, "D", "passive", T),
-    ], confirmed=False,
+    ], confirmed=True,
         note="chave de canal N de uma cor do LED; a Diodes nao publica numero "
              "de pino, a numeracao vem do padrao SOT-523")
 
@@ -983,6 +1102,73 @@ passive("R611", "100 k", "pull-down da porta do Q603")
 for n in ("JP102", "JP103", "JP104", "JP105", "JP106"):
     passive(n, "0 R", "jumper de corrente do bloco")
 
+
+
+# Codigos da LCSC dos passivos que so tinham valor, da tabela de fornecimento
+# da revisao de 2026-10-18 (out/blocks/sourcing.md; capacitors-a2,
+# connectors-a5): a JLCPCB monta pelo codigo, e um capacitor sem tensao nem
+# dieletrico nao e uma peca. A tensao de cada um cobre o trilho em que esta:
+# os 10 uF de 0603 sao todos de 25 V porque o C101 fica no VBUS.
+LCSC_PASSIVOS = {
+    # 10 uF 0603, 25 V X5R, Taiyo Yuden TMK107BBJ106MA-T
+    **{r: "C386081" for r in ("C101", "C102", "C103", "C104", "C105", "C106",
+                              "C107", "C108", "C109", "C303")},
+    # 1 uF 0402, 25 V X5R, Samsung CL05A105KA5NQNC
+    **{r: "C52923" for r in ("C110", "C111", "C113", "C114")},
+    # 22 uF 0402, 6,3 V X5R, Samsung CL05A226MQ5N6J8 (SRC e VBAT_SYS, ate 4,2 V)
+    "C115": "C7423886", "C116": "C7423886",
+    # 22 uF 0603, 10 V X5R, Taiyo Yuden MSASL168BB5226MTNA01
+    "C117": "C6600230", "C501": "C6600230",
+    "C118": "C77003",     # 0,47 uF 0402, 10 V, Murata GRM155R61A474KE15D
+    "C119": "C15195",     # 10 nF 0402, 50 V X7R, Samsung CL05B103KB5NNNC
+    # 100 nF 0402, 10 V X7R, Murata GRM155R71A104KA01D
+    **{r: "C71687" for r in ("C120", "C201", "C304", "C404", "C503")},
+    "C121": "C23733",     # 4,7 uF 0402, 10 V, Samsung CL05A475MP5NRNC
+    # 100 nF 0603, 50 V X7R, Samsung CL10B104KB8NNNC
+    **{r: "C1591" for r in ("C122", "C123", "C124", "C125", "C126", "C129")},
+    # 4,7 uF 0603, 16 V X5R, Samsung CL10A475KO8NNNC
+    "C210": "C19666", "C502": "C19666",
+    # RF, C0G 50 V, Murata GJM15: 1,5, 2,7 e 6,8 pF
+    "C301": "C76900", "C305": "C88896", "C306": "C76904",
+    # 1 nF 0603, 50 V X7R, Samsung CL10B102KB8NNNC
+    **{r: "C1588" for r in ("C601", "C602", "C603")},
+    "JP101": "C190124",   # 0 ohm 1206, Vishay CRCW12060000Z0EA
+    # the 5 V boost of the Sharp: 10 uF 0603, 25 V X5R
+    "C405": "C386081", "C406": "C386081", "C407": "C386081",
+    "R116": "C423222",    # 18 M 0402 a 1 %
+    "R123": "C25745",     # 110 k 0402 a 1 %
+    # Os resistores, da mesma tabela (UNI-ROYAL 0402WGF a 1 %, menos onde o
+    # comentario diz outro). Ate 2026-10-19 so o R116 e o R123 tinham codigo
+    # aqui, e 48 dos 51 resistores nao tinham nenhum.
+    **{r: "C25792" for r in ("R102", "R502", "R503")},                  # 47 k
+    "R103": "C25755",                                                    # 150 k
+    **{r: "C25741" for r in ("R104", "R124", "R125", "R402", "R403", "R404",
+                              "R405", "R501", "R609", "R610", "R611")},   # 100 k
+    "R105": "C25760",                                                    # 180 k
+    "R106": "C25902",                                                    # 4,87 k
+    **{r: "C25900" for r in ("R107", "R108", "R504", "R505")},           # 4,7 k
+    **{r: "C25744" for r in ("R109", "R112")},                   # 10 k
+    **{r: "C25082" for r in ("R406", "R407", "R408", "R409")},           # 150 R
+    **{r: "C25105" for r in ("R506", "R507", "R508")},                   # 33 R
+    **{r: "C11702" for r in ("R601", "R602", "R603", "R607", "R608")},   # 1 k
+    **{r: "C25076" for r in ("R604", "R605", "R606")},                   # 100 R
+    "R117": "C227115",    # 4,3 M, Yageo AC0402FR-074M3L
+    "R118": "C423169",    # 4,32 M
+    "R119": "C477658",    # 2,67 M, Yageo RC0402FR-072M67L
+    "R120": "C172116",    # 6,65 M, Walsin WR04W6654FTL: 28 na JLC, so para um lote piloto
+    "R121": "C2998090",   # 3,32 M, FOJAN FRC0402F3324TS
+    "R122": "C25785",     # 402 k
+    # os 0 ohm de 0402 (peca basica da JLC)
+    **{r: "C17168" for r in ("JP102", "JP103", "JP104", "JP105", "JP106", "JP301",
+                              "R113", "R114", "R115")},
+    # e as pecas que a tabela achou com codigo e que aqui nao tinham
+    "D103": "C5875723", "D104": "C5875723",              # Kingbright APT1608SURCK
+    **{r: "C20512" for r in ("Q601", "Q602", "Q603")},  # Diodes DMG1012T-7, como o Q401
+    "J102": "C160405",    # JST SM06B-SRSS-TB(LF)(SN)
+    "J103": "C485354",    # JST S4B-ZR-SM4A-TF(LF)(SN)
+}
+for _r, _c in LCSC_PASSIVOS.items():
+    PARTS[_r].lcsc = _c
 
 def by_sheet() -> dict[str, list[str]]:
     """Which parts belong to which sheet of 01-esquematico.md."""

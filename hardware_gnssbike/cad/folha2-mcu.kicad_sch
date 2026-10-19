@@ -362,7 +362,7 @@
 				(at 0 0 0)
 				(effects (font (size 1.27 1.27)) (hide yes))
 			)
-			(property "Description" "conector Cortex Debug de 10 vias, 2 x 5, passo 1,27 mm, SMD, para o adaptador Cortex-M de 9 vias do J-Link; pinagem da ARM (Cortex Debug Connector): 1 VTref, 2 SWDIO, 3 GND, 4 SWDCLK, 5 GND, 6 SWO, 7 KEY, 8 TDI, 9 GNDDetect, 10 nRESET. Peca a escolher: Samtec FTSH-105-01-L-DV-K ou equivalente blindado"
+			(property "Description" "conector Cortex Debug de 10 vias, 2 x 5, passo 1,27 mm, SMD, para o adaptador Cortex-M de 9 vias do J-Link; pinagem da ARM (Cortex Debug Connector): 1 VTref, 2 SWDIO, 3 GND, 4 SWDCLK, 5 GND, 6 SWO, 7 KEY, 8 TDI, 9 GNDDetect, 10 nRESET. Peca a escolher, SEM carcaca (2,5 mm sobre a placa): o blindado de 4,83 mm nao cabe sob a tampa da caixa proposta, que deixa 3,6 mm da face da placa (make_caixa.py)"
 				(at 0 0 0)
 				(effects (font (size 1.27 1.27)) (hide yes))
 			)
@@ -2667,7 +2667,7 @@
 			(at 236.22 52.07 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)
-		(property "Description" "conector Cortex Debug de 10 vias, 2 x 5, passo 1,27 mm, SMD, para o adaptador Cortex-M de 9 vias do J-Link; pinagem da ARM (Cortex Debug Connector): 1 VTref, 2 SWDIO, 3 GND, 4 SWDCLK, 5 GND, 6 SWO, 7 KEY, 8 TDI, 9 GNDDetect, 10 nRESET. Peca a escolher: Samtec FTSH-105-01-L-DV-K ou equivalente blindado"
+		(property "Description" "conector Cortex Debug de 10 vias, 2 x 5, passo 1,27 mm, SMD, para o adaptador Cortex-M de 9 vias do J-Link; pinagem da ARM (Cortex Debug Connector): 1 VTref, 2 SWDIO, 3 GND, 4 SWDCLK, 5 GND, 6 SWO, 7 KEY, 8 TDI, 9 GNDDetect, 10 nRESET. Peca a escolher, SEM carcaca (2,5 mm sobre a placa): o blindado de 4,83 mm nao cabe sob a tampa da caixa proposta, que deixa 3,6 mm da face da placa (make_caixa.py)"
 			(at 236.22 52.07 0)
 			(effects (font (size 1.27 1.27)) (hide yes))
 		)

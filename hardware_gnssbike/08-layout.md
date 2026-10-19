@@ -27,17 +27,21 @@ existe.
 |---|---|---|
 | Trilha e afastamento mínimos | 0,127 mm (5 mil) | sob o MAX17262 (WLP de 0,4 mm). **Não** sob o módulo: a matriz LGA do ME54BS13 é folgada, ilhas de 0,6 mm com passo de 1,5 × 1,2 mm (desenho mecânico da ficha V1.0.0) |
 | Via padrão | furo 0,2 mm, ilha 0,45 mm | em qualquer lugar |
-| Via na ilha (*via-in-pad*) | tampada e aplainada | **obrigatória** sob o MAX17262 e provavelmente sob o nPM1300 |
+| Via na ilha (*via-in-pad*) | tampada e aplainada | nas 9 vias térmicas do pad central do nPM1300, que o layout de referência da Nordic desenha em matriz de 3 × 3 (PS v1.1, figuras 61 a 64); proibida sob os pads térmicos do TPS7A02, do ADP5091 e do OPT3001 (regra `AL6` do dry run) |
 | Anel anular mínimo | 0,125 mm | — |
 | Afastamento ao contorno | 0,25 mm | borda de cima, onde a antena chega perto |
-| Máscara entre ilhas | 0,1 mm | LGA do módulo |
+| Máscara entre ilhas | 0,1 mm | LGA do módulo. As vias saem cobertas de máscara (*tented*: no KiCad 8 nenhuma via fica nas camadas de máscara, e a plotagem não as abre), então entre via e ilha vale só o isolamento de 0,127 mm (`route.FOLGA_MASCARA`) |
 
 > [!IMPORTANT]
-> **A via na ilha muda de fabricante.** O MAX17262 é um WLP de 1,5 × 1,5 mm
-> com passo de 0,4 mm: não há como sair das ilhas do meio sem via dentro
-> delas, e via não tampada num WLP suga solda e abre junta. Se o fabricante
-> escolhido não fizer via tampada e aplainada, **a peça não é montável** — e
-> isso decide o fabricante antes de decidir o layout.
+> **O MAX17262 não precisa mais de via na ilha.** Ele é um WLP de 1,5 ×
+> 1,5 mm com passo de 0,4 mm, e a única bola sem saída pela face é a do
+> meio, o `ALRT`. Até 2026-10-19 ele tinha um pull-up, e só chegaria lá por
+> uma via dentro da ilha, que num WLP precisa ser tampada e aplainada para
+> não sugar a solda. Desde então o `ALRT` vai ao GND, como a ficha pede
+> quando o alerta não é usado, e chega à bola de GND vizinha (`C3`) por uma
+> ponte de 0,1 mm, que deixa 0,133 mm até as bolas `B3` e `C2`; o
+> `gnssbike.kicad_dru` aceita essa largura só dentro do `U102`. As vias
+> térmicas do pad central do nPM1300 continuam dentro de uma ilha.
 
 ## Ordem de roteamento
 
@@ -180,24 +184,35 @@ das duas antenas ([04](04-pcb-e-caixa.md#posicionamento)).
 ### Largura de trilha
 
 O [cálculo](02-calculos.md#corrente-por-trilho-e-largura-de-trilha) fixa a
-corrente de cada nó; a largura sai da IPC-2152 **quando a pilha existir**.
-Os três que não podem sair com largura de sinal:
+corrente de cada nó. Desde 2026-10-19 o `route.py` dá a largura por essa
+corrente, em três classes, e a regra `AL2` do `dry_run_pcb.py` confere cada
+trecho pela IPC-2221 (10 °C de subida, cobre de 35 µm, que ainda é
+suposição até a pilha do fabricante):
 
-| Nó | Pior caso |
-|---|---|
-| `VBUS` | 1500 mA |
-| `VSYS` | 671 mA |
-| `VBAT` | 600 mA |
+| Classe | Largura | Nós | Por quê |
+|---|---|---|---|
+| energia | 0,25 mm, só nas faces de fora | `VBUS`, `VSYS`, `VBAT`, `VBAT_SYS`, `VBAT_CELULA` | de 0,5 a 0,8 A. Pela IPC-2221, 0,25 mm levam 0,87 A por fora e 0,44 A numa camada interna: por fora bastam de 0,12 a 0,22 mm, por dentro seriam precisos de 0,30 a 0,57 mm, e por isso esses nós não entram na `In2.Cu` |
+| média | 0,25 mm | `3V0` e os ramos `3V0_*` | 123 mA no pico de partida do receptor; 0,25 mm levam 0,44 A numa camada interna |
+| sinal | 0,15 mm | `1V8`, `3V3BL`, `SD3V0`, `SD3V0_FLASH`, `VBCKP`, `VBUSOUT` | de microampères a 16 mA; a `VBUSOUT` passa por uma chave de 7,5 Ω dentro do nPM1300 e só alimenta a detecção de USB do módulo e um divisor |
+
+Até 2026-10-19 todo trilho saía com 0,4 mm, o backup de 28 µA também, e
+eram esses trilhos que os sinais achavam no caminho ao atravessar a zona de
+energia. Os 0,4 mm eram a largura que uma camada interna pede para os
+trilhos de carga; na face de fora, 0,25 mm já cumprem a norma com folga.
 
 ## Térmica no cobre
 
 O carregador do nPM1300 dissipa até **1,50 W**, e a caixa inteira chega a
-44,7 °C a 25 °C de ambiente ([02](02-calculos.md#calor-da-caixa-inteira)) —
+44,1 °C a 25 °C de ambiente ([02](02-calculos.md#calor-da-caixa-inteira)) —
 **empate com o corte do JEITA a 45 °C, antes de qualquer sol**. O layout é
 uma das duas alavancas para isso (a outra é baixar a corrente de carga):
 
 - Preenchimento de cobre generoso no `VSYS` e no terra sob o nPM1300, nas
-  quatro camadas, costurado com vias térmicas.
+  quatro camadas, costurado com vias térmicas. O pad central leva as 9 vias
+  em matriz de 3 × 3 do layout de referência da Nordic (PS v1.1, figuras 61
+  a 64), que o `route.py` põe desde 2026-10-19; até então a regra `AL6` do
+  dry run proibia via sob ele, e o pad só achava o terra se o cobre da
+  frente passasse entre os pinos.
 - **A célula fica longe do carregador.** Hoje o desenho a põe atrás da
   placa ([04](04-pcb-e-caixa.md#posicionamento)); o nPM1300 não pode ficar
   do outro lado dela.

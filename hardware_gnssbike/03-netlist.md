@@ -38,8 +38,8 @@ lê as tabelas desta página e as compara com o devicetree da placa em
 | `3V0_BLOCO` | 3,0 V | `JP103`, do `3V0` | `FB301`: é o nó em que se mede a corrente do receptor | alim |
 | `3V0_GNSS` | 3,0 V | `FB301`, ferrite de 600 Ω e 150 mΩ | MAX-F10S `VCC` **e** `V_IO` (opção 1 da tabela 35 do manual de integração: os dois juntos, `VIO_SEL` aberto); 10 µF e 100 nF | alim |
 | `1V8` | 1,8 V | nPM1300 `BUCK1`, por filtro LC | **nada**, desde 2026-09-26: o receptor passou ao `3V0`. Montado, sem carga, desligado pelo firmware ([01](01-esquematico.md#folha-3--gnss)) | alim |
-| `SD3V0` | 3,0 V | nPM1300 `LDSW1`, do `3V0` | MX25R6435F `VCC` | alim |
-| `3V3BL` | 3,3 V | nPM1300 `LDSW2`, do `VSYS` | anodo da luz do painel, por `R_BL` de 39 Ω; o catodo volta ao dreno do `Q401`. Com o JDI o LED está **dentro do painel** e os dois fios chegam pelo **`J402`, um FPC próprio de 5 vias e passo 0,5 mm** ([06](06-conectores-e-pontos-de-teste.md#j402--luz-do-lpm027m128c)) | alim |
+| `SD3V0` | 3,0 V | nPM1300 `LDSW1`, do `3V0` | sem carga desde 2026-10-18: só o `TP107` (a flash foi para o `3V0`, pelo `JP106`) | alim |
+| `3V3BL` | 3,3 V | nPM1300 `LDSW2`, do `VSYS` | anodo da luz do painel, por `R_BL` de 39 Ω; o catodo volta ao dreno do `Q401`. Com o JDI o LED está **dentro do painel** e os dois fios chegam pelo **`J402`, um FPC próprio de 5 vias e passo 0,5 mm** ([06](06-conectores-e-pontos-de-teste.md#j402--luz-da-jdi)) | alim |
 | `VBCKP` | 1,8 V | TPS7A02, do `VBAT` | MAX-F10S `V_BCKP` | alim |
 | `5V0` | 5,0 V | REG710NA-5, do `3V0` | `VDD` e `VDDA` do display, pelo `JP401` — **não montado**: existe só no plano B, com a Sharp | alim |
 | `GND` | 0 V | — | plano contínuo | alim |
@@ -70,7 +70,7 @@ usa, mais os dois reservados. Confira com `python tools/fw/board_check.py`.
 | `NOR_SCK` | P2.01 | MX25R6435F pino 6 (`SCLK`) | dig | P2.01 é pino de clock (tabela 79) |
 | `NOR_MOSI` | P2.02 | MX25R6435F pino 5 (`SI/IO0`) | dig | — |
 | `NOR_MISO` | P2.04 | MX25R6435F pino 2 (`SO/IO1`) | dig | — |
-| `NOR_CS` | P2.05 | MX25R6435F pino 1 (`CS#`) | dig | ativo baixo, pull-up de 100 kΩ ao `SD3V0` |
+| `NOR_CS` | P2.05 | MX25R6435F pino 1 (`CS#`) | dig | ativo baixo, pull-up de 100 kΩ ao `3V0` |
 
 ### Display · `spi22` e `pwm20`
 
@@ -224,7 +224,7 @@ castelado da ficha ME54BS13 V1.0.0.
 | `LED_ERR` | nPM1300 `LED0` | LED de erro, anodo no `VSYS` | — |
 | `SHPHLD` | tecla central | nPM1300 `SHPHLD` | pull-up interno de 50 kΩ; liga fora do ship mode |
 | `RGB_R_D`, `RGB_G_D`, `RGB_B_D` | catodo de cada cor do LED | `R_LEDR`, `R_LEDG` ou `R_LEDB`, e daí ao dreno do seu MOSFET | o LED é de **anodo comum**: o anodo vai direto ao `VSYS` e **o resistor fica do lado do catodo**, um por cor. Pôr o resistor no anodo o deixaria em paralelo com o die, que veria o `VSYS` nu — até 5,5 V com cabo ([02](02-calculos.md#led-rgb)) |
-| `ALRT` do MAX17262 | pull-up de 10 kΩ ao `3V0` | **nenhum pino do MCU** | dreno aberto; o firmware não usa o alerta, e o pull-up existe para o pino não flutuar ([14](../docs/14-hardware-placa-nova.md#ligações-fixas-dos-cis)) |
+| `ALRT` do MAX17262 | **ao `GND`** | **nenhum pino do MCU** | dreno aberto; o firmware não usa o alerta, e a ficha manda ligar o pino ao GND quando ele não é usado ("Connect to GND if not used"). Até 2026-10-19 tinha um pull-up de 10 kΩ ao `3V0` (`R110`); como o `ALRT` é a bola do meio do WLP de 3 × 3, só chegaria ao pull-up por uma via dentro da ilha. Ao `GND`, ele vai à bola vizinha `C3` por uma ponte de 0,1 mm ([08](08-layout.md#regras-de-projeto), [14](../docs/14-hardware-placa-nova.md#ligações-fixas-dos-cis)) |
 | `INT` do OPT3001 | pull-up de 10 kΩ ao `3V0` | **nenhum pino do MCU** | idem |
 | `JP102` a `JP106` | cada trilho de bloco | 0 Ω em série, um por bloco: módulo de rádio, GNSS, display, sensores e armazenamento | para medir a corrente de **cada bloco** com o PPK2, e não só o total ([14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso)); o `JP101` da célula mede o conjunto |
 | `JP101` | `VBAT+` do `J102` | `BATT` do MAX17262 | jumper de 0 Ω, 1206, para abrir o caminho da célula e pôr o amperímetro; a resistência dele entra na tensão que o medidor lê, então ≤ 50 mΩ ([06](06-conectores-e-pontos-de-teste.md#jp101--jumper-de-medição-de-corrente)) |
@@ -271,7 +271,7 @@ placa sem que nada avise. Um pino de configuração aberto do AEM10900
 | `KEY_L`, `KEY_C`, `KEY_R` | **100 Ω** em série e **1 nF** ao `GND` | as teclas saem para a caixa e não tinham proteção nenhuma; τ de 13 µs com o pull-up interno e só 23 mV de queda no nível baixo ([02](02-calculos.md#proteção-das-teclas)) |
 | Derivação da tecla central para o `SHPHLD` | sai **depois** dos 100 Ω, não do contato | é o que faz a rede proteger os dois ramos: contra o pull-up interno de 50 kΩ do PMIC, 100 Ω dão 11 mV de erro a 5,5 V e o 1 nF dá τ de 50 µs, inócuos para um botão e para o toque longo de 10 s |
 | `3V0`, junto do pino de alimentação do módulo (pad 19) | **4,7 µF** | o rádio puxa 10,9 mA em rajada e o buck leva cerca de 10 µs para responder ([02](02-calculos.md#capacitor-de-volume-no-módulo)) |
-| Pull-ups de `WP` e `HOLD` da flash | 47 kΩ ao **`SD3V0`** | ao `3V0` a flash se alimentaria pelos pinos com a `LDSW1` cortada |
+| Pull-ups de `WP` e `HOLD` da flash | 47 kΩ ao **`3V0`** | desde 2026-10-18 a flash fica no `3V0`, sempre ligada, em deep power-down; com a flash e os pull-ups no mesmo trilho, nada a alimenta pelos pinos |
 | Tag-Connect pino 1 (`VTref`) | `3V0` | sem ele a maioria das sondas recusa conectar |
 | Tag-Connect pino 5 | `GND` | — |
 | `J202` pino 1 (`VTref`) | `3V0` | o mesmo `VTref`, no conector Cortex de 10 vias |

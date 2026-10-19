@@ -44,7 +44,9 @@ pico de partida do receptor — folga de 1,6× no pico e de 4× em regime. Até
 > NOR soldada, decidida em 2026-09-20, o armazenamento passou de até 100 mA
 > para **3,1 mA**, e o pico do trilho caiu de cerca de 120 mA para cerca de
 > 23 mA. Os 100 mA da `LDSW1` deixaram de ser o que dimensiona qualquer
-> coisa.
+> coisa. Desde 2026-10-18 a flash nem passa mais pela `LDSW1`: fica no `3V0`,
+> pelo `JP106`, sempre ligada e em deep power-down (achado mx25r6435f-a1 da
+> [revisão](11-revisao-do-esquematico.md#correções-aplicadas)).
 
 ### O receptor no `3V0`, e o `1V8` sem carga
 
@@ -166,21 +168,23 @@ a partir das seções acima):
 
 | Nó | Pior caso | Classe | Quando |
 |---|---|---|---|
-| `VBUS` | até 1500 mA | **larga** | com uma fonte de 1,5 A |
-| `VSYS` | 671 mA | **larga** | sistema mais carga |
-| `VBAT` | 600 mA | **larga** | carga |
+| `VBUS` | 671 mA | **energia** | carga mais sistema; os 1500 mA de uma fonte de 1,5 A são o que ela oferece, não o que entra (o carregador é linear) |
+| `VSYS` | 74 mA; 0,47 A com os reguladores na corrente nominal | **energia** | a carga da célula não sai pelo pino `VSYS`: o carregador fica entre o `VSYS` interno e o `VBAT` (ficha do nPM1300, PS v1.1, CHARGER). O pior caso de projeto soma o BUCK1 e o BUCK2 a 200 mA, a `LDSW2` a 100 mA e os LED, com a célula a 3,0 V; até 2026-10-19 esta linha dizia 671 mA, sistema mais carga |
+| `VBAT` | 600 mA | **energia** | carga |
 | `1V8` | 0 | sinal | montado, sem carga, desde 2026-09-26 |
 | `3V0` | 47 mA; 123 mA no pico de partida do receptor | média | o receptor está aqui desde 2026-09-26 |
 | `3V3BL` | 16 mA | sinal | luz acesa |
-| `SD3V0` | 3,1 mA | sinal | apagando um setor |
+| `SD3V0_FLASH` (o `3V0` pelo `JP106`) | 3,1 mA | sinal | apagando um setor; até 2026-10-18 era o `SD3V0` da `LDSW1`, que ficou sem carga |
 | `VBCKP` | 28 µA | sinal | backup do receptor |
+| `VBUSOUT` | poucos mA | sinal | a detecção de USB do módulo e o divisor de 100 kΩ e 180 kΩ, por uma chave de 7,5 Ω dentro do nPM1300 (`RVBUSOUT`): a 100 mA ela já derrubaria 0,75 V |
 
 > [!IMPORTANT]
 > **A largura em milímetros não sai daqui.** Ela depende da espessura do
 > cobre e da pilha do fabricante, que [04](04-pcb-e-caixa.md#camadas) ainda
 > não tem. O que este documento fixa é a **corrente**; a largura sai da
-> IPC-2152 quando a pilha existir. Os três nós marcados como "larga" são
-> os que não podem sair com largura de sinal.
+> IPC-2152 quando a pilha existir. Os três nós marcados como "energia" são
+> os que não podem sair com largura de sinal nem passar por dentro da placa
+> ([08](08-layout.md#largura-de-trilha)).
 
 ## Pull-ups do I²C
 
@@ -276,7 +280,7 @@ a troca da tela não mexeu em nenhum dos números dela. O `Q401`
 > pelo FPC de 10 vias: ela tem um conector próprio, de **5 vias e passo
 > 0,5 mm**, segundo a ficha `3LPM027M128C specification ver.02`. O `J402`
 > passou a ser esse conector
-> ([06](06-conectores-e-pontos-de-teste.md#j402--luz-do-lpm027m128c)). O
+> ([06](06-conectores-e-pontos-de-teste.md#j402--luz-da-jdi)). O
 > que ainda falta é **qual das cinco vias é anodo e qual é catodo**: os
 > dois PDF da JDI respondem 404 e o arquivo histórico está bloqueado.
 
@@ -403,12 +407,12 @@ O [calor do carregador](#calor-do-carregador) é a junção de um chip. A
 outra pergunta é o que acontece com a **caixa**, que é vedada e fica no
 guidão.
 
-Área externa (**conta**, caixa de 62 × 106 × 17 mm, a proposta de
-[`caixa/make_caixa.py`](caixa/make_caixa.py); o conceito de 62 × 104 × 19 dava
-192 cm²):
+Área externa (**conta**, caixa de 64 × 106 × 18,2 mm, a de
+[`caixa/make_caixa.py`](caixa/make_caixa.py) desde 2026-10-19; a de
+62 × 106 × 17 dava 189 cm², e o conceito de 62 × 104 × 19, 192 cm²):
 
 ```
-2×(62×106) + 2×(62×17) + 2×(106×17) = 18.856 mm² = 189 cm² = 0,0189 m²
+2×(64×106) + 2×(64×18,2) + 2×(106×18,2) = 19.756 mm² = 198 cm² = 0,0198 m²
 ```
 
 Dissipação no pior caso, que é **carregando**. E aqui a conta não é "o
@@ -426,17 +430,17 @@ Com convecção natural em ar parado, cujo coeficiente fica entre 5 e
 
 | `h` | Elevação da caixa | Caixa a 25 °C de ambiente |
 |---|---|---|
-| 5 W/m²·K (pior) | 20,1 °C | **45,1 °C** |
-| 7 W/m²·K | 14,3 °C | 39,3 °C |
-| 10 W/m²·K (melhor) | 10,0 °C | 35,0 °C |
+| 5 W/m²·K (pior) | 19,1 °C | **44,1 °C** |
+| 7 W/m²·K | 13,7 °C | 38,7 °C |
+| 10 W/m²·K (melhor) | 9,6 °C | 34,6 °C |
 
 **Pedalando, o problema não existe:** sem carga o aparelho dissipa 263 mW
-no pior caso, e a caixa sobe de 1,4 a 2,8 °C. O calor é inteiramente do
+no pior caso, e a caixa sobe de 1,3 a 2,7 °C. O calor é inteiramente do
 caminho de carga, e só com o cabo ligado.
 
 > [!CAUTION]
 > **No pior caso a caixa já encosta no corte do JEITA sem nenhum sol.** O
-> corte de carga da célula é **45 °C** e a conta acima dá **44,7 °C** com
+> corte de carga da célula é **45 °C** e a conta acima dá **44,1 °C** com
 > 25 °C de ambiente e o pior coeficiente. Não é margem: é empate. E as duas
 > saídas já estão escritas e nenhuma foi tomada — baixar o `I_CHG` para
 > 400 mA (0,2 C), o que alonga a carga, ou dar caminho térmico do
@@ -447,7 +451,7 @@ caminho de carga, e só com o cabo ligado.
 > **A junção do carregador é mais quente do que os 73 °C da seção
 > anterior.** Aqueles 73 °C usam 25 °C de ambiente, e o ar que rodeia o
 > chip **é o interior da caixa**, que esta seção acabou de mostrar subir
-> até 19,7 °C. Compondo, a junção vai a cerca de **93 °C**. O `θ_JA` de
+> até 19,1 °C. Compondo, a junção vai a cerca de **92 °C**. O `θ_JA` de
 > 32 °C/W supõe ar livre, então compor os dois é aproximação grosseira nos
 > dois sentidos — mas o sinal é claro, e o número de 73 °C é otimista.
 
@@ -600,7 +604,7 @@ de cada CI**, mais o volume que a ficha de cada peça pede.
 | `VBUS` | 10 µF, 25 V | ficha do nPM1300 (o CI tolera 22 V em transitório) |
 | `3V0_GNSS`, junto do módulo GNSS | ferrite + 10 µF | ficha do MAX-F10S, ondulação abaixo de 50 mV; o ferrite tem 150 mΩ, dentro dos 0,2 Ω que o manual (4.1.1) permite em série com o `VCC` |
 | `MMC5633NJL` `VDD` | pelo menos 2,2 µF | ficha |
-| `SD3V0`, junto da flash | 22 µF | [14](../docs/14-hardware-placa-nova.md#alimentação) |
+| `SD3V0_FLASH`, junto da flash | 22 µF | [14](../docs/14-hardware-placa-nova.md#alimentação) |
 | `CSRC` e `CINT` do AEM10900 | 22 µF, 6,3 V, 0402 | lista mínima da e-peas |
 | `CSTO` do AEM10900 | 22 µF, 10 V, 0603 | dá cerca de 9 µF com 4 V aplicados, acima dos 5 µF efetivos que a ficha pede |
 | Saída do TPS7A02 | pelo menos 0,5 µF efetivos | ficha |
@@ -834,7 +838,7 @@ Dito aqui para não passar por esquecimento.
 | Não calculado | Por quê | Quando vira necessário |
 |---|---|---|
 | Ondulação e resposta transitória dos bucks | os valores vêm da lista de referência da Nordic, tabelas 39 e 40 | se algum componente sair dessa lista |
-| Largura de trilha em milímetros | depende da pilha do fabricante, que [04](04-pcb-e-caixa.md#camadas) ainda não tem; a [corrente](#corrente-por-trilho-e-largura-de-trilha) está fixada | no layout |
+| Largura de trilha em milímetros | depende da pilha do fabricante, que [04](04-pcb-e-caixa.md#camadas) ainda não tem; a [corrente](#corrente-por-trilho-e-largura-de-trilha) está fixada, e o CAD usa três classes conferidas pela IPC-2221 com cobre de 35 µm ([08](08-layout.md#largura-de-trilha)) | quando a pilha do fabricante chegar |
 | Impedância da linha da antena GNSS e o par de 90 Ω do USB | idem | no layout |
 | Integridade de sinal do SPI do display | 2 MHz no máximo, trilha curta: não é regime crítico | se a FPC ficar longa |
 | **Caminho elétrico da luz do LPM027M128C** | o FPC de 10 vias não tem par de LED e nenhuma fonte do projeto diz se o C traz um FPC maior ou um rabicho próprio ([luz do display](#luz-do-display)) | **antes do layout** |

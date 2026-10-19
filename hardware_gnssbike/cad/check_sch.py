@@ -156,6 +156,10 @@ ERC_ACEITO = {
     ("pin_to_pin", "U102:B3", "U103:17"),
     # e a chave interna do colhedor, entre o BAT e o SYS dele
     ("pin_to_pin", "U103:16", "U103:17"),
+    # ALRT of the MAX17262 tied to GND, as its datasheet asks when the alert
+    # is not used (2026-10-19): an open-drain output on the ground node, which
+    # carries the power flag. KiCad flags open collector against power output
+    ("pin_to_pin", "#FLG021:1", "U102:B2"),
 }
 
 

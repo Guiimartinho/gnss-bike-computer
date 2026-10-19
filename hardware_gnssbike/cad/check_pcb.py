@@ -93,13 +93,25 @@ def main() -> int:
     # ---- the parts ----
     fps = fp_load.kids(arv, "footprint")
     refs_na_placa: list[str] = []
+    # a hole is known by its footprint, not by its name: the two are H1 and
+    # H2 since 2026-10-18 (two REF** made the Specctra export refuse the board)
+    def e_furo(f) -> bool:
+        return str(f[1]).startswith("MountingHole:")
+
     for f in fps:
         ref = next((p[2] for p in fp_load.kids(f, "property") if p[1] == "Reference"), None)
-        if ref and ref != "REF**":
+        if ref and not e_furo(f):
             refs_na_placa.append(ref)
     esperadas = {r for r in P.PARTS if r not in FPS.FORA_DA_PLACA}
     na_placa = set(refs_na_placa)
     check(len(refs_na_placa) == len(na_placa), "nenhuma referencia repetida")
+    # every uuid once: KiCad's DRC report names items by uuid, and until
+    # 2026-10-19 the library's pad uuids came along with every copy of a
+    # footprint, 112 of them repeated, so the report blamed the wrong pads
+    import collections as _col
+    uuids = re.findall(r'\(uuid "?([0-9a-fA-F-]{36})"?\)', PCB.read_text(encoding="utf-8"))
+    repetidos = [u for u, k in _col.Counter(uuids).items() if k > 1]
+    check(not repetidos, f"nenhum uuid repetido ({len(uuids)} no arquivo, {len(repetidos)} repetidos)")
     faltam = esperadas - na_placa
     check(not faltam, f"todas as {len(esperadas)} pecas de placa estao nela"
                       + ("" if not faltam else f"; faltam {sorted(faltam)}"))
@@ -166,7 +178,10 @@ def main() -> int:
         # USB-C crossed the edge by 0,42 mm when its box ends 0,14 mm inside.
         bx = cx[ref]
         x0, y0, x1, y1 = x + bx[0], y + bx[1], x + bx[2], y + bx[3]
-        if x0 < 0 or y0 < 0 or x1 > M.W or y1 > M.H:
+        # a part the placer lets stand out of the outline (MP.SALIENCIA: the
+        # USB-C, whose shell goes past the "PCB EDGE" line of its drawing)
+        s = MP.SALIENCIA.get(ref, 0.0)
+        if x0 < -s or y0 < -s or x1 > M.W + s or y1 > M.H + s:
             fora.append(ref)
         for nome, (kx0, ky0, kx1, ky1), _c, _s in M.ZONES:
             # a part is allowed in the keep-out that exists because of it: the
@@ -185,9 +200,16 @@ def main() -> int:
         print(f"      {ref} em {z}")
 
     # ---- the board has to fit the case ----
-    # 04-pcb-e-caixa.md: case 62 x 104 mm outside, walls about 2 mm, so the
-    # inside is about 58 x 100 mm.
-    dentro_caixa = (58.0, 100.0)
+    # The case of caixa/make_caixa.py, W_C x H_C outside with walls of PAREDE.
+    # Read from its text, not imported: that script pulls in the whole 3D
+    # stack. Until 2026-10-18 this was the concept's 62 x 104, written here.
+    fonte_caixa = (pathlib.Path(__file__).resolve().parent.parent / "caixa"
+                   / "make_caixa.py").read_text(encoding="utf-8")
+    w_c, h_c = (float(v) for v in re.search(
+        r"^W_C, H_C, R_C = ([\d.]+), ([\d.]+),", fonte_caixa, re.M).groups())
+    parede = float(re.search(r"^PAREDE, FUNDO, TAMPA = ([\d.]+),",
+                             fonte_caixa, re.M).group(1))
+    dentro_caixa = (w_c - 2 * parede, h_c - 2 * parede)
     check(M.W <= dentro_caixa[0] and M.H <= dentro_caixa[1],
           f"a placa de {M.W:g} x {M.H:g} mm cabe na caixa "
           f"({dentro_caixa[0]:g} x {dentro_caixa[1]:g} mm por dentro): sobra "
@@ -204,6 +226,13 @@ def main() -> int:
     check(camadas_plano == esperadas,
           f"plano de terra em In1.Cu e nas duas faces ({len(planos)} zonas em "
           f"{sorted(camadas_plano)})")
+    # and FILLED: on 2026-10-19 a run of the chain came out of fill_zones.py
+    # with no polygon in the file, and the DRC read every ground via as
+    # dangling (199) and the ground as 660 loose items, instead of saying so
+    if como_esta:
+        vazias = [(fp_load.kid(z, "layers") or fp_load.kid(z, "layer"))[1]
+                  for z in planos if not fp_load.kids(z, "filled_polygon")]
+        check(not vazias, f"as malhas de terra estao preenchidas (vazias: {vazias})")
 
     linhas = [g for g in fp_load.kids(arv, "gr_line")
               if fp_load.kid(g, "layer")[1] == "Edge.Cuts"]
@@ -218,9 +247,7 @@ def main() -> int:
     check(len(linhas) == n_linhas and len(arcos) == 4,
           f"contorno com {n_linhas} linhas e 4 arcos"
           + (" (4 lados mais o recorte da antena)" if recorte else ""))
-    furos = [f for f in fps
-             if next((p[2] for p in fp_load.kids(f, "property")
-                      if p[1] == "Reference"), "") == "REF**"]
+    furos = [f for f in fps if e_furo(f)]
     # As many holes as make_dxf declares: one until 2026-09-25, two since
     # (the owner's decision after the screw calculation in 02).
     check(len(furos) == len(M.FUROS_DOC),

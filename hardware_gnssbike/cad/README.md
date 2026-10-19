@@ -142,19 +142,19 @@ tamanho: o capacitor de desacoplamento cai ao lado do CI que ele desacopla.
 | Camadas | **4**: `F.Cu`, `In1.Cu` (terra), `In2.Cu` (alimentação), `B.Cu` |
 | Por que esse tamanho | a 7.2 do ME54BS13 pede **50 mm entre dois módulos de rádio**, e esta placa tem dois. Varrendo cada milímetro que cumpre isso e ainda cabe a fila de teclas, 34 × 90 é o menor contorno com folga — **3.060 mm² contra os 5.335 do 55 × 97, 43 % menos** |
 | Relação com a caixa | **nenhuma.** A placa sai do circuito; a caixa sai do display, da bateria e da mão. Encolher uma não encolhe a outra |
-| Peças na placa | **156**, com rotação (2026-09-26); as de trás (`U502`, `RT101`, `LS601`, `J103`) estão em `make_pcb.ATRAS` |
-| Fora da placa | 7 (o painel, a célula e os seis módulos solares moram na caixa; a antena GNSS passou a morar na placa) |
-| Redes | **114** |
+| Peças na placa | **156**, com rotação (2026-09-26); as de trás (`U502`, `RT101`, `LS601`, `J103`) estão em `make_pcb.ATRAS`. Desde 2026-10-18 são **167** com footprint, com as onze peças das duas telas que vão soldadas, e o `D105` e o `J403` também vão atrás; desde 2026-10-19, **166**, sem o `R110` |
+| Fora da placa | **8** desde 2026-10-18 (`footprints.FORA_DA_PLACA`): as duas telas, `DS401` e `DS402`, que vão no `J401` uma de cada vez, e os seis módulos solares, que moram na caixa. A célula não é peça do CAD, e a antena GNSS passou a morar na placa |
+| Redes | **118** (2026-10-19; eram 114 em 2026-09-26) |
 | Furos de fixação | **2**, M2, em (3,2; 7,0) e (14,4; 91,7) — decisão do dono em 2026-09-25 (dois furos), depois da conta de [02](../02-calculos.md#quantos-parafusos-a-placa-precisa); as posições são do dry run da caixa de 2026-09-26: nenhum sobre a célula, o segundo entre o USB-C (que andou 0,4 para a esquerda por ele) e o módulo, fora do lugar do sensor de luz e da faixa do verso que segura o `J103` |
 | Planos de terra | **3**, em `In1.Cu` e nas duas faces, preenchidos pelo `fill_zones.py` (com o Python do KiCad) |
-| Roteamento | **196 ligações**, 1.417 segmentos, 549 vias (2026-09-26, à tarde, na placa de 95 mm); o par USB à mão, num corredor reservado de `D102` a `J101`; `RF_IN`, `RF_ANT`, `RF_CHIP` e `RF_UFL` ficam de fora de propósito |
-| Ligações sem trilha | **75**, em 33 redes, pelo roteador; **58 itens desconectados** em 37 redes pelo DRC completo (`--severity-all`) com as malhas preenchidas — a regra `RT1` do `dry_run_pcb.py` |
-| Erros de DRC | **0** (20 avisos, todos de biblioteca de footprint); os 3 do par USB contra o ponto de teste `TP101`, que o furo M2 novo empurrou para o caminho do par, saíram com o corredor |
+| Roteamento | **completo** em 2026-10-19: 2.702 segmentos e 774 vias, 374 delas de terra; 1.341 mm de trilha na frente, 1.760 na `In2.Cu` e 1.582 no verso. O `route.py` faz a placa base e o `acabar.py` fecha o resto ([abaixo](#o-acabamento-uma-ligação-de-cada-vez)); o par USB vai à mão, num corredor reservado de `D102` a `J101`, e `RF_IN`, `RF_ANT`, `RF_CHIP` e `RF_UFL` têm rotina própria |
+| Ligações sem trilha | **0**: o DRC completo (`--severity-all`), com as malhas preenchidas, não acha item desconectado, nem trilha ou via solta — a regra `RT1` do `dry_run_pcb.py`. Eram 58 em 2026-09-26 e 48 na manhã de 2026-10-19 |
+| Erros de DRC | **0**; 25 avisos, os mesmos do arquivo de antes do roteamento: 23 de biblioteca de footprint e 2 de uma linha de serigrafia a 1,2 mm da borda de baixo. Os 3 do par USB contra o ponto de teste `TP101` saíram com o corredor do par em 2026-09-26 |
 
 ### O que decide a posição de cada peça
 
 1. **A borda**, para quem tem de alcançá-la: o USB-C com a boca para fora, os
-   dois cabos planos saindo pela esquerda, os contatos de mola nas laterais e
+   fitas das telas chegando pela esquerda, o `J103` do chicote solar e
    o módulo de rádio deitado no canto de baixo à direita, com a antena sobre o
    recorte — que é o arranjo que a figura 1 da seção 7.5 da ficha dele chama
    de "Best". Nada disso é a caixa mandando no tamanho da placa: é o circuito
@@ -183,13 +183,113 @@ python hardware_gnssbike/cad/check_sch.py                 # regera e confere o e
 "D:/KiCAD/bin/kicad-cli.exe" sch export pdf --output hardware_gnssbike/esquematico/gnssbike-esquematico.pdf hardware_gnssbike/cad/gnssbike.kicad_sch
 python hardware_gnssbike/cad/make_pcb.py                  # 1. coloca as pecas
 python hardware_gnssbike/cad/route.py                     # 2. roteia o que consegue
-"D:/KiCAD/bin/python.exe" hardware_gnssbike/cad/fill_zones.py   # 3. preenche as malhas de terra
-python hardware_gnssbike/cad/check_pcb.py --como-esta      # 4. confere o arquivo como esta
-python hardware_gnssbike/cad/dry_run_pcb.py               # 5. as regras das fichas
+python hardware_gnssbike/cad/acabar.py                    # 3. fecha o resto, uma ligacao de cada vez
+"D:/KiCAD/bin/python.exe" hardware_gnssbike/cad/fill_zones.py   # 4. preenche as malhas de terra
+python hardware_gnssbike/cad/check_pcb.py --como-esta      # 5. confere o arquivo como esta
+python hardware_gnssbike/cad/dry_run_pcb.py               # 6. as regras das fichas
 ```
 
-A ordem importa por dois motivos. Sem `--como-esta`, o passo 4 **regera a
-placa** e apaga as trilhas. E **sem o passo 3 o DRC mente**: os geradores
+O `route.py` é um labirinto A\* numa grade de 0,15 mm: faz bem o que pede
+regra própria (as linhas de 50 Ω do GNSS, o par USB pelo diodo, a costura da
+borda), e até 2026-10-18 deixava dezenas de ligações sem cobre. O `autoroute.py`, de
+2026-10-18, tenta fechar o resto com o Freerouting (fora do repositório, em
+`~/tools/freerouting`, como no projeto irmão do medidor de potência): trava o
+cobre de RF e USB e as vias de terra, exporta o DSN pelo `pcbnew` e importa o
+SES. **Medido em 2026-10-18, ele não fechou**: em 20 minutos, 55 itens
+desconectados contra os 64 do `route.py` sozinho, e erros novos de DRC. Ele
+fica fora da cadeia.
+
+Em 2026-10-19 o `route.py` mesmo foi atrás das causas, e várias não eram
+falta de espaço:
+
+| Causa | O que fazia | Correção |
+|---|---|---|
+| UUIDs repetidos no arquivo | o DRC dava cada ligação faltando na peça errada | `make_pcb.py` dá UUIDs próprios a cada footprint; o `check_pcb.py` acusa repetição |
+| keep-out da antena de chip pintado sobre os pads dela | nem a ligação de 1,7 mm do `E301` ao `C305` saía | o keep-out aceita, na frente, só as redes da própria antena |
+| `JP301` a 0° | as linhas do U.FL e da antena de chip tinham de se cruzar na frente | girado 180° |
+| vias de terra na primeira direção livre, começando por "para baixo" | as vias dos capacitores do nPM1300 cercavam o chip, e metade dos pinos não saía | a via vai para o lado de fora do CI denso mais perto |
+| pad de terra sem lugar para via reta | ficava solto | saída dobrada até onde uma via cabe |
+| grade de 0,15 mm num passo de 0,4 | duas saídas de terra a 0,11 mm de uma esfera do TPS610997 | toda saída de terra passa por uma conferência geométrica contra os pads reais |
+| trilhos roteados por último | os trilhos largos achavam a placa cheia | uma segunda passagem roteia os trilhos primeiro, e fica a melhor |
+| um passe em ordem não volta atrás | quem vinha tarde não achava caminho | *rip-up and reroute*: a rede que falhou é procurada de novo por cima do cobre que pode ser desfeito; se até 6 redes estão no caminho, elas saem, a que falhou passa primeiro, elas voltam depois, e a troca só fica se as falhas de todas juntas caírem |
+| a frente "sob o receptor" fechada pelo retângulo da zona de colocação (22 × 11,5 mm) | desde que o receptor andou 2,67 mm para a direita, o retângulo cobria os pads do `J402`, os `R406` a `R409` e os pinos do lado esquerdo do próprio receptor: as cinco redes do GNSS e três catodos da luz nunca saíam | fecha só o corpo do receptor (9,7 × 10,1 mm), que é o que a 4.4 do manual do MAX-F10S pede |
+| todo trilho de alimentação com 0,4 mm | o backup de 28 µA e o 3V0 dos sensores ocupavam a largura dos trilhos de carga, e eram eles que os sinais achavam no caminho | a largura sai da corrente de cada trilho ([02](../02-calculos.md#corrente-por-trilho-e-largura-de-trilha)): 0,25 mm para os de centenas de mA e para o `3V0` e os ramos dele, largura de sinal para os de microampères a dezenas de mA |
+| correntes do `VSYS` e da `VBUSOUT` acima do que passa pelo pino | o `VSYS` levava somada a carga da célula, que fica dentro do nPM1300, e a `VBUSOUT` a corrente do limitador, que a chave de 7,5 Ω dela não passa | 0,5 A e 0,1 A no dry run, pela ficha do nPM1300 (PS v1.1); a `VBUSOUT` virou sinal |
+| trilhos de carga com 0,4 mm e fora da camada interna | as duas margens somadas: 0,4 mm é o que a `In2.Cu` pediria (a `AL2` do dry run pedia 0,57 para os 800 mA da bateria), e por fora 0,22 bastam | `VBUS`, `VSYS`, `VBAT`, `VBAT_SYS` e `VBAT_CELULA` só nas faces de fora, com 0,25 mm, que levam 0,87 A |
+| janelas de pasta tratadas como cobre | as 9 aberturas do estêncil no pad central do nPM1300 entravam na grade como cobre sem rede, em cima do próprio pad: o terra dele não saía do centro, e nenhuma trilha ou via chegava perto | ilha só de pasta não entra na grade |
+| via proibida sob o pad central do nPM1300 | a `AL6` copiava para ele a proibição das fichas do TPS7A02 e do OPT3001; o pad só achava o terra se o cobre da frente passasse entre os pinos, e numa das rodadas ficou ilhado | as 9 vias em matriz de 3 × 3 do layout de referência da Nordic (PS v1.1, figuras 61 a 64); a `AL6` agora cobra as 9 |
+| o NTC do corte solar sob o nPM1300 | o `RT101` seguia o `U101` e caía no verso exatamente sob o pad central: leria o calor do carregador, e os pads dele tomavam o lugar da linha do meio das vias térmicas | segue o `U103`, o colhedor cuja carga ele corta, ainda no verso e sob a célula |
+| via a 0,35 mm de toda ilha | a regra guardava 0,25 mm de máscara entre a via e a ilha, mas as vias da placa saem cobertas de máscara (*tented*) e não abrem janela; o PVDD do nPM1300, entre os dois pinos de chaveamento, não tinha lugar para via | só o isolamento elétrico (0,14 mm na grade) |
+| `ALRT` do MAX17262 com pull-up | a bola do meio de um WLP de 3 × 3 a 0,4 mm não tem saída pela face, e o esquemático a mandava a um pull-up que nada lê: falhava em toda rodada | ao GND, como a ficha pede quando o alerta não é usado, por uma ponte de 0,1 mm até a bola de GND vizinha (`route.PONTES`, exceção de largura no `gnssbike.kicad_dru` só dentro do `U102`); o `R110` saiu |
+| nós de chaveamento depois das vias de terra | com a via a 0,2 mm da ilha, a via de terra do pino vizinho tomava o milímetro entre o pino e o indutor, e o `BUCK2_SW` falhava | os nós de chaveamento passam antes das vias de terra |
+| os capacitores de sintonia da antena de chip em pé, no meio do recorte | o terra do `C305` não tinha terra ao alcance | deitados na borda, nas pontas do recorte, como nas figuras 5-1 e 8-1 da ficha da Unictron: uma ponta na faixa de 0,35 mm que vem do pino da antena, a outra no terra de fora do recorte |
+| o par USB pelos canais do `D102` na ordem dos nomes | o par sai do diodo subindo com o D− à esquerda e entra no módulo descendo com o D+ a oeste; seguindo os nomes (`D2P`, `D2N`), só chegava cruzando a si mesmo, numa face em que não pode ter via, e o `USB_DP` nunca roteava | D+ pelo canal dos pinos 5 e 6, D− pelo dos 4 e 7: os quatro canais do TPD4E05U06 são o mesmo diodo ao terra |
+| todo sinal cruzando a zona de energia pelo meio | a zona ocupa a largura da placa, e os sinais do módulo para o receptor, a tela, a memória e os sensores tomavam o lugar das ligações dos conversores | um corredor de sinais na borda esquerda, livre de peças nas duas faces (`make_pcb.CORREDOR_SINAIS`, decisão do dono em 2026-10-19); no roteador, as redes que cruzam a zona passam logo depois dos nós de chaveamento, e cada passo dentro da zona e fora do corredor custa 4 a mais |
+| o ADP5091 a 2,2 mm do lado direito do nPM1300 | com os capacitores de `VSYS`, `VBUSOUT` e `VBUS` entre os dois, oito pinos tinham um canal de 0,65 mm para sair | a busca do lugar dele começa 9 mm à direita e 3 mm acima (`make_pcb.AFASTADO`): cai 1,5 mm mais longe, e nada mais anda |
+| indutores dos conversores postos como peças soltas | o `L102` ficou com o pad de chaveamento do lado de longe, e o `BUCK2_SW` dava uma volta de 6,3 mm e não roteava | os três indutores vão como o desacoplamento, com o pad do nó de chaveamento virado para o pino `SW` (`DECOPLA`, `PINO_ALVO`); e cada chip leva o seu desacoplamento antes de o próximo ser posto (o `C113` e o `C114` caíam a 3,1 e 4,9 mm do `TPS7A02`) |
+| as redes longas do módulo lado a lado na `In2.Cu` | faziam uma parede que nada cruzava | direção preferida: na `In2.Cu`, ao longo da placa, e o passo contra custa 0,5 a mais (`route.DIRECAO`); 25 para 21 soltas na mesma placa |
+| o *rip-up and reroute* só aceitava troca que baixasse a conta | parava no primeiro patamar: 45 tentativas, 8 aceitas, e a varredura seguinte não pegava nada | aceita também a troca que deixa a conta igual (até 120 por passagem, nunca duas vezes para as mesmas redes): a que falhou passa, e a que abriu espaço tenta de novo na varredura seguinte |
+
+Com as causas acima corrigidas, a melhor rodada medida do `route.py` (as
+redes curtas primeiro, depois o *rip-up and reroute*: 50 tentativas, 23
+aceitas, 12 delas de lado, de 26 a 11 falhas em uns 19 minutos) deixou 19
+ligações sem cobre em 13 redes. Passagens extras com as redes que falharam
+na frente pioraram o resultado (`PASSAGENS_EXTRA = 0`). Terra, o par USB e
+as linhas de RF nunca são desfeitos. O resto fecha o `acabar.py`.
+
+### O acabamento, uma ligação de cada vez
+
+Pedido do dono em 2026-10-19: começar da melhor placa roteada e fechar uma
+trilha de cada vez, mudando a regra até chegar a 100 %. O `acabar.py` lê a
+placa como está, acha toda rede com o cobre em mais de um pedaço e tenta
+cada ligação que falta, nesta ordem:
+
+| Passo | O que faz |
+|---|---|
+| 1 | a busca normal da rede: a largura da classe, as camadas que ela pode usar, a placa toda |
+| 2 | a regra afrouxada: a menor largura que a IPC-2221 aceita para a corrente da rede (`dry_run_pcb.CORRENTE`) numa face de fora, e depois a camada interna também, na largura que a IPC pede lá |
+| 3 | por cima de quem está no caminho: a busca anda sobre o cobre que pode sair, a rede que bloqueia sai (uma de cada vez, depois todas juntas), a ligação entra e a que saiu volta pelos passos 1 e 2 |
+| 4 | um corredor: todo cobre perto do caminho achado sai, a ligação passa, e o resto volta |
+| 5 | as duas ou três redes que disputam um canal, rasgadas inteiras e refeitas em cada ordem |
+
+Uma troca só fica se nada que estava ligado se soltar. Onde a grade de
+0,15 mm não tem lugar, o cobre vai à mão, em coordenadas exatas, no próprio
+`acabar.py`: três ligações com guia (`GUIAS`: o `PVDD` do nPM1300, o `3V0`
+do `JP102` e o `DIS_SW` do ADP5091) e quatro trechos desenhados (`MAO`,
+`TIRAR` e `VIAS_MAO`): os dois I²C nas bolas de 0,4 mm do MAX17262, com
+0,1365 mm até o cobre mais perto, e o `VSYS` e o `VBUS` do lado direito do
+nPM1300, cada um com a sua via. No fim, ele corta o que o DRC chamaria de
+solto: a ponta de trilha que nada pega volta até o último ponto que outra
+parte da rede toca, e a via ligada a uma camada só sai.
+
+Ligado e solto são medidos como o KiCad mede, e é por isso que a conta do
+`acabar.py` bate com a do DRC: cobre que se sobrepõe está ligado (a ponta de
+uma trilha a menos da soma das meias larguras do eixo da outra, dentro do
+anel de uma via ou dentro de uma ilha, e a ilha redonda é redonda); na
+regra de ponta solta, cada item conta para uma ponta só, a mais perto das
+pontas *dele* e não da linha, e a comparação é estrita, em nanômetros
+inteiros.
+
+**Medido em 2026-10-19**, na placa do repositório: o DRC completo com as
+malhas preenchidas dá **0 itens desconectados, 0 erros e nenhuma trilha ou
+via solta**. O dry run cumpre 24 regras, deixa 4 sem medir e viola 2, as
+mesmas de antes do roteamento: a `RF9` (a sombra do display a 13,4 mm da
+antena do módulo, contra os 25 da ficha) e a `AL1` (o `C304` a 2,0 mm do
+`U301`). Os trilhos de carga correm com 0,25 mm nas faces de fora e
+estreitam a 0,15 só junto de pino: 30 estreitamentos curtos, que a `AL2`
+aceita.
+
+A placa do repositório é essa rodada do `route.py` acabada pelo
+`acabar.py` em vários passes, enquanto as regras e o cobre à mão entravam;
+rodado de novo sobre ela, o `acabar.py` não muda nada. O `route.py` mudou
+depois da rodada (o halo da via passou a ser medido do centro verdadeiro),
+e o *rip-up* tem limite de tempo: rodar a cadeia do zero **não reproduz
+este cobre**, e o cobre à mão, preso a coordenadas, pode não caber no novo.
+Não rode o `make_pcb.py` nem o `route.py` sobre a placa roteada sem querer
+refazer o roteamento: os dois reescrevem o arquivo.
+
+A ordem importa por dois motivos. Sem `--como-esta`, o passo 5 **regera a
+placa** e apaga as trilhas. E **sem o passo 4 o DRC mente**: os geradores
 escrevem a zona de terra como contorno e mais nada, que é arquivo legal — o
 KiCad preenche ao abrir —, mas o `kicad-cli pcb drc` **não preenche**. Numa
 placa sem preenchimento todo pad que só chega ao plano aparece como
@@ -271,10 +371,12 @@ diferencial esperam a mesma resposta.
 ## Serigrafia e pontos de teste
 
 **Os dezesseis pontos de teste de [06](../06-conectores-e-pontos-de-teste.md)
-estão na placa**, menos dois que o próprio documento não pode ter: o `TP111`
-mede `ST_STO`, que a ficha do AEM10900 não tem, e o `TP401` mede `5V0`, de um
-regulador que não é montado com o painel JDI. A lista mora em `parts.TESTE` e
-o `nets.py` **recusa** um ponto que aponte para um nó inexistente.
+estão na placa**, menos dois: o `TP111` media o `ST_STO` do AEM10900, que
+saiu em 2026-09-24 (o ADP5091 não tem esse sinal), e o `TP401` mediria o
+`5V0`, que até 2026-10-18 não existia com a JDI e desde então sai do boost
+da Sharp (`U402`), montado em toda placa: o ponto ainda não foi criado. A
+lista mora em `parts.TESTE` e o `nets.py` **recusa** um ponto que aponte
+para um nó inexistente.
 
 **As referências estão em serigrafia nas duas faces**, cada peça na sua, no
 mínimo que a fábrica imprime — **0,8 mm de altura com traço de 0,15** — e
@@ -336,8 +438,8 @@ a peça não solda.
 | Peça da lista | Footprint que estava em uso | O que a ficha diz | Diferença |
 |---|---|---|---|
 | **Same Sky CPT-1117-83-SMT** (buzzer) | `Buzzer_CUI_CPT-9019S-SMT`, **redondo de 9 mm** | corpo **retangular de 11,0 × 9,0 × 1,7**, preso por duas abas de 2,0 × 0,2 mm, uma em cada ponta e em lados opostos, com furo de 0,8; padrão de solda de **duas ilhas de 2,5 × 2,5 a 10,5 mm** | **corrigido**: footprint desenhado aqui |
-| **Molex 2036150003** (USB-C IPX8) | `USB_C_Receptacle_Palconn_UTC16-G` | corpo **9,99 × 8,58 × 4,21** | o footprint desenha **8,94 × 7,32**: falta **1,05 × 1,26 mm**. **Em aberto** |
-| **Hirose FH28-10S-0.5SH(05)** (FPC do display) | `Hirose_FH12-10S-0.5SH`, outra série | corpo **9,90 × 5,70 × 2,55** | o footprint desenha **8,10** de largura: falta **1,80 mm**. **Em aberto** |
+| **Molex 2036150003** (USB-C IPX8) | `USB_C_Receptacle_Palconn_UTC16-G` | corpo **9,99 × 8,58 × 4,21** | o footprint desenha **8,94 × 7,32**: falta **1,05 × 1,26 mm**. **Superado em 2026-09-24**: a peça virou o HRO TYPE-C-31-M-12, que tem footprint com o nome dela na biblioteca do KiCad (**EXATO**) |
+| **Hirose FH28-10S-0.5SH(05)** (FPC do display) | `Hirose_FH12-10S-0.5SH`, outra série | corpo **9,90 × 5,70 × 2,55** | o footprint desenha **8,10** de largura: falta **1,80 mm**. **Superado**: a peça virou o FH12 em 2026-09-24 e o **Molex 503480-1000** em 2026-10-18, com footprint gerado aqui do desenho SD-503480-001 |
 
 > [!CAUTION]
 > **Os dois em aberto não foram consertados de propósito.** Reconstruir um
@@ -352,13 +454,27 @@ a peça não solda.
 A altura do USB-C também estava errada e foi corrigida: **4,21 mm** acima da
 superfície de montagem, não os 3,26 que estavam escritos como "conferir".
 
+> [!NOTE]
+> **As três peças da tabela saíram do desenho depois**, e com elas os casos.
+> O buzzer passou ao Murata PKLCS1212E4001-R1 em 2026-09-24 e ao Same Sky
+> CPT-12123-81-SMT-TR em 2026-10-18, no land de 12 × 12 da ficha
+> (`Buzzer_CPT-12123-81-SMT_12x12mm`). O USB-C passou ao HRO. E o conector
+> do display passou ao Molex 503480-1000, de contato dos dois lados, junto
+> com o `J402` (Molex 503480-0540) e o `J403` (Molex 503480-0440), os três
+> gerados em `footprints.py` com a frente do lado dos pregos de fixação e o
+> land na posição do contorno do desenho da Molex
+> ([11](../11-revisao-do-esquematico.md#correções-aplicadas)).
+
 ## Footprints
 
 | Origem | Quantos | O que significa |
 |---|---|---|
-| **EXATO** | 10 | o footprint da KiCad é desta peça |
-| **ENCAPSULAMENTO** | 92 | mesmo encapsulamento, desenhado para outra peça. Cabe, e **ainda tem de ser conferido contra a ficha** |
-| **GERADO** | 10 | não existe na KiCad; gerado aqui a partir das dimensões, com o land pattern **aproximado** |
+| **EXATO** | 24 | o footprint da KiCad é desta peça |
+| **ENCAPSULAMENTO** | 125 | mesmo encapsulamento, desenhado para outra peça. Cabe, e **ainda tem de ser conferido contra a ficha** |
+| **GERADO** | 18 | não existe na KiCad; gerado aqui a partir das dimensões, com o land pattern **aproximado** |
+
+São 167 peças com footprint em 2026-10-19 (`python footprints.py`); a tabela
+dava 10, 92 e 10 antes das trocas de peça de 2026-09-24 e das duas telas.
 
 O **módulo de rádio** é o `MinewSemi ME54BS13` (nRF54LM20A), 16,5 × 12,0 ×
 2,4 mm, **80 pads**: 20 castelados nas laterais e uma matriz LGA de 60 no
@@ -375,13 +491,13 @@ dela.
 > (D0, E0, F0) ficam do **mesmo lado do VCC (pino 19)**. Se estiverem do lado
 > do SWD, o footprint está espelhado.
 
-Oito peças **não estão na placa** porque moram na caixa: o painel `DS401`, a
-antena `E301` e os seis módulos solares `PV101` a `PV106`. Os pads que os
-recebem **passaram a existir**: `J302` para a antena e `J103` a `J105` para os
-três grupos de módulos solares, dois pads de 2,0 × 2,0 mm a 3,0 mm de passo,
-sem pasta de solda. **A mola em si ainda não foi escolhida** — a altura de
-1,5 mm que o 3D desenha está declarada em `footprints.ALTURA` como não lida de
-ficha nenhuma, e `parts.py` manda conferir antes de fabricar.
+Oito peças **não estão na placa**: as duas telas, `DS401` e `DS402`, que
+vão no `J401` uma de cada vez, e os seis módulos solares `PV101` a `PV106`,
+que moram na caixa e chegam pelo `J103`, um JST ZH de 4 vias. Até 2026-09-24
+a antena `E301` também morava fora, e os módulos chegavam por três pares de
+pads de mola (`J103` a `J105`); desde então a antena é de chip, soldada na
+borda, o `J302` é um u.FL para uma antena externa, e não há mais mola a
+escolher.
 
 ## De onde vem cada coisa
 
@@ -408,25 +524,27 @@ lugar de mudar é o gerador.
 
 ## O que falta
 
-- [ ] **Terminar o roteamento.** 127 ligações têm trilha e **101 não**; as duas
-      de RF (`RF_IN`, `RF_ANT`) ficam de fora de propósito, porque impedância
-      e caminho delas não são negociáveis e o roteador automático não sabe
-      disso.
+- [x] **Terminar o roteamento.** Fechado em 2026-10-19: 0 itens
+      desconectados e 0 erros no DRC completo ([acima](#o-acabamento-uma-ligação-de-cada-vez)).
+      As linhas de RF têm rotina própria, porque impedância e caminho delas
+      não são negociáveis.
 - [ ] **Os 25 mm entre o módulo de rádio e o display** (`RF9`): decidir entre
       blindagem, camada ou aceitar e medir na bancada.
-- [ ] **O desenho cotado do Hirose FH28.** O PDF que está aqui é só a folha de
-      especificação: sem vista, sem corte, sem cotas. Sem ele os 3,4 × 10 mm
-      da área do FPC em [04](../04-pcb-e-caixa.md) continuam sem origem.
+- [x] **O desenho cotado do conector do display.** O Hirose FH28 saiu; os
+      três conectores do display são Molex 503480 desde 2026-10-18, com o
+      land do desenho SD-503480-001. O que fica em aberto é a dobra das fitas
+      até a boca deles, que só a tela na mão confirma.
 - [ ] Conferir cada footprint **ENCAPSULAMENTO** contra a ficha da peça; onze
       já estão conferidos, com a cota do desenho mecânico em
       `footprints.PACOTE` e a conferência automática em `ME3`.
-- [ ] Desenhar os footprints exatos do Molex 2036150003 (USB-C IPX8), do
-      Hirose FH28-10S-0.5SH(05) e do Molex 503480-0500, e pedir à Minew o land
-      pattern oficial do ME54BS13.
-- [ ] Escolher a **mola** dos contatos do painel solar e da antena. Os pads
-      existem (`J103` a `J105`, `J302`); a peça não.
+- [ ] Pedir à Minew o land pattern oficial do ME54BS13. Os footprints do
+      Molex 2036150003, do Hirose FH28 e do Molex 503480-0500 deixaram de
+      ser necessários: as peças saíram do desenho.
+- [x] ~~Escolher a mola dos contatos do painel solar e da antena~~: o painel
+      chega pelo `J103`, um JST ZH, e a antena é a de chip ou o u.FL `J302`.
 - [ ] A pilha de camadas do fabricante, e com ela as larguras de 50 Ω e 90 Ω.
-- [ ] As pendências que os documentos já carregam: a ordem das cinco vias da
-      luz, o lado do sensor do MAX17262, a orientação do divisor do
-      `DIS_STO_CH`, o `I2C_ADDR` e o `ST_STO` do AEM10900 (que **não existem**
-      na ficha) e a tecla central ligada em dois lugares.
+- [ ] As pendências que os documentos já carregam: o lado do sensor do
+      MAX17262, a polaridade do LED do Azumo (jumpers `JP402` a `JP405`) e a
+      dobra das fitas das telas. A ordem das cinco vias da luz da JDI saiu da
+      spec 1.4.2, e as pendências do AEM10900 e da tecla central caíram com
+      as decisões de 2026-09-24 e de 2026-09-26.

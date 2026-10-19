@@ -63,7 +63,12 @@ BLOCOS: dict[str, list[tuple[str, list[str]]]] = {
     ],
     "4 Display e luz": [
         ("Painel JDI e conector de sinal", ["J401", "DS401"]),
-        ("Luz do painel", ["J402", "Q401"]),
+        ("Luz do painel JDI", ["J402", "Q401"]),
+        # o plano B no mesmo conector (2026-10-18): a Sharp, os 5 V dela e
+        # a luz do Azumo, que e a Sharp com luz frontal
+        ("5 V da Sharp", ["U402"]),
+        ("Painel Sharp ou Azumo, no mesmo J401", ["DS402"]),
+        ("Luz do Azumo, no verso", ["J403"]),
     ],
     "5 Memoria e sensores": [
         ("Flash NOR MX25R6435F", ["U501"]),

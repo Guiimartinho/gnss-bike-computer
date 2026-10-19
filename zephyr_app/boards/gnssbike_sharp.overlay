@@ -1,0 +1,24 @@
+/*
+ * GNSS Bike Computer (gnssbike/nrf54lm20a/cpuapp) with the Sharp
+ * LS027B7DH01A instead of the JDI LPM027M128C of the board file. The Azumo
+ * 11103-06 module is the same panel with a front light, and takes the same
+ * overlay.
+ *
+ * Since 2026-10-18 the board takes either panel on the same connector, J401:
+ * the two signal tails land on the same spot and carry the same ten
+ * contacts in the same order. What changes on the board is the supply, and
+ * it is a solder jumper, not firmware: JP401 on the 5V0 side feeds the panel
+ * from the TPS610997 boost, which power-gpios (P3.07) enables. Only this
+ * overlay sets it, so the JDI's firmware never turns the boost on: 5 V on
+ * the JDI destroys it (absolute maximum 3.6 V). The Azumo's light uses the
+ * same PWM channel as the JDI's, through J403 on the back.
+ *
+ * Build: TELA=sharp BOARD=gnssbike/nrf54lm20a/cpuapp bash tools/fw/fw.sh
+ * build pristine
+ */
+
+&display {
+	compatible = "sharp,ls027b7dh01";
+	/* enable of the TPS610997 5 V boost; the JDI's board file leaves it out */
+	power-gpios = <&gpio3 7 GPIO_ACTIVE_HIGH>;
+};

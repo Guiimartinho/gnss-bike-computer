@@ -18,6 +18,7 @@ from __future__ import annotations
 import hashlib
 import math
 import pathlib
+import re
 import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
@@ -44,11 +45,21 @@ DIEL_NUCLEO = 0.80 - 4 * CU - 2 * DIEL_RF    # In1.Cu to In2.Cu
 DIEL = (DIEL_RF, DIEL_NUCLEO, DIEL_RF)
 CU_LAYERS = ("F.Cu", "In1.Cu", "In2.Cu", "B.Cu")
 KEEPOUTS = {"KEEPOUT_ANTENA_GNSS", "KEEPOUT_ANTENA_MODULO"}
+# the keep-outs whose own antenna network runs inside them (keepout())
+COM_TRILHA_PROPRIA = {"KEEPOUT_ANTENA_GNSS"}
 BORDA = 0.8                    # keep parts this far inside the outline
 RAIO_COURTYARD_FURO = 2.45     # F.CrtYd of MountingHole_2.2mm_M2.kicad_mod
 FOLGA = 0.05                   # between two courtyards: the courtyard
                                # already carries the maker's clearance
 PASSO = 0.5                    # placement grid
+# The signal corridor beside the power band, on both faces (x0, y0, x1, y1):
+# no part may land in it, so the signals between the module at the bottom
+# and the receiver, the display and the flash at the top have a way round
+# the converters (decision of the owner, 2026-10-19; route.CORREDOR_SINAIS
+# is the same strip, up to the band's top edge). From y 38, under the
+# display connector's transistor and the boost's inductor, to y 64, over
+# the left key.
+CORREDOR_SINAIS = (0.8, 38.0, 6.8, 64.0)
 
 # The part that anchors each zone of 04-pcb-e-caixa.md.
 ANCORAS: dict[str, str] = {
@@ -65,17 +76,30 @@ ANCORAS: dict[str, str] = {
     "J101": "ZONA_USB_C",
     "U505": "ZONA_LUZ_AMBIENTE_OPT3001",
 }
+# Where the search for a part that follows an anchor starts, off the
+# anchor's centre (mm): a chip that would land against its anchor's pins.
+# The ADP5091 landed 2,2 mm from the right side of the nPM1300, with the
+# capacitors of VSYS, VBUSOUT and VBUS between them: eight pins (CC1, CC2,
+# VBUSOUT, VBUS, VSYS, VBAT_SYS, NTC_BAT, RVSET1) had one channel of 0,65 mm
+# to leave by, where one track fits (2026-10-19). Started 9 mm right and
+# 3 mm up, it lands 1,5 mm further right and nothing else moves.
+AFASTADO: dict[str, tuple[float, float]] = {"U103": (9.0, -3.0)}
 # Parts that follow an anchor instead of a zone of their own.
 JUNTO: dict[str, str] = {
     "U102": "U101", "U103": "U101", "U104": "U101",
-    "L101": "U101", "L102": "U101", "L103": "U103",
-    "J102": "U101", "JP101": "U101", "RT101": "U101",
+    "J102": "U101", "JP101": "U101",
+    # The NTC of the solar cut-off reads the cell, on the back, beside the
+    # harvester whose charge it stops. Until 2026-10-19 it followed U101 and
+    # landed under the nPM1300's exposed pad: on the heat of the charger
+    # (08-layout.md, "Termica no cobre") and on the pad's thermal vias
+    "RT101": "U103",
     "D101": "J101", "D102": "J101",
+    # the boost of the Sharp beside the display connector it feeds
+    "U402": "J401",
     "U105": "U103", "R124": "U103", "R125": "U103", "R106": "U103",
     "D106": "U103", "C122": "U102", "C123": "U503", "C124": "U503",
     "C125": "U502", "C126": "U505",
-    "C129": "U101", "R406": "J402", "R407": "J402", "R408": "J402",
-    "R409": "J402", "D107": "SW602",
+    "C129": "U101", "D107": "SW602",
     "FB301": "U301", "L301": "U301",
     "U504": "U503",
     "J402": "J401", "Q401": "J401",
@@ -94,7 +118,13 @@ JUNTO: dict[str, str] = {
 # for the ones that do.
 # J102 left this set on 2026-09-26: the cell connector is a JST SH on the
 # FRONT now (see BORDA_FIXA)
-ATRAS = {"U502", "RT101", "LS601", "J103"}
+# D105 joined on 2026-10-18: the TVS of the panel input goes beside J103,
+# which is on the back (protection-a2)
+ATRAS = {"U502", "RT101", "LS601", "J103", "D105", "J403"}
+# Parts with no body, only pads, that may lie in the band under the Azumo's
+# back strip (make_dxf.FAIXA_AZUMO): the Tag-Connect footprint and the test
+# points. Everything else keeps out of it on the front face.
+PLANAS = {"J201"}
 # LS601 is on the back because of arithmetic, not taste: it is 10,5 x 9,5 mm,
 # the largest part on the board after the two modules, and on the front the
 # only band left between the key row and the module is 9,25 mm tall. Pushed
@@ -170,7 +200,10 @@ BORDA_FIXA: dict[str, tuple[float, float, int]] = {
     # reserva dele (4,9 mais 0,05 de cada lado) so cabe com o contorno do
     # receptaculo acabando em 11,82. A serigrafia fica 0,4 mais perto do
     # arco do canto do que a 6,9; o DRC do check_pcb.py e quem diz se corta
-    "J101": (6.5, _H - 4.29, 0),
+    # 2026-10-18: 1,10 mm mais perto da borda, para a linha "PCB EDGE" do
+    # desenho da HRO cair na borda da placa; em _H - 4,29 a placa passava
+    # 0,61 mm da boca do receptaculo (usb-c-x1, usb-c-a1)
+    "J101": (6.5, _H - 3.19, 0),
     # O diodo de protecao do USB fica ACIMA da fileira de contatos, a 90
     # graus, com os cinco pinos de sinal virados para ela a 0,5 mm de passo -
     # o mesmo passo da fileira - e com o par ENTRANDO pelos pinos 4 e 5 e
@@ -242,10 +275,24 @@ BORDA_FIXA: dict[str, tuple[float, float, int]] = {
     # because the power pins on its lower castellated edge need a capacitor
     # within 0.5 mm and a 0603 courtyard does not fit against the margin.
     "U201": (_W - 8.5, _H - 12.5, 270),
-    "J401": (5.1, 26.5, 270),        # display flat cable, out to the left
-    # 36, not 38: at 38 its courtyard reached the M2 hole's keep-out,
-    # which sits at (3,2; H/2) on the same edge
-    "J402": (5.1, 37.0, 270),        # the light's cable, same side
+    # The panel tails, since 2026-10-18 (display-a1, display-a2 and the
+    # card display-dual of the schematic review). They leave the glass on
+    # the left, fold back under it and come up into the connectors with
+    # their contacts facing up, so the connectors are the dual-contact Molex
+    # 503480 with the opening to the left edge (rotation 90). The opening
+    # sits at x 1,27: the JDI tail reaches from 0 to 1,87 and the Sharp's
+    # from 0,57 to 2,17, with the panels centred on the board.
+    # Pin 1 is at the end towards the keys on every tail, which is where
+    # rotation 90 puts pad 1. The y are the centres of the tails over the
+    # active area at make_dxf.ATIVA_C: the signal tail of both panels at its
+    # centre, the JDI light 14,7 above it.
+    "J401": (3.07, 31.5, 90),        # JDI or Sharp signal, the same spot
+    "J402": (3.07, 16.8, 90),        # JDI light
+    # The Azumo's light tail wraps round the left edge to the back. With the
+    # mirror of the back face, rotation 90 still opens to the left (the
+    # placer's own transform), and puts pads 1-2 (the anode, drawing T7)
+    # towards the keys, where that pad of the tail lands.
+    "J403": (17.07, 58.18, 90),
     # on the back face the footprint is mirrored, so the angle that sends
     # the cable to the left is 270, not 90. It costs the front nothing: the
     # two faces have their own placement area since this run.
@@ -282,7 +329,12 @@ BORDA_FIXA: dict[str, tuple[float, float, int]] = {
     # neighbour is beyond twice its height: SW601 5,0 (needs 4), J202 5,65
     # (needs 5), J102 6,0 (needs 5,8), D102 3,1 (needs 0,8); the 0402s
     # around it are lower than the sensor and cast no shadow on it.
-    "U505": (3.0, 74.0, 0),
+    # y 74,4 and not 74,0 since 2026-10-19: the case's window over it is now
+    # sealed by a clear disk in a 5 mm counterbore, between the keys'
+    # membrane and the solar facet, with 0,9 mm to each (part 3 of the case
+    # review); the neighbours keep their distances (J102 and J202 are beside
+    # it, SW601 farther, D102 at 2,7 against the 0,8 it needs).
+    "U505": (3.0, 74.4, 0),
     # y 9,75: o corpo cresceu de 1,6 x 1,6 para 3,5 x 2,8 e ficou a
     # 3,25 mm do sensor de luz, que pede o dobro da altura do vizinho -
     # 3,8 mm para os 1,9 deste LED. Descido para 3,85 mm de folga, com
@@ -294,6 +346,13 @@ BORDA_FIXA: dict[str, tuple[float, float, int]] = {
     # pair's corridor. The lid's light-pipe hole is under the keys'
     # membrane there (2026-09-26).
     "D601": (23.7, 66.0, 0),
+    # Os LEDs de carga e de erro do nPM1300 na fileira das teclas, entre a
+    # primeira e a segunda, cada um com a sua janela na tampa: sob o display
+    # ninguem os via (leds-a2, decisao D3 de 2026-10-18). Junto do D601 nao
+    # cabem: abaixo dele ficam a menos de 5 mm do keep-out da antena do
+    # modulo (DIST_ANTENA) ou no corredor do par USB.
+    "D103": (8.5, 66.0, 0),
+    "D104": (12.0, 66.0, 0),
     # barometer, back face: the zone put it at (3; 71), 0,8 mm under the
     # cell's shadow (y <= 69,9) with 1,86 mm against a 1,2 ceiling (ME2).
     # The back's strip off the cell and off the module's antenna band (x <=
@@ -301,10 +360,13 @@ BORDA_FIXA: dict[str, tuple[float, float, int]] = {
     # standing at the left edge (x 0,9-8,9, y 69,95-80,45), the buzzer
     # (x 11,75-24,25, y 69,95-82,45) and, between the two and above the
     # USB-C's legs (y >= 85,44), this: x 7,82-11,58, y 80,62-84,38.
-    "U502": (9.7, 82.5, 0),
+    # 2,9 mm mais a esquerda desde 2026-10-18: o buzzer novo (Same Sky) tem o
+    # land de 15,0 mm da ficha, e a borda direita dele nao pode chegar mais
+    # perto do keep-out da antena do modulo do que a do Murata chegava
+    "U502": (6.8, 82.5, 0),
     # buzzer, back face, 12,5 round: right of J103, left of the module's
     # antenna band, off the cell (y >= 69,9 with 3,0 mm of height)
-    "LS601": (18.0, 76.2, 0),
+    "LS601": (16.5, 76.2, 0),
     # The receiver goes hard into the top LEFT corner, and that is the 50 mm
     # rule again: with it centred, its courtyard overlapped the module's in x
     # and the distance collapsed to the vertical gap alone.
@@ -313,7 +375,10 @@ BORDA_FIXA: dict[str, tuple[float, float, int]] = {
     # feed and its pi network had nowhere to go and ended up 10.5 mm from the
     # pin that 4.4 wants them "as short as possible" from. Turned round, the
     # pin faces into the board, where the network fits in line.
-    "U301": (8.5, 15.3, 180),
+    # 2,67 mm to the right since 2026-10-18: the JDI light connector J402
+    # lands where the receiver's left pads were, and its courtyard ends at
+    # x 5,37 (the receiver's box, pads included, starts 5,65 left of it)
+    "U301": (11.17, 15.3, 180),
     # Where the antenna in the case wall lands: under its keep-out and a few
     # millimetres from the pi network, which is what "linha de 50 ohm, poucos
     # mm" in 04-pcb-e-caixa.md asks for. To the right of the receiver, so the
@@ -323,11 +388,22 @@ BORDA_FIXA: dict[str, tuple[float, float, int]] = {
     # fica em y = 1,80. O x e o do resto da cadeia de RF, para o
     # caminho ser o mais curto possivel.
     "E301": (13.25, 1.8, 0),
-    # Os dois capacitores de sintonia, encostados nos pinos de terra
-    # da antena: eles SAO parte da antena, nao desacoplamento.
-    "C305": (17.55, 1.8, 90),
-    "C306": (8.95, 1.8, 90),
-    "J302": (20.4, 12.4, 0),
+    # The two tuning capacitors are part of the antenna, not decoupling, and
+    # since 2026-10-19 they sit where Unictron draws them (H2UJ4U1H2Q0100
+    # rev. E, figures 5-1 and 8-1, positions [8] and [9]): lying along the
+    # board edge at the two ends of the cut-out, one pad inside it, on the
+    # 0,35 mm strip that comes along the edge from the antenna's end pin, and
+    # the other outside it, on the ground beside the cut-out. Standing in
+    # the middle of the cut-out, where they were, the ground pad of C305 had
+    # no ground within reach and stayed loose. x is the keep-out's edge
+    # (13,25 - 4,96 and 13,25 + 10,04), which leaves each pad a quarter of a
+    # millimetre clear of it, the inner one inside and the outer one outside;
+    # y leaves the pads 0,33 mm from the board edge. C305, on the wide side
+    # of the cut-out, is [9]; C306, on the narrow side, is [8].
+    "C305": (23.30, 0.65, 0),
+    "C306": (8.30, 0.65, 180),
+    # +2,67 with the receiver and the pi network (2026-10-18)
+    "J302": (23.07, 12.4, 0),
     # The pi network, IN LINE between the antenna contact and the receiver's
     # RF_IN pin, and fixed here rather than left to the netlist placer -
     # which put it 10.5 mm away, on a rule that asks for "as short as
@@ -339,9 +415,17 @@ BORDA_FIXA: dict[str, tuple[float, float, int]] = {
     # Shifted 0,6 mm right on 2026-09-24: the module's land pattern grew when
     # the real drawing was read - the pad now reaches 0,8 mm outside the body
     # instead of 0,35 - and the old positions had the inductor sitting on it.
-    "C301": (17.4, 13.4, 0),
-    "L301": (15.8, 15.2, 90),
-    "C302": (15.8, 17.2, 0),
+    # The whole chain moved 2,67 mm right on 2026-10-18 with the receiver
+    # (the JDI light connector J402 took its old place): the same
+    # distances, the antenna and its keep-out where they were.
+    "C301": (20.07, 13.4, 0),
+    "L301": (18.47, 15.2, 90),
+    "C302": (18.47, 17.2, 0),
+    # The antenna selector, turned 180: pad 1 (UFL) towards J302 on the
+    # right and pad 3 (CHIP) towards E301 on the left. Left to the netlist
+    # placer it came out at 0 degrees, the two RF lines had to cross on the
+    # front layer, where no via is allowed, and both failed (2026-10-19).
+    "JP301": (18.5, 10.5, 180),
     # The six solar modules, in three groups of two, on one connector on the
     # right edge. They carry the harvester's SRC node, which is low voltage
     # and is the input of a boost, so it sits as close to the harvester's
@@ -397,7 +481,38 @@ DECOPLA: dict[str, str] = {
     "R506": "U201", "R507": "U201", "R508": "U501",
     # the gate pull-downs go at the transistor
     "R402": "Q401", "R609": "Q601", "R610": "Q602", "R611": "Q603",
+    # the JDI light's cathode resistors, each beside its own pin of J402:
+    # left to JUNTO they came out in a row that no longer followed the pins
+    # once the connector's circuits were reversed, and three of the four
+    # tracks had to cross (2026-10-19)
+    "R406": "J402", "R407": "J402", "R408": "J402", "R409": "J402",
+    # the 5 V boost of the Sharp: TI asks its inductor and its capacitors as
+    # close to the chip as possible (SLVSD88M 8.4.1); left to the netlist,
+    # they landed 17 to 23 mm away (blind check of 2026-10-18)
+    "L401": "U402", "C405": "U402", "C406": "U402", "C407": "U402",
+    # The inductors of the three converters the same way, against the
+    # switching pin, which is the loop the nPM1300 and ADP5091 layouts want
+    # shortest (AL3). As JUNTO parts they took a free spot by the chip at 0
+    # degrees, and L102 ended with its switching pad on the far side
+    # (2026-10-19).
+    "L101": "U101", "L102": "U101", "L103": "U103",
+    # a TVS goes at the connector it protects, not at the chip behind it:
+    # as a JUNTO only, the first pass laid D101 beside the VBUS pin of the
+    # nPM1300, 44 mm from J101, because that chip has the most pins on the
+    # net (protection-a2, 2026-10-18)
+    "D101": "J101", "D105": "J103",
 }
+# The pin a part decouples when its owner has several on the same net: the
+# VSYS net reaches the nPM1300 at VSYS, LSIN2 and PVDD, and C107 is the
+# input capacitor of PVDD (npm1300-a2).
+PINO_ALVO: dict[str, str] = {"C107": "PVDD", "L401": "SW", "C405": "VIN",
+                             "C406": "VOUT", "C407": "VOUT",
+                             "R406": "K1", "R407": "K2", "R408": "K3", "R409": "K4",
+                             "L101": "SW1", "L102": "SW2", "L103": "SW"}
+# How far a fixed part may stand out of the outline. The USB-C receptacle is
+# meant to: its drawing puts the "PCB EDGE" line 3,19 mm in front of the
+# footprint origin, and the shell goes on past it (usb-c-x1, 2026-10-18).
+SALIENCIA: dict[str, float] = {"J101": 1.0}
 
 # A part is allowed inside the keep-out that exists because of it: the
 # radio module sits over its own antenna zone, which forbids copper, not it.
@@ -466,6 +581,29 @@ ROTACAO: dict[str, int] = {
 def uid(*parts: object) -> str:
     h = hashlib.sha256("|".join(str(p) for p in parts).encode()).hexdigest()
     return f"{h[0:8]}-{h[8:12]}-4{h[13:16]}-8{h[17:20]}-{h[20:32]}"
+
+
+_UUID = re.compile(r'\(uuid "?([0-9a-fA-F-]{36})"?\)')
+
+
+def uuids_proprios(corpo: str, ref: str) -> str:
+    """Every uuid inside a placed footprint made its own, from the ref.
+
+    The body comes from the library, uuids and all, so every 0402 on the
+    board carried the same pad uuids: 112 of them repeated, one 66 times
+    (2026-10-19). KiCad still routes and counts right, but its DRC report
+    names items by uuid, and an unconnected pad was reported as whichever
+    pad came first with that uuid - "SRC 16" in RT1 was RT101's pad 1
+    standing in for sixteen other pads. Deterministic, so the file stays
+    the same from run to run.
+    """
+    vistos: dict[str, int] = {}
+
+    def novo(m: re.Match) -> str:
+        k = vistos.get(m.group(1), 0)
+        vistos[m.group(1)] = k + 1
+        return f'(uuid "{uid("fpu", ref, m.group(1), k)}")'
+    return _UUID.sub(novo, corpo)
 
 
 def P_(x: float, yd: float) -> tuple[float, float]:
@@ -564,6 +702,9 @@ def livre(x: float, y: float, bx: tuple[float, float, float, float],
             continue
         if x1 > kx0 and kx1 > x0 and y1 > ky0 and ky1 > y0:
             return False
+    if (ref not in ATRAS and ref not in PLANAS and not ref.startswith("TP")
+            and y1 > M.FAIXA_AZUMO[0] and y0 < M.FAIXA_AZUMO[1]):
+        return False
     for px0, py0, px1, py1 in postos:
         if x1 + FOLGA > px0 and px1 + FOLGA > x0 and \
                 y1 + FOLGA > py0 and py1 + FOLGA > y0:
@@ -819,9 +960,17 @@ def colocar() -> tuple[dict[str, tuple[float, float, int, bool]], list[str]]:
     # the DRC. Both ends are fixed parts, so the strip stops FOLGA short of
     # each courtyard; x 3 to 8,5 keeps the cell connector (x >= 10,22) out
     # of it.
-    corredores = [(19.4, 68.3, 22.8, M.H - 19.3), (3.0, 80.0, 8.5, 85.3)]
+    # The last two (2026-10-19) are the pair's way from the diode to the
+    # module: up from the diode's exit, between the light sensor (to x
+    # 4,25) and the diode (from y 78,35), and right along the gap under the
+    # SWD header's pads, short of the header (from x 9,9); from there the
+    # header and the cell connector keep the gap themselves. JP101, R112
+    # and R114 sat in it, and the pair had nowhere to turn.
+    corredores = [(19.4, 68.3, 22.8, M.H - 19.3), (3.0, 80.0, 8.5, 85.3),
+                  (4.3, 74.4, 6.2, 78.3), (4.3, 74.4, 9.8, 75.65)]
     postos_face: dict[bool, list[tuple[float, float, float, float]]] = {
-        False: list(furos) + corredores, True: list(furos)}
+        False: list(furos) + corredores + [CORREDOR_SINAIS],
+        True: list(furos) + [CORREDOR_SINAIS]}
     falhas: list[str] = []
 
     def por(ref: str, cx: float, cy: float, ang: int = 0,
@@ -840,7 +989,8 @@ def colocar() -> tuple[dict[str, tuple[float, float, int, bool]], list[str]]:
             # silently is how two connectors end up on top of each other.
             # A connector that comes out of the case may touch the edge - that
             # is the point of it - so the edge margin does not apply to it.
-            p = (cx, cy) if livre(cx, cy, bx, postos, ref, borda=0.0) else None
+            p = (cx, cy) if livre(cx, cy, bx, postos, ref,
+                                  borda=-SALIENCIA.get(ref, 0.0)) else None
             if p is None:
                 falhas.append(f"{ref}: a posicao fixa ({cx:.1f}; {cy:.1f}) nao "
                               f"esta livre para o contorno {bx}")
@@ -899,13 +1049,14 @@ def colocar() -> tuple[dict[str, tuple[float, float, int, bool]], list[str]]:
                     y - px * math.sin(r) + py * math.cos(r))
         return None
 
-    def pads_locais(ref: str) -> list[tuple[float, float]]:
-        """Every pad of a footprint, as an offset from the footprint origin."""
+    def pads_locais(ref: str, numero: str | None = None) -> list[tuple[float, float]]:
+        """Every pad of a footprint, or only pad `numero`, as an offset from
+        the footprint origin."""
         arv = fp_load.parse(fp_load.carregar(FPS.FP[ref][0])[0])
         saida = []
         for p in fp_load.kids(arv, "pad"):
             a = fp_load.kid(p, "at")
-            if a:
+            if a and (numero is None or str(p[1]) == numero):
                 saida.append((float(a[1]), float(a[2])))
         return saida
 
@@ -929,16 +1080,23 @@ def colocar() -> tuple[dict[str, tuple[float, float, int, bool]], list[str]]:
                     continue
                 if dono_bom is not None and outro != dono_bom:
                     continue
+                if ref in PINO_ALVO and pino != PINO_ALVO[ref]:
+                    continue
                 if dono_bom is None and len(P.PARTS[outro].pins) < 4:
                     continue
                 numero = next(q.number for q in P.PARTS[outro].pins
                               if q.name == pino or q.number == pino)
                 p = pad_global(outro, numero)
+                # this part's own pad on the same net: the one that has to
+                # face the pin
+                meu = next(pn for r, pn in pinos if r == ref)
+                meu_num = next(q.number for q in P.PARTS[ref].pins
+                               if q.name == meu or q.number == meu)
                 if p and (melhor is None or len(P.PARTS[outro].pins) > melhor[2]):
-                    melhor = (p, outro, len(P.PARTS[outro].pins))
+                    melhor = (p, outro, len(P.PARTS[outro].pins), meu_num)
         if melhor is None:
             return False
-        (px, py), dono, _n = melhor
+        (px, py), dono, _n, meu_num = melhor
         dx, dy, _a, _b = lugar[dono]
         v = math.hypot(px - dx, py - dy) or 1.0
         ux, uy = (px - dx) / v, (py - dy) / v
@@ -953,11 +1111,16 @@ def colocar() -> tuple[dict[str, tuple[float, float, int, bool]], list[str]]:
         # against a 2.00 limit while a slot 1.90 mm away was free one grid
         # step up - the old rule could not see it, because by centre distance
         # that slot was the worse of the two.
-        locais = pads_locais(ref)
+        # And the pad that counts is the one on the PIN's net, in all four
+        # orientations: scored by its nearest pad, a capacitor could face the
+        # pin with its ground pad, and an inductor put its output pad by the
+        # switching pin and its switching pad on the far side - which is how
+        # BUCK2_SW ran 6,3 mm round L102 and then did not route (2026-10-19).
+        locais = pads_locais(ref, meu_num) or pads_locais(ref)
         fora = max((math.hypot(a, b) for a, b in locais), default=0.0)
         espelha = -1.0 if ref in ATRAS else 1.0
         melhor_pos, melhor_d = None, float("inf")
-        caixas = {a: caixa(ref, a) for a in (0, 90)}
+        caixas = {a: caixa(ref, a) for a in (0, 90, 180, 270)}
         postos = postos_face[ref in ATRAS]
         if ref in PASSANTE:
             postos = postos + postos_face[ref not in ATRAS]
@@ -1008,6 +1171,10 @@ def colocar() -> tuple[dict[str, tuple[float, float, int, bool]], list[str]]:
         everything else. Alphabetical order - which is what this did before -
         put C101 ahead of C112 for no reason at all.
         """
+        if ref in DECOPLA and ref.startswith("L"):
+            # a converter's inductor before its capacitors: it is the
+            # biggest part of the loop and the one with a pin to face
+            return (0, 1.0, ref)
         if ref not in DECOPLA or not ref.startswith("C"):
             return (2, 0.0, ref)
         # The radio module's own decoupling picks first, whatever its value:
@@ -1047,7 +1214,18 @@ def colocar() -> tuple[dict[str, tuple[float, float, int, bool]], list[str]]:
         if ref.startswith("TP"):
             continue                     # depois do desacoplamento
         dx, dy = lugar[dono][0], lugar[dono][1]
-        por(ref, dx, dy, ROTACAO.get(ref, 0))
+        ox, oy = AFASTADO.get(ref, (0.0, 0.0))
+        por(ref, dx + ox, dy + oy, ROTACAO.get(ref, 0))
+        # A chip that follows an anchor takes its own decoupling with it,
+        # before the next chip is placed. Placing every chip of the power
+        # band first and their capacitors after (the second pass below) gave
+        # the ring round the TPS7A02 to its neighbours, and C113 and C114
+        # landed 3,1 and 4,9 mm from pins that want them within 2 (AL1 of the
+        # dry run, until 2026-10-19).
+        if ref in lugar:
+            for cap in sorted((c for c, d in DECOPLA.items() if d == ref),
+                              key=ordem_de_encostar):
+                encostar(cap)
 
     # second pass: now the chips that follow an anchor are placed too
     for ref in sorted(FPS.FP, key=ordem_de_encostar):
@@ -1283,7 +1461,14 @@ def keepout(nome: str, x0: float, y0: float, x1: float, y1: float,
     obviously has to be there - it is the whole point of the rule. Forbidding
     tracks there too put sixteen items_not_allowed in the DRC, every one of
     them the switching node itself.
+
+    The chip antenna's area forbids the pour and the vias but takes tracks:
+    the antenna's own feed and tuning live inside it (DONO_DO_KEEPOUT), and
+    route.py keeps every other net out of it. Until 2026-10-19 it forbade
+    tracks too, and the router, which painted it over the antenna's own
+    pads, never drew them.
     """
+    trilhas = so_plano or nome in COM_TRILHA_PROPRIA
     pts = [P_(x0, y0), P_(x1, y0), P_(x1, y1), P_(x0, y1)]
     poly = "\n".join(f"\t\t\t\t(xy {px:.4f} {py:.4f})" for px, py in pts)
     camadas = " ".join(f'"{ly}"' for ly in CU_LAYERS)
@@ -1295,7 +1480,7 @@ def keepout(nome: str, x0: float, y0: float, x1: float, y1: float,
             # own antenna sits inside its own keep-out, and its pads with it.
             # A switching node's zone forbids only the POUR, because the node
             # itself has to run there.
-            f'\t\t\t(tracks {"allowed" if so_plano else "not_allowed"})\n'
+            f'\t\t\t(tracks {"allowed" if trilhas else "not_allowed"})\n'
             f'\t\t\t(vias {"allowed" if so_plano else "not_allowed"})\n'
             '\t\t\t(pads allowed)\n'
             '\t\t\t(copperpour not_allowed)\n\t\t\t(footprints allowed)\n\t\t)\n'
@@ -1485,12 +1670,17 @@ def main() -> int:
     corpo_furo = corpo_furo.replace(
         '(property "Reference" "REF**"',
         '(property "Reference" "REF**" (hide yes)', 1)
+    # H1 and H2, not REF** twice: the Specctra DSN export refuses a board
+    # with two parts of the same name, and it refuses in silence - which is
+    # how the Freerouting step of 2026-10-18 found it (autoroute.py)
     for i_furo, (dx_furo, dy_furo) in enumerate(M.FUROS_DOC):
         fx, fy = P_(dx_furo, dy_furo)
         saida.append('\t(footprint "MountingHole:MountingHole_2.2mm_M2"\n'
                      f'\t\t(at {fx:.4f} {fy:.4f})\n'
                      f'\t\t(uuid "{uid("furo%d" % i_furo)}")'
-                     + corpo_furo.replace("\n", "\n\t") + "\n\t)")
+                     + uuids_proprios(corpo_furo.replace('"REF**"', f'"H{i_furo + 1}"', 1),
+                                      f"H{i_furo + 1}")
+                     .replace("\n", "\n\t") + "\n\t)")
 
     # where each reference designator goes, decided once for the whole board
     desloca = rotulos(lugar)
@@ -1507,6 +1697,7 @@ def main() -> int:
             corpo = FPS.modelo_no_verso(corpo)
         corpo = girar_pads(corpo, ang)
         corpo = com_redes(corpo, ref, por_pad, numeros)
+        corpo = uuids_proprios(corpo, ref)
         px, py = P_(x, y)
         camada = "B.Cu" if atras else "F.Cu"
         # rotulos() picks the offset in the BOARD's frame, and KiCad turns a

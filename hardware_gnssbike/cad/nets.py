@@ -49,8 +49,16 @@ net("VBUSOUT", ("U101", "VBUSOUT"), ("U201", "VBUS"), ("R104", "1"), ("C110", "1
 # 4 e o 6 ao 5.
 net("CC1", ("J101", "CC1"), ("U101", "CC1"), ("D102", "D1P"), ("D102", "NC4"))
 net("CC2", ("J101", "CC2"), ("U101", "CC2"), ("D102", "D1N"), ("D102", "NC3"))
-net("USB_DP", ("J101", "DP_A6"), ("J101", "DP_B6"), ("U201", "USB_DP"), ("D102", "D2P"), ("D102", "NC2"))
-net("USB_DM", ("J101", "DM_A7"), ("J101", "DM_B7"), ("U201", "USB_DM"), ("D102", "D2N"), ("D102", "NC1"))
+# D+ through the diode's channel on pins 5 and 6, and D- through 4 and 7, the
+# other way round from the pin names (D2P, D2N): the four channels of the
+# TPD4E05U06 are the same diode to ground each, and the names are labels.
+# The order is what the board needs: the pair leaves the diode going up with
+# D- on the left and enters the module's pins going down with D+ on the
+# west, and a pair keeps its left and right through every turn, so with the
+# names followed it could only reach the module by crossing itself, on a
+# layer where it may not take a via. USB_DP never routed (2026-10-19).
+net("USB_DP", ("J101", "DP_A6"), ("J101", "DP_B6"), ("U201", "USB_DP"), ("D102", "D2N"), ("D102", "NC1"))
+net("USB_DM", ("J101", "DM_A7"), ("J101", "DM_B7"), ("U201", "USB_DM"), ("D102", "D2P"), ("D102", "NC2"))
 
 # The cell reaches the gauge through the measuring jumper; the gauge's 7 mOhm
 # sense sits INSIDE the chip, between BATT and SYS, so those are two nodes.
@@ -69,12 +77,16 @@ net("VBAT", ("JP101", "2"), ("U102", "BATT"), ("U102", "TH"), ("C122", "1"))
 net("VBAT_SYS", ("U102", "SYS"), ("U101", "VBAT"), ("U104", "IN"),
     ("U103", "BAT"), ("U103", "SYS"),
     ("C120", "1"), ("C116", "1"),
-    ("U104", "EN"), ("C117", "1"), ("C102", "1"), ("C113", "1"))
+    ("U104", "EN"), ("C117", "1"), ("C102", "1"), ("C113", "1"),
+    # o comparador do corte termico: o VSYS some em ship mode (npm1300-a1)
+    ("U105", "V+"))
 ABERTO["VBAT / VBAT_SYS"] = ("de que lado do sensor interno do MAX17262 ficam o BATT e o "
                              "SYS nao esta fechado; trocar os dois inverte o sinal da corrente")
 
-net("VSYS", ("U101", "VSYS"), ("U101", "LSIN2"), ("U105", "V+"), ("D103", "A"), ("D104", "A"),
-    ("D601", "ANODO"), ("C103", "1"))
+# C107 e o capacitor de entrada do PVDD, junto do U101.4 (npm1300-a2): a
+# referencia da Nordic poe um em cada PVSS e o C103 servia VSYS, PVDD e LSIN2.
+net("VSYS", ("U101", "VSYS"), ("U101", "LSIN2"), ("D103", "A"), ("D104", "A"),
+    ("D601", "ANODO"), ("C103", "1"), ("C107", "1"))
 net("BUCK1_SW", ("U101", "SW1"), ("L101", "1"))
 # O BUCK1 ficou sem carga alem dos capacitores. Decisao do dono em
 # 2026-09-26: o receptor passou para o 3V0 - opcao 1 da tabela 35 do manual
@@ -92,9 +104,11 @@ net("3V0_GNSS", ("FB301", "2"), ("U301", "VCC"), ("U301", "V_IO"), ("C303", "1")
 net("BUCK2_SW", ("U101", "SW2"), ("L102", "1"))
 net("3V0", ("L102", "2"), ("U101", "VOUT2"), ("U101", "LSIN1"),
     ("JP103", "1"), ("C129", "1"),
-    ("C105", "1"), ("C106", "1"), ("C107", "1"), ("C108", "1"),
+    ("C105", "1"), ("C106", "1"),
+    # a flash no 3V0, sempre ligada, em deep power-down (mx25r6435f-a1)
+    ("JP106", "1"), ("R501", "1"), ("R502", "1"), ("R503", "1"),
     ("JP102", "1"), ("JP104", "1"), ("JP105", "1"),
-    ("R107", "1"), ("R108", "1"), ("R109", "1"), ("R110", "1"),
+    ("R107", "1"), ("R108", "1"), ("R109", "1"),
     ("J201", "VTref"), ("J202", "VTref"))
 net("3V0_MOD", ("JP102", "2"), ("U201", "VDD"), ("C201", "1"), ("C210", "1"))
 net("3V0_SENS", ("JP105", "2"), ("R112", "1"), ("C123", "1"), ("C124", "1"),
@@ -102,13 +116,16 @@ net("3V0_SENS", ("JP105", "2"), ("R112", "1"), ("C123", "1"), ("C124", "1"),
     ("U502", "SDO"), ("U503", "VDD"), ("U503", "VDDIO"), ("U503", "ASDX"), ("U503", "ASCX"),
     ("U503", "CSB"), ("U504", "VDD"), ("U505", "VDD"),
     ("R504", "1"), ("R505", "1"), ("C502", "1"), ("C503", "1"))
-net("SD3V0", ("U101", "LSOUT1"), ("JP106", "1"), ("R501", "1"), ("R502", "1"),
-    ("R503", "1"))
+# O SD3V0 (LDSW1) ficou sem carga em 2026-10-18: a flash passou para o 3V0
+# (mx25r6435f-a1) e o firmware nao liga o LDSW1. Fica o ponto de teste.
+net("SD3V0", ("U101", "LSOUT1"))
 # the bulk sits AFTER the jumper, beside the flash, like every other block on
 # this board: 02-calculos.md asks for 22 uF "junto da flash", and a 1206
 # jumper between the part and its energy is what the other blocks avoid
 net("SD3V0_FLASH", ("JP106", "2"), ("U501", "VCC"), ("C501", "1"))
-net("3V3BL", ("U101", "LSOUT2"), ("C111", "1"), ("J402", "5"), ("DS401", "LUZ_ANODO"))
+# C108: 10 uF na saida do LDSW2 como LDO, junto do U101.31 (npm1300-a3)
+net("3V3BL", ("U101", "LSOUT2"), ("C111", "1"), ("C108", "1"), ("J402", "ANODO"),
+    ("DS401", "LUZ_ANODO"), ("JP402", "1"), ("JP404", "1"))
 net("VBCKP", ("U104", "OUT"), ("U301", "V_BCKP"), ("C114", "1"))
 # O VINT do AEM10900 era o trilho interno que alimentava os pinos de
 # configuracao por strap - R_MPP, T_MPP, STO_CFG, KEEP_ALIVE. O ADP5091
@@ -187,7 +204,7 @@ net("TERM_QUENTE", ("U105", "OUT"), ("D106", "A"))
 ABERTO["DIS_STO_CH"] = ("qual dos dois resistores fica em serie nao esta em fonte "
                         "nenhuma; 100 k em serie da 5,0 V no pino e 1 M da 0,5 V")
 net("NTC_BAT", ("U101", "NTC"), ("J102", "3"))
-ABERTO["C107, C108, C109, C112"] = ("a lista de materiais nao diz em que no cada um destes entra: C101 a C109 sao \"entradas e saidas do nPM1300\" em bloco")
+ABERTO["C109, C112"] = ("a lista de materiais nao diz em que no cada um destes entra: C101 a C109 sao \"entradas e saidas do nPM1300\" em bloco. C107 e C108 tem no desde 2026-10-18: PVDD e 3V3BL")
 ABERTO["NTC_BAT"] = "qual via do J102 leva o NTC do pack vem do fabricante do pack"
 
 net("RVSET1", ("U101", "VSET1"), ("R102", "1"))
@@ -195,7 +212,11 @@ net("RVSET2", ("U101", "VSET2"), ("R103", "1"))
 net("REG_GAUGE", ("U102", "REG"), ("C118", "1"))
 net("LED_CHG", ("U101", "LED1"), ("D103", "K"))
 net("LED_ERR", ("U101", "LED0"), ("D104", "K"))
-net("ALRT", ("U102", "ALRT"), ("R110", "2"))
+# ALRT of the MAX17262 goes to GND: "Connect to GND if not used" (datasheet,
+# pin description), and no MCU pin reads it. Until 2026-10-19 it had a
+# 10 k pull-up, R110, and nothing else - and as the MIDDLE bump of a 3 x 3
+# WLP at 0.4 mm it could only reach that pull-up through a via in the pad.
+# Its GND neighbour is the bump on the diagonal (route.PONTES).
 # O ADP5091 nao tem pino de interrupcao. O R111, que fazia o pull-up do IRQ
 # do AEM10900, ficou sem funcao em 2026-09-25 e saiu da lista em
 # 2026-09-26: o TLV7031 do corte termico tem saida push-pull e nao precisa
@@ -238,26 +259,40 @@ net("DISP_MOSI", ("U201", "P3.00"), ("J401", "SI"))
 net("DISP_CS", ("U201", "P3.02"), ("J401", "SCS"), ("R405", "1"))
 net("DISP_EXTCOMIN", ("U201", "P3.06"), ("J401", "EXTCOMIN"))
 net("DISP_ON", ("U201", "P3.05"), ("J401", "DISP"), ("R404", "1"))
-net("DISP_PWR_EN", ("U201", "P3.07"), ("R403", "1"))
-net("DISP_VDD", ("JP401", "2"), ("J401", "VDD"), ("J401", "VDDA"), ("J401", "EXTMODE"),
+net("DISP_PWR_EN", ("U201", "P3.07"), ("R403", "1"), ("U402", "EN"))
+net("DISP_VDD", ("JP401", "COMUM"), ("J401", "VDD"), ("J401", "VDDA"), ("J401", "EXTMODE"),
     ("C404", "1"))
-net("DISP_VDD_SEL", ("JP401", "1"), ("JP104", "2"))
+# o 3V0 do bloco do display, depois do jumper de medicao: vai ao painel pelo
+# JP401 (JDI) e ao boost de 5 V da Sharp
+net("DISP_VDD_SEL", ("JP401", "3V0"), ("JP104", "2"), ("U402", "VIN"), ("L401", "1"),
+    ("C405", "1"))
+net("SW_5V0", ("U402", "SW"), ("L401", "2"))
+net("5V0", ("U402", "VOUT"), ("C406", "1"), ("C407", "1"), ("JP401", "5V0"))
 net("BL_PWM", ("U201", "P3.08"), ("Q401", "G"), ("R402", "1"))
 # um resistor por catodo: quatro LEDs em paralelo num resistor so repartem
 # a corrente pela dispersao de V_F, e quem tem menos V_F leva mais
-net("BL_K1", ("J402", "1"), ("DS401", "LUZ_K1"), ("R406", "1"))
-net("BL_K2", ("J402", "2"), ("DS401", "LUZ_K2"), ("R407", "1"))
-net("BL_K3", ("J402", "3"), ("DS401", "LUZ_K3"), ("R408", "1"))
-net("BL_K4", ("J402", "4"), ("DS401", "LUZ_K4"), ("R409", "1"))
+net("BL_K1", ("J402", "K1"), ("DS401", "LUZ_K1"), ("R406", "1"))
+net("BL_K2", ("J402", "K2"), ("DS401", "LUZ_K2"), ("R407", "1"))
+net("BL_K3", ("J402", "K3"), ("DS401", "LUZ_K3"), ("R408", "1"))
+net("BL_K4", ("J402", "K4"), ("DS401", "LUZ_K4"), ("R409", "1"))
 net("BL_CATODO", ("R406", "2"), ("R407", "2"), ("R408", "2"), ("R409", "2"),
-    ("Q401", "D"))
-ABERTO["J402"] = ("a ordem das cinco vias da luz nao esta em fonte nenhuma: as vias 1 e 2 "
-                  "aqui sao posicao, nao pinagem, e a peca tambem esta em aberto")
+    ("R410", "2"), ("Q401", "D"))
+# a luz do Azumo: um par de vias do J403 vai ao 3V3BL e o outro ao R410, e
+# os quatro jumpers escolhem qual (JP402 e JP403 pela T7; JP404 e JP405 ao
+# contrario)
+net("LUZ_AZ_A", ("J403", "1"), ("J403", "2"), ("JP402", "2"), ("JP405", "1"),
+    ("DS402", "LUZ_A"))
+net("LUZ_AZ_B", ("J403", "3"), ("J403", "4"), ("JP403", "1"), ("JP404", "2"),
+    ("DS402", "LUZ_K"))
+net("LUZ_AZ_K", ("JP403", "2"), ("JP405", "2"), ("R410", "1"))
+# A ordem das cinco vias da luz, que ficava em aberto aqui, vem da spec 1.4.2
+# (1 a 4 catodos, 5 anodo) e do desenho de contorno (pino 1 do lado da fita
+# de sinal); o J402 e o Molex 503480-0540 desde 2026-10-18.
 
 # the panel itself, wired to the signal connector contact by contact
 for _n in ("SCLK", "SI", "SCS", "EXTCOMIN", "DISP", "VDDA", "VDD", "EXTMODE",
            "VSS", "VSSA"):
-    NETS.setdefault(f"FPC_{_n}", []).extend([("J401", _n), ("DS401", _n)])
+    NETS.setdefault(f"FPC_{_n}", []).extend([("J401", _n), ("DS401", _n), ("DS402", _n)])
 
 # ------------------------------------------------------------ GNSS
 # Receptor e MCU no mesmo 3V0 desde 2026-09-26: as quatro linhas vao direto,
@@ -276,8 +311,9 @@ net("RF_ANT", ("L301", "1"), ("C301", "1"), ("JP301", "COMUM"))
 net("RF_UFL", ("JP301", "UFL"), ("J302", "FEED"))
 net("RF_CHIP", ("JP301", "CHIP"), ("E301", "FEED"))
 # Os pinos 1 e 2 da antena de chip sao terra E sintonia: vao ao plano
-# por C305 e C306, nao direto. Sao as posicoes [8] e [9] do circuito da
-# ficha da Unictron.
+# por C305 e C306, nao direto. Sao as posicoes [9] e [8] do circuito da
+# ficha da Unictron: o pino 1 fica do lado largo do recorte, onde a figura
+# 8-1 poe a [9].
 net("ANT_T1", ("E301", "GND_T1"), ("C305", "1"))
 net("ANT_T2", ("E301", "GND_T2"), ("C306", "1"))
 
@@ -315,7 +351,8 @@ net("GND",
     # loop between two mains-powered boxes, and this one runs off a cell.
     ("J101", "SHELL"),
     ("D101", "GND"), ("D102", "GND1"), ("D102", "GND2"),
-    ("U101", "AVSS"), ("U101", "PVSS1"), ("U101", "PVSS2"), ("U102", "GND"), ("U103", "AGND"), ("U103", "PGND"), ("U103", "AGND2"),
+    ("U402", "GND"), ("U402", "FB"), ("C405", "2"), ("C406", "2"), ("C407", "2"),
+    ("U101", "AVSS"), ("U101", "PVSS1"), ("U101", "PVSS2"), ("U102", "GND"), ("U102", "ALRT"), ("U103", "AGND"), ("U103", "PGND"), ("U103", "AGND2"),
     ("U103", "SETBK"), ("U103", "REG_D0"), ("U103", "REG_D1"),
     ("R116", "2"), ("R119", "2"), ("R121", "2"),
     ("R122", "2"), ("R123", "2"), ("C119", "2"), ("C120", "2"),
@@ -331,7 +368,7 @@ net("GND",
     ("C301", "2"), ("C302", "2"), ("C303", "2"), ("C304", "2"),
     ("C305", "2"), ("C306", "2"),
     ("U501", "GND"), ("U502", "VSSIO"), ("U503", "GND"), ("U503", "GNDIO"),
-    ("U503", "SDO"), ("U504", "VSA"), ("U505", "GND"), ("U505", "ADDR"),
+    ("U503", "SDO"), ("U504", "VSA"), ("U505", "GND"), ("U505", "EP"), ("U505", "ADDR"),
     ("DS401", "VSS"), ("DS401", "VSSA"),
     ("Q401", "S"), ("Q601", "S"), ("Q602", "S"), ("Q603", "S"),
     ("R402", "2"), ("R403", "2"), ("R404", "2"), ("R405", "2"),

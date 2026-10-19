@@ -63,7 +63,7 @@ flowchart LR
 | | |
 |---|---|
 | ![A caixa proposta, vista de frente: janela do display, três teclas sob a membrana, módulos solares nos chanfros e na faceta](docs/img/hardware/gnssbike-3d-caixa-frente.png) | ![A caixa em vista explodida: tampa com o display colado, teclas, módulos e coberturas, a porta do USB-C](docs/img/hardware/gnssbike-3d-caixa-explodida.png) |
-| *A caixa proposta em 2026-09-26, 62 × 106 × 17 mm, medida por um dry run próprio* | *Explodida: tampa com o display, teclas, módulos solares, porta do USB-C* |
+| *A caixa proposta, 64 × 106 × 18,2 mm desde 2026-10-19, medida por um dry run próprio* | *Explodida: tampa com o display, teclas, módulos solares, porta do USB-C* |
 
 ![Manual de montagem: as peças em escala e os oito passos, do chicote solar ao fechamento do aparelho](docs/img/manual-de-montagem.svg)
 
@@ -145,7 +145,7 @@ flowchart TB
     ROOT --> HW["hardware/<br/>Eagle da myStravaB V3 (Gerbers da V2)"]
     ROOT --> HWN["hardware_gnssbike/<br/>a placa nova: docs 01 a 10, cad (KiCad e geradores),<br/>esquematico, placa, caixa (PDF, STL, dry run), datasheets"]
     ROOT --> DOCS["docs/<br/>documentação numerada, img (telas, hardware), historico"]
-    ROOT --> AI["CLAUDE.md · AGENTS.md · .claude/skills/"]
+    ROOT --> AI["CLAUDE.md · AGENTS.md · .claude/skills/ · .claude/contexto/"]
     ROOT --> BAT["build.bat · flash.bat · recover.bat · serial.bat"]
 ```
 

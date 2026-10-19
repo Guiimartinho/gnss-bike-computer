@@ -81,19 +81,30 @@ import make_pcb as MP         # noqa: E402
 # 12 x 12 x 4 patch standing against that wall between two ribs, with a
 # lip in front and 0,5 mm to the board) needs 6,1. Two millimetres of
 # length buy the option the owner asked to keep.
-W_C, H_C, R_C = 62.0, 106.0, 7.0
+# 63 and not 62 since 2026-10-18: the board takes the JDI or the Sharp, and
+# the union of their outlines (43,02 across) has to fit between the two
+# bevels with 0,5 mm of wall behind each module pocket and 1,0 mm from the
+# glass to the bevel's inner face (CX10, CX11); at 62 there were 42,30
+# 64 and not 63 since 2026-10-19: the module pockets sized for the module's
+# +-0,3 (MODULO_TOL) are 0,45 deeper and 0,2 wider across the bevel, and the
+# pocket's deep upper corner came to 0,06 mm of the bevel's inner face. One
+# millimetre of width gives it 0,6, with the same 1,0 to the glass.
+W_C, H_C, R_C = 64.0, 106.0, 7.0
 # 17, not the concept's 19: the board's top face sits 2,6 mm (the display
 # shadow's ceiling) under the display, which is glued under the lid, so
 # what is left under the lid for the parts outside the display is the
 # same 2,6 plus the tape plus the glass: 3,6 mm. The USB-C is 3,26, the
 # SWD header without its shroud 2,5. At 16 both hit the lid.
-T_C = 17.0
+# 18,2 and not 17,0 since 2026-10-18: the JDI is 2,2 mm thick (spec Rev.02
+# p. 34), not the 1,0 this drawing had (display-a3 of the schematic review),
+# and the stack keeps the cell 0,3 above the floor
+T_C = 18.2
 PAREDE, FUNDO, TAMPA = 2.0, 1.5, 1.5
 # 45-degree bevel along the long edges: its horizontal run, equal to its
 # rise. 7,5 and not the concept's 6,2 (the case's dry run, 2026-09-26):
 # the sloped face is CHANFRO * sqrt(2) long and has to hold the module
-# ACROSS it (MODULO_H + 2 * MODULO_FOLGA = 8,4) with a wall of at least
-# 1 mm at each end for the cover to land on: 10,4 mm, so CHANFRO >= 7,35.
+# ACROSS it (MODULO_H + 2 * MODULO_FOLGA_L = 8,6) with a wall of at least
+# 1 mm at each end for the cover to land on: 10,6 mm, so CHANFRO >= 7,5.
 # At 6,2 the face was 8,77 and the cover step reached past both ends.
 CHANFRO = 7.5
 CHANFRO_Y = (16.0, 76.0)                          # where the bevel runs
@@ -102,7 +113,12 @@ FOLGA_PLACA = 0.5
 # DISPLAY_VAO 3,0, not 2,6: the receiver MAX-F10S is 2,7 at most (its
 # datasheet's cota C) and sits under the glass; 0,3 of air over it. The
 # board is 0,4 lower for it, and the cell ends 0,3 above the floor.
-DISPLAY_W, DISPLAY_H, DISPLAY_ESP, DISPLAY_VAO = 40.08, MD.DISPLAY_ALT, 1.0, 3.0
+# Since 2026-10-18 the outline is the union of the JDI, the Sharp and the
+# Azumo module around the same active area (make_dxf.PAINEIS_X, DISPLAY_ALT),
+# and the thickness the JDI's 2,2, the thickest of the three; the Azumo is
+# 2,08, with a strip behind it that the board keeps clear (FAIXA_AZUMO).
+DISPLAY_W = MD.PAINEIS_X[1] - MD.PAINEIS_X[0]
+DISPLAY_H, DISPLAY_ESP, DISPLAY_VAO = MD.DISPLAY_ALT, 2.2, 3.0
 JANELA_W, JANELA_H = 36.28, 59.8                  # viewing area
 ARO_JANELA, FITA_DISPLAY = 0.3, 0.2               # lid rim over the glass, tape
 CELULA_W, CELULA_H, CELULA_ESP, CELULA_VAO = 36.0, 60.0, 7.0, 1.2
@@ -111,9 +127,32 @@ PLACA_W, PLACA_H, PLACA_ESP = MD.W, MD.H, 0.8
 # board's ME2 rule and the zonas.dxf use, so that the two cannot disagree
 SOMBRA_DISPLAY = (MD.DISPLAY_Y1 - MD.DISPLAY_ALT, MD.DISPLAY_Y1)
 SOMBRA_CELULA = (9.9, 69.9)
-MODULO_W, MODULO_H, MODULO_ESP = 23.0, 8.0, 1.8   # KXOB25-05X3F class
+MODULO_W, MODULO_H, MODULO_ESP = 23.0, 8.0, 1.8   # ANYSOLAR KXOB25-05X3F
+# Its datasheet (preliminary, 2026-09, p. 3): 23 x 8 x 1,8 with +-0,3 on
+# every dimension unless stated otherwise, and two pads on the back, one at
+# each end, 2,0 along the module and 7,4 across it, + at one end and - at
+# the other. Until 2026-10-19 the pockets had 0,2 a side and 0,1 of depth,
+# from the nominal size: a module at the top of the tolerance did not go in,
+# and one on the 0,5 mm tape the hardware list asked for stood 0,4 proud of
+# the pocket, lifting the cover off the glue line that keeps the rain out.
+MODULO_TOL = 0.3
+# under each module, a thin double-sided acrylic tape (the class of 3M
+# 9080A, 0,15 mm); the 0,5 mm foam tape is the cell's
+MODULO_FITA = 0.15
+# the pocket's depth under the cover: the thickest module on its tape, and
+# 0,1 of air under the cover
+MODULO_BOLSO = MODULO_ESP + MODULO_TOL + MODULO_FITA + 0.1
+# the soldered wire's joint on each pad, which the pocket's floor has to let
+# drop through: a slot under the middle of the pad, along x and along y
+FIO_SOLDA = (1.6, 3.0)
 COBERTURA_ESP = 0.6                               # clear cover thickness
 TECLA_ALT, TECLA_CURSO = 2.0, 0.2                 # TS-1088R over the board
+# The key's top stops this far under the membrane. Until 2026-10-19 it was
+# flush, so the stack (board on its bosses, the switch's 2,0, the printed
+# key, the lid) had no room either way, and the switch's travel is 0,2
+# +-0,1: a stack 0,1 tall holds the switch pressed. 0,15 of air is dead
+# travel under the finger, and a key that never presses itself.
+TECLA_FOLGA = 0.15
 # ------------------------------------------------ where everything sits
 PLACA_X0 = (W_C - PLACA_W) / 2.0
 PLACA_Y0 = H_C - PAREDE - FOLGA_PLACA - PLACA_H
@@ -134,7 +173,7 @@ BARRA_ESP = 0.5
 # the bevel solid's thickness, perpendicular to its slope: the module
 # pocket plus the cover recess plus 0,5 mm of wall left behind them (at the
 # lid's 1,5 the pocket went straight through - the case's own dry run)
-CHANFRO_ESP = max(TAMPA, COBERTURA_ESP + MODULO_ESP + 0.1 + 0.5)
+CHANFRO_ESP = max(TAMPA, COBERTURA_ESP + MODULO_BOLSO + 0.5)
 # the bevel solid's inner face is parallel to the slope up to this far from
 # the display's glass, then vertical to the lid's top: the parallel line
 # alone would end 0,4 mm from the glass (CX11 of the case's dry run)
@@ -159,17 +198,33 @@ PORTA_ESP, PORTA_ABA, PORTA_LUG = 1.2, 2.0, 2.5
 ANT_EXT_W, ANT_EXT_H, ANT_EXT_ESP, ANT_EXT_FOLGA = 12.0, 12.0, 4.0, 0.3
 MEMBRANA_ESP = 0.3
 MEMBRANA_REBAIXO = 0.4
-# facet below the keys: a plateau on the lid with the module pockets
-FACETA_ALT = 1.5
+# facet below the keys: a plateau on the lid with the module pockets, as
+# tall as the pocket's floor, the pocket and the cover need over the lid
+FACETA_ALT = FACETA_FUNDO + MODULO_BOLSO + COBERTURA_ESP - TAMPA
 COBERTURA_FOLGA = 1.0                             # cover pocket around the modules
-MODULO_FOLGA = 0.2
+# a side, round the module: along it, its tolerance and 0,1 for the print;
+# across it, the tolerance alone, which is what the bevel's ramp has room
+# for (the largest module, 8,3, still has 0,15 a side)
+MODULO_FOLGA = MODULO_TOL + 0.1
+MODULO_FOLGA_L = MODULO_TOL
 # fasteners
 PARAFUSO_TAMPA = ((5.5, 5.5), (W_C - 5.5, 5.5), (5.5, H_C - 5.5), (W_C - 5.5, H_C - 5.5))
 BOSSA_D, BOSSA_FURO, BOSSA_PLACA_D, PILAR_D = 5.0, 1.6, 4.5, 3.0
 # the LED and the light sensor: PROPOSED board positions (page 3 says why)
 LED_PROPOSTA = (3.5, 70.5)
 SENSOR_LUZ_PROPOSTA = (17.5, 70.0)
-LED_FURO, SENSOR_FURO = 2.5, 3.5
+LED_FURO, SENSOR_FURO = 2.5, 3.0
+# The light sensor's window is sealed by a clear disk of its own, 0,5 mm PC
+# or PET in a counterbore SENSOR_REBAIXO wide and SENSOR_REBAIXO_ESP deep
+# (0,1 of glue). Until 2026-10-19 it was an open hole of 3,5 mm, which let
+# the rain in and ran 0,95 mm into the solar facet. It cannot go under the
+# keys' membrane instead: the translucent membrane carries the LEDs' light
+# along inside it, and the sensor would read the LEDs.
+SENSOR_REBAIXO, SENSOR_REBAIXO_ESP = 5.0, 0.6
+# The charge and error LEDs of the nPM1300 (D103, D104) sit in the key row
+# since 2026-10-18, each under a window of its own (leds-a2 of the schematic
+# review: under the display nobody saw them).
+LEDS_DE_CARGA, LED_CARGA_FURO = ("D103", "D104"), 1.5
 
 COR_CAIXA = (0.22, 0.23, 0.26)
 COR_TAMPA = (0.27, 0.28, 0.31)
@@ -367,12 +422,14 @@ class Caixa:
         self.pecas = pecas
         self.fora = contorno_arredondado(0.0, 0.0, W_C, H_C, R_C)
         self.dentro = contorno_arredondado(PAREDE, PAREDE, W_C - PAREDE, H_C - PAREDE, R_C - PAREDE)
-        # the display and its window, from the board's shadow
-        self.display = (PLACA_X0 + PLACA_W / 2 - DISPLAY_W / 2, PLACA_Y0 + SOMBRA_DISPLAY[0],
-                        PLACA_X0 + PLACA_W / 2 + DISPLAY_W / 2, PLACA_Y0 + SOMBRA_DISPLAY[1])
+        # the display and its window, from the board's shadow; the window is
+        # centred on the active area, which is 0,9 right of the board's
+        # middle, and not on the outline (2026-10-18)
+        self.display = (PLACA_X0 + MD.PAINEIS_X[0], PLACA_Y0 + SOMBRA_DISPLAY[0],
+                        PLACA_X0 + MD.PAINEIS_X[1], PLACA_Y0 + SOMBRA_DISPLAY[1])
         dx0, dy0, dx1, dy1 = self.display
-        self.janela = (dx0 + (DISPLAY_W - JANELA_W) / 2, dy0 + (DISPLAY_H - JANELA_H) / 2,
-                       dx1 - (DISPLAY_W - JANELA_W) / 2, dy1 - (DISPLAY_H - JANELA_H) / 2)
+        ax, ay = PLACA_X0 + MD.ATIVA_C[0], PLACA_Y0 + MD.ATIVA_C[1]
+        self.janela = (ax - JANELA_W / 2, ay - JANELA_H / 2, ax + JANELA_W / 2, ay + JANELA_H / 2)
         self.bolso_display = (dx0 - 0.3, dy0 - 0.3, dx1 + 0.3, dy1 + 0.3)
         self.celula = (PLACA_X0 + PLACA_W / 2 - CELULA_W / 2, PLACA_Y0 + SOMBRA_CELULA[0],
                        PLACA_X0 + PLACA_W / 2 + CELULA_W / 2, PLACA_Y0 + SOMBRA_CELULA[1])
@@ -393,23 +450,30 @@ class Caixa:
         else:
             self.rebaixo_membrana = None
         self.topo_tecla = PLACA_Z1 + TECLA_ALT            # the switch's plunger top
-        # the facet: a plateau below the keys, two module pockets, one cover
-        y_ini = (max(ys) + TECLA_FURO / 2 + 6.0) if self.teclas else PLACA_Y0 + 72.0
+        # the facet: a plateau below the keys, two module pockets, one cover.
+        # 9,0 below the keys' holes and not 6,0 since 2026-10-19: the light
+        # sensor's sealed window sits in the band between the membrane's
+        # recess and the facet, with 0,9 mm to each (CX9)
+        y_ini = (max(ys) + TECLA_FURO / 2 + 9.0) if self.teclas else PLACA_Y0 + 72.0
         self.faceta = (4.0, y_ini, W_C - 4.0, H_C - 4.0)
         fy = (self.faceta[1] + self.faceta[3]) / 2
         larg = 2 * (MODULO_W + 2 * MODULO_FOLGA) + 0.6
         fx0 = W_C / 2 - larg / 2
         self.bolsos_faceta = [
-            (fx0, fy - MODULO_H / 2 - MODULO_FOLGA, fx0 + MODULO_W + 2 * MODULO_FOLGA,
-             fy + MODULO_H / 2 + MODULO_FOLGA),
-            (fx0 + MODULO_W + 2 * MODULO_FOLGA + 0.6, fy - MODULO_H / 2 - MODULO_FOLGA,
-             fx0 + larg, fy + MODULO_H / 2 + MODULO_FOLGA)]
-        self.cobertura_faceta = (fx0 - COBERTURA_FOLGA, fy - MODULO_H / 2 - MODULO_FOLGA - COBERTURA_FOLGA,
-                                 fx0 + larg + COBERTURA_FOLGA, fy + MODULO_H / 2 + MODULO_FOLGA + COBERTURA_FOLGA)
+            (fx0, fy - MODULO_H / 2 - MODULO_FOLGA_L, fx0 + MODULO_W + 2 * MODULO_FOLGA,
+             fy + MODULO_H / 2 + MODULO_FOLGA_L),
+            (fx0 + MODULO_W + 2 * MODULO_FOLGA + 0.6, fy - MODULO_H / 2 - MODULO_FOLGA_L,
+             fx0 + larg, fy + MODULO_H / 2 + MODULO_FOLGA_L)]
+        self.cobertura_faceta = (fx0 - COBERTURA_FOLGA, fy - MODULO_H / 2 - MODULO_FOLGA_L - COBERTURA_FOLGA,
+                                 fx0 + larg + COBERTURA_FOLGA, fy + MODULO_H / 2 + MODULO_FOLGA_L + COBERTURA_FOLGA)
+        # the wire passages, one under the middle of each end pad: until
+        # 2026-10-19 a hole of 1 mm, which the solder joint on the pad does
+        # not drop into, so the module sat on the joints
         self.furos_fio = []
         for b in self.bolsos_faceta:
-            for x in (b[0] + 1.5, b[2] - 1.5):
-                self.furos_fio.append(quadrado(x, fy, 1.0))
+            for x in (b[0] + MODULO_FOLGA + 1.0, b[2] - MODULO_FOLGA - 1.0):
+                self.furos_fio.append((x - FIO_SOLDA[0] / 2, fy - FIO_SOLDA[1] / 2,
+                                       x + FIO_SOLDA[0] / 2, fy + FIO_SOLDA[1] / 2))
         # the bevels: two modules a side, along y; the wire slots at the two
         # ends of each pocket; where the shell's long walls stop under the
         # bevel; how far in the bevel solid may reach at the lid (the glass)
@@ -433,9 +497,29 @@ class Caixa:
         led = pecas.get("D601")
         if led and not led["atras"] and led["y"] >= SOMBRA_DISPLAY[1]:
             self.furo_led = quadrado(PLACA_X0 + led["x"], PLACA_Y0 + led["y"], LED_FURO)
+        self.furos_led_carga = {}
+        for ref in LEDS_DE_CARGA:
+            q = pecas.get(ref)
+            if q and not q["atras"] and q["y"] >= SOMBRA_DISPLAY[1]:
+                self.furos_led_carga[ref] = quadrado(PLACA_X0 + q["x"], PLACA_Y0 + q["y"], LED_CARGA_FURO)
+        # The floor of the membrane recess is a plate of its own, and until
+        # 2026-10-18 it was cut only for the keys: the window of the RGB LED,
+        # which sits in the key row, was open in the full plate and closed in
+        # the recess, so its light never left the case. Every LED window inside
+        # the recess is cut through its floor too; the TPU membrane over it is
+        # natural (translucent), and the light goes through it.
+        rx = self.rebaixo_membrana
+        self.furos_rebaixo = list(self.furos_teclas)
+        for f in [self.furo_led] + list(self.furos_led_carga.values()):
+            if f and rx and rx[0] <= f[0] and f[2] <= rx[2] and rx[1] <= f[1] and f[3] <= rx[3]:
+                self.furos_rebaixo.append(f)
         luz = pecas.get("U505")
         if luz and not luz["atras"] and luz["y"] >= SOMBRA_DISPLAY[1]:
             self.furo_sensor = quadrado(PLACA_X0 + luz["x"], PLACA_Y0 + luz["y"], SENSOR_FURO)
+        # the counterbore of the sensor window's clear disk
+        self.rebaixo_sensor = None
+        if self.furo_sensor:
+            self.rebaixo_sensor = quadrado(PLACA_X0 + luz["x"], PLACA_Y0 + luz["y"], SENSOR_REBAIXO)
         # USB-C notch in the bottom wall (and the lid's rim), centred on
         # J101; it starts 0,3 BELOW the board's top face, because the
         # receptacle's shell sits on that face (at +0,2 the wall's edge
@@ -573,6 +657,7 @@ class Caixa:
         z0, z1 = z_base, z_base + TAMPA
         furos = [self.janela] + self.furos_teclas + [quadrado(x, y, 2.2) for x, y in PARAFUSO_TAMPA]
         furos += [f for f in (self.furo_led, self.furo_sensor) if f] + self.furos_fio
+        furos += list(self.furos_led_carga.values())
         # the rim on the short sides and corners (the long sides are the bevels)
         longos = set(self._segmentos_longos())
         n = len(self.fora)
@@ -595,6 +680,9 @@ class Caixa:
         rx = self.rebaixo_membrana
         fx0, fy0, fx1, fy1 = self.faceta
         especiais = [(fx0, fy0, fx1, fy1)] + ([rx] if rx else [])
+        rs = self.rebaixo_sensor
+        if rs:
+            especiais.append(rs)
         # the plate, in three bands along y: beside the bevels it starts at
         # x = CHANFRO, inside the bevel solid (which runs from its slope to
         # x_interno_chanfro); from the wall it poked through the sloped
@@ -604,7 +692,9 @@ class Caixa:
                                    (px0, cy1, px1, py1)):
             m.placa_com_furos(bx0, by0, bx1, by1, z0, z1, furos + especiais, COR_TAMPA)
         if rx:
-            m.placa_com_furos(rx[0], rx[1], rx[2], rx[3], z0, z1 - MEMBRANA_REBAIXO, self.furos_teclas, COR_TAMPA)
+            m.placa_com_furos(rx[0], rx[1], rx[2], rx[3], z0, z1 - MEMBRANA_REBAIXO, self.furos_rebaixo, COR_TAMPA)
+        if rs:
+            m.placa_com_furos(rs[0], rs[1], rs[2], rs[3], z0, z1 - SENSOR_REBAIXO_ESP, [self.furo_sensor], COR_TAMPA)
         # the facet plateau: base with the wire holes, pockets, the cover step
         m.placa_com_furos(fx0, fy0, fx1, fy1, z0, z0 + FACETA_FUNDO, self.furos_fio, COR_TAMPA)
         topo = z1 + FACETA_ALT
@@ -648,7 +738,7 @@ class Caixa:
         c = COBERTURA_ESP * math.sqrt(2)
         return dict(A=A, B=B, C=C, D=D, E=E, s=s, nrm=nrm, comp=comp, meio=meio, P=P, t=t,
                     off=off, A_=(c, z_pe), B_=(CHANFRO + c, z_top),
-                    h_mod=(MODULO_H + 2 * MODULO_FOLGA) / 2)
+                    h_mod=(MODULO_H + 2 * MODULO_FOLGA_L) / 2)
 
     @staticmethod
     def _limpar(pol):
@@ -689,7 +779,7 @@ class Caixa:
         the piece below the slot and the piece above it."""
         g = self._geo_chanfro(dz)
         C, D, E, P = g["C"], g["D"], g["E"], g["P"]
-        c, e, h, t = COBERTURA_ESP, MODULO_ESP + 0.1, g["h_mod"], g["t"]
+        c, e, h, t = COBERTURA_ESP, MODULO_BOLSO, g["h_mod"], g["t"]
         fs = FIO_CHANFRO_S / 2
         baixo = [g["A_"], P(-h, c), P(-h, c + e), P(-fs, c + e), P(-fs, t), E]
         cima = [P(fs, c + e), P(h, c + e), P(h, c), g["B_"], C, D, P(fs, t)]
@@ -697,13 +787,14 @@ class Caixa:
 
     def perfis_modulo_chanfro(self, lado: str, dz: float = 0.0) -> tuple[list, list]:
         """The module's and the cover strip's cross-sections on one bevel:
-        the module lies in its pocket 0,1 below the recess, the strip fills
+        a nominal module on its tape on the pocket's floor, the strip filling
         the recess from the wall's top to the lid's top (a parallelogram,
         its ends horizontal)."""
         g = self._geo_chanfro(dz)
         P = g["P"]
         c, h = COBERTURA_ESP, MODULO_H / 2
-        quad_mod = [P(-h, c + 0.1), P(h, c + 0.1), P(h, c + 0.1 + MODULO_ESP), P(-h, c + 0.1 + MODULO_ESP)]
+        d0 = c + MODULO_BOLSO - MODULO_FITA - MODULO_ESP      # the module's top
+        quad_mod = [P(-h, d0), P(h, d0), P(h, d0 + MODULO_ESP), P(-h, d0 + MODULO_ESP)]
         quad_cob = [g["A"], g["B"], g["B_"], g["A_"]]
         return self._espelhar(lado, quad_mod), self._espelhar(lado, quad_cob)
 
@@ -725,7 +816,7 @@ class Caixa:
                     m.prisma_yz(pol, ya, yb, COR_TAMPA)
                 continue
             if any(a <= ym <= b for a, b in meus):
-                pol = self._perfil_chanfro(lado, dz, MODULO_ESP + 0.1)
+                pol = self._perfil_chanfro(lado, dz, MODULO_BOLSO)
             elif any(a - COBERTURA_FOLGA <= ym <= b + COBERTURA_FOLGA for a, b in meus):
                 pol = self._perfil_chanfro(lado, dz, 0.0)
             else:
@@ -739,7 +830,7 @@ class Caixa:
         m = Malha()
         (sx, sy), (cx, cy) = self.teclas[i], self.capas[i]
         z_pe = self.topo_tecla + dz
-        z_topo = TAMPA_Z0 + TAMPA - MEMBRANA_REBAIXO + dz     # flush with the recess floor
+        z_topo = TAMPA_Z0 + TAMPA - MEMBRANA_REBAIXO - TECLA_FOLGA + dz   # just under the membrane
         if origem is not None:
             ox, oy, oz = cx - origem[0], cy - origem[1], z_pe - origem[2]
             sx, sy, cx, cy, z_pe, z_topo = sx - ox, sy - oy, cx - ox, cy - oy, z_pe - oz, z_topo - oz
@@ -770,13 +861,20 @@ class Caixa:
         x0, y0, x1, y1 = self.cobertura_faceta
         cob.caixa(x0, y0, topo - COBERTURA_ESP, x1, y1, topo, COR_COBERTURA)
         for bx0, by0, bx1, by1 in self.bolsos_faceta:
-            mod.caixa(bx0 + MODULO_FOLGA, by0 + MODULO_FOLGA, topo - COBERTURA_ESP - MODULO_ESP - 0.1,
-                      bx1 - MODULO_FOLGA, by1 - MODULO_FOLGA, topo - COBERTURA_ESP - 0.1, COR_MODULO)
+            z_mod = topo - COBERTURA_ESP - MODULO_BOLSO + MODULO_FITA
+            mod.caixa(bx0 + MODULO_FOLGA, by0 + MODULO_FOLGA_L, z_mod,
+                      bx1 - MODULO_FOLGA, by1 - MODULO_FOLGA_L, z_mod + MODULO_ESP, COR_MODULO)
         # on the bevels: the module in its pocket, the strip in the recess
         for lado, ya, yb in self.modulos_chanfro:
             quad_mod, quad_cob = self.perfis_modulo_chanfro(lado, dz)
             mod.prisma_yz(quad_mod, ya + MODULO_FOLGA, yb - MODULO_FOLGA, COR_MODULO)
             cob.prisma_yz(quad_cob, ya - COBERTURA_FOLGA, yb + COBERTURA_FOLGA, COR_COBERTURA)
+        # the light sensor's clear disk, flush with the lid in its counterbore
+        rs = self.rebaixo_sensor
+        if rs:
+            z_t = TAMPA_Z0 + TAMPA + dz
+            cob.caixa(rs[0] + 0.1, rs[1] + 0.1, z_t - SENSOR_REBAIXO_ESP + 0.1,
+                      rs[2] - 0.1, rs[3] - 0.1, z_t, COR_COBERTURA)
         return cob, mod
 
     def celula_e_display_3d(self, dz_display: float = 0.0) -> Malha:
@@ -1049,7 +1147,7 @@ def pagina_1(doc, cx: Caixa):
     zr(DISPLAY_Z1, cx.display[1], TAMPA_Z0, cx.display[3], (0.5, 0.5, 0.5), (0.9, 0.9, 0.7), 0.2)   # tape
     zr(T_C, cx.faceta[1], T_C + FACETA_ALT, cx.faceta[3], (0.1, 0.1, 0.1), (0.80, 0.81, 0.83))
     for b in cx.bolsos_faceta:
-        zr(T_C + FACETA_ALT - COBERTURA_ESP - MODULO_ESP - 0.1, b[1], T_C + FACETA_ALT - COBERTURA_ESP, b[3],
+        zr(T_C + FACETA_ALT - COBERTURA_ESP - MODULO_BOLSO, b[1], T_C + FACETA_ALT - COBERTURA_ESP, b[3],
            (0.1, 0.12, 0.3), (0.35, 0.40, 0.55), 0.4)
     zr(T_C + FACETA_ALT - COBERTURA_ESP, cx.cobertura_faceta[1], T_C + FACETA_ALT, cx.cobertura_faceta[3],
        (0.2, 0.4, 0.5), (0.80, 0.88, 0.92), 0.4)
@@ -1098,7 +1196,7 @@ def pagina_2(doc, cx: Caixa):
     xz(cx.janela[0], TAMPA_Z0, cx.janela[2], T_C, (0.1, 0.1, 0.1), (1, 1, 1), 0.3)
     xz(cx.display[0], DISPLAY_Z1, cx.display[2], TAMPA_Z0, (0.5, 0.5, 0.5), (0.9, 0.9, 0.7), 0.2)   # tape
     for lado in ("L", "R"):
-        pol = cx._perfil_chanfro(lado, 0.0, MODULO_ESP + 0.1)
+        pol = cx._perfil_chanfro(lado, 0.0, MODULO_BOLSO)
         bv.poli([(x, -z) for x, z in pol], (0.1, 0.1, 0.1), (0.80, 0.81, 0.83), 0.6)
         quad_mod, quad_cob = cx.perfis_modulo_chanfro(lado)
         bv.poli([(x, -z) for x, z in quad_mod], (0.1, 0.12, 0.3), (0.35, 0.40, 0.55), 0.5)
@@ -1158,11 +1256,12 @@ def pagina_2(doc, cx: Caixa):
     mz(b[0] - 2.0, TAMPA_Z0, b[2] + 2.0, TAMPA_Z0 + FACETA_FUNDO, (0.1, 0.1, 0.1), (0.80, 0.81, 0.83))
     mz(b[0] - 2.0, TAMPA_Z0 + FACETA_FUNDO, b[0], topo - COBERTURA_ESP, (0.1, 0.1, 0.1), (0.80, 0.81, 0.83))
     mz(b[2], TAMPA_Z0 + FACETA_FUNDO, b[2] + 2.0, topo - COBERTURA_ESP, (0.1, 0.1, 0.1), (0.80, 0.81, 0.83))
-    mz(b[0] + MODULO_FOLGA, topo - COBERTURA_ESP - 0.1 - MODULO_ESP, b[2] - MODULO_FOLGA, topo - COBERTURA_ESP - 0.1,
+    z_mod = topo - COBERTURA_ESP - MODULO_BOLSO + MODULO_FITA
+    mz(b[0] + MODULO_FOLGA, z_mod, b[2] - MODULO_FOLGA, z_mod + MODULO_ESP,
        (0.1, 0.12, 0.3), (0.35, 0.40, 0.55))
     mz(b[0] - 1.0, topo - COBERTURA_ESP, b[2] + 1.0, topo, (0.2, 0.4, 0.5), (0.80, 0.88, 0.92))
-    mv.texto(0.2, -TAMPA_Z0 - 0.2, f"tampa ({f2(FACETA_FUNDO)} sob o bolso; furos de fio o1)", 4.5, (0.1, 0.1, 0.1))
-    mv.texto(2.6, -(topo - COBERTURA_ESP - 0.1) - 0.6, f"modulo 23 x 8 x {f2(MODULO_ESP)}, colado no fundo do bolso", 4.5, (0.1, 0.12, 0.3))
+    mv.texto(0.2, -TAMPA_Z0 - 0.2, f"tampa ({f2(FACETA_FUNDO)} sob o bolso; fendas de solda de {f2(FIO_SOLDA[0])} x {f2(FIO_SOLDA[1])})", 4.5, (0.1, 0.1, 0.1))
+    mv.texto(2.6, -(z_mod + MODULO_ESP) - 0.6, f"modulo 23 x 8 x {f2(MODULO_ESP)} (+-{f2(MODULO_TOL)}) em fita de {f2(MODULO_FITA)}", 4.5, (0.1, 0.12, 0.3))
     mv.texto(2.6, -topo - 0.4, f"cobertura transparente {f2(COBERTURA_ESP)} (resina clara ou PET), colada no degrau", 4.5, (0.2, 0.4, 0.5))
     mv.cota_h(-TAMPA_Z0 + 1.6, b[0] - xm, b[2] - xm, f"bolso {f2(b[2] - b[0])}", acima=False)
 
@@ -1170,7 +1269,8 @@ def pagina_2(doc, cx: Caixa):
 def conflitos(cx: Caixa) -> list[str]:
     out = []
     p = cx.pecas
-    for ref, nome in (("D601", "LED RGB"), ("U505", "sensor de luz OPT3001")):
+    for ref, nome in (("D601", "LED RGB"), ("U505", "sensor de luz OPT3001"),
+                      ("D103", "LED de carga"), ("D104", "LED de erro da carga")):
         q = p.get(ref)
         if q and (q["atras"] or q["y"] < SOMBRA_DISPLAY[1]):
             out.append(f"{ref} ({nome}) esta em ({q['x']:g}; {q['y']:g}) da placa, "
@@ -1208,7 +1308,7 @@ def pagina_3(doc, cx: Caixa):
         f"Tampa presa por 4 parafusos M2 nos cantos, em bossas de o{BOSSA_D:g} com furo de o{BOSSA_FURO:g} (auto-atarraxante); a vedacao da linha de particao (cordao de silicone ou junta cortada) nao esta desenhada. No fundo: {len(cx.furos_fundo)} furos (som do buzzer, respiro do barometro com rebaixo para a membrana).",
         f"USB-C: entalhe de {cx.usb[1] - cx.usb[0]:g} x {f2(cx.usb[3] - cx.usb[2])} na parede de baixo e na aba da tampa, e uma porta de {f2(cx.porta[1] - cx.porta[0])} x {f2(cx.porta[3] - cx.porta[2])} x {PORTA_ESP:g} por fora, articulada em dois ressaltos no alto (pino de o1,5, nao desenhado), que fecha sobre o entalhe com {PORTA_ABA:g} mm de aba; aberta, passa o cabo para carregar e para o disco USB (docs/09). Uma junta de silicone entre a porta e a parede e o que a torna estanque, e nao esta desenhada.",
         f"Antena GNSS externa (opcao): berco de {ANT_EXT_W + 2 * ANT_EXT_FOLGA:g} x {ANT_EXT_ESP + 2 * ANT_EXT_FOLGA:g} entre duas nervuras contra a parede de cima, com um labio baixo na frente, para uma patch de {ANT_EXT_W:g} x {ANT_EXT_H:g} x {ANT_EXT_ESP:g} em pe (a parede de cima aponta para o ceu com o aparelho inclinado no guidao); o rabicho U.FL vai ao J302 da placa, a {f2(math.hypot((cx.berco[0] + cx.berco[2]) / 2 - (PLACA_X0 + cx.pecas['J302']['x']), cx.berco[3] - (PLACA_Y0 + cx.pecas['J302']['y']))) if 'J302' in cx.pecas else '-'} mm. Com a externa ligada, o jumper JP301 tira a antena de chip do circuito.",
-        "Nao desenhados: o engate de quarto de volta atras, a saida dos fios dos seis modulos ate J103, J104 e J105 (passam pelos furos de o1 e correm por dentro da tampa), o pino e a junta da porta, textos e logotipo.",
+        "Nao desenhados: o engate de quarto de volta atras, a saida dos fios dos seis modulos ate o J103 (passam pelas fendas sob os terminais e correm por dentro da tampa), o pino e a junta da porta, textos e logotipo.",
         "Nada disto e decisao final: e uma proposta desenhada em volta da placa de hoje, para decidir em cima dela, e nao foi impressa.",
     ]
     for s in itens:
@@ -1225,9 +1325,9 @@ def pagina_3(doc, cx: Caixa):
     y += 15
     for s in [
         "caixa-concha.stl (PETG ou ASA, 0,2 mm, sem suporte); caixa-tampa.stl (idem, impressa de cabeca para baixo, com suporte sob os chanfros); caixa-tecla-1/2/3.stl (resina ou PETG); "
-        "caixa-membrana-teclas.stl (TPU 0,3 mm, ou filme de PET cortado); caixa-cobertura-faceta.stl e caixa-cobertura-chanfro.stl (4x, uma tira em paralelogramo com as pontas horizontais, do alto da parede ao alto da tampa): "
-        "resina transparente, ou PET de 0,5 cortado no tamanho; caixa-porta-usb.stl (PETG, com o pino de o1,5 a parte).",
-        "Ferragens: 4 parafusos M2 x 8 (tampa), 1 M2 x 6 (placa), fita dupla face de 0,5 para a celula e os modulos, fita de 0,2 para o display, silicone neutro para as coberturas e a particao.",
+        "caixa-membrana-teclas.stl: o contorno para cortar filme de TPU ou PU de 0,2 a 0,3 mm, natural (impressa com 0,3 mm, em uma ou duas camadas, a TPU fica com poros e nao veda), colado com cordao continuo em volta do rebaixo; caixa-cobertura-faceta.stl e caixa-cobertura-chanfro.stl (4x, uma tira em paralelogramo com as pontas horizontais, do alto da parede ao alto da tampa): "
+        "PC ou PET de 0,5 cortado a laser no contorno do STL (resina transparente amarela e espalha a luz), colado com silicone de cura neutra; caixa-porta-usb.stl (PETG, com o pino de o1,5 a parte).",
+        "Ferragens: 4 parafusos M2 x 8 (tampa), 1 M2 x 6 (placa), fita dupla face de 0,5 para a celula e de 0,15 (classe 3M 9080A) para os modulos, fita de 0,2 para o display, silicone neutro para as coberturas e a particao.",
         "Os STL sao sopas de triangulos de caixas sobrepostas (o fatiador as une), nao solidos de CAD; servem para imprimir a primeira prova, nao para usinar.",
     ]:
         y = _paragrafo(page, 30, y, s, 7.2)

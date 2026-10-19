@@ -13,6 +13,31 @@ Avaliação de engenharia, bloco a bloco, dos componentes principais da placa no
 > Sharp LS027B7DH01A + filme Azumo que a lista tinha adotado. A Sharp segue
 > como plano B ([Display](#display)).
 
+> [!NOTE]
+> **Depois desta avaliação, o CAD trocou várias escolhas**, a maioria em
+> 2026-09-24, quando a placa passou a ser montada na JLCPCB com peças da
+> LCSC, e o resto na revisão do esquemático de 2026-10-18
+> ([11](../hardware_gnssbike/11-revisao-do-esquematico.md)). O texto abaixo
+> guarda a avaliação como foi feita; o que a placa monta hoje, peça a peça,
+> está em [materiais por folha](../hardware_gnssbike/05-materiais.md).
+>
+> | Bloco | Escolha desta avaliação | No CAD em 2026-10-19 | Desde |
+> |---|---|---|---|
+> | Carga pelo painel | e-peas AEM10900, indutor de 4,7 µH | Analog Devices ADP5091, indutor Sunlord de 22 µH; o corte térmico é um comparador TLV7031 alimentado pelo `VBAT_SYS` | 2026-09-24; o comparador em 2026-09-26, no `VBAT_SYS` em 2026-10-18 |
+> | MCU | Fanstel BM20C | MinewSemi ME54BS13 (o BM20C fica de alternativa, com outro footprint) | 2026-09-23 |
+> | Display | JDI LPM027M128C, com a Sharp no plano B | a JDI ou a Sharp LS027B7DH01A, nua ou como o Azumo 11103-06, no mesmo Molex 503480-1000, com um boost TPS610997 para os 5 V da Sharp; a JDI saiu de venda | 2026-10-18 |
+> | Antena GNSS | TE L000670 | Unictron H2UJ4U1H2Q0100 na borda de cima, ou uma externa pelo u.FL `J302` | 2026-09-24 |
+> | Magnetômetro | Memsic MMC5633NJL | Memsic MMC5603NJ, mesmo endereço e mesmo ID | 2026-09-24 |
+> | Armazenamento | NOR soldada atrás da `LDSW1`, microSD no protótipo | MX25R6435F no `3V0`, em deep power-down, sem soquete | 2026-10-18 |
+> | USB-C | Molex 2036150003 | HRO TYPE-C-31-M-12 | 2026-09-24 |
+> | Proteção do VBUS | TI ESD761 | Nexperia PESD24VS1UL, 24 V de trabalho (o TI TPD1E05U06, de 5,5 V, esteve no lugar de 2026-09-24 a 2026-10-18) | 2026-10-18 |
+> | Bateria | dois NTC na célula | um NTC no pack, para o JEITA de 0 a 45 °C, e o NTC do corte solar na placa (`RT101`) | 2026-09-26; o JEITA em 2026-10-18 |
+> | Teclas | Omron B3S-1002P | XunPu TS-1088R-02026 | 2026-09-24 |
+> | LED RGB | Kingbright APTF1616SEEZGKQBKC | TUOZHAN S4-3528RGBTA-A | 2026-09-24 |
+> | Buzzer | Same Sky CPT-1117-83-SMT-TR | Same Sky CPT-12123-81-SMT-TR (o Murata PKLCS1212E4001-R1 esteve no lugar de 2026-09-24 a 2026-10-18) | 2026-10-18 |
+> | Luz do display | um resistor de 39 Ω | um de 150 Ω por catodo da JDI, e 39,2 Ω para a luz do Azumo | 2026-09-26; o Azumo em 2026-10-18 |
+> | Conector da bateria | JST GH de 6 vias | JST SH SM06B-SRSS-TB, que cabe sob a tampa | 2026-09-26 |
+
 **Nesta página:** [Resumo](#resumo) · [Critérios](#critérios) · [Carga: USB-C e painel solar](#carga-usb-c-e-painel-solar) · [GNSS](#gnss) · [Módulo do MCU](#módulo-do-mcu) · [Display](#display) · [Antena GNSS](#antena-gnss) · [Sensores](#sensores) · [Armazenamento](#armazenamento) · [USB-C e proteção](#usb-c-e-proteção) · [Bateria](#bateria) · [Tradutor de nível e backup do GNSS](#tradutor-de-nível-e-backup-do-gnss) · [Interface](#interface) · [Bancada antes do layout](#bancada-antes-do-layout) · [Referências](#referências)
 
 ## Resumo
@@ -20,20 +45,20 @@ Avaliação de engenharia, bloco a bloco, dos componentes principais da placa no
 | Bloco | Escolha | Por quê | Plano B |
 |---|---|---|---|
 | Carga pelo USB-C | Nordic nPM1300 (QFN32) | carregador de 32 a 800 mA com power path, CC sem resistor externo, 2 bucks, 2 chaves, ship mode de 370 nA e driver no NCS v3.3.0 | nenhum candidato junta tudo isso com driver |
-| Carga pelo painel | e-peas AEM10900 (QFN28), indutor de 4,7 µH | o único avaliado com MPPT na faixa das strings de 3 células, cerca de 90 % de rendimento a 1,5–1,7 V e corte térmico sem MCU | nenhum com corte térmico e 80 mA; o BQ25798 pediria strings de 7 células ou mais |
-| Convivência das cargas | o USB bloqueia o solar no hardware (DIS_STO_CH pelo VBUSOUT) | os dois carregadores nunca trabalham juntos | bloqueio por registrador, pelo firmware |
+| Carga pelo painel | e-peas AEM10900 (QFN28), indutor de 4,7 µH — **no CAD desde 2026-09-24: Analog Devices ADP5091**, com indutor de 22 µH | o único avaliado com MPPT na faixa das strings de 3 células, cerca de 90 % de rendimento a 1,5–1,7 V e corte térmico sem MCU | nenhum com corte térmico e 80 mA; o BQ25798 pediria strings de 7 células ou mais |
+| Convivência das cargas | o USB bloqueia o solar no hardware (DIS_STO_CH pelo VBUSOUT; com o ADP5091, o `DIS_SW`) | os dois carregadores nunca trabalham juntos | bloqueio por registrador, pelo firmware |
 | Medição | Analog Devices MAX17262 | vê as duas fontes, também com o aparelho desligado | nRF Fuel Gauge corrigido pelo APM (perde a carga em ship mode) |
 | GNSS | u-blox MAX-F10S, L1 + L5 | 1 m de CEP contra 1,5 m, no mesmo encapsulamento MAX e com o mesmo driver UBX; é o multibanda que menos consome (46,8 mW contra 59 do LC79H e 79 do LC29H). Custa autonomia: o aparelho vai a cerca de 58 mW e dura cerca de 115 h, contra 21 mW e 310 h do MAX-M10N-10B em LEAP | MAX-M10N-10B no mesmo footprint |
-| MCU | Fanstel BM20C (nRF54LM20A) | módulo certificado, 64 GPIO, antena e cristais inclusos; o QFN52 não tem pinos suficientes | chip em CSP98 com antena própria |
-| Display | **JDI LPM027M128C**, MIP de 8 cores com luz frontal integrada (decidido em 2026-09-23) | peça única: sem etapa de laminação, mesma resolução, 30 µW a 1 quadro/s contra 175 µW da Sharp, e cor. Custa R$ 776 contra US$ 90,06 do par, **sem canal autorizado e sem garantia** | Sharp LS027B7DH01A com o filme Azumo 11103-06_A1, no mesmo conector |
-| Antena GNSS | TE L000670 no protótipo | L1 e L5 numa alimentação só: o F10S precisa das duas bandas, e ela ainda serve ao M10N do A/B | elementos de parede sob medida |
+| MCU | Fanstel BM20C (nRF54LM20A) — **o CAD monta o MinewSemi ME54BS13** ([Módulo do MCU](#módulo-do-mcu)) | módulo certificado, 64 GPIO, antena e cristais inclusos; o QFN52 não tem pinos suficientes | chip em CSP98 com antena própria |
+| Display | **JDI LPM027M128C**, MIP de 8 cores com luz frontal integrada (decidido em 2026-09-23) | peça única: sem etapa de laminação, mesma resolução, 30 µW a 1 quadro/s contra 175 µW da Sharp, e cor. Custa R$ 776 contra US$ 90,06 do par, **sem canal autorizado e sem garantia** | Sharp LS027B7DH01A, nua ou como o Azumo 11103-06, no mesmo conector: **desde 2026-10-18 a placa aceita as duas telas**, e a JDI saiu de venda |
+| Antena GNSS | TE L000670 no protótipo — **no CAD desde 2026-09-24: Unictron H2UJ4U1H2Q0100**, com o u.FL `J302` de alternativa | L1 e L5 numa alimentação só: o F10S precisa das duas bandas, e ela ainda serve ao M10N do A/B | elementos de parede sob medida |
 | Barômetro | Bosch BMP585 | robusto a água e produtos químicos (15 bar sem efeito, pela ficha), 1,3 µA a 1 Hz, ±0,5 Pa/K | ST LPS28DFW |
-| IMU e magnetômetro | Bosch BMI270 e Memsic MMC5633NJL | em estoque, com driver no NCS v3.3.0 e despertar por movimento; o footprint do IMU aceita o ST LSM6DSV16X | ST LSM6DSV16X e LIS2MDL, quando voltarem ao estoque |
+| IMU e magnetômetro | Bosch BMI270 e Memsic MMC5633NJL — **no CAD, o MMC5603NJ** desde 2026-09-24 | em estoque, com driver no NCS v3.3.0 e despertar por movimento; o footprint do IMU aceita o ST LSM6DSV16X | ST LSM6DSV16X e LIS2MDL, quando voltarem ao estoque |
 | Luz ambiente | TI OPT3001 | resposta do olho humano, 1,8 µA | Vishay VEML7700 |
-| Armazenamento | **flash NOR SPI soldada** (microSD só no protótipo) | preço: o SD NAND de 1 Gbyte sai por mais que o resto do armazenamento vale, e o aparelho usa dezenas de megabytes, não gigabytes | SD NAND XTX; microSD em soquete com tampa |
-| USB-C | receptáculo IPX8 Molex 2036150003 | dispensa a tampa de borracha; o desenho confirma o anel de vedação | Amphenol 12402484E512A, depois do desenho; GCT USB4105-GF-A com tampa |
-| Proteção do USB | TI ESD761 no VBUS, TI TPD4E05U06 no D+, D−, CC1 e CC2 | o TVS do VBUS não conduz até 24 V e preserva os 22 V do nPM1300 | TI TVS2200 no VBUS |
-| Bateria | LiPo de 1 célula, 2000 mAh, com PCM e 2 NTC | 60 × 36 × 7 mm; o PCM é obrigatório (o nPM1300 não tem UVLO) | 2500 mAh se a caixa crescer |
+| Armazenamento | **flash NOR SPI soldada** (microSD só no protótipo; no CAD não há soquete, e a flash fica no `3V0` desde 2026-10-18) | preço: o SD NAND de 1 Gbyte sai por mais que o resto do armazenamento vale, e o aparelho usa dezenas de megabytes, não gigabytes | SD NAND XTX; microSD em soquete com tampa |
+| USB-C | receptáculo IPX8 Molex 2036150003 — **no CAD desde 2026-09-24: HRO TYPE-C-31-M-12** | dispensa a tampa de borracha; o desenho confirma o anel de vedação | Amphenol 12402484E512A, depois do desenho; GCT USB4105-GF-A com tampa |
+| Proteção do USB | TI ESD761 no VBUS, TI TPD4E05U06 no D+, D−, CC1 e CC2 — **no VBUS, desde 2026-10-18, o Nexperia PESD24VS1UL** | o TVS do VBUS não conduz até 24 V e preserva os 22 V do nPM1300 | TI TVS2200 no VBUS |
+| Bateria | LiPo de 1 célula, 2000 mAh, com PCM e 2 NTC (desde 2026-09-26, um NTC no pack e o do corte solar na placa) | 60 × 36 × 7 mm; o PCM é obrigatório (o nPM1300 não tem UVLO) | 2500 mAh se a caixa crescer |
 | Backup do GNSS | TI TPS7A02 | 25 nA no backup | — |
 | Tradutor de nível | **nenhum, desde 2026-09-26**: o receptor passou a 3,0 V, no trilho do MCU (opção 1 da tabela 35 do manual de integração) | o BUCK1 é de ±5 % e o projeto de 1,8 V pede ±2 %; o LDO de ±1 % custava 35 mW na bateria, a opção 1 custa 11 | TI TXU0204 com o receptor a 1,8 V, o que era |
 
@@ -48,6 +73,15 @@ Avaliação de engenharia, bloco a bloco, dos componentes principais da placa no
 7. **Risco técnico:** comportamento não documentado conta contra e vira item de [bancada](#bancada-antes-do-layout).
 
 ## Carga: USB-C e painel solar
+
+> [!NOTE]
+> O colhedor que esta seção escolhe, o AEM10900, saiu do CAD em
+> 2026-09-24: a linha e-peas inteira estava com estoque zero na LCSC. O
+> ADP5091 que o substituiu não tem I²C nem entrada de temperatura, e o
+> corte térmico virou um comparador externo, alimentado pelo `VBAT_SYS`
+> desde 2026-10-18; o bloqueio pelo USB é o mesmo, no `DIS_SW`
+> ([01](../hardware_gnssbike/01-esquematico.md#folha-1--energia)). O JEITA
+> do nPM1300 só carrega de 0 a 45 °C desde 2026-10-18.
 
 ### Requisitos
 
@@ -105,7 +139,7 @@ O nRF Fuel Gauge da Nordic roda no MCU e usa a corrente que o nPM1300 mede no pr
 | Consumo | 5,2 µA em hibernação (12 µA no máximo), 16 µA ativo, 0,5 µA desligado |
 | Medição de tensão | erro de ±7,5 mV a 25 °C (±20 mV de −40 a 85 °C) |
 | Temperatura | TH no BATT, usando o sensor interno de ±1 °C: os dois NTC da célula já estão ocupados; o CI fica junto do conector da bateria. A configuração de fábrica (0x2210) liga o ETHRM, e o firmware grava ETHRM = 0 com TSel = 0 |
-| Outros pinos | REG (1,8 V interno) com 0,47 µF, sem carga externa; ALRT em dreno aberto para o MCU |
+| Outros pinos | REG (1,8 V interno) com 0,47 µF, sem carga externa; ALRT ao GND, como a ficha pede quando o alerta não é usado (até 2026-10-19, dreno aberto com pull-up) |
 | I2C | 0x36; binding `maxim,max17262`, que pede capacidade, tensões de projeto, de carga e de vazio, e a corrente de carga |
 
 ### Convivência das duas cargas
@@ -287,6 +321,17 @@ Valem para o MAX-F10S e para o MAX-M10N-10B: as duas peças têm a mesma pinagem
 
 O MCU está decidido (nRF54LM20A); a escolha aqui é como montá-lo.
 
+> [!NOTE]
+> **O esquemático e o CAD montam o MinewSemi ME54BS13** desde o primeiro
+> desenho, de 2026-09-23: 16,5 × 12,0 × 2,4 mm, 80 pads e antena de PCB
+> ([01](../hardware_gnssbike/01-esquematico.md#folha-2--mcu)). A
+> [lista de compras](19-lista-de-compras.md#mcu-e-rádio) o segue desde
+> 2026-10-19, como peça consignada na JLCPCB, com o BM20C de alternativa,
+> que pede outro footprint. A escolha abaixo é a desta avaliação, de
+> 2026-09-18; fechar o ME54BS13 como escolha do projeto, com a certificação
+> e o cristal de 32,768 kHz ainda por confirmar, é decisão do dono
+> ([hardware](../hardware_gnssbike/README.md#decisões-que-são-do-dono)).
+
 | Opção | Dados | Veredito |
 |---|---|---|
 | **Fanstel BM20C** | nRF54LM20A (ou B) em 10,0 × 16,2 × 2 mm (a página e o texto da ficha dizem 14,8 mm; a tabela, o desenho e a biblioteca da Fanstel, 16,2 mm), antena em chip, cristais de 32 MHz e de 32,768 kHz integrados; a página da Fanstel cita 90 pinos LGA e 66 GPIO, e a pinagem da ficha, 64 (o cristal de 32,768 kHz ocupa P1.20 e P1.21); FCC ID X8WBM20C, ISED 4100A-BM20C e TELEC R201-260622, conforme na Europa e na Austrália e Nova Zelândia; produção prevista para 09/2026; US$ 6,50 (US$ 5,94 no lote de mil) | **escolhido** |
@@ -303,6 +348,16 @@ O BM20C tem pinos LGA, não castelados: a montagem é por estêncil e forno, com
 4. **Variante do chip:** o `sdk-ant` e o port compilam para o nRF54LM20A; as placas de avaliação da Fanstel usam o nRF54LM20B.
 
 ## Display
+
+> [!NOTE]
+> **Desde 2026-10-18 a placa aceita as duas telas** no mesmo conector de
+> sinal, um Molex 503480-1000 de contato dos dois lados: a JDI
+> LPM027M128C, que continua sendo a padrão e saiu de venda, ou a Sharp
+> LS027B7DH01A, nua ou como o módulo Azumo 11103-06, com os 5 V de um boost
+> TPS610997 e um `JP401` de três pads que escolhe a tensão. A luz da JDI vai
+> num Molex 503480-0540 e a do Azumo, num 503480-0440 no verso
+> ([revisão](../hardware_gnssbike/11-revisao-do-esquematico.md#as-duas-telas-na-mesma-placa),
+> [01](../hardware_gnssbike/01-esquematico.md#folha-4--display)).
 
 > [!IMPORTANT]
 > **Decidido pelo dono em 2026-09-23: o JDI LPM027M128C.** Peça única,
@@ -325,7 +380,7 @@ O BM20C tem pinos LGA, não castelados: a montagem é por estêncil e forno, com
 > que não está em fonte nenhuma, e a **peça do conector de 5 vias**; nenhuma
 > das duas trava o layout, porque posicionar não depende da ordem, só o
 > roteamento depende
-> ([J402](../hardware_gnssbike/06-conectores-e-pontos-de-teste.md#j402--luz-do-lpm027m128c),
+> ([J402](../hardware_gnssbike/06-conectores-e-pontos-de-teste.md#j402--luz-da-jdi),
 > [esquemático, folha 4](../hardware_gnssbike/01-esquematico.md#folha-4--display)).
 
 | | JDI LPM027M128C | Sharp LS027B7DH01 |
@@ -336,7 +391,7 @@ O BM20C tem pinos LGA, não castelados: a montagem é por estêncil e forno, com
 | Entradas | VIH de 3,0 V | VIH de 2,70 a 3,00 V: aceita a lógica de 3,0 V |
 | Consumo | 5 µW parado, 30 µW a 1 quadro/s, 180 µW a 10 quadros/s | 50 µW parado, 175 µW a 1 quadro/s |
 | Luz | **16 mA a 2,67 V, integrada** na versão C, num FPC próprio de 5 vias; o `R_BL` de 39 Ω fecha pela ficha | não tem; o filme frontal Azumo 11103-06_A1 (0,05 mm, um LED de 10 mA) é laminado sobre a tela |
-| FPC | **duas interfaces**, pela `3LPM027M128C specification ver.02`: 10 vias de sinal, passo de 0,5 mm, conector indicado Hirose FH28-10S-0.5SH(05), e **5 vias só para a luz**, também com passo de 0,5 mm e tipo ZIF — os 10 pinos de sinal não têm par de LED. Falta a **ordem das cinco vias** ([J402](../hardware_gnssbike/06-conectores-e-pontos-de-teste.md#j402--luz-do-lpm027m128c)) | 10 vias, passo de 0,5 mm, **na mesma ordem**; a ficha atual (LD-28305A, tabela 8-2-1) indica o Hirose FH28-10S-0.5SH, com contato por baixo, e três de contato duplo; a antiga indicava SMK CFP-4610-0150F ou Molex 51441-1093; a luz tem cauda própria de 4 vias, no Molex 5034800440 |
+| FPC | **duas interfaces**, pela `3LPM027M128C specification ver.02`: 10 vias de sinal, passo de 0,5 mm, conector indicado Hirose FH28-10S-0.5SH(05), e **5 vias só para a luz**, também com passo de 0,5 mm e tipo ZIF — os 10 pinos de sinal não têm par de LED. Falta a **ordem das cinco vias** ([J402](../hardware_gnssbike/06-conectores-e-pontos-de-teste.md#j402--luz-da-jdi)) | 10 vias, passo de 0,5 mm, **na mesma ordem**; a ficha atual (LD-28305A, tabela 8-2-1) indica o Hirose FH28-10S-0.5SH, com contato por baixo, e três de contato duplo; a antiga indicava SMK CFP-4610-0150F ou Molex 51441-1093; a luz tem cauda própria de 4 vias, no Molex 5034800440 |
 | Compra | **sem canal autorizado e sem garantia**: a JDI não lista mais MIP, a Switch Science encerrou as vendas, a DigiKey marca como obsoletos os módulos da Azumo com esse painel e a Data Modul não tem JDI. O anúncio escolhido em 2026-09-23 é de **R$ 776** | LS027B7DH01A na DigiKey, com 3.180 em estoque; a LS027B7DH01 sem A está sem estoque |
 | Firmware | o `jdi,lpm013m126` do Zephyr aceita até 255 px por eixo e precisa de mudanças; o **driver próprio do port já aceita `jdi,lpm027m128c`**, em 3 bits, e a placa o declara | o port já desenha nele, em 1 bit |
 | Custo na placa | R$ 776, cerca de **US$ 144** a R$ 5,40 por dólar | US$ 23,61 + US$ 66,45 = **US$ 90,06**, mais o REG710 e o conector do filme |
@@ -388,7 +443,7 @@ cara ou coroa justamente na característica que se está comprando.
 
 A cor e o consumo fazem do JDI a melhor tela, e **a decisão de 2026-09-23 pagou o preço de compra para tê-la**. Nenhuma MIP colorida de 2 a 3,5" com SPI e 3,0 V está à venda por canal autorizado: as coloridas da Sharp (LS021B7DD02 e LS035Q7DD01) têm interface paralela de 6 bits e pedem 3,2 V e 5 V. A placa segue desenhada para as duas telas no mesmo conector:
 
-- **Pinagem:** conferida nas duas fichas, a ordem dos 10 pinos é a mesma (SCLK, SI, SCS, EXTCOMIN, DISP, VDDA, VDD, EXTMODE, VSS, VSSA). **Nenhum desses dez é o LED da luz** — na Sharp ele vinha na cauda do filme e no C vem num **FPC próprio de 5 vias**, com passo de 0,5 mm, pela ficha do C encontrada em 2026-09-23; falta só a ordem dessas cinco vias ([J402](../hardware_gnssbike/06-conectores-e-pontos-de-teste.md#j402--luz-do-lpm027m128c)).
+- **Pinagem:** conferida nas duas fichas, a ordem dos 10 pinos é a mesma (SCLK, SI, SCS, EXTCOMIN, DISP, VDDA, VDD, EXTMODE, VSS, VSSA). **Nenhum desses dez é o LED da luz** — na Sharp ele vinha na cauda do filme e no C vem num **FPC próprio de 5 vias**, com passo de 0,5 mm, pela ficha do C encontrada em 2026-09-23; falta só a ordem dessas cinco vias ([J402](../hardware_gnssbike/06-conectores-e-pontos-de-teste.md#j402--luz-da-jdi)).
 - **Alimentação:** 3,0 V do BUCK2, direto do `JP401` com o 0 Ω na posição do 3,0 V. Os 5 V da bomba de carga **não são montados**: o footprint do TI REG710, que a V3 usa para o LS027 ([02](02-hardware.md)), fica na placa vazio, e com ele o trilho de 5 V e o `DISP_PWR_EN` (P3.07), que volta a ficar livre. O EXTMODE vai ao VDD do display, qualquer que seja a tensão, e a inversão do VCOM vem do PWM no EXTCOMIN; na V3 o EXTMODE fica em GND e o VCOM se inverte pelo SPI ([02](02-hardware.md)), o que o driver precisa acompanhar. **Um JDI com 5 V queima**: o `JP401` tem uma posição só populada e o pad do meio é um só, de modo que a montagem não consegue pôr os dois trilhos no painel.
 - **COM a 120 Hz:** o driver aceita até 140 Hz no JDI e só 20 Hz na Sharp, e a interface pede 120 Hz com a luz acesa. Com o JDI declarado, o pedido passa; com a Sharp, ele era recusado e o COM ficava em 1 Hz ([10](10-status-do-port.md)).
 - **Conector:** o Hirose FH28-10S-0.5SH(05), com contato por baixo, aparece nas duas fichas; se a FPC for dobrada na montagem, um de contato duplo (Hirose FH34SRJ-10S-0.5SH(50)) serve à Sharp, e a amostra do JDI confirma.
@@ -398,6 +453,13 @@ A cor e o consumo fazem do JDI a melhor tela, e **a decisão de 2026-09-23 pagou
 O TFT transflectivo (ST7789, com driver no Zephyr) redesenha a tela o tempo todo e gasta cerca de 20 mW sem a luz: somaria um terço ao consumo do aparelho com o F10S, e o dobraria com o M10N em LEAP. Por isso fica fora.
 
 ## Antena GNSS
+
+> [!NOTE]
+> A TE L000670 saiu do CAD em 2026-09-24: estoque zero na LCSC e área livre
+> de 40,5 × 14,5 mm, mais larga que a placa. A antena de hoje é a Unictron
+> H2UJ4U1H2Q0100, de chip, com 5,0 × 3,0 × 0,5 mm, soldada na borda de
+> cima, com o u.FL `J302` para uma antena externa e o `JP301` escolhendo
+> uma das duas ([01](../hardware_gnssbike/01-esquematico.md#folha-3--gnss)).
 
 - **Protótipo:** TE L000670, antena de chip de 14 × 10,75 × 1 mm na borda de cima, com L1 e L5 numa alimentação só (66 % e 56 % de eficiência num plano de 90 × 41 mm). Serve ao M10N e ao F10S e mantém o teste A/B possível.
 - **Uma antena só de L1** renderia um pouco mais com o M10N, mas não serve ao F10S, que é a peça escolhida e não faz banda única. Fora de cogitação.
@@ -474,6 +536,14 @@ Ou seja, **8 MB dão os segmentos, os percursos e cerca de 35 pedais de 10 h**; 
 
 ## USB-C e proteção
 
+> [!NOTE]
+> No CAD, o receptáculo é o HRO TYPE-C-31-M-12 desde 2026-09-24, e o TVS
+> do VBUS é o Nexperia PESD24VS1UL desde 2026-10-18. Entre as duas datas o
+> lugar dele foi do TI TPD1E05U06, de 5,5 V de trabalho, o mesmo tipo de
+> peça que a tabela abaixo manda não usar no VBUS; a revisão do esquemático
+> o achou (G5) e o dono escolheu voltar a um TVS de 24 V
+> ([07](../hardware_gnssbike/07-sequencias-e-protecao.md#o-tvs-do-vbus)).
+
 | Item | Escolha | Detalhe |
 |---|---|---|
 | Conector | receptáculo USB-C IPX8: Molex 2036150003 (16 pinos, IPX8, SMT em ângulo reto; o desenho confirma o anel de vedação de silicone e recomenda placa de 0,8 mm) ou Amphenol 12402484E512A (USB 2.0, montagem sobre a placa, SMT, 5 A e 20 V; o desenho não abriu) | na série da Amphenol, silicone líquido colado à carcaça veda o corpo e um anel veda contra a parede da caixa: o aparelho dispensa a tampa de borracha. O GCT USB4105-GF-A da especificação anterior não tem grau de proteção (3,31 mm de altura, 20 mil ciclos) e pediria tampa. Altura e furo na parede saem do desenho de cada fabricante |
@@ -506,6 +576,13 @@ O nRF54LM20A tem um só VDD, de 1,7 a 3,6 V, para todos os pinos (não há domí
 
 ## Interface
 
+> [!NOTE]
+> No CAD, desde 2026-09-24, as teclas são XunPu TS-1088R-02026 e o LED RGB
+> é o TUOZHAN S4-3528RGBTA-A, que pede resistores novos; o buzzer é o Same
+> Sky CPT-12123-81-SMT-TR desde 2026-10-18; e a luz da JDI tem um resistor
+> de 150 Ω por catodo desde 2026-09-26
+> ([05](../hardware_gnssbike/05-materiais.md#folha-6--interface)).
+
 | Item | Escolha | Detalhe |
 |---|---|---|
 | Botão de ligar | chave no SHPHLD do nPM1300 | o nPM1300 acorda do ship mode pelo SHPHLD e avisa o MCU pelo GPIO3, configurado como saída de interrupção; é o arranjo da amostra `npm13xx_one_button` do NCS, que também cobre o nRF54LM20 DK |
@@ -513,7 +590,7 @@ O nRF54LM20A tem um só VDD, de 1,7 a 3,6 V, para todos os pinos (não há domí
 | LED de carga | Kingbright APT1608SURCK (0603) no LED1 do nPM1300, anodo no VSYS | acende carregando sem firmware (o LED1 sai de fábrica como indicador de carga); 5 mA de corrente constante, sem resistor |
 | LED RGB | Kingbright APTF1616SEEZGKQBKC (anodo comum, 1,6 × 1,6 mm), 3 canais PWM do MCU, com um DMG1012T-7 em cada catodo e o anodo no VSYS | o verde e o azul de InGaN têm pouca folga para o resistor em 3,0 V; o WS2812B da V3 pede 5 V, e o port troca o `neopixel.c` pelos `pwm-leds` |
 | Buzzer | piezo Same Sky CPT-1117-83-SMT-TR (11 × 9 mm) | dois PWM em contrafase dobram a excursão sobre o piezo |
-| Luz do display | DMG1012T-7 com PWM, resistor de 39 Ω, alimentação pela LDSW2 em 3,3 V | 16 mA a 2,67 V na ficha do JDI, que é a tela decidida, e 10 mA no filme da Sharp do plano B. Com 3,0 V sobrariam só 0,33 V para o resistor; os 3,3 V da LDSW2, tirados do VSYS, dão 0,63 V. Com o JDI os 39 Ω fecham pela ficha; com o filme, o valor sai da medida da amostra. Os dois fios chegam ao painel do C por um **FPC próprio de 5 vias**, com passo de 0,5 mm, separado das 10 vias de sinal; falta a ordem dessas vias ([J402](../hardware_gnssbike/06-conectores-e-pontos-de-teste.md#j402--luz-do-lpm027m128c)) |
+| Luz do display | DMG1012T-7 com PWM, resistor de 39 Ω, alimentação pela LDSW2 em 3,3 V | 16 mA a 2,67 V na ficha do JDI, que é a tela decidida, e 10 mA no filme da Sharp do plano B. Com 3,0 V sobrariam só 0,33 V para o resistor; os 3,3 V da LDSW2, tirados do VSYS, dão 0,63 V. Com o JDI os 39 Ω fecham pela ficha; com o filme, o valor sai da medida da amostra. Os dois fios chegam ao painel do C por um **FPC próprio de 5 vias**, com passo de 0,5 mm, separado das 10 vias de sinal; falta a ordem dessas vias ([J402](../hardware_gnssbike/06-conectores-e-pontos-de-teste.md#j402--luz-da-jdi)) |
 
 ## Bancada antes do layout
 

@@ -19,6 +19,10 @@ description: |
     supply (data sheet, table 15), and what saves energy is the software
     standby by UBX-RXM-PMREQ, which the driver still has.
   - It adds NavIC, off by default in the receiver.
+  - The MAX-F10S leaves the factory at 9600 baud, not at the 38400 of the
+    firmware default: "The UART baudrate in MAX-F10S is configured to 9600
+    baud" (integration manual UBXDOC-963802114-12892, p. 12; data sheet R03,
+    table 20). The UART opens at 9600.
   - GPS L5 is enabled in the firmware but the satellites still broadcast as
     unhealthy, so the solution leaves them out until the signal becomes
     operational; the dual-band gain today comes from Galileo E5a, BeiDou B2a
@@ -28,7 +32,7 @@ description: |
 
     &uart21 {
         status = "okay";
-        current-speed = <38400>;
+        current-speed = <9600>;
 
         gnss: gnss@0 {
             compatible = "u-blox,max-f10";

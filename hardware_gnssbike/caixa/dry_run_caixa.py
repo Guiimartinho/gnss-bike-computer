@@ -139,10 +139,21 @@ def regras(cx: C.Caixa, r: Relatorio) -> None:
     for ref, p in frente.items():
         if _cruza(C.caixa_na_caixa(p), disp) and C.PLACA_Z1 + p["altura"] > C.DISPLAY_Z0 - FOLGA_TAMPA + 1e-9:
             sob.append(f"{ref} {p['altura']:g} mm")
+    # the band under the Azumo's back strip (make_dxf.FAIXA_AZUMO), since
+    # 2026-10-18: the module is 2,08 thick and the strip stands 2,53 behind
+    # it, so it comes down to 0,59 mm over the board; nothing but pads fits
+    AZUMO_ESP, AZUMO_BARRA = 2.08, 2.53
+    teto_barra = C.DISPLAY_Z1 - AZUMO_ESP - AZUMO_BARRA
+    barra = (C.PLACA_X0, C.PLACA_Y0 + C.MD.FAIXA_AZUMO[0], C.PLACA_X0 + C.PLACA_W,
+             C.PLACA_Y0 + C.MD.FAIXA_AZUMO[1])
+    for ref, p in frente.items():
+        if _cruza(C.caixa_na_caixa(p), barra) and C.PLACA_Z1 + p["altura"] > teto_barra - FOLGA_TAMPA + 1e-9:
+            sob.append(f"{ref} {p['altura']:g} mm sob a barra do Azumo")
     if sob:
-        r.falha("CX3", f"{len(sob)} pecas sob o display passam de {C.DISPLAY_VAO - FOLGA_TAMPA:.1f} mm: " + "; ".join(sob))
+        r.falha("CX3", f"{len(sob)} pecas sob o display passam do teto: " + "; ".join(sob))
     else:
-        r.ok("CX3", f"nenhuma peca sob o display passa de {C.DISPLAY_VAO - FOLGA_TAMPA:.1f} mm")
+        r.ok("CX3", f"nenhuma peca sob o display passa de {C.DISPLAY_VAO - FOLGA_TAMPA:.1f} mm, e nenhuma "
+                    f"sob a barra do Azumo ({teto_barra - C.PLACA_Z1:.2f} mm sobre a placa)")
 
     # ---- CX4: keys
     if not cx.teclas:
@@ -160,12 +171,21 @@ def regras(cx: C.Caixa, r: Relatorio) -> None:
         curso = C.TAMPA_Z0 - cx.topo_tecla
         if curso < C.BARRA_ESP + 0.2:
             erros.append(f"entre o embolo da chave ({cx.topo_tecla:.1f}) e a tampa ({C.TAMPA_Z0:g}) ha {curso:.2f} mm, menos que a aba ({C.BARRA_ESP}) mais 0,2")
+        # the air between the key's top and the membrane: more than the
+        # switch's travel tolerance (0,1), or a tall stack holds the switch
+        # down; less than the travel itself (0,2), or the press is half dead
+        t0 = cx.tecla_3d(0)
+        topo = max(z for tri in t0.tris for (_x, _y, z) in tri)
+        ar = (C.TAMPA_Z0 + C.TAMPA - C.MEMBRANA_REBAIXO) - topo
+        if not 0.1 - 1e-9 <= ar <= C.TECLA_CURSO + 1e-9:
+            erros.append(f"{ar:.2f} mm entre a tecla e a membrana (de 0,1 a {C.TECLA_CURSO:g})")
         if erros:
             r.falha("CX4", "; ".join(erros))
         else:
             r.ok("CX4", f"{len(cx.teclas)} capas sobre as chaves (desvio maximo "
                         f"{max(math.hypot(a[0] - b[0], a[1] - b[1]) for a, b in zip(cx.teclas, cx.capas)):.2f} mm), "
-                        f"furos a mais de 1 mm da janela e dentro do rebaixo, {curso:.1f} mm do embolo a tampa")
+                        f"furos a mais de 1 mm da janela e dentro do rebaixo, {curso:.1f} mm do embolo a tampa, "
+                        f"{ar:.2f} de ar entre a tecla e a membrana")
 
     # ---- CX5: the window and the glass
     d = cx.display
@@ -255,7 +275,11 @@ def regras(cx: C.Caixa, r: Relatorio) -> None:
 
     # ---- CX9: windows and holes over the parts that need them
     erros = []
-    for ref, furo, nome in (("D601", cx.furo_led, "janela do LED"), ("U505", cx.furo_sensor, "janela do sensor de luz")):
+    # the charge and error LEDs have windows of their own since 2026-10-18
+    for ref, furo, nome in (("D601", cx.furo_led, "janela do LED"),
+                            ("D103", cx.furos_led_carga.get("D103"), "janela do LED de carga"),
+                            ("D104", cx.furos_led_carga.get("D104"), "janela do LED de erro da carga"),
+                            ("U505", cx.furo_sensor, "janela do sensor de luz")):
         p = pecas.get(ref)
         if not p:
             erros.append(f"{ref} nao esta na placa")
@@ -267,6 +291,26 @@ def regras(cx: C.Caixa, r: Relatorio) -> None:
                 erros.append(f"{nome} descentrada")
             if _cruza(furo, cx.janela):
                 erros.append(f"{nome} entra na janela do display")
+            # a window under the membrane recess has to go through the
+            # recess floor too, which is a plate of its own (2026-10-18)
+            rx = cx.rebaixo_membrana
+            if rx and _dentro(furo, rx) and furo not in cx.furos_rebaixo:
+                erros.append(f"{nome} fechada pelo fundo do rebaixo da membrana")
+    # the light sensor's window is sealed by a clear disk in a counterbore,
+    # which keeps 0,8 mm from the keys' membrane recess and from the solar
+    # facet: not under the membrane, which would carry the LEDs' light to it
+    # (2026-10-19)
+    rs = getattr(cx, "rebaixo_sensor", None)
+    if cx.furo_sensor and not rs:
+        erros.append("janela do sensor de luz aberta, sem rebaixo para o disco transparente")
+    elif rs:
+        rx = cx.rebaixo_membrana
+        if rx and _cruza(rs, rx, 0.8):
+            erros.append("o rebaixo do sensor de luz fica a menos de 0,8 mm do rebaixo da membrana")
+        if _cruza(rs, cx.faceta, 0.8):
+            erros.append("o rebaixo do sensor de luz fica a menos de 0,8 mm da faceta dos paineis")
+        if min(cx.furo_sensor[2] - cx.furo_sensor[0], cx.furo_sensor[3] - cx.furo_sensor[1]) < 2.5 - 1e-9:
+            erros.append("a abertura do sensor de luz tem menos de 2,5 mm")
     ls = pecas.get("LS601")
     if ls:
         cb = C.caixa_na_caixa(ls)
@@ -285,25 +329,39 @@ def regras(cx: C.Caixa, r: Relatorio) -> None:
     if erros:
         r.falha("CX9", "; ".join(erros))
     else:
-        r.ok("CX9", "janela do LED e do sensor de luz sobre as pecas, fora da janela do display; 3 furos de som sob o buzzer; respiro sob o barometro")
+        r.ok("CX9", "janela do LED e do sensor de luz sobre as pecas, fora da janela do display; a do sensor com disco transparente "
+                    "num rebaixo a 0,8 mm ou mais da membrana e da faceta; 3 furos de som sob o buzzer; respiro sob o barometro")
 
     # ---- CX10: the solar modules, their pockets, covers and wire passages,
     # measured on the facet's rectangles and on the bevel's cross-sections
     # (the very polygons the STL is extruded from)
     erros = []
-    precisa = (C.MODULO_W + 2 * C.MODULO_FOLGA, C.MODULO_H + 2 * C.MODULO_FOLGA)
+    precisa = (C.MODULO_W + 2 * C.MODULO_FOLGA, C.MODULO_H + 2 * C.MODULO_FOLGA_L)
     if not cx.bolsos_faceta or not cx.modulos_chanfro:
         erros.append("sem bolso de modulo para medir")
+    # the module's datasheet gives +-0,3: the pocket takes the largest one
+    # with 0,1 a side for the print, and its depth the thickest on its tape
+    if C.MODULO_FOLGA < C.MODULO_TOL + 0.1 - 1e-9 or C.MODULO_FOLGA_L < C.MODULO_TOL - 1e-9:
+        erros.append(f"folga de {C.MODULO_FOLGA:g} ao longo e {C.MODULO_FOLGA_L:g} atraves do modulo, para uma tolerancia de "
+                     f"{C.MODULO_TOL:g} (minimo {C.MODULO_TOL + 0.1:.1f} e {C.MODULO_TOL:g})")
+    bolso_min = C.MODULO_ESP + C.MODULO_TOL + C.MODULO_FITA + 0.1
     for b in cx.bolsos_faceta:
         if b[2] - b[0] < precisa[0] - 1e-9 or b[3] - b[1] < precisa[1] - 1e-9:
             erros.append(f"bolso da faceta {b[2] - b[0]:.1f} x {b[3] - b[1]:.1f} menor que o modulo com folga {precisa[0]:.1f} x {precisa[1]:.1f}")
         if not _dentro(b, cx.cobertura_faceta, COBERTURA_SOBREPOSICAO):
             erros.append(f"a cobertura da faceta nao sobra {COBERTURA_SOBREPOSICAO} mm em volta de um bolso")
-        if not any(_dentro(f, b) for f in cx.furos_fio):
-            erros.append("bolso da faceta sem furo de fio")
+        # one passage under each end pad (the pads are the module's last
+        # 2,0 mm at each end), wide enough for the joint to drop into
+        for ponta in (b[0] + C.MODULO_FOLGA, b[2] - C.MODULO_FOLGA - 2.0):
+            sob = [f for f in cx.furos_fio if _dentro(f, b)
+                   and ponta - 1e-6 <= (f[0] + f[2]) / 2 <= ponta + 2.0 + 1e-6]
+            if not sob:
+                erros.append(f"bolso da faceta sem passagem de fio sob o terminal em x {ponta:.1f}-{ponta + 2.0:.1f}")
+            elif min(sob[0][2] - sob[0][0], sob[0][3] - sob[0][1]) < 1.5 - 1e-9:
+                erros.append(f"a passagem de fio em x {ponta:.1f} tem {min(sob[0][2] - sob[0][0], sob[0][3] - sob[0][1]):.1f} mm, menos que a solda (1,5)")
     fundo_bolso_faceta = C.TAMPA + C.FACETA_ALT - C.COBERTURA_ESP - C.FACETA_FUNDO
-    if fundo_bolso_faceta < C.MODULO_ESP + 0.1 - 1e-9:
-        erros.append(f"o bolso da faceta tem {fundo_bolso_faceta:.2f} de fundo para um modulo de {C.MODULO_ESP:g} mais 0,1")
+    if fundo_bolso_faceta < bolso_min - 1e-9:
+        erros.append(f"o bolso da faceta tem {fundo_bolso_faceta:.2f} de fundo para um modulo de ate {C.MODULO_ESP + C.MODULO_TOL:g} em fita de {C.MODULO_FITA:g}, mais 0,1")
     if C.FACETA_FUNDO < 0.5 - 1e-9:
         erros.append(f"o fundo do bolso da faceta tem {C.FACETA_FUNDO:g} mm (minimo 0,5)")
     # the bevel: one side's pocket profile, in slope coordinates
@@ -315,8 +373,10 @@ def regras(cx: C.Caixa, r: Relatorio) -> None:
 
     def fundo(p):
         return -((p[0] - A[0]) * nrm[0] + (p[1] - A[1]) * nrm[1])
-    pol = cx._perfil_chanfro("L", 0.0, C.MODULO_ESP + 0.1)
-    prof = C.COBERTURA_ESP + C.MODULO_ESP + 0.1
+    pol = cx._perfil_chanfro("L", 0.0, C.MODULO_BOLSO)
+    prof = C.COBERTURA_ESP + C.MODULO_BOLSO
+    if C.MODULO_BOLSO < bolso_min - 1e-9:
+        erros.append(f"o bolso do chanfro tem {C.MODULO_BOLSO:.2f} de fundo, menos que {bolso_min:.2f}")
     chao = [p for p in pol if abs(fundo(p) - prof) < 1e-6]
     if len(chao) != 2:
         erros.append(f"nao achei o fundo do bolso do chanfro no perfil ({len(chao)} pontos a {prof:.2f} de profundidade)")
@@ -359,8 +419,9 @@ def regras(cx: C.Caixa, r: Relatorio) -> None:
     if erros:
         r.falha("CX10", "; ".join(erros))
     else:
-        r.ok("CX10", f"faceta: 2 bolsos de {precisa[0]:.1f} x {precisa[1]:.1f} x {fundo_bolso_faceta:.1f} sobre {C.FACETA_FUNDO:g} de fundo, "
-                     f"cobertura sobrando {COBERTURA_SOBREPOSICAO} mm, furo de fio em cada; chanfro: rampa de {comp:.2f} com o bolso de "
+        r.ok("CX10", f"modulo de {C.MODULO_W:g} x {C.MODULO_H:g} x {C.MODULO_ESP:g} +-{C.MODULO_TOL:g} em fita de {C.MODULO_FITA:g}; "
+                     f"faceta: 2 bolsos de {precisa[0]:.1f} x {precisa[1]:.1f} x {fundo_bolso_faceta:.2f} sobre {C.FACETA_FUNDO:g} de fundo, "
+                     f"cobertura sobrando {COBERTURA_SOBREPOSICAO} mm, passagem de solda sob cada terminal; chanfro: rampa de {comp:.2f} com o bolso de "
                      f"{a1 - a0:.1f} entre paredes de {a0:.2f} e {comp - a1:.2f}, {sobra:.2f} mm de parede atras dele, a tira em toda a rampa "
                      f"com {C.COBERTURA_FOLGA:g} alem do bolso em y, 2 fendas de fio por bolso ate a face interna")
 
@@ -438,7 +499,7 @@ def regras(cx: C.Caixa, r: Relatorio) -> None:
                      f"U.FL a {dist:.0f} mm")
 
     # ---- CX13: things that need the bench or a print
-    r.nao_medido("CX13", "a passagem dos fios dos seis modulos por dentro da tampa ate J103, J104 e J105, a junta da porta e da "
+    r.nao_medido("CX13", "a passagem dos fios dos seis modulos por dentro da tampa ate o J103, a junta da porta e da "
                          "particao, o aperto das capas na membrana e o encaixe dos parafusos auto-atarraxantes: so uma prova impressa diz")
 
 

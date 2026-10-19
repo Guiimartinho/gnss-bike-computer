@@ -25,8 +25,23 @@ mecânico). **A Minew não publica land pattern** — a ficha manda pedir o dela
 
 ## As outras peças
 
-As pinagens do nPM1300, MAX17262, AEM10900, TPS7A02, ESD761, TPD4E05U06,
-MAX-F10S, TXU0204, MX25R6435F, BMP585, BMI270, MMC5633NJL, OPT3001, do
-receptáculo USB-C, do JST GH, do Hirose FH28, do LED da Kingbright, da tecla
-Omron e do painel JDI estão transcritas em [`cad/parts.py`](../cad/parts.py),
-cada uma com o documento e a revisão de onde veio, no comentário logo acima.
+As pinagens das peças do desenho de hoje estão transcritas em
+[`cad/parts.py`](../cad/parts.py), cada uma com o documento e a revisão de
+onde veio, no comentário logo acima: nPM1300, MAX17262, ADP5091 (Rev. A),
+TPS7A02, TLV7031 (SLVSE13J), TPS610997 (SLVSD88M), PESD24VS1UL,
+TPD4E05U06, PESD3V3S1UB, BAT54WS, MAX-F10S, a antena Unictron
+H2UJ4U1H2Q0100, o u.FL da Hirose, MX25R6435F, BMP585, BMI270, MMC5603NJ
+(Rev. B), OPT3001, o USB-C HRO TYPE-C-31-M-12, os JST SH e ZH, os três
+Molex 503480 (SD-503480-001), o DMG1012T, a tecla XunPu TS-1088R, o buzzer
+Same Sky CPT-12123, o LED RGB TUOZHAN S4-3528RGBTA-A (S35210052), o LED
+Kingbright APT1608SURCK, o Tag-Connect TC2030 (`TC2030-CTX_1.pdf`) e as
+duas telas: a JDI LPM027M128C (spec ver.02) e a Sharp LS027B7DH01A
+(LCP-2110015A e LD-28305A), com o desenho T7 do Azumo 11103-06.
+
+Algumas fichas guardadas aqui são de peças que saíram do desenho e ficam
+como registro do que foi lido: a do AEM10900 (o colhedor de antes do
+ADP5091), do ESD761, do TXU0204, do MMC5633NJL, do Hirose FH28, do Molex
+2036150003, do JST GH, da TE L000670, da tecla Omron, do LED APTF1616 e do
+buzzer CPT-1117. Das peças que entraram a partir de 2026-09-24, só a do
+ADP5091 está aqui; as outras se baixam do fabricante ou da página da LCSC
+do código que `cad/parts.py` traz.

@@ -113,10 +113,13 @@ REGRAS = [
      "MinewSemi ME54BS13 V1.0.0, 7.2"),
     ("GN2", "costura de vias de terra na borda a cada 5 mm no maximo",
      "lambda/10 a 2,44 GHz em FR-4 e 6,1 mm"),
-    ("AL6", "nenhuma via sob o pad termico: ela suga a solda da junta no "
-            "forno, e sob o DQN do TPS7A02 a ficha proibe por escrito",
+    ("AL6", "nenhuma via sob o pad termico de quem a ficha proibe: ela "
+            "suga a solda da junta no forno, e sob o DQN do TPS7A02 a ficha "
+            "proibe por escrito; o nPM1300 leva as 9 vias do layout de "
+            "referencia no pad central",
      "TI TPS7A02 SBVS277C, 8.4.1; TI OPT3001 SBOS681B, layout (via no pad "
-     "termico so com diametro abaixo de 0,2 mm)"),
+     "termico so com diametro abaixo de 0,2 mm); Nordic nPM1300 PS v1.1, "
+     "figuras 61 a 64"),
     ("OP1", "nenhum componente a menos de duas vezes a propria altura do "
             "sensor de luz: reflexao optica secundaria",
      "TI OPT3001 SBOS681B, layout guidelines"),
@@ -152,17 +155,34 @@ REGRAS = [
 # As pecas cujo corpo vem de um modelo do fabricante: sao as unicas em que
 # o modelo pode estar girado em relacao ao footprint, porque as outras tem o
 # corpo desenhado aqui a partir da cota da ficha.
-CORPOS_CONFERIDOS = ("J101", "J103", "J402")
+# J402 left on 2026-10-18: it is the Molex 503480-0540 now, a footprint drawn
+# by footprints.py with a box for a body, not a maker's model
+CORPOS_CONFERIDOS = ("J101", "J103")
 
 # What each rail carries, and where the number comes from. Without this a
 # trace width is a guess.
 CORRENTE = {
-    "VBUS": (0.5, "USB-C 2.0 sem PD: 500 mA (04-pcb-e-caixa.md)"),
-    "VBUSOUT": (0.5, "saida do limitador do nPM1300"),
+    # 600 mA of charge plus 71 mA of system: the charger is linear, so what
+    # comes in is the sum (02-calculos.md, the USB budget). The 1,5 A of a
+    # USB-C source is what it offers, not what runs in the track; until
+    # 2026-10-19 this was 0,5 A, the nPM1300's starting limit
+    "VBUS": (0.671, "carga mais sistema, 02-calculos.md"),
+    # VBUSOUT goes through a 7,5 ohm switch (RVBUSOUT, nPM1300 PS v1.1): at
+    # 100 mA it already drops 0,75 V, and what it feeds is the module's VBUS
+    # detection and a 100k + 180k divider. Until 2026-10-19 this was the
+    # limiter's 0,5 A, a current the pin cannot pass
+    "VBUSOUT": (0.1, "chave de 7,5 ohm do nPM1300 (RVBUSOUT)"),
     "VBAT": (0.8, "carga de 800 mA da celula (15-avaliacao-componentes.md)"),
     "VBAT_CELULA": (0.8, "idem, do conector da celula"),
     "VBAT_SYS": (0.8, "idem, para o sistema"),
-    "VSYS": (0.5, "consumo de pico do aparelho"),
+    # The charge does not leave the nPM1300 through the VSYS pin: the
+    # charger sits between the internal VSYS node and VBAT (PS v1.1,
+    # CHARGER). What leaves is what the regulators on VSYS deliver, at most
+    # their rated output - BUCK1 and BUCK2 200 mA each, LDSW2 100 mA and the
+    # LEDs, about 0,47 A from a 3,0 V cell. Until 2026-10-19 02-calculos.md
+    # gave VSYS 671 mA, the charge added in
+    "VSYS": (0.5, "reguladores do VSYS na corrente nominal; a carga nao sai "
+                  "pelo pino (nPM1300 PS v1.1)"),
     "3V0": (0.4, "trilho de 3,0 V: modulo, display, sensores, flash e, desde "
                  "2026-09-26, o receptor GNSS (100 mA de pico na partida)"),
     "1V8": (0.2, "trilho de 1,8 V do BUCK1, montado e sem carga"),
@@ -473,7 +493,8 @@ def _ilhas_sob_o_corpo(ref: str, pecas: dict):
 
 # Os conectores cujos rabichos de solda a ME5 confere: os que tem modelo do
 # fabricante ou da biblioteca do KiCad no GLB e ilhas de sinal numa fileira.
-RABICHOS_CONFERIDOS = ("J101", "J102", "J103", "J401", "J402")
+# J401 and J402 left on 2026-10-18 for the same reason (Molex 503480, boxes)
+RABICHOS_CONFERIDOS = ("J101", "J102", "J103")
 
 # Models whose solder contacts have a colour of their own in the maker's
 # STEP, so that the contacts can be told from the nails' plate. Measured in
@@ -1299,8 +1320,12 @@ def main() -> int:
     # Which pad of which part is a thermal pad. It is the one the datasheet
     # numbers last and connects to ground, and the two that matter here say
     # so by name.
-    TERMICOS = {("U104", "5"), ("U103", "25"), ("U101", "33"),
-                ("U505", "7")}
+    TERMICOS = {("U104", "5"), ("U103", "25"), ("U505", "7")}
+    # The nPM1300's exposed pad is the other way round: Nordic's reference
+    # layout puts a 3 x 3 matrix of vias in it (PS v1.1, figures 61 to 64),
+    # the path for the heat of a charger that dissipates up to 1,5 W. Until
+    # 2026-10-19 it was in the list above, which no datasheet asked for.
+    COM_MATRIZ = {("U101", "33"): 9}
     sobre_termico = []
     for q in pads:
         if (q["ref"], q["pad"]) not in TERMICOS:
@@ -1316,11 +1341,22 @@ def main() -> int:
                                       round(math.hypot(v["x"] - q["x"],
                                                        v["y"] - q["y"]), 2)))
                 break
-    if sobre_termico:
+    poucas = []
+    for q in pads:
+        quer = COM_MATRIZ.get((q["ref"], q["pad"]))
+        if quer is None:
+            continue
+        tem = sum(1 for v in vias
+                  if abs(v["x"] - q["x"]) < q["hw"] and abs(v["y"] - q["y"]) < q["hh"])
+        if tem < quer:
+            poucas.append(f"{q['ref']}.{q['pad']} com {tem} de {quer}")
+    if sobre_termico or poucas:
         falhou("AL6", f"{len(sobre_termico)} vias sobre um pad termico: " +
-               ", ".join(f"{r}.{p} a {d} mm" for r, p, d in sobre_termico[:6]))
+               ", ".join(f"{r}.{p} a {d} mm" for r, p, d in sobre_termico[:6]) +
+               ("; vias termicas faltando: " + ", ".join(poucas) if poucas else ""))
     else:
-        ok.append(f"AL6: nenhuma via sobre os {len(TERMICOS)} pads termicos")
+        ok.append(f"AL6: nenhuma via sobre os {len(TERMICOS)} pads termicos sem "
+                  f"via, e as {sum(COM_MATRIZ.values())} vias termicas do nPM1300 no lugar")
 
     # -- OP1: reflexao optica no sensor de luz ---------------------------
     if "U505" in pecas:
