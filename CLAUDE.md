@@ -69,12 +69,12 @@ O dono do projeto é um desenvolvedor brasileiro de eletrônica embarcada que qu
 
 ## 3. Estado em resumo
 
-Estado registrado até 2026-09-26. O registro completo, as decisões com data e a ordem do que falta estão em [`.claude/contexto/estado.md`](.claude/contexto/estado.md): atualize lá quando o estado mudar, e aqui quando o resumo mudar.
+Estado registrado até 2026-10-18. O registro completo, as decisões com data e a ordem do que falta estão em [`.claude/contexto/estado.md`](.claude/contexto/estado.md): atualize lá quando o estado mudar, e aqui quando o resumo mudar.
 
 - **Port:** compila no NCS v3.3.0 e passa nos testes de host; **nunca rodou em placa nem no DK**. Matriz em [`docs/10-status-do-port.md`](docs/10-status-do-port.md).
-- **Placa nova:** nRF54LM20A, gerada no KiCad pelos scripts de `hardware_gnssbike/cad/`, com dry run da placa e da caixa; **nada fabricado, montado nem impresso**.
+- **Placa nova:** nRF54LM20A, gerada no KiCad pelos scripts de `hardware_gnssbike/cad/`, com dry run da placa e da caixa; **nada fabricado, montado nem impresso**. A revisão do esquemático de 2026-10-18 ([11](hardware_gnssbike/11-revisao-do-esquematico.md)) achou 6 bloqueios, a tela e o buzzer fora de venda ou em fim de vida e 15 graves: a placa não vai para a fábrica antes das correções.
 - **Decisões do dono que pesam em todo trabalho:** ANT+ **e** BLE, pelo `sdk-ant` v2.1.1 sobre o NCS v3.3.0 (build com `ANT=1`); GNSS u-blox **MAX-F10S** a 3,0 V no trilho do MCU, sem modo econômico (o F10 não tem `CFG-PM`); tela **JDI LPM027M128C**, peça única com luz integrada (2026-09-23), num driver que também atende a LPM027M128B e a Sharp LS027B7DH01; memória soldada no lugar do cartão.
-- **Em aberto:** aprovação dos componentes da placa nova ([13](docs/13-placa-nova.md), [14](docs/14-hardware-placa-nova.md), [15](docs/15-avaliacao-componentes.md), [19](docs/19-lista-de-compras.md)), hardware de teste, formatos no SD e o teste com cabo da fase 6.
+- **Em aberto:** aprovação da lista de correções e das decisões D1 a D4 da revisão do esquemático ([11](hardware_gnssbike/11-revisao-do-esquematico.md)), aprovação dos componentes da placa nova ([13](docs/13-placa-nova.md), [14](docs/14-hardware-placa-nova.md), [15](docs/15-avaliacao-componentes.md), [19](docs/19-lista-de-compras.md)), hardware de teste, formatos no SD e o teste com cabo da fase 6.
 
 ## 4. Comandos do dia a dia
 

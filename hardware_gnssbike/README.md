@@ -35,7 +35,7 @@ componente.
 > ([09](09-dry-run-da-pcb.md), [10](10-dry-run-2026-09-26.md), 2026-09-26)
 > —, e a caixa existe como proposta medida por um dry run próprio (12
 > regras cumpridas, 0 violadas, [04](04-pcb-e-caixa.md#a-placa-de-hoje-dentro-da-caixa-do-conceito));
-> mas nenhuma foi feita e nenhum componente passou por bancada. Este aviso já disse "0 ligações sem trilha" com 47 em aberto:
+> mas nenhuma foi feita e nenhum componente passou por bancada. A revisão do esquemático de 2026-10-18 ([11](11-revisao-do-esquematico.md)) achou 6 bloqueios: ele só vai para a fábrica depois das correções. Este aviso já disse "0 ligações sem trilha" com 47 em aberto:
 > o DRC rodava só com erros, e os não roteados são aviso. Todo valor
 > abaixo vem de ficha ou de conta feita aqui, e está marcado como tal. O
 > que depende de decisão, de ficha por ler ou de medida está na lista de
@@ -76,6 +76,7 @@ fontes, cada um na sua pasta (2026-09-26):
 | [08 · Plano de layout](08-layout.md) | regras de projeto, ordem de roteamento, terra e retorno, os nós críticos e a subida da primeira placa |
 | [09 · Dry-run da placa](09-dry-run-da-pcb.md) | as regras das fichas e da IPC-2221 medidas no arquivo de CAD, com o que passa, o que falha e o que ninguém mediu |
 | [10 · Dry-run de 2026-09-26](10-dry-run-2026-09-26.md) | placa roteada, esquemático, mecânica e contas, em três análises independentes: o que foi corrigido no dia e o que fica para o dono |
+| [11 · Revisão do esquemático](11-revisao-do-esquematico.md) | a revisão de 2026-10-18 antes da fábrica: 6 bloqueios, 2 peças fora de venda ou em fim de vida, 15 graves, a correção de cada um e as decisões do dono |
 | [CAD](cad/README.md) | como o esquemático e a placa são gerados, e como se confere cada etapa |
 | [Caixa](caixa/README.md) | a proposta de caixa em volta da placa: o gerador, o dry run de 13 regras, o PDF e os STL |
 
