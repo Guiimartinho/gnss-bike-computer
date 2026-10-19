@@ -27,7 +27,7 @@ FP: dict[str, tuple[str, str, str]] = {}
 
 # Parts that are not on the board: they live in the case and reach the board
 # through spring contacts or a flat cable that no document dimensions yet.
-FORA_DA_PLACA = {"DS401", "PV101", "PV102", "PV103", "PV104", "PV105",
+FORA_DA_PLACA = {"DS401", "DS402", "PV101", "PV102", "PV103", "PV104", "PV105",
                  "PV106"}
 
 
@@ -48,11 +48,21 @@ _fp(["R102", "R103", "R104", "R105", "R106", "R107", "R108", "R109", "R110",
      "R113", "R114", "R115", "C305", "C306",
      "R116", "R117", "R118", "R119", "R120", "R121", "R122", "R123",
      "C119", "C120", "C121",
-     "JP102", "JP103", "JP104", "JP105", "JP106", "JP401"], R0402,
+     "JP102", "JP103", "JP104", "JP105", "JP106"], R0402,
     "ENCAPSULAMENTO", "0402; a lista de compras usa a serie Panasonic ERJ-2")
 _fp("JP101", "Resistor_SMD:R_1206_3216Metric", "ENCAPSULAMENTO",
     "0 ohm 1206, >= 2 A: o 0402 da lista nao serve")
 _fp("RT101", R0402, "ENCAPSULAMENTO", "NTC 10 k B3380 em 0402")
+_fp(["JP402", "JP403", "JP404", "JP405", "R410"], R0402, "ENCAPSULAMENTO",
+    "0402: escolha da polaridade e resistor da luz do Azumo")
+_fp("JP401", "gnssbike:JumperRF_3x0402", "GERADO",
+    "tres pads a passo de 0402: o 0 ohm liga o meio ao 3V0 (JDI) OU ao 5V0 "
+    "(Sharp); 5 V na JDI a queima (maximo absoluto de 3,6 V)")
+_fp("U402", "Package_BGA:Texas_DSBGA-6_0.855x1.255mm_Layout2x3_P0.4mm_LevelB",
+    "EXATO", "TI TPS610997YFFR, DSBGA de 6 bolas a 0,4 mm (SLVSD88M)")
+_fp("L401", "Inductor_SMD:L_Murata_DFE201610P", "ENCAPSULAMENTO",
+    "Murata DFE201610E-2R2M, 2,2 uH, o mesmo dos bucks")
+_fp(["C405", "C406", "C407"], C0603, "ENCAPSULAMENTO", "")
 
 _fp(["C110", "C111", "C113", "C114", "C115", "C116", "C118", "C201", "C304",
      "C404", "C503"], C0402, "ENCAPSULAMENTO", "")
@@ -60,10 +70,12 @@ _fp(["C101", "C102", "C103", "C104", "C105", "C106", "C107", "C108", "C109",
      "C122", "C123", "C124", "C125", "C126", "C129", "C117", "C210", "C303", "C501", "C502",
      "C601", "C602", "C603"], C0603, "ENCAPSULAMENTO", "")
 
-_fp(["L101", "L102"], "Inductor_SMD:L_0805_2012Metric", "ENCAPSULAMENTO",
-    "Murata DFE201610E e 2,0 x 1,6 mm; o 0805 da KiCad e 2,0 x 1,2 mm")
+_fp(["L101", "L102"], "Inductor_SMD:L_Murata_DFE201610P", "ENCAPSULAMENTO",
+    "Murata DFE201610E, 2,0 x 1,6 mm, no land da Murata para a serie 2016 "
+    "(0,55 x 1,6 em +-0,725). Era o 0805 da KiCad, de 2,0 x 1,2 mm, que nao e "
+    "o da peca pedida (npm1300-x1, revisao de 2026-10-18)")
 _fp("L103", "Inductor_SMD:L_1008_2520Metric", "ENCAPSULAMENTO",
-    "TDK VLS252012HBX, 2,5 x 2,0 mm")
+    "Sunlord SPH252012H220MT, 2,5 x 2,0 mm")
 _fp("L301", "Inductor_SMD:L_0402_1005Metric", "ENCAPSULAMENTO", "")
 _fp(["C301", "C302"], C0402, "ENCAPSULAMENTO", "")
 _fp("FB301", "Inductor_SMD:L_0603_1608Metric", "ENCAPSULAMENTO",
@@ -99,17 +111,20 @@ _fp("J202", "Connector_PinHeader_1.27mm:PinHeader_2x05_P1.27mm_Vertical_SMD", "E
     "conector Cortex Debug de 10 vias, 2 x 5, passo 1,27 mm, SMD, sem carcaca "
     "(2,5 mm de altura: o blindado de 4,83 nao cabe sob a tampa); o footprint "
     "e o generico do KiCad, a conferir contra a ficha da peca escolhida")
-_fp("J401", "Connector_FFC-FPC:Hirose_FH12-10S-0.5SH_1x10-1MP_P0.50mm_Horizontal",
-    "ENCAPSULAMENTO",
-    "10 vias, passo 0,5 mm, CONTATO INFERIOR: a cauda do display entra com "
-    "as trilhas viradas para a placa. O footprint e da peca: FH12-10S-"
-    "0.5SH(55), LCSC C506791, que tem modelo STEP na biblioteca do KiCad")
-_fp("J402", "gnssbike:HC-FPC-05-10-5RLTAG", "GERADO",
-    "5 vias, passo 0,5 mm, CONTATO INFERIOR - a cauda da luz entra com as "
-    "trilhas viradas para a placa, igual a do sinal no J401. Era o Molex "
-    "503480-0500 que a JDI nomeia no desenho de contorno, mas ele nao esta "
-    "na LCSC e a placa e montada na JLCPCB; este tem 45.619 pecas e o STEP "
-    "do fabricante. O corpo encolhe de 7,93 x 4,40 para 4,27 x 2,90")
+_fp("J401", "gnssbike:Molex_503480-1000_1x10_P0.50mm", "GERADO",
+    "Molex 503480-1000 desde 2026-10-18: ZIF de 10 vias, passo 0,5, 1,0 mm de "
+    "altura e CONTATO DOS DOIS LADOS, para a fita de sinal da JDI ou da Sharp, "
+    "que caem no mesmo lugar e chegam dobradas sob o vidro com os contatos "
+    "para cima. Era o Hirose FH12-10S-0.5SH(55), de contato inferior: nenhum "
+    "contato encostava (display-a1, display-a2)")
+_fp("J402", "gnssbike:Molex_503480-0540_1x05_P0.50mm", "GERADO",
+    "Molex 503480-0540 desde 2026-10-18: a serie que a JDI nomeia para a fita "
+    "da luz, com contato dos dois lados e 2 mm de condutor exposto no minimo; "
+    "a fita tem 2,2 a 2,8, e o HCTL HC-FPC-05-10-5RLTAG de antes pedia 3,0 "
+    "(display-a4)")
+_fp("J403", "gnssbike:Molex_503480-0440_1x04_P0.50mm", "GERADO",
+    "Molex 503480-0440: a fita da luz do Azumo 11103-06 (Sharp com luz "
+    "frontal), no VERSO; cada pad da fita cobre duas vias (1-2 e 3-4)")
 import parts as _P  # noqa: E402
 
 _fp([t[0] for t in _P.TESTE] + ["TP201", "TP202", "TP203"],
@@ -150,8 +165,10 @@ _fp(["SW601", "SW602", "SW603"], "gnssbike:SW_TS-1088R_3.9x3mm", "GERADO",
     "tampa contra os 0,7 da Omron - a mecanica do embolo da caixa muda")
 _fp(["D103", "D104"], "LED_SMD:LED_0603_1608Metric", "ENCAPSULAMENTO",
     "Kingbright APT1608SURCK, 1,6 x 0,8 mm")
-_fp("LS601", "gnssbike:Buzzer_PKLCS1212E4001_12x12mm", "GERADO",
-    "Murata PKLCS1212E4001-R1. O CPT-1117-83-SMT que estava aqui tem UMA "
+_fp("LS601", "gnssbike:Buzzer_CPT-12123-81-SMT_12x12mm", "GERADO",
+    "Same Sky CPT-12123-81-SMT-TR desde 2026-10-18: o Murata PKLCS1212E4001-R1 "
+    "entrou em Last Time Buy com toda a linha piezo da Murata (buzzer-a1). "
+    "Antes, Murata PKLCS1212E4001-R1. O CPT-1117-83-SMT que estava aqui tem UMA "
     "peca em estoque; este tem 12.328 e mantem os 84 dB, que e o que "
     "justifica ter buzzer numa bicicleta - os substitutos de 9 x 9 caem "
     "para 65 a 70 dB. Custa 144 mm2 na face de tras e 3,0 mm de altura")
@@ -200,10 +217,16 @@ CORPO: dict[str, tuple[float, float, float]] = {
     # HCTL HC-FPC-05-10-5RLTAG: 4,27 x 2,90 x 1,00 do desenho, e o STEP
     # do fabricante mede 4,280 x 3,920 x 1,010 (o 3,92 inclui os pes)
     "gnssbike:HC-FPC-05-10-5RLTAG": (4.27, 2.90, 1.00),
+    # Molex 503480: A x (3,6) x (1,0), tabelas de SD-503480-001 J e -003 C
+    "gnssbike:Molex_503480-1000_1x10_P0.50mm": (6.70, 3.60, 1.00),
+    "gnssbike:Molex_503480-0540_1x05_P0.50mm": (4.20, 3.60, 1.00),
+    "gnssbike:Molex_503480-0440_1x04_P0.50mm": (3.70, 3.60, 1.00),
     # Unictron H2UJ4U1H2Q0100: 5,0 x 3,0 x 0,5, +-0,15 nos tres
     "gnssbike:Antena_Unictron_H2UJ4U1H2Q0100_5x3mm": (5.00, 3.00, 0.50),
     # Murata PKLCS1212E4001-R1: 12,0 x 12,0 x 3,0 max (JGB40-1584B)
     "gnssbike:Buzzer_PKLCS1212E4001_12x12mm": (12.00, 12.00, 3.00),
+    # Same Sky CPT-12123-81-SMT-TR: 12,0 x 12,0 x 3,0, +-0,3 (ficha, p. 2)
+    "gnssbike:Buzzer_CPT-12123-81-SMT_12x12mm": (12.00, 12.00, 3.00),
     # TUOZHAN S4-3528RGBTA-A: 3,5 x 2,8 x 1,9
     "gnssbike:LED_RGB_3528_3.5x2.8mm": (3.50, 2.80, 1.90),
     "gnssbike:OPT3001_USON-6_2x2mm_P0.65mm": (2.00, 2.00, 0.65),
@@ -250,7 +273,7 @@ def wrl_caixa(caminho, w: float, h: float, alt: float, cor=(0.13, 0.13, 0.14)):
         + " ]\n  }\n}\n", encoding="utf-8", newline="\n")
 
 
-def _corpo(nome, w, h, pads, descr, crtyd=None):
+def _corpo(nome, w, h, pads, descr, crtyd=None, marca=None):
     """Wrap pads in a footprint with a courtyard and a fab outline.
 
     `crtyd` is (largura, altura) para o contorno de ocupacao quando ele NAO e
@@ -259,10 +282,23 @@ def _corpo(nome, w, h, pads, descr, crtyd=None):
     neles - o colocador acredita no contorno, nao no que esta desenhado.
     O F.Fab continua sendo o corpo, porque e ele que o ME3 compara com a
     ficha.
+
+    `marca` is (x, y) of the pin 1 (or cathode) dot, in F.SilkS only: the
+    F.Fab stays the body, which is what the ME3 compares with the datasheet.
+    The review of 2026-10-18 found that no footprint drawn here had one
+    (protection-x1): a polarised part with a symmetric land, like the TVS of
+    VBUS or a WLP, could be placed turned and nobody could see it.
     """
     hw, hh = w / 2.0, h / 2.0
     cw, ch = (crtyd if crtyd else (w, h))
     linhas = []
+    if marca:
+        for lay in ("F.SilkS",):
+            linhas.append(
+                f'\t(fp_circle\n\t\t(center {marca[0]:.4f} {marca[1]:.4f})\n'
+                f'\t\t(end {marca[0] + 0.1:.4f} {marca[1]:.4f})\n'
+                '\t\t(stroke (width 0.05) (type solid))\n\t\t(fill solid)\n'
+                f'\t\t(layer "{lay}")\n\t\t(uuid "{_uid(nome, lay, "pino1")}")\n\t)')
     for lay, larg, folga in (("F.CrtYd", 0.05, 0.25), ("F.Fab", 0.1, 0.0)):
         if lay == "F.CrtYd":
             a, b = cw / 2.0 + folga, ch / 2.0 + folga
@@ -289,7 +325,7 @@ def _corpo(nome, w, h, pads, descr, crtyd=None):
 
 
 def son(nome, n, pitch, pad_w, pad_h, span, corpo_w, corpo_h, descr,
-        nomes=None, ep=None):
+        nomes=None, ep=None, marca=None):
     """Two rows of pads, numbered counter-clockwise from the top left."""
     pads = []
     por_lado = n // 2
@@ -302,10 +338,10 @@ def son(nome, n, pitch, pad_w, pad_h, span, corpo_w, corpo_h, descr,
         pads.append(_pad(num, span / 2.0, y0 + i * pitch, pad_w, pad_h))
     if ep:
         pads.append(_pad(ep[0], 0, 0, ep[1], ep[2], forma="rect"))
-    return _corpo(nome, corpo_w, corpo_h, pads, descr)
+    return _corpo(nome, corpo_w, corpo_h, pads, descr, marca=marca)
 
 
-def wlp(nome, linhas, colunas, pitch, bola, corpo_w, corpo_h, descr):
+def wlp(nome, linhas, colunas, pitch, bola, corpo_w, corpo_h, descr, marca=None):
     """A ball grid, named A1..: letter is the row, number the column."""
     pads = []
     for r in range(linhas):
@@ -314,11 +350,41 @@ def wlp(nome, linhas, colunas, pitch, bola, corpo_w, corpo_h, descr):
             y = (r - (linhas - 1) / 2.0) * pitch
             pads.append(_pad(f"{chr(ord('A') + r)}{c + 1}", x, y, bola, bola,
                              forma="circle"))
-    return _corpo(nome, corpo_w, corpo_h, pads, descr)
+    return _corpo(nome, corpo_w, corpo_h, pads, descr, marca=marca)
+
+
+def bmp585_lga8(nome):
+    """Bosch BMP585, LGA-8 de 3,25 x 3,25 mm: pads nos QUATRO lados.
+
+    BST-BMP585-DS003, figura 29 (p. 64), que e vista de BAIXO; o land e
+    simetrico, e a numeracao e a da vista de cima da figura 22 (p. 45). O que
+    estava aqui
+    era um SON generico de duas fileiras de quatro a 0,65 mm, que sobre a
+    peca real ligava o 3V0_SENS ao GND e o SDA ao 3V0_SENS e deixava VDD e
+    VDDIO soltos (bmp585-a1 e bmp585-x1, revisao de 2026-10-18).
+
+      pinos 1 a 3   x -1,225, y -1,1 / 0 / +1,1   pad 0,60 x 0,85
+      pino 4        ( 0; +1,225)                   pad 0,85 x 0,60 (VDDIO)
+      pinos 5 a 7   x +1,225, y +1,1 / 0 / -1,1   pad 0,60 x 0,85
+      pino 8        ( 0; -1,225)                   pad 0,85 x 0,60 (VDD)
+
+    Cada pad e o terminal da peca (0,55 x 0,80) mais 25 um de cada lado, e
+    nao ha pad central nem cobre sob o corpo (secao 9.3.3 da ficha).
+    """
+    lado = [(-1.225, -1.1), (-1.225, 0.0), (-1.225, 1.1)]
+    pads = [_pad(str(i + 1), x, y, 0.60, 0.85) for i, (x, y) in enumerate(lado)]
+    pads.append(_pad("4", 0.0, 1.225, 0.85, 0.60))
+    pads += [_pad(str(5 + i), 1.225, y, 0.60, 0.85)
+             for i, y in enumerate((1.1, 0.0, -1.1))]
+    pads.append(_pad("8", 0.0, -1.225, 0.85, 0.60))
+    return _corpo(nome, 3.25, 3.25, pads,
+                  "Bosch BMP585, LGA-8 de quatro lados; land pattern da figura "
+                  "29 da BST-BMP585-DS003, sem cobre sob o corpo",
+                  marca=(-1.75, -1.75))
 
 
 def duas_bordas(nome, n_por_lado, pitch, pad_w, pad_h, span, corpo_w, corpo_h,
-                descr, primeiro_lado="R", pad_h_canto=None):
+                descr, primeiro_lado="R", pad_h_canto=None, marca=None):
     """A module: pads down one edge and up the other, 1..n.
 
     `pad_h_canto` narrows the first and the last pad of each row. u-blox asks
@@ -335,7 +401,7 @@ def duas_bordas(nome, n_por_lado, pitch, pad_w, pad_h, span, corpo_w, corpo_h,
         h = pad_h_canto if (pad_h_canto and i in (0, n_por_lado - 1)) else pad_h
         pads.append(_pad(str(n_por_lado + i + 1), -span / 2.0, y0 + i * pitch,
                          pad_w, h))
-    return _corpo(nome, corpo_w, corpo_h, pads, descr)
+    return _corpo(nome, corpo_w, corpo_h, pads, descr, marca=marca)
 
 
 def tecla_ts1088(nome):
@@ -386,6 +452,27 @@ def buzzer_pklcs1212(nome):
                   "som lateral de 1,9 x 0,9 rente a placa")
 
 
+def buzzer_cpt12123(nome):
+    """Same Sky CPT-12123-81-SMT-TR, ficha de 09/11/2024, p. 2.
+
+    12,0 x 12,0 x 3,0, tolerancia geral +-0,3. Transdutor PASSIVO de 81 dB a
+    4 kHz no lugar do Murata PKLCS1212E4001-R1, que entrou em Last Time Buy
+    ate 31/03/2027 com toda a linha de sounders piezo da Murata (buzzer-a1 e
+    sourcing-d2 da revisao de 2026-10-18). Os terminais tem 4,0 de largura
+    com vao interno de 10,0, como os do Murata, e o land e o que a ficha
+    recomenda, com filete de 1,5 mm para fora do corpo - a peca vive numa
+    bicicleta. O furo de som fica numa parede lateral sem terminal.
+
+      pad         3,0 x 6,0, centros em +-6,0, vao externo 15,0 (na ficha os
+                  terminais ficam em cima e embaixo: aqui o desenho gira 90)
+    """
+    pads = [_pad("1", -6.0, 0.0, 3.0, 6.0),
+            _pad("2", 6.0, 0.0, 3.0, 6.0)]
+    return _corpo(nome, 12.0, 12.0, pads,
+                  "Same Sky CPT-12123-81-SMT-TR, 81 dB a 4 kHz, passivo; land "
+                  "da p. 2 da ficha, furo de som lateral", crtyd=(15.0, 12.0))
+
+
 def led_rgb_3528(nome):
     """TUOZHAN S4-3528RGBTA-A, ficha S35210052 de 2021-02-21.
 
@@ -406,13 +493,18 @@ def led_rgb_3528(nome):
     """
     # Os nomes sao os do esquematico, nao os numeros da ficha: o pino 1 da
     # ficha e o catodo azul, o 2 o anodo comum, o 3 o verde e o 4 o vermelho.
-    pads = [_pad("KB", -1.70, 0.75, 1.8, 0.8),
-            _pad("A", -1.70, -0.75, 1.8, 0.8),
-            _pad("KG", 1.70, 0.75, 1.8, 0.8),
-            _pad("KR", 1.70, -0.75, 1.8, 0.8)]
+    # Com o y do KiCad para baixo, "superior" e y negativo. Ate 2026-10-18 os
+    # quatro estavam com o sinal de y trocado - o espelho da ficha, que
+    # nenhum giro desfaz: o anodo nunca chegava ao VSYS (leds-a1, leds-x1).
+    pads = [_pad("KB", -1.70, -0.75, 1.8, 0.8),
+            _pad("A", -1.70, 0.75, 1.8, 0.8),
+            _pad("KG", 1.70, -0.75, 1.8, 0.8),
+            _pad("KR", 1.70, 0.75, 1.8, 0.8)]
+    # a marca fica no canto chanfrado, o do vermelho, que e o que a peca traz
     return _corpo(nome, 3.5, 2.8, pads,
                   "TUOZHAN S4-3528RGBTA-A, anodo comum no pino 2; canto "
-                  "chanfrado junto ao pino 4 (vermelho). MSL4")
+                  "chanfrado junto ao pino 4 (vermelho). MSL4",
+                  marca=(1.70, 1.50))
 
 
 def antena_unictron(nome):
@@ -509,6 +601,50 @@ def fpc_hctl_5(nome):
                   crtyd=(4.28, 3.92))
 
 
+def molex_503480(nome, n, a):
+    """Molex 503480 (Easy-On, back flip): ZIF de passo 0,5 e 1,0 mm de altura.
+
+    Desenhos SD-503480-001 rev J (10 vias) e SD-503480-003 rev C (4 e 5
+    vias), "P.W.BOARD PATTERN": n terminais de 0,3 x 0,7 a passo 0,5; dois
+    pregos de 0,3 x 1,0 a 0,79 para fora dos terminais 1 e n; 3,5 da borda
+    externa dos terminais a borda externa dos pregos (2,65 de centro a
+    centro). CONTATO DOS DOIS LADOS (nota 9 do -001 e 10 do -003): aceita a
+    fita com os contatos para cima ou para baixo. Fita: 2 mm de condutor
+    exposto e 3 mm de reforco no minimo, espessura 0,3 +-0,05.
+
+    A fita entra pelo lado dos PREGOS, e os rabichos de solda dos terminais
+    ficam atras, sob o atuador: e o que as cinco vistas da p. 1 dizem juntas
+    (a secao Y-Y corta o corpo so na metade dos pregos, onde fica a fenda,
+    com 1,58 de insercao e o ponto de contato a 1,0; a vista de frente olha
+    para dentro da fenda, do lado dos pregos; na vista de lado o atuador
+    esta atras e o pe do prego 0,25 atras da face da frente; na de baixo os
+    rabichos saem 0,05 da borda de tras). Ate a conferencia cega de
+    2026-10-18 este desenho tinha a frente no lado dos terminais, e os tres
+    conectores abriam para dentro da placa.
+
+    Origem no centro do corpo de a x 3,6, a FRENTE em y -1,8. O contorno
+    CONNECTOR POSITION do land vai de 0,15 alem da borda de fora dos pregos a
+    0,05 aquem da borda de fora dos terminais: o pad do prego fica de 0,15 a
+    1,15 atras da face da frente (centro em -1,15) e o dos terminais 2,65
+    atras dele (centro em +1,50, a borda de fora 0,05 alem do corpo). A
+    primeira versao corrigida punha tudo 0,1 mm para tras. O pad 1 e o
+    circuito 1 da Molex:
+    a vista de cima do desenho tem os rabichos em cima e o circuito 1 a
+    esquerda, e aqui a frente esta em cima, entao o circuito 1 fica em +x.
+    """
+    yt = 1.50                              # centre of the terminal row, at the back
+    pads = [_pad(str(i + 1), ((n - 1) / 2.0 - i) * 0.5, yt, 0.30, 0.70)
+            for i in range(n)]
+    xn = (n - 1) / 2.0 * 0.5 + 0.79
+    pads += [_pad("MP1", xn, yt - 2.65, 0.30, 1.00),
+             _pad("MP2", -xn, yt - 2.65, 0.30, 1.00)]
+    return _corpo(nome, a, 3.60, pads,
+                  f"Molex 503480, ZIF de {n} vias, passo 0,5, 1,0 mm, contato dos "
+                  "dois lados; a fita entra pelo lado dos pregos (y negativo); land "
+                  "dos desenhos SD-503480-001 J e -003 C",
+                  crtyd=(a, 4.10), marca=((n - 1) / 2.0 * 0.5 + 0.45, yt + 0.35))
+
+
 GERADOS: dict[str, str] = {}
 
 
@@ -517,7 +653,7 @@ def _gerar():
     GERADOS["gnssbike:MAX17262_WLP-9_1.4x1.4mm_P0.4mm"] = wlp(
         "gnssbike:MAX17262_WLP-9_1.4x1.4mm_P0.4mm", 3, 3, 0.4, 0.20, 1.4, 1.4,
         "MAX17262 WLP de 9 bolas; land pattern aproximado, "
-        "a ficha recomendada nao foi lida")
+        "a ficha recomendada nao foi lida", marca=(-0.85, -0.85))
     # MMC5603NJ WLP-4, ficha Rev. B de 2018-07-12, paginas 17 e 18. O
     # MMC5633NJL que estava aqui nao existe na LCSC; este e da mesma
     # familia, responde no MESMO 0x30 e devolve o MESMO 0x10 no registrador
@@ -532,33 +668,44 @@ def _gerar():
     GERADOS["gnssbike:MMC5603_WLP-4_0.82x0.82mm"] = wlp(
         "gnssbike:MMC5603_WLP-4_0.82x0.82mm", 2, 2, 0.4, 0.23, 0.82, 0.82,
         "Memsic MMC5603NJ, WLP de 4 bolas; land pattern da pagina 18 da "
-        "ficha Rev. B")
+        "ficha Rev. B", marca=(-0.60, -0.60))
     GERADOS["gnssbike:Antena_Unictron_H2UJ4U1H2Q0100_5x3mm"] = antena_unictron(
         "gnssbike:Antena_Unictron_H2UJ4U1H2Q0100_5x3mm")
     GERADOS["gnssbike:HC-FPC-05-10-5RLTAG"] = fpc_hctl_5(
         "gnssbike:HC-FPC-05-10-5RLTAG")
+    for _n, _a, _cod in ((10, 6.70, "1000"), (5, 4.20, "0540"), (4, 3.70, "0440")):
+        _nome = f"gnssbike:Molex_503480-{_cod}_1x{_n:02d}_P0.50mm"
+        GERADOS[_nome] = molex_503480(_nome, _n, _a)
     GERADOS["gnssbike:SW_TS-1088R_3.9x3mm"] = tecla_ts1088(
         "gnssbike:SW_TS-1088R_3.9x3mm")
     GERADOS["gnssbike:Buzzer_PKLCS1212E4001_12x12mm"] = buzzer_pklcs1212(
         "gnssbike:Buzzer_PKLCS1212E4001_12x12mm")
+    GERADOS["gnssbike:Buzzer_CPT-12123-81-SMT_12x12mm"] = buzzer_cpt12123(
+        "gnssbike:Buzzer_CPT-12123-81-SMT_12x12mm")
     GERADOS["gnssbike:LED_RGB_3528_3.5x2.8mm"] = led_rgb_3528(
         "gnssbike:LED_RGB_3528_3.5x2.8mm")
-    # OPT3001 USON-6, 2.0 x 2.0 mm, 0.65 mm pitch.
+    # OPT3001 em DNP (USON-6), 2,0 x 2,0 mm, passo 0,65: o land pattern da
+    # p. 42 da ficha SBOS681, com o pad termico exposto de 0,65 x 1,35 que a
+    # TI manda soldar e ligar ao GND. Ate 2026-10-18 nao havia pad no centro
+    # e os pads eram de 0,35 x 0,28 (opt3001-a1, opt3001-x1).
     GERADOS["gnssbike:OPT3001_USON-6_2x2mm_P0.65mm"] = son(
-        "gnssbike:OPT3001_USON-6_2x2mm_P0.65mm", 6, 0.65, 0.35, 0.28, 1.8,
-        2.0, 2.0, "TI OPT3001 em DNP, USON-6; land pattern aproximado")
-    # ESD761 X1SON-2, 1.0 x 0.6 mm.
+        "gnssbike:OPT3001_USON-6_2x2mm_P0.65mm", 6, 0.65, 0.50, 0.25, 1.9,
+        2.0, 2.0, "TI OPT3001 em DNP, USON-6; land pattern da p. 42 da "
+                  "SBOS681, pad termico 7 no GND", ep=("7", 0.65, 1.35),
+        marca=(-0.95, -1.15))
+    # ESD761 X1SON-2, 1.0 x 0.6 mm. A marca e o catodo, pad 1, no VBUS.
     GERADOS["gnssbike:ESD761_X1SON-2_1x0.6mm"] = son(
         "gnssbike:ESD761_X1SON-2_1x0.6mm", 2, 0.5, 0.35, 0.45, 0.6,
-        1.0, 0.6, "TI ESD761 em DPY, X1SON-2; land pattern aproximado")
+        1.0, 0.6, "TI ESD761 em DPY, X1SON-2; land pattern aproximado",
+        marca=(-0.70, 0.0))
     # TPD4E05U06 USON-10, 1.0 x 2.5 mm, 0.5 mm pitch.
     GERADOS["gnssbike:TPD4E05U06_USON-10_1x2.5mm_P0.5mm"] = son(
         "gnssbike:TPD4E05U06_USON-10_1x2.5mm_P0.5mm", 10, 0.5, 0.3, 0.24, 0.8,
-        1.0, 2.5, "TI TPD4E05U06 em DQA, USON-10; land pattern aproximado")
-    # BMP585 LGA-8, 3.25 x 3.25 mm.
-    GERADOS["gnssbike:BMP585_LGA-8_3.25x3.25mm"] = son(
-        "gnssbike:BMP585_LGA-8_3.25x3.25mm", 8, 0.65, 0.5, 0.35, 2.5,
-        3.25, 3.25, "Bosch BMP585, LGA-8; land pattern aproximado")
+        1.0, 2.5, "TI TPD4E05U06 em DQA, USON-10; land pattern aproximado",
+        marca=(-0.40, -1.40))
+    # BMP585 LGA-8, 3.25 x 3.25 mm, pads nos quatro lados.
+    GERADOS["gnssbike:BMP585_LGA-8_3.25x3.25mm"] = bmp585_lga8(
+        "gnssbike:BMP585_LGA-8_3.25x3.25mm")
     # MAX form factor, 9,7 x 10,1 mm, 18 pads, 9 per edge, LCC with half
     # vias on the two long edges. It carries EITHER receiver: the MAX-F10S
     # and the MAX-M10S have the same 18 pins, the same names, the same
@@ -585,7 +732,7 @@ def _gerar():
         9.7, 10.1, "u-blox MAX-F10S ou MAX-M10S; 18 pads, 9 por borda, passo "
                    "1,1. Land pattern da tabela 44 do UBX-20053088 R05, "
                    "confirmado na figura 25 do UBXDOC-963802114-12892",
-        pad_h_canto=0.7)
+        pad_h_canto=0.7, marca=(4.75, 5.20))
     # Kingbright APTF1616 RGB, 1.6 x 1.6 mm, four terminals.
     GERADOS["gnssbike:LED_RGB_APTF1616_1.6x1.6mm"] = son(
         "gnssbike:LED_RGB_APTF1616_1.6x1.6mm", 4, 0.8, 0.45, 0.55, 1.5,
@@ -1378,6 +1525,8 @@ DESENHADOS = {
     "gnssbike:u-blox_MAX_LCC-18_9.7x10.1mm": wrl_max_f10s,
     "gnssbike:SW_TS-1088R_3.9x3mm": wrl_tecla_ts1088,
     "gnssbike:Buzzer_PKLCS1212E4001_12x12mm": wrl_buzzer_pklcs,
+    # the same body and the same lateral sound hole as the Murata
+    "gnssbike:Buzzer_CPT-12123-81-SMT_12x12mm": wrl_buzzer_pklcs,
     # wrl_usb_c desenha o Molex 2036150003, que saiu da lista em
     # 2026-09-24 (309 unidades no mundo). O HRO TYPE-C-31-M-12 que
     # entrou no lugar ainda nao teve o desenho cotado lido, e desenhar
@@ -1457,6 +1606,12 @@ PACOTE: dict[str, tuple] = {
          "DPY0002A X1SON, desenho 4224561/C 07/2024: A 0,9 a 1,1, B 0,5 a "
          "0,7, C maximo 0,45 (nominal nao consta), standoff 0 a 0,05, "
          "terminais 0,2 a 0,3 por 0,45 a 0,55, passo 0,65 basico"),
+    "gnssbike:Buzzer_CPT-12123-81-SMT_12x12mm":
+        (12.00, 12.00, 3.00, 0.00, None, 1.00, 4.00, 11.00,
+         "Same Sky CPT-12123-81-SMT-TR, ficha de 09/11/2024, p. 2: corpo "
+         "12,0 x 12,0 x 3,0 +-0,3; terminais de 4,0 na aresta com vao interno "
+         "10,0; land recomendado de 3,0 x 6,0 com vao externo 15,0; furo de "
+         "som numa parede lateral"),
     "gnssbike:Buzzer_PKLCS1212E4001_12x12mm":
         (12.00, 12.00, 3.00, 0.00, None, 1.20, 4.00, 11.20,
          "Murata PKLCS1212E4001-R1, especificacao JGB40-1584B (2021-05-21), "
@@ -1724,7 +1879,9 @@ _fp("U504", "gnssbike:MMC5603_WLP-4_0.82x0.82mm", "GERADO",
     "Memsic MMC5603NJ: o MMC5633NJL nao existe na LCSC. Mesma familia, "
     "mesmo 0x30, mesmo 0x10 no registrador 0x39 - o driver nao muda")
 _fp("U505", "gnssbike:OPT3001_USON-6_2x2mm_P0.65mm", "GERADO", "")
-_fp("D101", "gnssbike:ESD761_X1SON-2_1x0.6mm", "GERADO", "")
+_fp("D101", "Diode_SMD:D_SOD-882", "EXATO",
+    "Nexperia PESD24VS1UL, DFN1006-2 (SOD-882): o land da KiCad e o da ficha "
+    "(0,4 x 0,7 a 0,7); pino 1 e o catodo, com a barra, no VBUS")
 _fp("D102", "gnssbike:TPD4E05U06_USON-10_1x2.5mm_P0.5mm", "GERADO", "")
 _fp("U502", "gnssbike:BMP585_LGA-8_3.25x3.25mm", "GERADO", "")
 _fp("U301", "gnssbike:u-blox_MAX_LCC-18_9.7x10.1mm", "GERADO", "")
@@ -1774,7 +1931,8 @@ def me54bs13() -> str:
 
     corpo = _corpo("gnssbike:MinewSemi_ME54BS13_16.5x12mm", W, H, pads,
                    "MinewSemi ME54BS13, nRF54LM20A; 20 pads castelados e 60 LGA. "
-                   "Land pattern NAO oficial: a Minew fornece o dela sob pedido")
+                   "Land pattern NAO oficial: a Minew fornece o dela sob pedido",
+                   marca=(-6.0, fy(ys_cast[9]) - 0.75))
     # the antenna band, and the 4 mm the datasheet asks for around the RF side
     faixa = (f'\t(fp_rect\n\t\t(start {-W / 2.0:.3f} {-H / 2.0:.3f})\n'
              f'\t\t(end {W / 2.0:.3f} {-H / 2.0 + ANT:.3f})\n'

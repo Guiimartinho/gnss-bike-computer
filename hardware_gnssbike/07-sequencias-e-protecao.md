@@ -24,15 +24,15 @@ sequenceDiagram
     participant P as nPM1300
     participant M as MCU (ME54BS13)
     participant G as MAX-F10S
-    participant F as flash e luz
+    participant F as luz
     Note over P: ship mode, cerca de 370 nA<br/>só o VBCKP do TPS7A02 continua
     C->>P: tecla central no SHPHLD (pull-up interno de 50 kΩ)
     P->>P: sai do ship mode e o VSYS sobe
     P->>M: BUCK2 em 3,0 V, fixado pelo RVSET2 de 150 kΩ
-    P->>G: BUCK1 em 1,8 V, fixado pelo RVSET1 de 47 kΩ
+    P->>G: o mesmo 3V0, pelo JP103 e pelo ferrite (o BUCK1 sobe sem carga)
     M->>M: MCUboot, kernel do Zephyr, main()
     M->>G: UBX-CFG-VALSET nas camadas RAM e BBR
-    M->>F: LDSW1 e LDSW2, só quando alguém precisa
+    M->>F: LDSW2 só quando a interface acende a luz<br/>(a flash fica no 3V0 e dorme em deep power-down)
     G-->>M: UBX-NAV-PVT a 1 Hz
 ```
 
@@ -197,8 +197,16 @@ carga de **3,90 V** e corte de descarga de **3,01 V**
 | MAX17262 em hibernação | 5,2 µA | continua contando a corrente líquida, inclusive a do painel |
 | nPM1300 em ship mode | 370 nA | espera o `SHPHLD` ou o `VBUS` |
 | AEM10900 | cerca de 0,2 µA | **continua carregando com sol**, sozinho, até 3,90 V |
+| Comparador `U105` do corte térmico, no `VBAT_SYS` | 315 nA | o corte da carga solar a 45 °C continua valendo com o aparelho desligado ao sol, desde 2026-10-18 ([abaixo](#o-corte-térmico-da-carga-solar)) |
 
 Total de cerca de **34 µA** ([`docs/14`](../docs/14-hardware-placa-nova.md#estados-de-energia)).
+
+> [!NOTE]
+> A linha do AEM10900 é a do colhedor que o firmware e esta página ainda
+> descrevem. No CAD, desde 2026-09-24, o colhedor é o ADP5091, que também
+> carrega sozinho com sol, até os 3,93 V nominais do divisor do `TERM`; o
+> consumo dele parado não foi conferido aqui
+> ([01](01-esquematico.md#folha-1--energia)).
 
 ### O toque longo de 10 s
 
@@ -287,10 +295,10 @@ Esta tabela é a conta do que existe e do que falta.
 
 | O que sai | Risco | Proteção | Estado |
 |---|---|---|---|
-| USB-C `VBUS` | descarga e sobretensão de um carregador defeituoso | **TVS ESD761** junto do conector, mais 10 µF/25 V junto do nPM1300; o TVS não conduz até ±24 V e o PMIC tolera 22 V em transitório | existe ([03](03-netlist.md#nós-de-alimentação)) |
+| USB-C `VBUS` | descarga e sobretensão de um carregador defeituoso | **TVS Nexperia PESD24VS1UL** (`D101`, SOD-882) junto do `VBUS` do USB-C, mais 10 µF/25 V (`C101`) junto do nPM1300. É **unidirecional**: 24 V de trabalho, ruptura de 26,5 a 27,5 V, 23 kV de ESD por contato, catodo no `VBUS`. O nPM1300 cuida da sobretensão contínua (tolera até 22 V) e o TVS, só da descarga | existe desde 2026-10-18 ([abaixo](#o-tvs-do-vbus)) |
 | USB-C `D+`, `D−`, `CC1`, `CC2` | descarga pelo cabo | **TPD4E05U06**, 4 canais, 0,5 pF, ±12 kV por contato | existe ([03](03-netlist.md#nós-sem-ligação-ao-mcu)) |
 | As três teclas | descarga pelo dedo do ciclista | **100 Ω em série e 1 nF ao `GND`** em cada uma, desde 2026-09-23 | [abaixo](#as-teclas-que-até-2026-09-23-não-tinham-nada) |
-| Painel solar | sobretensão de entrada | a entrada `SRC` do AEM10900, sem componente externo | ficha do AEM10900 |
+| Painel solar | descarga pelo chicote e polaridade trocada | grampo ESD **Nexperia PESD3V3S1UB-N** (`D105`, unidirecional, SOD-523) no `SRC`, junto do `J103` no verso desde 2026-10-18: grampeia uma polaridade trocada em −0,7 V. Não protege de fonte errada sustentada (uma célula de 4,2 V no `J103`); quem impede isso é a família do conector | existe ([05](05-materiais.md#folha-1--energia)) |
 | Antena GNSS e antena do rádio | descarga pelo ar e acoplamento entre elas | dentro dos módulos: o MAX-F10S tem SAW, LNA e SAW; o ME54BS13 traz o casamento e a antena de PCB | [01](01-esquematico.md#folha-3--gnss) |
 
 > [!CAUTION]
@@ -302,9 +310,26 @@ Esta tabela é a conta do que existe e do que falta.
 > ([`docs/14`](../docs/14-hardware-placa-nova.md#gnss),
 > [04](04-pcb-e-caixa.md#as-duas-antenas)).
 
+### O TVS do VBUS
+
+O `D101` já foi três peças, e cada troca mudou o que ele protege:
+
+| Desde | Peça | O que fazia | Por que saiu |
+|---|---|---|---|
+| 2026-09-18 | TI ESD761DPYR | bidirecional, 24 V de trabalho: o PMIC cuidava da sobretensão e o TVS, da descarga | estoque zero na LCSC e na JLCPCB, quando a placa passou a ser montada lá |
+| 2026-09-24 | TI TPD1E05U06DPYR | unidirecional, 5,5 V de trabalho e 0,42 pF; rompia entre 6,5 e 8,5 V | um carregador fora da norma, que o nPM1300 aguentaria (até 22 V), queimava o `D101` e podia deixar o `VBUS` em curto (achado G5 da [revisão](11-revisao-do-esquematico.md#graves)) |
+| 2026-10-18 | **Nexperia PESD24VS1UL** | unidirecional, 24 V de trabalho, ruptura de 26,5 a 27,5 V, SOD-882, LCSC C477994 | — é o de hoje, decisão D2 do dono |
+
+Com o PESD24VS1UL a divisão de trabalho volta a ser a de 2026-09-18: o
+nPM1300 segura a sobretensão contínua e o TVS só a descarga eletrostática.
+Ele fica junto do `VBUS` do USB-C desde 2026-10-18 (achado G9: estava a
+47 mm do conector), e é polarizado: o catodo, com a barra, vai
+ao `VBUS`, e a serigrafia marca o pino 1 em todo footprint gerado desde
+2026-10-18 (achado G7).
+
 ### As teclas, que até 2026-09-23 não tinham nada
 
-As três teclas Omron B3S-1002P vão do pino do MCU ao `GND`, com o pull-up
+As três teclas (XunPu TS-1088R-02026 desde 2026-09-24) vão do pino do MCU ao `GND`, com o pull-up
 interno. Até o dry-run, **sem nenhum componente no meio**: era o único
 caminho da caixa para o silício sem proteção — e é o que o ciclista toca
 com a mão molhada, de luva, depois de descer uma ladeira.
@@ -346,7 +371,8 @@ comparador em cobre, sem firmware no caminho
 flowchart LR
     SRC(("SRC · painel")) --> RT["RT101 NTC 10 kΩ<br/>sobre R106 4,87 kΩ"]
     SRC --> REF["R124 / R125<br/>metade do SRC"]
-    RT -->|"IN+"| CMP["U105 TLV7031"]
+    VBS(("VBAT_SYS")) -->|"V+, 315 nA"| CMP
+    RT -->|"IN+"| CMP["U105 TLV7031DCKR"]
     REF -->|"IN−"| CMP
     CMP -->|"quente: alto"| D106["D106 BAT54WS"] --> DIS(("DIS_SW do ADP5091"))
     VBUSOUT(("VBUSOUT")) -->|"R104 / R105"| DIS
@@ -358,14 +384,20 @@ flowchart LR
 | Célula acima de 45 °C, com sol | o divisor passa da metade do `SRC`, o comparador sobe, o `D106` leva o `DIS_SW` acima de 1 V e o boost para | cobre |
 | Célula abaixo de 45 °C | o comparador fica baixo, o `D106` fica em corte e o `DIS_SW` só responde ao divisor do USB | cobre |
 | Cabo USB ligado | o `VBUSOUT` leva o `DIS_SW` para cima pelo `R104`/`R105` e o solar para, com ou sem calor | cobre |
-| Sem sol | `SRC` em zero: o divisor e o comparador não gastam nada, e não há o que cortar | — |
-| **Célula abaixo de 0 °C, com sol** | **nada corta**: só o lado quente tem comparador. O carregador do nPM1300 no USB continua protegido pelo JEITA; o painel, não | **em aberto** ([01](01-esquematico.md#folha-1--energia)) |
+| Aparelho desligado (ship mode), com sol | o comparador continua alimentado pelo `VBAT_SYS` e o corte vale. Até 2026-10-18 ele estava no `VSYS`, que o nPM1300 desliga em ship mode, e o ADP5091 carregava a célula quente sem corte nenhum (achado G3) | cobre |
+| Sem sol | `SRC` em zero: os divisores não gastam nada e não há o que cortar. O comparador gasta os seus 315 nA do `VBAT_SYS`, e com as duas entradas em 0 V a saída não tem estado definido: pode segurar o `DIS_SW` alto a noite inteira (achado menor `energia-s2` da [revisão](11-revisao-do-esquematico.md#menores), não verificado) | — |
+| **Célula abaixo de 0 °C, com sol** | **nada corta**: só o lado quente tem comparador. O carregador do nPM1300 no USB continua protegido pelo JEITA, que desde 2026-10-18 só carrega de 0 a 45 °C; o painel, não | **em aberto** ([01](01-esquematico.md#folha-1--energia)) |
 
-O comparador é alimentado pelo `VSYS`, e as entradas, alimentadas pelo
-painel, ficam entre 0 e 2,07 V. A faixa de alimentação, a de modo comum
-das entradas e a pinagem do TLV7031 estão **por conferir na ficha
-SNOSD54** antes de fabricar: o `cad/parts.py` o marca como não confirmado
-de propósito ([05](05-materiais.md)).
+O comparador é o **TLV7031DCKR** (LCSC C2863637), com saída push-pull, e
+desde 2026-10-18 é alimentado pelo `VBAT_SYS`, que existe sempre que existe
+célula, de 3,0 a 4,45 V, dentro dos 1,6 a 6,5 V da ficha (SLVSE13J). A
+pinagem foi conferida na mesma revisão e o símbolo, renumerado para a
+peça pedida (1 `OUT`, 2 `V−`, 3 `IN+`, 4 `IN−`, 5 `V+`): o desenho tinha a
+da TLV7031**S**, e o código da LCSC era o da versão SOT-23-5, que não cabe
+no land (achado B3). As entradas, alimentadas pelo painel, ficam entre 0 e
+o `SRC`, no máximo os 2,07 V do painel em vazio, abaixo do `V+`; a faixa de
+modo comum delas não está registrada em documento do projeto
+([05](05-materiais.md#folha-1--energia)).
 
 ## O que só a bancada decide
 
@@ -375,7 +407,7 @@ de propósito ([05](05-materiais.md)).
 | Brown-out do nRF54LM20A e `VSYSPOF` do nPM1300 | fichas não lidas nesta rodada | ler as duas e medir a ordem de corte com fonte programável |
 | O que o MCU vê depois do toque longo de 10 s | `RESET_POWER_ON` ou `RESET_PIN` | ler o `LPRESETCONFIG` na ficha e conferir no console |
 | Se o POF chega a tempo de fechar uma gravação | o apagamento de um setor leva 58 ms (**ficha**) | provocar queda de tensão gravando, e conferir o arquivo |
-| `LDSW1` não é ligada por firmware nenhum | o nó `LDO1` existe no devicetree sem `regulator-boot-on`, sem alias, e a flash `mx25r64` não tem `supply`; nenhum arquivo de `src/` a referencia | decidir se o armazenamento fica sempre ligado (e tirar a chave) ou dar um alias e ligar a chave no serviço de armazenamento |
+| A flash parada em deep power-down | desde 2026-10-18 a flash fica no `3V0`, sempre ligado (pelo `JP106`), e a `LDSW1` ficou sem carga e desligada: a chave que nenhum firmware ligava saiu do circuito. O consumo dela parada depende de o driver a pôr em deep power-down (`has-dpd` no devicetree): 0,35 µA no máximo pela ficha | medir a corrente do `3V0` com o aparelho ligado e a flash parada, com e sem o comando de deep power-down |
 | `NPM13XX_EVENT_SHIPHOLD_PRESS` não é assinado | o firmware lê a tecla central pelo GPIO em conflito | decidir a ligação da tecla central e então inscrever o evento |
 | Proteção das teclas | os 100 Ω e o 1 nF entraram em 2026-09-23 ([03](03-netlist.md#pinos-de-configuração-amarrados-em-cobre), [05](05-materiais.md#folha-6--interface)), mas nenhum foi exercitado | testar com pistola de ESD segundo a IEC 61000-4-2, e conferir que o `SHPHLD` continua enxergando a tecla central através da rede |
 | Isolamento entre as antenas | o `RF_IN` do F10S tolera 0 dBm e o rádio transmite a +8 dBm | medir S21 em 2,44 GHz **antes** de ligar o rádio na potência cheia |

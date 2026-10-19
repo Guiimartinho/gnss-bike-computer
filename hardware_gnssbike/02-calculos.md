@@ -276,7 +276,7 @@ a troca da tela não mexeu em nenhum dos números dela. O `Q401`
 > pelo FPC de 10 vias: ela tem um conector próprio, de **5 vias e passo
 > 0,5 mm**, segundo a ficha `3LPM027M128C specification ver.02`. O `J402`
 > passou a ser esse conector
-> ([06](06-conectores-e-pontos-de-teste.md#j402--luz-do-lpm027m128c)). O
+> ([06](06-conectores-e-pontos-de-teste.md#j402--luz-da-jdi)). O
 > que ainda falta é **qual das cinco vias é anodo e qual é catodo**: os
 > dois PDF da JDI respondem 404 e o arquivo histórico está bloqueado.
 
@@ -403,12 +403,12 @@ O [calor do carregador](#calor-do-carregador) é a junção de um chip. A
 outra pergunta é o que acontece com a **caixa**, que é vedada e fica no
 guidão.
 
-Área externa (**conta**, caixa de 62 × 106 × 17 mm, a proposta de
-[`caixa/make_caixa.py`](caixa/make_caixa.py); o conceito de 62 × 104 × 19 dava
-192 cm²):
+Área externa (**conta**, caixa de 64 × 106 × 18,2 mm, a de
+[`caixa/make_caixa.py`](caixa/make_caixa.py) desde 2026-10-19; a de
+62 × 106 × 17 dava 189 cm², e o conceito de 62 × 104 × 19, 192 cm²):
 
 ```
-2×(62×106) + 2×(62×17) + 2×(106×17) = 18.856 mm² = 189 cm² = 0,0189 m²
+2×(64×106) + 2×(64×18,2) + 2×(106×18,2) = 19.756 mm² = 198 cm² = 0,0198 m²
 ```
 
 Dissipação no pior caso, que é **carregando**. E aqui a conta não é "o
@@ -426,17 +426,17 @@ Com convecção natural em ar parado, cujo coeficiente fica entre 5 e
 
 | `h` | Elevação da caixa | Caixa a 25 °C de ambiente |
 |---|---|---|
-| 5 W/m²·K (pior) | 20,1 °C | **45,1 °C** |
-| 7 W/m²·K | 14,3 °C | 39,3 °C |
-| 10 W/m²·K (melhor) | 10,0 °C | 35,0 °C |
+| 5 W/m²·K (pior) | 19,1 °C | **44,1 °C** |
+| 7 W/m²·K | 13,7 °C | 38,7 °C |
+| 10 W/m²·K (melhor) | 9,6 °C | 34,6 °C |
 
 **Pedalando, o problema não existe:** sem carga o aparelho dissipa 263 mW
-no pior caso, e a caixa sobe de 1,4 a 2,8 °C. O calor é inteiramente do
+no pior caso, e a caixa sobe de 1,3 a 2,7 °C. O calor é inteiramente do
 caminho de carga, e só com o cabo ligado.
 
 > [!CAUTION]
 > **No pior caso a caixa já encosta no corte do JEITA sem nenhum sol.** O
-> corte de carga da célula é **45 °C** e a conta acima dá **44,7 °C** com
+> corte de carga da célula é **45 °C** e a conta acima dá **44,1 °C** com
 > 25 °C de ambiente e o pior coeficiente. Não é margem: é empate. E as duas
 > saídas já estão escritas e nenhuma foi tomada — baixar o `I_CHG` para
 > 400 mA (0,2 C), o que alonga a carga, ou dar caminho térmico do
@@ -447,7 +447,7 @@ caminho de carga, e só com o cabo ligado.
 > **A junção do carregador é mais quente do que os 73 °C da seção
 > anterior.** Aqueles 73 °C usam 25 °C de ambiente, e o ar que rodeia o
 > chip **é o interior da caixa**, que esta seção acabou de mostrar subir
-> até 19,7 °C. Compondo, a junção vai a cerca de **93 °C**. O `θ_JA` de
+> até 19,1 °C. Compondo, a junção vai a cerca de **92 °C**. O `θ_JA` de
 > 32 °C/W supõe ar livre, então compor os dois é aproximação grosseira nos
 > dois sentidos — mas o sinal é claro, e o número de 73 °C é otimista.
 

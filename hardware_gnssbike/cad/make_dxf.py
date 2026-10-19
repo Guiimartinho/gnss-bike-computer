@@ -135,6 +135,34 @@ FUROS_DOC = [(3.2, 7.0), (14.4, 91.7)]
 # (8,8 of its 9,88), the conflict flagged below.
 DISPLAY_ALT = 61.8
 DISPLAY_Y1 = 62.9
+# Since 2026-10-18 the board takes either panel on the same J401: the JDI
+# LPM027M128C (62,5 x 42,2 x 2,2, spec Rev.02 p. 34) or the Sharp
+# LS027B7DH01A (62,8 x 42,82 x 1,64, LCP-2110015A and LD-28305A), bare or as
+# the Azumo 11103-06 module with its front light (64,57 long with the roll at
+# the end away from the light tail, 2,08 thick, drawing T7). The two active
+# areas are the same, 58,8 x 35,28, and they sit at the same place, so one
+# window serves both; the panels' outlines differ around it. All of it in
+# the board frame (mm from the top left corner), from the card of the
+# schematic review (display-dual):
+#   ATIVA_C        centre of the active area: 1,67 right of the board's
+#                  middle, because the tail edge has a 5,54 border and the
+#                  other 2,0
+#   PAINEIS_X      the union of the outlines across, from the tail edge (the
+#                  left, where all the tails leave) to the far one, centred
+#                  on the board: between the two bevels of the lid, which
+#                  carry the solar modules, there are 43,30 mm for its 43,02
+#                  (the case's CX10 and CX11)
+#   DISPLAY_Y1     where the glass ends near the keys: the Sharp's, 0,3 short
+#                  of the caps' holes, which is why everything moved 0,5 up
+#   DISPLAY_ALT    the Azumo's length with its roll, so the shadow starts
+#                  1,67 above the board's top edge
+#   FAIXA_AZUMO    the band under the Azumo's back strip (6,9 x 38,1, 2,53
+#                  behind the panel): 0,47 mm over the board, so no part may
+#                  stand in it, only pads and copper
+ATIVA_C = (18.67, 31.5)
+PAINEIS_X = (-4.51, 38.51)
+DISPLAY_ALT = 64.57
+FAIXA_AZUMO = (53.6, 60.5)
 
 # The four screws the case drawing still has, at (6.5, 12.5), (55.5, 12.5),
 # (6.5, 91.5) and (55.5, 91.5) in case coordinates, are 3.5 mm inside on every
@@ -287,7 +315,7 @@ ZONES = [
     # teto de 3,0 e nao 2,6 desde 2026-09-26: o receptor MAX-F10S tem 2,7
     # de maximo (cota C da ficha) e fica sob o display; a caixa desce a
     # placa 0,4 mm (make_caixa.DISPLAY_VAO) e a celula fica a 0,3 do fundo
-    ("SOMBRA_DISPLAY_JDI_MAX_3-0MM", _f(0.0, DISPLAY_Y1 - DISPLAY_ALT, W, DISPLAY_Y1), 4,
+    ("SOMBRA_DISPLAY_JDI_MAX_3-0MM", _f(0.0, max(0.0, DISPLAY_Y1 - DISPLAY_ALT), W, DISPLAY_Y1), 4,
      "04#as-duas-sombras-display-e-bateria: teto de 3,0 mm na frente; "
      "PROPOSTA, a caixa e a de make_caixa.py, nao impressa"),
     ("SOMBRA_BATERIA_MAX_1-2MM", _f(0.0, 9.9, W, 69.9), 4,
@@ -311,7 +339,7 @@ CONFLITOS: list[tuple] = [
     # aqui: o dono decide entre celula menor, display mais baixo ou caixa
     # diferente.
     ("CONFLITO_DISPLAY_SOBRE_ANTENA_GNSS",
-     _f(13.25 - 4.96, DISPLAY_Y1 - DISPLAY_ALT, 13.25 + 10.04, 9.88), 1,
+     _f(13.25 - 4.96, max(0.0, DISPLAY_Y1 - DISPLAY_ALT), 13.25 + 10.04, 9.88), 1,
      f"o display de {DISPLAY_ALT:g} mm, acabando em {DISPLAY_Y1:g}, comeca em "
      f"{DISPLAY_Y1 - DISPLAY_ALT:.1f} e cobre {9.88 - (DISPLAY_Y1 - DISPLAY_ALT):.1f} mm "
      "da area da antena GNSS; a ficha da Unictron nao diz o que um vidro com "

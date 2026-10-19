@@ -48,15 +48,16 @@ Três fontes entram (USB, painel solar e célula), quatro trilhos saem.
 
 ```mermaid
 flowchart LR
-    USB["USB-C<br/>Molex 2036150003"]
-    TVS["ESD761"]
+    USB["USB-C<br/>HRO TYPE-C-31-M-12"]
+    TVS["D101 · PESD24VS1UL<br/>24 V, unidirecional"]
     USB -->|"VBUS"| TVS --> NPM
     USB -->|"CC1, CC2"| NPM
 
     PV["6 × KXOB25-05X3F<br/>3 células cada"] -->|"SRC"| AEM["ADP5091<br/>colhedor solar com MPPT"]
     AEM -->|"SW · 22 µH"| AEM
-    AEM -->|"BAT"| VBAT(("VBAT"))
-    PV -.->|"divisor RT101 / R106"| CMP["TLV7031<br/>corte térmico a 45 °C"]
+    AEM -->|"BAT"| VBAT(("VBAT_SYS"))
+    PV -.->|"divisor RT101 / R106"| CMP["U105 · TLV7031DCKR<br/>corte térmico a 45 °C"]
+    VBAT -->|"V+"| CMP
     CMP -->|"D106 → DIS_SW"| AEM
 
     CELL["LiPo 1S<br/>2000 mAh"] --> RS["sensor<br/>7 mΩ"] --> VBAT
@@ -69,9 +70,9 @@ flowchart LR
     NPM -->|"VBUSOUT"| VOUT(("VBUSOUT"))
     NPM -->|"BUCK2 · 2,2 µH"| R3V0(("3V0"))
     NPM -->|"BUCK1 · 2,2 µH · sem carga"| R1V8(("1V8"))
-    NPM -->|"LDSW1"| RSD(("SD3V0"))
+    NPM -->|"LDSW1 · sem carga"| RSD(("SD3V0"))
     NPM -->|"LDSW2 como LDO"| RBL(("3V3BL"))
-    VOUT -->|"divisor 100 k / 1 M"| AEM
+    VOUT -->|"divisor 100 k / 180 k"| AEM
 ```
 
 ### As decisões desta folha
@@ -99,9 +100,10 @@ que nada contasse quanto.
 proíbe: ele é saída do power path e parece uma entrada, o que torna o
 engano fácil.
 
-No `VBAT` a regra é outra e mais estreita do que "nada pendura nele". Ali
-estão, além do `VBAT` do nPM1300, o `BAT` do ADP5091, o `IN` do TPS7A02 e
-o `SYS` do medidor — e é assim de propósito: o colhedor **carrega** a
+No `VBAT_SYS`, o nó do lado do sistema do medidor, a regra é outra e mais
+estreita do que "nada pendura nele". Ali estão, além do `VBAT` do nPM1300,
+o `BAT` e o `SYS` do ADP5091, o `IN` do TPS7A02, o `SYS` do medidor e,
+desde 2026-10-18, o `V+` do comparador `U105` — e é assim de propósito: o colhedor **carrega** a
 célula por esse nó e o LDO do `V_BCKP` precisa da célula direto, para
 sobreviver ao ship mode. O que não pode é carga da aplicação pendurada
 ali, desviando do caminho de medição.
@@ -117,7 +119,13 @@ ali, desviando do caminho de medição.
 **O LED de carga não precisa de firmware.** O `LED1` do nPM1300 sai de
 fábrica como indicador de carga e o `LED0` como indicador de erro. Com o
 anodo no `VSYS`, o LED acende com o aparelho desligado — que é justamente
-quando alguém quer saber se está carregando.
+quando alguém quer saber se está carregando. Os dois (`D103` e `D104`,
+Kingbright APT1608SURCK) ficam **na fileira das teclas, entre a primeira e
+a segunda, cada um com a sua janela na caixa**, desde 2026-10-18: sob o
+display, onde estavam, ninguém os via (achado G8 da
+[revisão](11-revisao-do-esquematico.md#correções-aplicadas); junto do
+`D601`, como a revisão sugeria, eles caíam perto demais da antena do
+módulo ou no corredor do par USB).
 
 **A tecla central liga o aparelho.** Ela vai ao `SHPHLD`, que tem pull-up
 interno de 50 kΩ, e **também** a um GPIO, porque o firmware precisa ler a
@@ -137,17 +145,30 @@ sozinho fora de 0 a 45 °C; o ADP5091 só tem o `DIS_SW`, que desliga o
 boost quando puxado para cima. Decisão do dono em 2026-09-26: o divisor
 `RT101` (NTC 10 kΩ, B3380, na face de trás, sob a célula) sobre `R106`
 (4,87 kΩ) é alimentado pelo **próprio painel** (`SRC`), o `U105`
-(TLV7031, 335 nA) o compara com a metade do `SRC` (`R124`/`R125`, 100 kΩ
-cada) e, quente, leva o `DIS_SW` para cima pelo `D106` (BAT54WS): o mesmo
+(TLV7031DCKR, 315 nA, saída push-pull) o compara com a metade do `SRC`
+(`R124`/`R125`, 100 kΩ cada) e, quente, leva o `DIS_SW` para cima pelo
+`D106` (BAT54WS): o mesmo
 pino que o divisor do `VBUSOUT` (`R104`/`R105`) já usa para bloquear a
 carga solar com o cabo ligado, agora em OU de diodos. A conta do limiar
 (**conta**, B = 3380): a 45 °C o NTC vale
 10 kΩ × e^(3380 × (1/318,15 − 1/298,15)) = 4,90 kΩ, e
 4,87 ÷ (4,90 + 4,87) = 0,498 do `SRC` — o comparador vira exatamente
-onde a metade está. Alimentar o divisor pelo painel, e não pelo `VSYS`, é
-o que faz o circuito não gastar nada sem sol; o painel em vazio dá 2,07 V
-([04](04-pcb-e-caixa.md)), dentro do que o `DIS_SW` aceita (6,0 V de
-máximo absoluto) e do `VIN` do ADP5091 (3,6 V).
+onde a metade está. Alimentar os dois divisores pelo painel, e não pela
+célula, é o que faz eles não gastarem nada sem sol; o painel em vazio dá
+2,07 V ([04](04-pcb-e-caixa.md)), dentro do que o `DIS_SW` aceita (6,0 V
+de máximo absoluto) e do `VIN` do ADP5091 (3,6 V).
+
+**O comparador fica no `VBAT_SYS`, que o ship mode não corta** (desde
+2026-10-18, achado G3 da [revisão](11-revisao-do-esquematico.md#correções-aplicadas)).
+Até então o `V+` do `U105` estava no `VSYS`, que o nPM1300 desliga em ship
+mode, enquanto o ADP5091 continuava carregando a célula: o aparelho
+desligado ao sol ficava sem corte térmico. O `VBAT_SYS` existe sempre que
+existe célula, de 3,0 a 4,45 V, dentro dos 1,6 a 6,5 V da ficha (SLVSE13J),
+e o preço são os 315 nA do comparador, o tempo todo. Na mesma revisão o
+símbolo foi renumerado para a pinagem da TLV7031DCKR, a peça pedida (1
+`OUT`, 2 `V−`, 3 `IN+`, 4 `IN−`, 5 `V+`), e o código da LCSC passou a ser o
+C2863637: o desenho tinha a pinagem da TLV7031**S** e o código da versão
+SOT-23-5 (achado B3).
 
 > [!CAUTION]
 > **Um termistor para o corte, nunca dois.** O conector da célula tem a
@@ -165,21 +186,28 @@ máximo absoluto) e do `VIN` do ADP5091 (3,6 V).
 > carga abaixo de 0 °C, e uma célula de lítio carregada abaixo de zero
 > deposita lítio metálico. Com um comparador só, o painel carrega a célula
 > numa manhã de inverno abaixo de zero; o carregador do nPM1300, no USB,
-> continua protegido pelo JEITA. Registrado em aberto abaixo: a saída é um
+> continua protegido pelo JEITA, que desde 2026-10-18 só carrega de 0 a
+> 45 °C (o devicetree deixava a carga cheia até 60 °C, achado G12).
+> Registrado em aberto abaixo: a saída é um
 > segundo comparador (a outra metade de um TLV7032) com a referência do
 > frio, ou aceitar o risco pelo clima em que o aparelho vai rodar.
 
 ### Em aberto nesta folha
 
-- O indutor do AEM10900: a tabela 6 e a fórmula da ficha não batem ([02](02-calculos.md#colheita-solar)).
+- O lado frio do corte térmico da carga solar (acima, e no
+  [README](README.md#decisões-que-são-do-dono)).
+- **No escuro, o `U105` não tem estado definido**: com o `SRC` em zero, as
+  duas entradas ficam em 0 V e a saída pode segurar o `DIS_SW` alto a noite
+  inteira (achado menor `energia-s2` da
+  [revisão](11-revisao-do-esquematico.md#menores), não verificado).
 - O calor do carregador linear numa caixa vedada ([02](02-calculos.md#calor-do-carregador)).
-- O fator θ·L da e-peas, que falta para o firmware informar a potência do painel em mW.
-- **O driver do AEM10900 não grava `TMONEN`, `HPEN` nem `KEEPALEN`.** Ele
-  escreve `VOVDIS`, `VOVCH`, `APM` e `CTRL`, e valida com `CTRL.UPDATE = 1`.
-  A [avaliação](../docs/15-avaliacao-componentes.md#detalhes-para-o-esquemático)
-  avisa que os registradores partem dos **valores de fábrica, não dos
-  pinos**, e que os três precisam ficar em 1 — o keep-alive, que é o que
-  faz a configuração sobreviver ao `3V0` desligado, é um deles.
+- **O ADP5091 não tem I²C**: o firmware não lê a potência do painel, e o
+  `status.solar_mw` sai ou passa a ser estimado pela corrente líquida que o
+  MAX17262 já mede.
+- **O devicetree da placa ainda declara o AEM10900** (`aem10900: charger@41`,
+  `solar-charger = &aem10900`), peça que saiu em 2026-09-24: na placa de
+  verdade o driver não acha nada em `0x41`. Tirar o nó e o driver é
+  trabalho de firmware ([10](../docs/10-status-do-port.md#defeitos-abertos)).
 
 ## Folha 2 · MCU
 
@@ -188,7 +216,7 @@ flowchart TB
     subgraph MOD["MinewSemi ME54BS13"]
         NRF["nRF54LM20A<br/>cristais integrados<br/>antena de PCB"]
     end
-    R3V0(("3V0")) -->|"VDD, pad 19, 100 nF por pino"| MOD
+    R3V0(("3V0")) -->|"JP102 · VDD, pad 19<br/>100 nF e 4,7 µF"| MOD
     VOUT(("VBUSOUT")) -->|"VBUS, pad 9"| MOD
     USBD["USB-C D+ / D−"] ---|"par de 90 Ω, pads 8 e 7"| MOD
     TC["Tag-Connect TC2030-NL<br/>e J202, Cortex de 10 vias"] ---|"SWDIO 5, SWDCLK 6, reset 4"| MOD
@@ -256,7 +284,9 @@ protótipo, e é o que o dono quis; o `SWDCLK` e o `nRESET` dele são
 flowchart LR
     R3V0(("3V0")) -->|"JP103 · ferrite + 10 µF"| MAXF
     VBCKP(("VBCKP")) -->|"V_BCKP"| MAXF["u-blox MAX-F10S<br/>L1 + L5<br/>VCC = V_IO = 3,0 V · VIO_SEL aberto"]
-    ANT["antena de chip L1/L5<br/>borda de cima"] ---|"rede em π"| MAXF
+    ANT["E301 · antena de chip L1/L5<br/>Unictron H2UJ4U1H2Q0100, borda de cima<br/>C305 e C306 de sintonia"] --- JP["JP301<br/>um 0 Ω escolhe"]
+    UFL["J302 · u.FL<br/>antena externa de 50 Ω"] --- JP
+    JP ---|"rede de casamento<br/>C301 · L301 · C302"| MAXF
     MCU["MCU 3,0 V"] ---|"TX · RX · EXTINT · TIMEPULSE · RESET_N<br/>direto, sem tradutor"| MAXF
 ```
 
@@ -316,15 +346,26 @@ subir.
 
 ### Em aberto nesta folha
 
-- **A antena é a TE L000670-01**, aprovada e em estoque na [lista de
-  compras](../docs/19-lista-de-compras.md). O que está em aberto não é a
-  compra, é o desempenho: 66 % de eficiência em L1 e 56 % em L5 num plano
-  de 90 × 41 mm, e o plano desta placa é menor. Garmin, COROS e Wahoo
-  usam elementos lineares na parede da caixa, ligados por mola ou cabo
-  flexível; nenhum usa patch cerâmica ([13](../docs/13-placa-nova.md#antena-gnss-dentro-da-caixa)).
-- **Com o F10S a rede em π tem de sintonizar L1 e L5 na mesma rede**, e
-  não só L1: a TE mede a peça com 0 Ω em série e os paralelos vazios, e
-  quem escolhe os valores é a sintonia com VNA **dentro da caixa final**.
+- **A antena é a Unictron H2UJ4U1H2Q0100** (`E301`, LCSC C6569550), de
+  5,0 × 3,0 × 0,5 mm, na borda de cima, desde 2026-09-24; o u.FL `J302`
+  leva a uma antena externa de 50 Ω, e o `JP301` escolhe uma das duas com
+  um 0 Ω só. Desde 2026-10-18 o `COMUM` do `JP301` fica no pad do meio:
+  antes ele estava numa ponta, e nenhum 0402 ligava a antena de chip ao
+  receptor (achado B4 da [revisão](11-revisao-do-esquematico.md#correções-aplicadas)).
+  A TE L000670-01 de antes saiu por estoque zero na LCSC e por pedir
+  40,5 × 14,5 mm livres, mais que a largura da placa. O que está em aberto
+  não é a compra, é o desempenho: a ficha da Unictron dá 70 % de eficiência
+  típica em L1 e em L5 numa placa de avaliação de 80 × 40 mm, e esta tem
+  34 mm de largura.
+- **A rede de casamento tem de sintonizar L1 e L5 ao mesmo tempo.** Os
+  valores são os de partida da Unictron para a placa de avaliação dela: o
+  `C301` de 1,5 pF em paralelo, o `L301` em série — que é um **capacitor**
+  C0G de 3,6 pF, apesar do nome (o código de antes era o de um indutor de
+  3,9 nH) —, o `C302` sem peça, e o `C305` (2,7 pF) e o `C306` (6,8 pF) nos
+  dois pinos de terra da antena. Com o u.FL, o `C301` sai e o `L301` vira
+  0 Ω. Quem fecha os valores é o VNA **dentro da caixa final**.
+- **A UART do GNSS abre a 9.600 Bd**, que é como o MAX-F10S sai de fábrica:
+  o devicetree abria a 38.400 até 2026-10-18 (achado G13).
 - O AssistNow não existe no F10S: ele é ROM, e só tem Offline e Autonomous,
   de L1.
 
@@ -332,54 +373,81 @@ subir.
 
 ```mermaid
 flowchart LR
-    R3V0(("3V0")) -->|"JP401 · 0 Ω<br/>posição 3,0 V"| FPC["Hirose FH28-10S<br/>10 vias"]
-    NM["REG710NA-5 e trilho 5V0<br/>não montados · plano B"] -.->|"posição vazia do JP401"| FPC
-    MCU["spi22"] -->|"SCLK, SI, SCS"| FPC
-    MCU -->|"EXTCOMIN, DISP"| FPC
-    FPC --- PANEL["JDI LPM027M128C<br/>8 cores, luz integrada"]
-    RBL(("3V3BL")) -->|"R_BL · 39 Ω"| LED["LED da luz<br/>dentro do painel"] --> MOSFET["Q401<br/>DMG1012T-7"] --> GND["GND"]
-    MCU -->|"pwm20 · P3.08"| MOSFET
-    LED -.->|"por onde? em aberto"| PANEL
+    B3["3V0 do bloco<br/>JP104"] --> JP["JP401 · 3 pads<br/>COMUM no meio"]
+    B3 --> U["U402 · TPS610997<br/>boost de 5,0 V"]
+    EN["DISP_PWR_EN · P3.07<br/>só no firmware da Sharp"] -.->|"EN"| U
+    U -->|"5V0"| JP
+    JP -->|"3V0: JDI, montado<br/>5V0: Sharp"| J1["J401 · Molex 503480-1000<br/>sinal das duas telas"]
+    MCU["spi22: SCLK, SI, SCS<br/>EXTCOMIN, DISP"] --> J1
+    J1 --- T1["DS401 · JDI LPM027M128C<br/>8 cores, luz de 4 LED"]
+    J1 -.- T2["DS402 · Sharp LS027B7DH01A<br/>ou Azumo 11103-06"]
+    BL(("3V3BL<br/>LDSW2")) --> J2["J402 · Molex 503480-0540<br/>luz da JDI"]
+    J2 -->|"4 catodos<br/>R406 a R409 · 150 Ω"| Q["Q401<br/>DMG1012T-7"]
+    BL --> JPA["JP402 e JP403<br/>polaridade"] --> J3["J403 · Molex 503480-0440<br/>luz do Azumo, no verso"]
+    J3 -->|"R410 · 39,2 Ω"| Q
+    PWM["pwm20 · P3.08"] --> Q
+    Q --> GND["GND"]
 ```
 
 ### As decisões desta folha
 
-**A tela é o JDI LPM027M128C, decidido em 2026-09-23.** Peça única: 2,7",
-400 × 240, MIP de 8 cores, **com luz frontal integrada**. Ela substitui o
-par que a lista de compras trazia, a Sharp LS027B7DH01A mais o filme Azumo
-11103-06_A1 — sem etapa de laminação, mesma resolução (a interface não
-muda), consumo menor e cor. **A Sharp continua sendo o plano B**, no mesmo
-conector, se o JDI não chegar.
+**Duas telas, um conector de sinal**, desde 2026-10-18, a pedido do dono:
+a placa aceita a **JDI LPM027M128C** ou a **Sharp LS027B7DH01A**, nua ou
+como o módulo **Azumo 11103-06**, que é a Sharp com luz frontal, sem
+refazer a PCB ([revisão](11-revisao-do-esquematico.md#as-duas-telas-na-mesma-placa)).
+As fitas de sinal das duas saem do meio da borda longa e caem no mesmo
+lugar, com a mesma ordem de dez pinos (`SCLK`, `SI`, `SCS`, `EXTCOMIN`,
+`DISP`, `VDDA`, `VDD`, `EXTMODE`, `VSS`, `VSSA`), e por isso o conector é
+um só: o `J401`, **Molex 503480-1000**, de contato dos dois lados. As fitas
+chegam dobradas sob o vidro com os contatos para cima, e o Hirose FH12 de
+antes, de contato por baixo, não encostava em nenhum (achados B5 e B6). A
+fita entra pelo lado dos pregos de fixação, e o pino 1 das telas cai no
+circuito 10 do conector ([06](06-conectores-e-pontos-de-teste.md#j401--display)).
 
-**O caminho de 5 V saiu.** O JDI vive em 3,0 V, de modo que o `U401`
-(REG710NA-5), o `C401` de bombeamento e os dois de 10 µF de entrada e de
-saída **não são montados**, e o trilho `5V0` deixa de existir na placa
-construída. Os footprints ficam no desenho, porque são eles que fazem o
-plano B ser uma troca de montagem e não uma placa nova.
+**A tela padrão é a JDI, e ela saiu de venda.** Decidida em 2026-09-23 —
+2,7", 400 × 240, MIP de 8 cores, **com luz frontal integrada**, 3,0 V —,
+ela não tem mais canal autorizado. A decisão D1 do dono manda comprar agora
+todas as telas do lote, mais duas de reserva; a Sharp, ativa, é a tela que
+a placa aceita se a JDI faltar.
 
-**O `DISP_PWR_EN` (P3.07) fica livre.** Ele era o `EN` do REG710; sem o
-regulador, **o pino volta a ficar disponível** para outro uso. O firmware
-continua declarando `power-gpios` no nó do display do
-[devicetree](../zephyr_app/boards/gnss/gnssbike/gnssbike_nrf54lm20a_cpuapp.dts),
-e isso é de propósito: é o que faz o plano B funcionar sem mexer no
-firmware. Enquanto o JDI estiver montado, o pino aciona um regulador que
-não existe, com o pull-down de 100 kΩ do `R403` segurando o nível — e quem
-quiser o pino para outra coisa tira essa linha.
+**A tensão do painel é uma posição de solda.** O `JP401` tem três pads em
+linha: o do meio vai a `VDD`, `VDDA` e `EXTMODE`, um lado ao `3V0` do bloco
+(pelo `JP104`) e o outro ao `5V0`. Com a JDI monta-se o lado do `3V0`; com
+a Sharp, o do `5V0` ([06](06-conectores-e-pontos-de-teste.md#jp401--tensão-do-display)).
+Com um pad do meio só, nenhuma montagem põe os dois trilhos no painel.
 
-**Um conector, duas telas.** Os dez pinos das duas fichas estão na mesma
-ordem (`SCLK`, `SI`, `SCS`, `EXTCOMIN`, `DISP`, `VDDA`, `VDD`, `EXTMODE`,
-`VSS`, `VSSA`), e o mesmo Hirose FH28-10S-0.5SH(05) aparece nas duas.
+**O 5 V vem de um TPS610997** (`U402`), boost de saída fixa em 5,0 V (4,90 a
+5,10 V), dentro dos 4,8 a 5,5 V da Sharp. O REG710NA-5 do plano antigo dá
+4,7 V no mínimo, e não volta. Em volta do `U402`, encostados nos pinos
+`SW`, `VIN` e `VOUT`: o `L401` de 2,2 µH (o mesmo indutor dos bucks), o
+`C405` de 10 µF na entrada e o `C406` e o `C407` na saída, que a ficha pede
+com 20 µF nominais. Desligado, ele desconecta a saída. O `EN` é o
+`DISP_PWR_EN` (P3.07), com o pull-down de 100 kΩ do `R403`, e **só o
+firmware da Sharp o liga**: o `power-gpios` está só no overlay dela
+(`zephyr_app/boards/gnssbike_sharp.overlay`, `TELA=sharp` em
+`tools/fw/fw.sh`). Com o firmware da JDI, um `JP401` esquecido na posição
+do `5V0` dá 0 V à JDI, não 5 V.
 
 > [!CAUTION]
-> **Um JDI com 5 V queima**: o máximo absoluto dele é 3,6 V. Com uma tela
-> só, o `JP401` deixa de ser um seletor: ele vira um **0 Ω fixo na posição
-> do 3,0 V**, e a posição do 5 V fica **sem peça**. O footprint das três
-> posições continua no desenho de propósito — é ele que permite montar a
-> Sharp do plano B sem redesenhar a folha —, e o pad do meio continua sendo
-> **um só**, de modo que nenhuma montagem consegue pôr os dois trilhos no
-> painel ao mesmo tempo. Uma alternativa seria apagar o jumper e ligar o
-> `3V0` direto ao painel em cobre; ela é mais segura contra erro de
-> montagem e custa o plano B, que passaria a exigir corte de trilha.
+> **Um JDI com 5 V queima**: o máximo absoluto dele é 3,6 V. Duas coisas o
+> protegem, e só juntas: o pad do meio único do `JP401` e o boost que só
+> liga com o firmware da Sharp. Nenhuma das duas impede montar o `JP401` no
+> `5V0` com a JDI no conector **e** gravar o firmware da Sharp: contra isso,
+> a serigrafia (`3V0 · JDI` de um lado, `5V0 · SHARP` do outro) e o
+> procedimento de montagem.
+
+**As duas luzes, um MOSFET.** A luz da JDI são quatro LEDs em paralelo
+dentro do painel, com anodo comum e um catodo por LED (spec ver.02, 1.4.2),
+num conector próprio, o `J402` (**Molex 503480-0540**): o anodo vai ao
+`3V3BL`, os 3,3 V da `LDSW2`, e cada catodo passa por um resistor de 150 Ω
+(`R406` a `R409`, cerca de 4 mA por LED e 16 mA no total, com 2,68 V de
+tensão direta típica) até o dreno do `Q401`. A luz do Azumo chega por uma
+fita de 27,8 mm que contorna a borda esquerda da placa até o `J403`
+(**Molex 503480-0440**), **no verso**, com o `R410` de 39,2 Ω (13 mA com
+2,8 V de tensão direta). As duas usam o mesmo `Q401` (DMG1012T-7), com a
+porta no PWM de P3.08 e o pull-down `R402`. A polaridade da luz do Azumo
+fica em jumpers — `JP402` e `JP403` pelo desenho T7, `JP404` e `JP405`
+pela folha de 2020 —, porque as duas fontes se contradizem.
 
 **O chip select é ativo alto.** Ao contrário de quase todo SPI. Vale
 repetir aqui porque é o tipo de coisa que se inverte sem pensar.
@@ -396,52 +464,49 @@ VCOM pelo SPI.
 20 Hz na Sharp. Enquanto a placa declarava `sharp,ls027b7dh01`, o pedido de
 120 Hz da interface era recusado com `-EINVAL` e o COM ficava em 1 Hz com a
 luz acesa, que é justamente o que o `EXTCOMIN` existe para evitar. Com
-`jdi,lpm027m128c` no devicetree **esse defeito deixa de existir** — e ele
-volta a existir se alguém montar o plano B sem mexer no firmware.
+`jdi,lpm027m128c` no devicetree **esse defeito deixa de existir**. Com a
+Sharp, o overlay volta a `sharp,ls027b7dh01`, e o `ui_svc.c` deixa o COM em
+1 Hz também com a luz acesa, porque a ficha da Sharp não pede nada para a
+luz frontal: o número certo para o Azumo é de bancada.
 
 ### Em aberto nesta folha
 
 > [!NOTE]
-> **A luz do C tem conector próprio, e ele apareceu em 2026-09-23.** A
-> ficha `3LPM027M128C specification ver.02`, pelas especificações que a
-> Switch Science publica, dá duas interfaces: o **FPC de 10 vias e passo
-> 0,5 mm** dos sinais, o mesmo do B, e um **FPC de 5 vias e passo 0,5 mm**
-> só para a luz. O `J402` passou a ser esse segundo conector
-> ([06](06-conectores-e-pontos-de-teste.md#j402--luz-do-lpm027m128c)).
->
-> A mesma ficha confirma os dois números com que a
-> [conta do `R_BL`](02-calculos.md#luz-do-display) foi feita — **2,67 V de
-> tensão direta e 16 mA** —, de modo que os 39 Ω param de ser hipótese.
->
-> **O que falta é menor:** qual das cinco vias é anodo, qual é catodo e
-> quais não se usam. Os dois PDF da JDI respondem 404 e o arquivo histórico
-> está bloqueado; sai da ficha em mãos ou de uma amostra.
+> **A luz do C tem conector próprio desde que a ficha dele foi lida**, em
+> 2026-09-23: um FPC de 5 vias e passo de 0,5 mm, ao lado do de 10 vias do
+> sinal. A pinagem que faltava naquele dia — 1 a 4 catodos, 5 anodo comum,
+> com o pino 1 do lado da fita de sinal — veio da spec ver.02, 1.4.2, e
+> está no `J402` ([06](06-conectores-e-pontos-de-teste.md#j402--luz-da-jdi)).
 
-- **Sem canal autorizado e sem garantia.** O anúncio escolhido é de
+- **A dobra das fitas.** O alcance calculado de cada fita até a boca do
+  conector tem cerca de 0,6 mm de folga, e só a tela na mão confirma.
+- **A polaridade do LED do Azumo.** O desenho T7 e a folha de 2020 se
+  contradizem: teste de diodo antes de montar o par de jumpers. Montar os
+  quatro põe o `3V3BL` em curto com o `Q401` pelo `R410`
+  ([06](06-conectores-e-pontos-de-teste.md#j403--luz-do-azumo-no-verso)).
+- **O que é o Azumo 11103-06 na compra.** A lista de compras de 2026-09-18
+  o tratava como filme a laminar sobre uma Sharp comprada à parte; o desenho
+  T7 põe a LS027B7DH01A na lista de peças do módulo. Conferir com a Azumo
+  antes de pedir ([19](../docs/19-lista-de-compras.md#display)).
+- **A JDI está fora de venda.** O anúncio escolhido em 2026-09-23 é de
   **R$ 776** no AliExpress
   ([link](https://pt.aliexpress.com/item/1005011938384752.html)); a JDI não
   lista mais MIP, a Switch Science encerrou as vendas e nenhum distribuidor
   tem a peça. Comprar é comprar de revendedor, sem procedência
   ([15](../docs/15-avaliacao-componentes.md#a-luz-da-tela-procurada-em-2026-09-23)).
-- **A tela é o item mais caro da placa**, e ficou mais cara: R$ 776, ou
-  cerca de **US$ 144** a R$ 5,40 por dólar, contra os US$ 23,61 + US$ 66,45
-  = **US$ 90,06** do par Sharp + Azumo. São **US$ 54 a mais por placa**
-  ([19](../docs/19-lista-de-compras.md#custo)).
+- **A tela é o item mais caro da placa**: R$ 776, ou cerca de **US$ 144** a
+  R$ 5,40 por dólar, na conta de 2026-09-23 ([19](../docs/19-lista-de-compras.md#custo)).
 - A `LDSW2` sai de regulação com o `VSYS` perto de 3,4 V: a luz enfraquece
   com a bateria baixa, e isso não tem conserto no resistor.
-- **No plano B** (Sharp mais filme Azumo) voltam o `U401`, o `C401`, os dois
-  de 10 µF, o `DS402`, o `J402` e o `JP401` na posição do 5 V; o `R_BL`
-  deixa de ser 39 Ω e passa a depender da tensão direta do filme, que só a
-  amostra dá ([02](02-calculos.md#luz-do-display)).
 
 ## Folha 5 · Memória e sensores
 
 ```mermaid
 flowchart LR
-    RSD(("SD3V0")) -->|"22 µF"| NOR["MX25R6435F<br/>8 MB"]
+    R3V0(("3V0")) -->|"JP106 · 22 µF"| NOR["MX25R6435F<br/>8 MB"]
     MCU1["spi00 · 8 MHz"] --- NOR
-    R3V0(("3V0")) --> SENS
-    MCU2["i2c23 · 400 kHz<br/>pull-ups 4,7 kΩ"] --- SENS["BMP585 0x47<br/>BMI270 0x68<br/>MMC5633NJL 0x30<br/>OPT3001 0x44"]
+    R3V0 -->|"JP105"| SENS
+    MCU2["i2c23 · 400 kHz<br/>pull-ups 4,7 kΩ"] --- SENS["BMP585 0x47<br/>BMI270 0x68<br/>MMC5603NJ 0x30<br/>OPT3001 0x44"]
     SENS -->|"INT · P1.10 e P1.12"| MCU2
 ```
 
@@ -453,13 +518,21 @@ no `spi00`, e os 8 MB dela guardam as atividades, os segmentos e os
 percursos, montados em `/SD:` como sempre foi. Quem quiser cartão num
 protótipo põe num overlay, no chip select livre de P2.03.
 
-**A flash fica atrás da chave de alimentação.** A `LDSW1` corta o `SD3V0`,
-e com o trilho desligado os pinos do `spi00` precisam ficar em nível baixo
-ou em alta impedância — senão a peça se alimenta pelos pinos de sinal, que
-é um jeito conhecido de uma flash nunca desligar de verdade.
+**A flash fica no `3V0`, sempre ligado**, desde 2026-10-18 (achado G6 da
+[revisão](11-revisao-do-esquematico.md#correções-aplicadas)). Até então ela
+ficava atrás da `LDSW1`, no `SD3V0`, e com o trilho desligado o P2.05 punha
+3,0 V no `CS#` sem resistor, acima do máximo absoluto da entrada, e
+alimentava a flash de volta pelos pinos. Agora o `JP106` a liga ao `3V0`,
+os pull-ups de `CS#`, `WP` e `HOLD` (`R501` a `R503`) vão ao mesmo trilho,
+e parada ela dorme em deep power-down (`has-dpd` no devicetree): 0,35 µA no
+máximo, 0,15 % da célula por ano. A `LDSW1` ficou sem carga, só com o
+`TP107`, e o devicetree a deixa desligada.
 
-**Nada varre este barramento I²C.** O endereço `0x7E` põe o MMC5633NJL em
-I3C, e ele só sai disso faltando energia. O firmware fala com endereços
+**Nada varre este barramento I²C.** O endereço `0x7E` põe o MMC5603NJ em
+I3C, e ele só sai disso faltando energia. Ele está no lugar do MMC5633NJL
+desde 2026-09-24 (a LCSC não tem o 5633), com o mesmo endereço `0x30` e o
+mesmo ID, de modo que o driver `memsic,mmc56x3` não muda; o que muda é o
+land e os 2,2 µF que ele pede no `VDD`. O firmware fala com endereços
 conhecidos e ponto.
 
 **O `CSB` do BMP585 tem de estar no VDDIO na partida**, ou o I²C fica
@@ -468,28 +541,17 @@ firmware.
 
 ### Em aberto nesta folha
 
-> [!CAUTION]
-> **Ninguém liga a chave de alimentação da flash.** O nó `LDO1` do nPM1300
-> (a `LDSW1`, que entrega o `SD3V0`) está declarado no
+> [!NOTE]
+> **A chave da flash que ninguém ligava deixou de existir em 2026-10-18.**
+> O dry-run de 2026-09-23 achou que o nó `LDO1` do nPM1300 (a `LDSW1`, que
+> entregava o `SD3V0`) estava no
 > [devicetree](../zephyr_app/boards/gnss/gnssbike/gnssbike_nrf54lm20a_cpuapp.dts)
-> **sem `regulator-boot-on` e sem apelido**, a `mx25r6435f@0` **não declara
-> `supply` nenhum**, e nada em `zephyr_app/src/` referencia o regulador. Na
-> placa de verdade isso quer dizer **flash sem energia e armazenamento que
-> não funciona**, em silêncio — no DK não aparece, porque lá a flash é
-> alimentada pelo próprio kit.
->
-> Três saídas, e é decisão de firmware, não de esquemático: dar um `supply`
-> à flash, como o GNSS já tem (`vcc-supply = <&npm1300_buck1>`); ligar a
-> `LDSW1` no boot; ou tirar a chave do circuito e aceitar a flash sempre
-> alimentada, perdendo os nanoampères do deep power down.
->
-> **E há um segundo efeito, que só aparece somando os dois defeitos:** com
-> o `SD3V0` em 0 V, o serviço de armazenamento aciona um SPI de 8 MHz
-> contra uma peça sem alimentação, e ela **se alimenta pelos diodos de
-> grampo do `SCK` e do `MOSI`** — agora através dos 33 Ω de série, que
-> limitam a corrente mas não impedem o caminho. É o modo de falha que a
-> própria folha descreve duas linhas acima, acontecendo hoje. **Achado pelo
-> dry-run de 2026-09-23, ao escrever a [sequência de partida](07-sequencias-e-protecao.md).**
+> sem `regulator-boot-on` e sem apelido, e que a `mx25r6435f@0` não
+> declarava `supply`: na placa de verdade, flash sem energia e alimentada
+> pelos diodos de grampo do `SCK` e do `MOSI`, através dos 33 Ω de série. A
+> saída escolhida foi a terceira das que esta nota listava: tirar a chave do
+> circuito e deixar a flash sempre alimentada, no `3V0`, com o deep
+> power-down no lugar dos nanoampères da chave.
 
 - **8 MHz é uma frequência ruim para o L1.** Harmônicos de 8 MHz caem a
   menos de 0,6 MHz do centro de 1575,42 MHz. A flash é a única coisa
@@ -516,10 +578,15 @@ flowchart LR
 
 ### As decisões desta folha
 
-**As três teclas são Omron B3S-1002P**, IP67 pela ficha, de 6 × 6 × 4,3 mm
-(a C&K PTS526 é a tecla da V3; a lista de compras trocou). Todas ativas em
-nível baixo, com pull-up interno do MCU: menos três resistores e o
-comportamento certo com o pino em alta impedância.
+**As três teclas são XunPu TS-1088R-02026** (LCSC C455280), SPST-NO de dois
+terminais, 3,90 × 3,00 × 2,00 mm e 260 gf, desde 2026-09-24. Elas tomaram o
+lugar da Omron B3S-1002P (IP67, 6 × 6 × 4,3 mm), que o estoque da LCSC
+tirou; o êmbolo sobe só 0,50 mm acima da tampa de aço, contra 0,7 da Omron,
+e a tecla da caixa foi redesenhada para ele, sob a membrana de TPU
+([04](04-pcb-e-caixa.md#a-placa-de-hoje-dentro-da-caixa-do-conceito)). A
+C&K PTS526 é a tecla da V3. Todas ativas em nível baixo, com pull-up
+interno do MCU: menos três resistores e o comportamento certo com o pino
+em alta impedância.
 
 **A tecla central chega ao P1.27 por um Schottky.** Ela é também a tecla
 do `SHPHLD` do nPM1300, cujo pull-up de 50 kΩ vai ao maior entre `VBAT` e
@@ -539,20 +606,29 @@ tensão sobre o piezo sem nenhuma fonte a mais. Custa um pino.
 comum fica no `VSYS`, que **com o cabo USB chega a 5,5 V**: um pino de
 3,0 V amarrado ao catodo ficaria com o diodo de proteção polarizado. Vão
 três DMG1012T-7, com o pino do MCU na porta de cada um e **1 kΩ** em
-série com cada cor, o valor que a especificação já fixava. O preço disso é
+série com cada cor, o valor que a especificação já fixava (a recalcular
+para o LED de hoje, abaixo). O preço disso é
 que o brilho varia com a tensão do `VSYS` ([02](02-calculos.md#led-rgb)) — o
 que se aceita porque o indicador serve a pareamento e a carga, e carga é
 justamente quando o `VSYS` está alto.
 
 ### Em aberto nesta folha
 
-- O brilho do LED varia com a tensão do `VSYS`: **3,2 vezes no vermelho** e
-  **9,6 vezes no verde e no azul** entre a célula vazia e o USB no limite,
-  porque o anodo está num trilho não regulado ([02](02-calculos.md#led-rgb));
-  com 1 kΩ e o Kingbright APTF1616SEEZGKQBKC, o verde e o azul chegam ao fim
-  da bateria com 0,29 mA — fracos, mas acesos.
-- O buzzer é o Same Sky CPT-1117-83-SMT-TR, aprovado: 83 dB a 10 cm com
-  5 Vpp, e os dois pinos em contrafase dão 6 Vpp.
+- **Os resistores do LED RGB pedem conta nova.** O LED é o TUOZHAN
+  S4-3528RGBTA-A (`D601`, LCSC C2827321) desde 2026-09-24, de anodo comum,
+  3,5 × 2,8 × 1,9 mm e MSL 4, muito mais brilhante que o Kingbright
+  APTF1616SEEZGKQBKC de antes (460 a 1000 mcd no vermelho, contra 15). A
+  conta de [02](02-calculos.md#led-rgb), com o 1 kΩ, ainda é a do Kingbright,
+  e o `cad/parts.py` manda recalcular `R601` a `R603`. O brilho continua
+  variando com o `VSYS`, porque o anodo está num trilho não regulado.
+- **O buzzer é o Same Sky CPT-12123-81-SMT-TR** (`LS601`, LCSC C3812179)
+  desde 2026-10-18: piezo passivo de 12 × 12 × 3,0 mm, 81 dB a 4 kHz, furo
+  de som lateral, no mesmo land do Murata PKLCS1212E4001-R1 que ele
+  substitui (em *Last Time Buy* até 31/03/2027). Falta conferir o lado do
+  furo de som contra a abertura da caixa. Os `R607` e `R608` são de
+  **1 kΩ**; a conta de [02](02-calculos.md#buzzer-piezo) ainda fecha 330 Ω,
+  e o Same Sky não foi conferido contra a faixa de 1 a 2 kΩ que a Murata
+  pedia.
 
 > [!CAUTION]
 > **Nem o buzzer nem o LED RGB têm firmware, e o devicetree só declara um

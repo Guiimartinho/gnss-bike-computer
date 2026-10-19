@@ -44,7 +44,7 @@ vem marcado como **ficha** ou **desenho**.
 >
 > A caixa do conceito continuava sendo a de 62 × 104 (o desenho dela foi
 > retirado em 2026-09-26; a proposta medida, em [`caixa/`](caixa/README.md),
-> tem 62 × 106 × 17), e **isso não é pendência da placa**: a caixa
+> tem 64 × 106 × 18,2 desde 2026-10-19), e **isso não é pendência da placa**: a caixa
 > tem o tamanho que o display, a bateria e a mão pedem, e a placa encolher não
 > muda nenhum dos três.
 
@@ -62,7 +62,7 @@ vem marcado como **ficha** ou **desenho**.
 |---|---|---|
 | PCB | **34 × 95 mm**, espessura de 0,8 mm | derivado das regras em [`cad/make_dxf.py`](cad/make_dxf.py) (`W`, `H`); os 5 mm além dos 90 de 2026-09-24 são das teclas no passo de 13,4 (abaixo) |
 | Raio de canto da placa | **3 mm no desenho, 4 mm em [14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso)** | as duas fontes discordam, ver abaixo |
-| Caixa | conceito: 62 × 104 × 19 mm, mais 3 mm do engate de quarto de volta; proposta de 2026-09-26: **62 × 106 × 17** ([abaixo](#a-placa-de-hoje-dentro-da-caixa-do-conceito)) | o desenho do conceito (`tools/docs/case_drawing.py`, retirado em 2026-09-26); [`caixa/make_caixa.py`](caixa/make_caixa.py) (`W_C, H_C, T_C`) |
+| Caixa | conceito: 62 × 104 × 19 mm, mais 3 mm do engate de quarto de volta; proposta de 2026-09-26: 62 × 106 × 17; 63 × 106 × 18,2 em 2026-10-18, pela JDI de 2,2 mm e pela união das duas telas; desde 2026-10-19, **64 × 106 × 18,2**, pelos bolsos dos módulos solares na tolerância da ficha ([12](12-revisao-da-caixa.md#1--painéis-solares)) ([abaixo](#a-placa-de-hoje-dentro-da-caixa-do-conceito)) | o desenho do conceito (`tools/docs/case_drawing.py`, retirado em 2026-09-26); [`caixa/make_caixa.py`](caixa/make_caixa.py) (`W_C, H_C, T_C`) |
 | Raio de canto da caixa | 7 mm | idem (`R`) |
 | Placa da V3, para comparar | 52,35 × 77,47 mm | [13](../docs/13-placa-nova.md#o-que-cabe-numa-caixa-pequena) |
 
@@ -148,9 +148,9 @@ retângulo em documento nenhum.
 | LED RGB | 50–53, 0–3 | 3 × 3 | 9,0 | 0,2 % |
 | IMU e magnetômetro | 8–15, 20–23 | 7 × 3 | 21,0 | 0,4 % |
 | FPC do display | 3,7–7,1, 29,5–39,5 | 3,4 × 10 | 34,0 | 0,6 % |
-| Conector do filme de luz (Molex 5034800440) | **sem retângulo em [14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso)** | — | **falta** | — |
+| Conector da luz do Azumo (Molex 503480-0440, o `J403` desde 2026-10-18, no verso) | **sem retângulo em [14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso)** | — | **falta** | — |
 | Buzzer | 10,5–21,5, 46,5–55,5 | 11 × 9 | 99,0 | 1,9 % |
-| Energia (nPM1300, AEM10900, MAX17262, indutores, conectores) | 16–38, 67–90 | 22 × 23 | 506,0 | 9,5 % |
+| Energia (nPM1300, ADP5091, MAX17262, indutores, conectores) | 16–38, 67–90 | 22 × 23 | 506,0 | 9,5 % |
 | Armazenamento (flash NOR) | 0–14, 67–83 | 14 × 16 | 224,0 | 4,2 % |
 | Barômetro | 4,5–8, 83–86,5 | 3,5 × 3,5 | 12,3 | 0,2 % |
 | ME54BS13 **mais a zona proibida da sua antena** | 37,2–54,2, 58,7–71,4 unido a 49,5–55, 54,6–75,4 | ver a conta abaixo | 270,6 | 5,1 % |
@@ -244,16 +244,16 @@ fecha com folga.**
 > sem dimensionar.**
 
 > [!IMPORTANT]
-> **O conector do filme de luz não tem zona nem área.**
-> [14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso) manda
+> **O conector da luz do Azumo não tem retângulo nesta tabela.**
+> [14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso) mandava
 > pôr o Molex 5034800440, de 4 vias e passo de 0,5 mm, "ao lado" do FPC do
-> display na borda esquerda, mas a tabela de zonas de lá **não lhe dá
-> retângulo**, e a ficha dele não está resumida em nenhum documento deste
-> repositório: não há como calcular a área aqui sem inventar uma medida.
-> Ele só existe na montagem com a Sharp
-> ([05](05-materiais.md#folha-4--display)), o que não o torna opcional no
-> layout, porque a placa tem de aceitar as duas montagens. **É um número
-> que falta**, e a soma acima está subestimada por ele.
+> display na borda esquerda, sem lhe dar zona. Desde 2026-10-18 ele existe
+> no CAD: é o `J403`, Molex 503480-0440 (o mesmo código), **no verso**, em
+> (17,07; 58,18), e a fita de 27,8 mm da luz do Azumo contorna a borda
+> esquerda da placa até ele
+> ([06](06-conectores-e-pontos-de-teste.md#j403--luz-do-azumo-no-verso)).
+> A soma acima, que é a da placa de 55 × 97, continua sem ele, e sem as
+> outras peças que vieram depois dela.
 
 ### As duas sombras: display e bateria
 
@@ -277,6 +277,17 @@ receptor de junto da antena) e até 1,2 mm sob a bateria
 > A caixa de [`caixa/make_caixa.py`](caixa/make_caixa.py) lê os mesmos
 > retângulos (`make_dxf.DISPLAY_Y1`), e o dry run dela
 > ([`caixa/dry_run_caixa.py`](caixa/dry_run_caixa.py)) mede a pilha inteira.
+
+> [!NOTE]
+> **A tela mudou de medida no CAD em 2026-10-18** (achado G11 da
+> [revisão](11-revisao-do-esquematico.md#as-duas-telas-na-mesma-placa)): a
+> placa e a caixa passaram a modelar a JDI pelo desenho dela, de 62,5 ×
+> 42,2 mm e 2,2 mm de espessura, e a caixa abre o bolso na união dos
+> contornos da JDI e da Sharp (43,02 × 64,57 mm). O Azumo tem ainda uma
+> barra atrás do vidro, a 0,59 mm da placa, que deixa a faixa de y = 53,6
+> a 60,5 mm sem peça na face da frente. Os números abaixo, com o contorno
+> de 40,08 × 61,8 mm, são os de 2026-09-26 e não foram refeitos aqui:
+> quem vale é o CAD (`cad/make_dxf.py`).
 
 O que fixa cada retângulo, na placa de 34 × 95:
 
@@ -456,6 +467,15 @@ ficha do colhedor.
 
 ### O aperto que não fecha: a antena GNSS
 
+> [!NOTE]
+> **Superado em 2026-09-24.** A antena passou a ser a Unictron
+> H2UJ4U1H2Q0100, de chip, com 5,0 × 3,0 × 0,5 mm, soldada na borda de
+> cima, com o u.FL `J302` como alternativa e o `JP301` escolhendo uma das
+> duas; a área livre caiu de 40,5 × 14,5 mm para 15,00 × 9,35 mm na face
+> de cima ([A zona da antena GNSS](#a-zona-da-antena-gnss-em-detalhe),
+> [01](01-esquematico.md#folha-3--gnss)). O que segue é a conta da TE
+> L000670, e fica como registro de por que ela saiu.
+
 Entre a borda de cima da placa e o contorno do display sobram **5,1 mm**
 (**conta**: 8,6 − 3,5, do desenho), e a zona da antena de
 [14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso) reserva
@@ -524,6 +544,9 @@ posicionado e o pino `RF_IN` ter coordenada.
 A espessura de 0,8 mm **não é escolha de layout**: o desenho do receptáculo
 USB-C Molex 2036150003 a recomenda, e a especificação do projeto já desceu
 de 1,0 para 0,8 mm por causa dele ([15](../docs/15-avaliacao-componentes.md#usb-c-e-proteção)).
+O Molex saiu em 2026-09-24 (o `J101` é o HRO TYPE-C-31-M-12), e a placa
+continua em 0,8 mm no CAD (`cad/make_pcb.py`); o que o desenho da HRO pede
+de espessura não está registrado aqui.
 Com 4 camadas dentro de 0,8 mm, os dielétricos ficam finos:
 
 ```
@@ -573,8 +596,8 @@ flowchart TB
         end
         subgraph Y2["y 20 a 67 · meio, sob o display"]
             direction LR
-            B1["FPC do display, 10 vias<br/>x 3,7 a 7,1 · y 29,5 a 39,5<br/>sai pela esquerda"]
-            B2["BMI270 e MMC5633NJL<br/>x 8 a 15 · y 20 a 23"]
+            B1["FPC das telas, J401 de 10 vias<br/>x 3,7 a 7,1 · y 29,5 a 39,5<br/>sai pela esquerda"]
+            B2["BMI270 e MMC5603NJ<br/>x 8 a 15 · y 20 a 23"]
             B3["buzzer piezo<br/>x 10,5 a 21,5 · y 46,5 a 55,5"]
             B4["LiPo 36 × 60 × 7 mm, atrás<br/>x 9,5 a 45,5 · y 22,5 a 82,5<br/>teto de 1,2 mm embaixo"]
             B5["ME54BS13 16,5 × 12,0 × 2,4 mm<br/>x 37,2 a 54,2 · y 58,7 a 71,4<br/>deitado, na frente; antena nos últimos<br/>4,46 mm, virada para a borda direita"]
@@ -582,14 +605,14 @@ flowchart TB
         subgraph Y3["y 67 a 97 · base"]
             direction LR
             C1["flash MX25R6435F<br/>x 0 a 14 · y 67 a 83"]
-            C2["energia: nPM1300, MAX17262,<br/>AEM10900, indutores<br/>x 16 a 38 · y 67 a 90"]
+            C2["energia: nPM1300, MAX17262,<br/>ADP5091, indutores<br/>x 16 a 38 · y 67 a 90"]
             C4["BMP585 no respiro, atrás<br/>x 4,5 a 8 · y 83 a 86,5"]
-            C5["3 teclas Omron B3S-1002P<br/>6 × 6 × 4,3 mm<br/>x 8 a 47 · y 88 a 95"]
-            C6["USB-C IPX8<br/>x 23 a 32 · y 94 a 97"]
+            C5["3 teclas XunPu TS-1088R<br/>3,9 × 3,0 × 2,0 mm<br/>x 8 a 47 · y 88 a 95"]
+            C6["USB-C HRO TYPE-C-31-M-12<br/>x 23 a 32 · y 94 a 97"]
             C7["OPT3001<br/>x 0,4 a 2,4 · y 88 a 90"]
         end
     end
-    ANT["elemento linear L1 e L5<br/>na parede de cima da caixa,<br/>fora da placa, por contatos de mola"] -.->|"linha de 50 Ω, poucos mm"| A2
+    ANT["antena de chip Unictron L1 e L5<br/>na borda de cima, ou externa<br/>pelo u.FL J302; o JP301 escolhe"] -.->|"linha de 50 Ω, poucos mm"| A2
     Y1 --> Y2 --> Y3
     PV["6 módulos solares 23 × 8 mm<br/>2 na face inclinada e 2 em cada chanfro,<br/>na caixa, fora da placa"] -.->|"3 grupos em paralelo,<br/>J103 de 4 vias"| C2
 ```
@@ -616,7 +639,7 @@ cobre.**
 | **Antena do ME54BS13** | x 49,5–55, y 54,6–75,4 | 114,4 mm² (**conta**: 5,5 × 20,8) | cobre, trilha, plano e via **em todas as camadas**; nenhum componente | ficha MinewSemi ME54BS13 V1.0.0, 7.2 |
 | **Antena GNSS** | x 0–55, y 0–8 | 440 mm² (**conta**) | cobre em todas as camadas sob a antena; nada metálico mais alto que 3 mm num raio de 10 mm; a caixa a 3 a 5 mm | [13](../docs/13-placa-nova.md#regras-de-projeto), [14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso) |
 | **Sombra da bateria** | x 9,5–45,5, y 22,5–82,5 | 2.160 mm² (**conta**) | peças acima de 1,2 mm na face de trás; e a bolsa metálica não pode ficar entre a antena GNSS e o céu | [13](../docs/13-placa-nova.md#regras-de-projeto), [14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso) |
-| **Conector USB-C** | x 23–32, y 94–97 | 27 mm² (**conta**) | o anel de vedação passa da borda da placa; nada entre o corpo do conector e a parede | desenho Molex 2036150003 |
+| **Conector USB-C** | x 23–32, y 94–97 | 27 mm² (**conta**) | o anel de vedação passa da borda da placa; nada entre o corpo do conector e a parede | desenho Molex 2036150003; a peça de hoje é o HRO TYPE-C-31-M-12 ([abaixo](#a-zona-do-conector-usb-c)) |
 
 ### A zona do ME54BS13, em detalhe
 
@@ -735,8 +758,16 @@ pede.
 
 ### A zona do conector USB-C
 
-O conector é o Molex 2036150003 da [folha 1](01-esquematico.md#folha-1--energia).
-O desenho da Molex dá: **placa de 0,8 mm**, furo de **9,54 × 3,76 mm** numa
+> [!NOTE]
+> O conector da [folha 1](01-esquematico.md#folha-1--energia) é o **HRO
+> TYPE-C-31-M-12** desde 2026-09-24, e a caixa fecha a abertura com uma
+> porta articulada
+> ([caixa](caixa/README.md)). Desde 2026-10-18 ele fica 1,10 mm mais perto
+> da borda, na linha "PCB EDGE" do desenho da HRO (achado G10 da
+> [revisão](11-revisao-do-esquematico.md#correções-aplicadas)). As contas
+> abaixo são as do Molex e ficam como registro.
+
+O conector era o Molex 2036150003. O desenho da Molex dá: **placa de 0,8 mm**, furo de **9,54 × 3,76 mm** numa
 parede de **pelo menos 1,2 mm**, e a **borda da placa 2,73 mm atrás da
 frente do conector**. Com o recuo de 3,5 mm:
 
@@ -919,7 +950,7 @@ frente** (acima), a ordem fica:
 
 ```mermaid
 flowchart LR
-    P1["1ª passagem · face de trás<br/>BMP585 no respiro, conector da bateria,<br/>peças até 1,2 mm sob a célula"] --> P2["2ª passagem · face da frente<br/>ME54BS13, MAX-F10S e blindagem,<br/>nPM1300, AEM10900, MAX17262,<br/>indutores, FPC, USB-C, teclas"]
+    P1["1ª passagem · face de trás<br/>BMP585 no respiro, conector da bateria,<br/>peças até 1,2 mm sob a célula"] --> P2["2ª passagem · face da frente<br/>ME54BS13, MAX-F10S e blindagem,<br/>nPM1300, ADP5091, MAX17262,<br/>indutores, FPC, USB-C, teclas"]
     P2 --> P3["sem 3ª passagem:<br/>o que falhar vai a ar quente,<br/>peça a peça"]
 ```
 
@@ -937,7 +968,7 @@ O que isso impõe:
   ([14](../docs/14-hardware-placa-nova.md#regras-de-layout)). Duas passagens
   consomem o orçamento de exposição das duas peças; se a placa parar entre
   as passagens, elas voltam para a estufa.
-- **Peças WLP**, o MAX17262 e o MMC5633NJL, pedem estêncil fino e inspeção
+- **Peças WLP**, o MAX17262 e o MMC5603NJ, pedem estêncil fino e inspeção
   por raio X ou por ótica lateral, que **não estão disponíveis aqui**.
 
 Estas conclusões vêm da regra da ficha e da geometria calculada acima;
@@ -950,16 +981,16 @@ montagem, que não existe.**
 |---|---|---|
 | **A pilha do fabricante** | sem as espessuras de dielétrico não há largura de trilha para 50 Ω nem para 90 Ω diferencial; 0,66 mm repartido em 3 vãos admite pilhas muito diferentes | [Camadas](#camadas), [02](02-calculos.md#o-que-não-foi-calculado) |
 | **4 camadas em 0,8 mm** | o USB-C manda a espessura e o resto manda as camadas; falta confirmar que o fabricante faz a combinação | [Camadas](#camadas) |
-| **A antena GNSS de verdade** | a TE L000670 não cabe: faltam 2,75 mm contra a zona e 5,65 mm contra a faixa livre acima do display | [Orçamento de área](#orçamento-de-área) |
+| **A antena GNSS de verdade** | a TE L000670, que não cabia, saiu em 2026-09-24; a Unictron H2UJ4U1H2Q0100 cabe na borda, mas a ficha dá 70 % de eficiência típica numa placa de 80 × 40 mm e esta tem 34 mm de largura, e a rede de casamento é de partida: só o VNA, dentro da caixa, fecha os valores | [01](01-esquematico.md#folha-3--gnss) |
 | **Isolação entre as duas antenas** | a conta dá 67,2 mm, 0,55 λ em 2,44 GHz, 20 mm menos do que com o módulo antigo; a isolação real depende do plano, da caixa e das correntes de retorno. Medir o S21 antes de ligar o rádio na potência cheia | [As duas antenas](#as-duas-antenas), [15](../docs/15-avaliacao-componentes.md#bancada-antes-do-layout) |
 | **Harmônico de 8 MHz da flash** | 0,58 MHz do centro de L1; só o `UBX-MON-SPAN` com a flash trabalhando diz se aparece | [As duas antenas](#as-duas-antenas) |
 | **Alcance do rádio** | a linha de **20 mm** da tabela de isolação (ficha **7.2**) é cumprida na placa de [`cad/`](cad/), mas a de **25 mm do display não é e não pode ser** — 11,3 mm medidos; a bolsa da bateria fica a 4 mm da zona proibida; e se a MinewSemi tem regra de metal externo ninguém a leu | [Zonas proibidas](#zonas-proibidas), [09](09-dry-run-da-pcb.md) |
-| **Área do FPC do display** | os **3,4 × 10 mm** da tabela de zonas não saem de ficha nenhuma: o PDF do Hirose FH28 que está em `datasheets/` é só a folha de especificação (ELC4-153887-02), **sem vista, sem corte e sem tabela de cotas**. Falta a folha de desenho da Hirose, ou medir uma amostra | [Orçamento de área](#orçamento-de-área) |
+| **Área do FPC do display** | os **3,4 × 10 mm** da tabela de zonas vinham do Hirose FH28, sem folha de desenho. Desde 2026-10-18 os três conectores do display são Molex 503480 (`J401`, `J402` e `J403`), com o land do desenho SD-503480-001 na posição do contorno; o CAD põe o `J401` e o `J402` com a boca em x = 1,27 mm e o `J403` no verso. O que fica para a bancada é a **dobra das fitas** até a boca: o alcance calculado tem cerca de 0,6 mm de folga, e só a tela na mão confirma | [06](06-conectores-e-pontos-de-teste.md#j401--display), [11](11-revisao-do-esquematico.md#as-duas-telas-na-mesma-placa) |
 | **Folga entre placa e caixa** | 3,5 mm no desenho contra os 2,5 mm que [14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso) descreve | [O contorno](#o-contorno) |
 | **Raio de canto da placa** | 3 mm no desenho do conceito (`cad/make_dxf.RADIUS_DRAWING`) contra os 4 mm de [14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso); as duas fontes discordam e nenhuma foi confirmada | [O contorno](#o-contorno) |
 | **Face de cada peça e ordem do forno** | a conta põe o ME54BS13 na frente; o arquivo de montagem não existe | [Montagem](#montagem) |
-| **Plugue do USB-C na caixa** | a boca do conector fica 0,77 mm atrás da face externa; um plugue de capa grossa pode não entrar | [Zonas proibidas](#zonas-proibidas) |
+| **Plugue do USB-C na caixa** | com o Molex, a boca do conector ficava 0,77 mm atrás da face externa; com o HRO na linha "PCB EDGE" a conta não foi refeita aqui, e um plugue de capa grossa pode não entrar | [A zona do conector USB-C](#a-zona-do-conector-usb-c) |
 | **Contatos da antena** | a área dos contatos do elemento de antena na parede da caixa não está dimensionada. Os painéis **deixaram de ser pendência** em 2026-09-24: são um `J103` de 4 vias medido ([Como os painéis chegam à placa](#como-os-painéis-chegam-à-placa)) | [Orçamento de área](#orçamento-de-área) |
-| **Zona do conector do filme de luz** | [14](../docs/14-hardware-placa-nova.md#placa-de-circuito-impresso) põe o Molex 5034800440 ao lado do FPC do display, mas não lhe dá retângulo, e a medida do corpo dele não está em nenhum documento daqui | [Orçamento de área](#orçamento-de-área) |
+| **Luz do Azumo** | o conector existe desde 2026-10-18 (`J403`, Molex 503480-0440, no verso); falta a dobra da fita de 27,8 mm em volta da borda esquerda e a polaridade do LED, que o desenho T7 e a folha de 2020 dão ao contrário: teste de diodo antes de montar os jumpers | [06](06-conectores-e-pontos-de-teste.md#j403--luz-do-azumo-no-verso) |
 | **Empenamento e calor** | 0,8 mm empena mais, e o carregador linear dissipa até 1,50 W dentro de uma caixa vedada | [02](02-calculos.md#calor-do-carregador) |
 | **Altura real das peças** | o empilhamento de [14](../docs/14-hardware-placa-nova.md#empilhamento-mecânico) fecha em 17,1 mm dentro de 19 mm, com 1,9 mm de folga, a partir de fichas e não de peças medidas | [14](../docs/14-hardware-placa-nova.md#empilhamento-mecânico) |

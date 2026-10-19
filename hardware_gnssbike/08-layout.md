@@ -192,7 +192,7 @@ Os três que não podem sair com largura de sinal:
 ## Térmica no cobre
 
 O carregador do nPM1300 dissipa até **1,50 W**, e a caixa inteira chega a
-44,7 °C a 25 °C de ambiente ([02](02-calculos.md#calor-da-caixa-inteira)) —
+44,1 °C a 25 °C de ambiente ([02](02-calculos.md#calor-da-caixa-inteira)) —
 **empate com o corte do JEITA a 45 °C, antes de qualquer sol**. O layout é
 uma das duas alavancas para isso (a outra é baixar a corrente de carga):
 

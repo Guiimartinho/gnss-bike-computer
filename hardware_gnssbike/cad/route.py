@@ -116,6 +116,14 @@ CAMADAS = ("F.Cu", "In2.Cu", "B.Cu")
 NC = len(CAMADAS)
 I_BCU = NC - 1
 CUSTO_VIA = 16.0            # in grid steps, about 2,4 mm
+# Passes after the first, each with the nets that failed in the one before
+# routed first. A pass costs about five minutes on this board. Measured on
+# 2026-10-19, twice: 70 failures in the first pass, 86 and 78 in the two
+# after it, so the extra passes are off; the knob stays for a board where
+# the order is what blocks.
+PASSAGENS_EXTRA = 0
+# How far a bent ground stub may look for room for its via, mm
+RAIO_TERRA = 3.0
 CUSTO_CURVA = 0.7             # virar 90 graus
 CUSTO_CURVA_45 = 0.2          # virar 45: meia virada, meio custo
 # A maze search that cannot get through explores everything it is allowed to
@@ -127,6 +135,16 @@ CUSTO_CURVA_45 = 0.2          # virar 45: meia virada, meio custo
 ORCAMENTO = 300000   # era 90000: o tabuleiro tem ~400 mil celulas
 
 BLOQUEADO = "\x00"          # a net name no net can have: blocked for everyone
+# The chip antenna's keep-out forbids copper, except the antenna's own
+# network: Unictron's layout guide puts the 50 ohm feed and the two tuning
+# capacitors INSIDE the cut-out (make_pcb.DONO_DO_KEEPOUT). Its empty cells
+# on the front layer carry this mark, which those nets may cross. Until
+# 2026-10-19 the keep-out was painted BLOQUEADO over everything, the
+# antenna's own pads included, and neither the feed nor the 1,7 mm from a
+# pin of E301 to its tuning capacitor could be drawn.
+KEEPOUT_LIVRE = "\x01"
+KEEPOUT_DA_ANTENA = "KEEPOUT_ANTENA_GNSS"
+REDES_DO_KEEPOUT = {"ANT_T1", "ANT_T2", "RF_CHIP"}
 
 # The RF nets. They are routed LAST and at the calculated 50 ohm width, on
 # the front layer only, with the ground pour beside them and ground vias
@@ -157,6 +175,7 @@ ALIMENTACAO = ("GND", "VSYS", "VBAT", "VBAT_SYS", "VBAT_CELULA", "VBUS",
 
 def e_alimentacao(rede: str) -> bool:
     return rede in ALIMENTACAO or rede.startswith(("3V0_", "1V8_", "SD3V0_"))
+
 
 
 
@@ -311,6 +330,9 @@ class Grade:
         self.v: dict[tuple[int, int, int], str] = {}
         self.fixo: set[tuple[int, int, int]] = set()   # a pad's own copper
         self.postas: set[tuple[int, int]] = set()      # via centres already used
+        # a net let into the antenna's keep-out for a moment: the ground of
+        # a tuning capacitor finding its way out (terra())
+        self.ko_extra: str | None = None
 
     def cel(self, x: float, y: float) -> tuple[int, int]:
         return (int(round(x / PASSO)), int(round(y / PASSO)))
@@ -499,7 +521,9 @@ class Grade:
         t = self.t
         for dx, dy in off:
             d = t.get((c, ix + dx, iy + dy))
-            if d is not None and d != rede:
+            if d is not None and d != rede and not (
+                    d == KEEPOUT_LIVRE
+                    and (rede in REDES_DO_KEEPOUT or rede == self.ko_extra)):
                 return False
         return True
 
@@ -539,6 +563,22 @@ class Grade:
         return True
 
 
+# The thermal pads no via may touch, the same four the AL6 of dry_run_pcb.py
+# checks with the same 0,5 mm margin: a via under one sucks the solder out of
+# the joint in the oven, and under the TPS7A02 the datasheet forbids it. Until
+# 2026-10-18 nothing here knew them, and the OPT3001's new exposed pad got a
+# ground via 1,0 mm from its centre on the first run.
+TERMICOS_SEM_VIA = {("U104", "5"), ("U103", "25"), ("U101", "33"), ("U505", "7")}
+MARGEM_TERMICO = 0.5
+# filled by pads_da_placa(): (x, y, half w, half h) of each pad above
+PADS_TERMICOS: list[tuple[float, float, float, float]] = []
+# filled by pads_da_placa(): the pad field (x0, y0, x1, y1) of every
+# footprint with at least this many pads, the chips whose pins have to
+# escape; terra() puts the ground vias round them on the outside
+PADS_DENSO = 8
+CAIXAS_DENSAS: list[tuple[float, float, float, float]] = []
+
+
 def pads_da_placa(arv) -> tuple[list[tuple], dict[str, list[tuple]], dict]:
     """Every pad: (net, layer index or -1 for through, x, y, half w, half h).
 
@@ -552,10 +592,14 @@ def pads_da_placa(arv) -> tuple[list[tuple], dict[str, list[tuple]], dict]:
     # position of any one of them: that box is the pad field the neck-down
     # has to cover, and no wider neighbourhood is
     caixa_fp: dict[tuple[float, float], tuple] = {}
+    PADS_TERMICOS.clear()
+    CAIXAS_DENSAS.clear()
     for f in fp_load.kids(arv, "footprint"):
         at = fp_load.kid(f, "at")
         fx, fy = float(at[1]), float(at[2])
         ang = math.radians(float(at[3])) if len(at) > 3 else 0.0
+        ref_fp = next((pr[2] for pr in fp_load.kids(f, "property")
+                       if len(pr) > 2 and pr[1] == "Reference"), "")
         meus: list[tuple[float, float, float, float]] = []
         for p in fp_load.kids(f, "pad"):
             a = fp_load.kid(p, "at")
@@ -612,6 +656,8 @@ def pads_da_placa(arv) -> tuple[list[tuple], dict[str, list[tuple]], dict]:
             nome = rede[2] if rede else ""
             item = (nome, idx, gx, gy, hw, hh)
             todos.append(item)
+            if (ref_fp, str(p[1])) in TERMICOS_SEM_VIA:
+                PADS_TERMICOS.append((gx, gy, hw, hh))
             meus.append((gx, gy, hw, hh))
             if nome:
                 por_rede.setdefault(nome, []).append(item)
@@ -620,14 +666,33 @@ def pads_da_placa(arv) -> tuple[list[tuple], dict[str, list[tuple]], dict]:
                  max(q[0] + q[2] for q in meus), max(q[1] + q[3] for q in meus))
             for gx, gy, _hw, _hh in meus:
                 caixa_fp[(round(gx, 4), round(gy, 4))] = b
+            if len(meus) >= PADS_DENSO:
+                CAIXAS_DENSAS.append(b)
     return todos, por_rede, caixa_fp
+
+
+def longe_dos_pads(g: Grade, ix: int, iy: int) -> bool:
+    """No pad copper, of any net and on any layer, within a via's radius
+    plus the clearance: the same gap terra() leaves between a pad and the
+    via its straight stub ends on, so the via never eats into a pad."""
+    r = VIA_D / 2 + FOLGA
+    n = int(math.ceil(r / PASSO))
+    for dx in range(-n, n + 1):
+        for dy in range(-n, n + 1):
+            if math.hypot(dx * PASSO, dy * PASSO) > r:
+                continue
+            for c in range(NC):
+                if (c, ix + dx, iy + dy) in g.fixo:
+                    return False
+    return True
 
 
 def a_estrela(g: Grade, rede: str, inicio: tuple[int, int, int],
               alvos: set[tuple[int, int, int]], folga: int = 200,
               orcamento: int = ORCAMENTO, so_camada: int | None = None,
               perto_de: frozenset | None = None,
-              campos: list | None = None, larg_estreita: float = LARGURA):
+              campos: list | None = None, larg_estreita: float = LARGURA,
+              fim_via: bool = False):
     """Shortest path from one cell to any target, changing layer at a cost.
 
     `campos` are the pad fields of this net, in CELL coordinates. Inside one
@@ -637,6 +702,10 @@ def a_estrela(g: Grade, rede: str, inicio: tuple[int, int, int],
     found. With one width for the whole search the USB pair at its calculated
     0.352 mm could not leave a 0.5 mm pitch receptacle at all, and came out
     with zero segments.
+
+    With `fim_via` the search ends on the first cell where a via of this net
+    fits clear of every pad, and `alvos` may be empty: that is a ground stub
+    looking for its way down to the plane.
     """
     if inicio in alvos:
         return [inicio]
@@ -654,8 +723,11 @@ def a_estrela(g: Grade, rede: str, inicio: tuple[int, int, int],
                 if x0 <= ix <= x1 and y0 <= iy <= y1:
                     return off_estreito
         return off
-    tx = sum(t[1] for t in alvos) / len(alvos)
-    ty = sum(t[2] for t in alvos) / len(alvos)
+    if alvos:
+        tx = sum(t[1] for t in alvos) / len(alvos)
+        ty = sum(t[2] for t in alvos) / len(alvos)
+    else:
+        tx, ty = inicio[1], inicio[2]
     bx0 = min([inicio[1]] + [t[1] for t in alvos]) - folga
     bx1 = max([inicio[1]] + [t[1] for t in alvos]) + folga
     by0 = min([inicio[2]] + [t[2] for t in alvos]) - folga
@@ -671,7 +743,9 @@ def a_estrela(g: Grade, rede: str, inicio: tuple[int, int, int],
         veio[atual] = ant
         if len(veio) > orcamento:
             return None
-        if atual in alvos:
+        if atual in alvos or (fim_via and atual != inicio
+                              and g.cabe_via(atual[1], atual[2], rede)
+                              and longe_dos_pads(g, atual[1], atual[2])):
             caminho = [atual]
             while veio[caminho[-1]] is not None:
                 caminho.append(veio[caminho[-1]])
@@ -806,6 +880,12 @@ def base(arv, todos):
         g.pad(range(NC) if idx < 0 else (idx,), x - MP.ORIGEM[0],
               y - MP.ORIGEM[1], hw, hh, nome or BLOQUEADO,
               folga=FOLGA if nome else FOLGA_FURO)
+    # no via of any net under a thermal pad (TERMICOS_SEM_VIA)
+    for x, y, hw, hh in PADS_TERMICOS:
+        for c in range(NC):
+            g._ret(g.v, c, x - MP.ORIGEM[0], y - MP.ORIGEM[1],
+                   hw + MARGEM_TERMICO, hh + MARGEM_TERMICO, BLOQUEADO,
+                   respeitar_fixo=False)
 
     # EVERY mounting hole, not the first: when the second one came in on
     # 2026-09-25 this still read FUROS_DOC[0], and a track or a via was free
@@ -840,9 +920,14 @@ def base(arv, todos):
         ix0, iy0 = g.cel(x0, y0)
         ix1, iy1 = g.cel(x1, y1)
         for c in range(NC):
+            marca = KEEPOUT_LIVRE if (c == 0 and nome == KEEPOUT_DA_ANTENA) else BLOQUEADO
             for ix in range(ix0, ix1 + 1):
                 for iy in range(iy0, iy1 + 1):
-                    g.t[(c, ix, iy)] = BLOQUEADO
+                    k = (c, ix, iy)
+                    # a pad inside, and the clearance round it, stay its own
+                    if marca == KEEPOUT_LIVRE and k in g.t:
+                        continue
+                    g.t[k] = marca
         # a via is 0.45 mm wide: its CENTRE has to stay that much further out
         # of a keep-out, or the pad of it reaches inside
         folga_v = int(math.ceil((VIA_D / 2 + FOLGA) / PASSO))
@@ -853,19 +938,91 @@ def base(arv, todos):
     return g
 
 
-def terra(g: Grade, por_rede, segmentos, vias, falhas) -> int:
+# The copper-to-copper rule of the board (0,127 mm) and a hair over it: what
+# the DRC measures, not the grid's FOLGA, which carries half a step of slack
+FOLGA_REAL = 0.127 + 0.005
+
+
+def _dist_seg_ret(p0, p1, cx, cy, hw, hh) -> float:
+    """Distance from the segment p0-p1 to a pad's rectangle (centre, half
+    sizes), sampled every 0,02 mm: good to a hundredth, which is what the
+    clearance rule is written in."""
+    n = max(1, int(math.hypot(p1[0] - p0[0], p1[1] - p0[1]) / 0.02))
+    melhor = 1e9
+    for i in range(n + 1):
+        f = i / n
+        x = p0[0] + (p1[0] - p0[0]) * f
+        y = p0[1] + (p1[1] - p0[1]) * f
+        dx = max(abs(x - cx) - hw, 0.0)
+        dy = max(abs(y - cy) - hh, 0.0)
+        melhor = min(melhor, math.hypot(dx, dy))
+    return melhor
+
+
+def longe_das_ilhas(outras, camada: int, p0, p1, larg: float,
+                    via_no_fim: bool) -> bool:
+    """Does a ground stub from p0 to p1 (grid coordinates), and the via at its
+    end when there is one, keep the board's clearance to every pad of another
+    net? Measured on the pads themselves. The grid's 0,15 mm step cannot
+    see a 0,4 mm pitch: on the TPS610997's DSBGA a straight stub passed
+    0,11 mm from the 5 V ball and the DRC said so (2026-10-19)."""
+    xs, ys = (p0[0], p1[0]), (p0[1], p1[1])
+    for idx, qx, qy, hw, hh in outras:
+        if (qx + hw < min(xs) - 1.0 or qx - hw > max(xs) + 1.0
+                or qy + hh < min(ys) - 1.0 or qy - hh > max(ys) + 1.0):
+            continue
+        if (idx < 0 or idx == camada) and \
+                _dist_seg_ret(p0, p1, qx, qy, hw, hh) < larg / 2 + FOLGA_REAL:
+            return False
+        if via_no_fim and _dist_seg_ret(p1, p1, qx, qy, hw, hh) < VIA_D / 2 + FOLGA_REAL:
+            return False
+    return True
+
+
+def para_fora(x: float, y: float) -> tuple[float, float] | None:
+    """Which way is OUT for a ground via at (x, y), board coordinates.
+
+    A pad of a dense chip: away from the chip's own centre, past the edge
+    its pin sits on. A pad within 4 mm of a dense chip's pad field (the
+    chip's decoupling, as a rule): away from that chip. Anything else: no
+    preference. Until 2026-10-19 every ground via took the first bearing
+    that fitted, in a fixed order that starts with "down", and the vias of
+    the nPM1300's own capacitors closed a fence round it: half of its 32
+    pins never got out (the RT1 of that day).
+    """
+    melhor = None
+    for x0, y0, x1, y1 in CAIXAS_DENSAS:
+        dx = max(x0 - x, 0.0, x - x1)
+        dy = max(y0 - y, 0.0, y - y1)
+        d = math.hypot(dx, dy)
+        if d <= 4.0 and (melhor is None or d < melhor[0]):
+            melhor = (d, ((x0 + x1) / 2, (y0 + y1) / 2))
+    if melhor is None:
+        return None
+    vx, vy = x - melhor[1][0], y - melhor[1][1]
+    n = math.hypot(vx, vy)
+    return (vx / n, vy / n) if n > 1e-6 else None
+
+
+def terra(g: Grade, por_rede, segmentos, vias, falhas,
+          sem_lugar: list | None = None) -> int:
     """A stub from every ground pad to a via down into the plane.
 
     The stub is axis-aligned and the whole of it is checked before anything
     is drawn: a stub that leaves on a free bearing but crosses a neighbour's
     pad on the way is exactly the sort of short a plane is supposed to save
-    you from.
+    you from. A pad with no room for a straight stub goes to `sem_lugar`, when
+    given, for uma_passagem() to try a bent one.
     """
     n_gnd = 0
+    # every pad of every other net, in grid coordinates, for the real check
+    outras = [(q[1], q[2] - MP.ORIGEM[0], q[3] - MP.ORIGEM[1], q[4], q[5])
+              for rede, qs in por_rede.items() if rede != "GND" for q in qs]
     for _nome, idx, x, y, hw, hh in por_rede.get("GND", []):
         if idx < 0:
             continue                     # a through pad already meets the plane
         bx, by = x - MP.ORIGEM[0], y - MP.ORIGEM[1]
+        g.ko_extra = "GND" if no_keepout_da_antena(bx, by) else None
         posto = None
         # the four sides first, then the corners: a via straight out of the
         # pad gives the shortest loop, and the diagonal is what saves the
@@ -873,6 +1030,11 @@ def terra(g: Grade, por_rede, segmentos, vias, falhas) -> int:
         dirs = ((0, 1), (0, -1), (1, 0), (-1, 0),
                 (0.7071, 0.7071), (0.7071, -0.7071),
                 (-0.7071, 0.7071), (-0.7071, -0.7071))
+        fora = para_fora(x, y)
+        if fora:
+            # outward first; the sort is stable, so the sides still come
+            # before the corners among bearings that point out alike
+            dirs = tuple(sorted(dirs, key=lambda d: -round(d[0] * fora[0] + d[1] * fora[1], 1)))
         for extra in (0.0, 0.2, 0.45, 0.8, 1.3, 2.0):
             for dx, dy in dirs:
                 meia = math.hypot(hw * dx, hh * dy)
@@ -889,12 +1051,18 @@ def terra(g: Grade, por_rede, segmentos, vias, falhas) -> int:
                 vx, vy = g.pos(c0, c1)
                 if not g.corredor_livre(idx, (bx, by), (vx, vy), "GND"):
                     continue
+                larg_t = max(LARGURA, min(LARGURA_ALIM, 2 * hw, 2 * hh))
+                if not longe_das_ilhas(outras, idx, (bx, by), (vx, vy), larg_t, True):
+                    continue
                 posto = (vx, vy)
                 break
             if posto:
                 break
         if posto is None:
-            falhas.append(f"GND: sem lugar para a via ao lado de ({bx:.1f}; {by:.1f})")
+            if sem_lugar is not None:
+                sem_lugar.append((idx, bx, by, hw, hh))
+            else:
+                falhas.append(f"GND: sem lugar para a via ao lado de ({bx:.1f}; {by:.1f})")
             continue
         # the stub necks down to the pad, exactly like a signal track: a
         # 0.4 mm stub leaving a 0.3 mm ground pad sticks out on both sides and
@@ -905,7 +1073,17 @@ def terra(g: Grade, por_rede, segmentos, vias, falhas) -> int:
         g.trilha(idx, (bx, by), posto, larg_g, "GND")
         g.via(posto[0], posto[1], "GND")
         n_gnd += 1
+    g.ko_extra = None
     return n_gnd
+
+
+def no_keepout_da_antena(bx: float, by: float) -> bool:
+    """Is this point (grid coordinates) inside the chip antenna's keep-out?
+    Only the antenna's tuning capacitors have a ground pad there."""
+    for nome, (x0, y0, x1, y1), _c, _s in M.ZONES:
+        if nome == KEEPOUT_DA_ANTENA and x0 <= bx <= x1 and y0 <= by <= y1:
+            return True
+    return False
 
 
 def costurar(g: Grade, vias: list) -> int:
@@ -1286,8 +1464,13 @@ def podar_soltas(segmentos: list, vias: list, todos: list) -> int:
         removidos += 1
 
 
-def uma_passagem(arv, numeros, todos, por_rede, caixa_fp, prioridade):
-    """One routing attempt with a given order. Returns what came out."""
+def uma_passagem(arv, numeros, todos, por_rede, caixa_fp, prioridade,
+                 antes: list | tuple = ()):
+    """One routing attempt with a given order. Returns what came out.
+
+    `antes` are nets routed right after PRIMEIRO, ahead of everything else:
+    the ones that failed in the pass before.
+    """
     g = base(arv, todos)
     segmentos: list[tuple] = []
     vias: list[tuple] = []
@@ -1351,7 +1534,37 @@ def uma_passagem(arv, numeros, todos, por_rede, caixa_fp, prioridade):
     # vias are placed, not searched, and a stitching via already sitting
     # there is not checked against them. One landed 0.10 mm from a tie via.
     pre_ligados = ligar_usb(g, segmentos, vias, por_rede)
-    n_gnd = terra(g, por_rede, segmentos, vias, falhas)
+    sem_lugar: list[tuple] = []
+    n_gnd = terra(g, por_rede, segmentos, vias, falhas, sem_lugar)
+    outras_gnd = [(q[1], q[2] - MP.ORIGEM[0], q[3] - MP.ORIGEM[1], q[4], q[5])
+                  for rede, qs in por_rede.items() if rede != "GND" for q in qs]
+    # The ground pads with no room for a straight stub get a bent one, found
+    # by the same search as any track, to the nearest spot where a via fits.
+    # Until 2026-10-18 they were simply reported: twelve of the 64 items the
+    # DRC found unconnected were ground pads in the crowded power corner.
+    for idx, bx, by, hw, hh in sem_lugar:
+        larg_g = max(LARGURA, min(LARGURA_ALIM, 2 * hw, 2 * hh))
+        c0, c1 = g.cel(bx, by)
+        lim = int(round(RAIO_TERRA / PASSO))
+        g.ko_extra = "GND" if no_keepout_da_antena(bx, by) else None
+        p = a_estrela(g, "GND", (idx, c0, c1), set(), lim, so_camada=idx,
+                      campos=[(c0 - lim, c1 - lim, c0 + lim, c1 + lim)],
+                      larg_estreita=larg_g, fim_via=True)
+        g.ko_extra = None
+        if p is not None:
+            pts = [g.pos(c[1], c[2]) for c in p]
+            if not all(longe_das_ilhas(outras_gnd, idx, pts[k], pts[k + 1], larg_g,
+                                       k == len(pts) - 2)
+                       for k in range(len(pts) - 1)):
+                p = None
+        if p is None:
+            falhas.append(f"GND: sem lugar para a via ao lado de ({bx:.1f}; {by:.1f})")
+            continue
+        emitir(p, "GND", larg_g)
+        vx, vy = g.pos(p[-1][1], p[-1][2])
+        vias.append((vx, vy, "GND"))
+        g.via(vx, vy, "GND")
+        n_gnd += 1
 
     def alcance(r: str) -> float:
         xs = [q[2] for q in por_rede[r]]
@@ -1359,9 +1572,19 @@ def uma_passagem(arv, numeros, todos, por_rede, caixa_fp, prioridade):
         return (max(xs) - min(xs)) + (max(ys) - min(ys))
 
     ordem = [r for r in PRIMEIRO if r in por_rede]
+    ordem += [r for r in antes if r in por_rede and r not in ordem
+              and r not in NAO_ROTEAR and r != "GND"]
     resto = [r for r in por_rede
              if r not in ordem and r not in NAO_ROTEAR and r != "GND"]
-    resto.sort(key=alcance, reverse=(prioridade != "curtas"))
+    if prioridade == "alimentacao":
+        # the power rails first, the longest of them first, and then the
+        # signals short first: the rails are wide and span the board, and
+        # routed last they found it full (2026-10-19, 40 of the 69 loose
+        # items were rails)
+        trilhos = sorted((r for r in resto if e_alimentacao(r)), key=alcance, reverse=True)
+        resto = trilhos + sorted((r for r in resto if not e_alimentacao(r)), key=alcance)
+    else:
+        resto.sort(key=alcance, reverse=(prioridade != "curtas"))
 
     n_ok = 0
     fechou = [False]
@@ -1611,19 +1834,34 @@ def main() -> int:
     numeros = fp_load.redes_da_placa(arv)
     todos, por_rede, caixa_fp = pads_da_placa(arv)
 
-    # Several passes. Whatever failed goes to the front of the next one,
-    # so a run that could not find a way through gets the empty board next
-    # time. A pass costs about a minute; the board settles in three or four.
+    # Several passes, and the best is kept. The first routes the short nets
+    # first; the second the power rails first, longest first, and then the
+    # signals short first; any pass after those (PASSAGENS_EXTRA) puts
+    # whatever failed in the one before at the front. Until 2026-10-18 there
+    # were two passes, long nets first and short nets first, and the comment
+    # promised the failed-first passes without the code doing them; the
+    # long-first order lost every time it was measured (113 and 124 failures
+    # against 83), and it is gone.
     melhor = None
-    for nome in ("compridas", "curtas"):
-        r = uma_passagem(arv, numeros, todos, por_rede, caixa_fp, nome)
+    antes: list[str] = []
+    sem_ganho = 0
+    ordens = ["curtas", "alimentacao"] + ["curtas"] * PASSAGENS_EXTRA
+    for i_pass, ordem_pass in enumerate(ordens):
+        r = uma_passagem(arv, numeros, todos, por_rede, caixa_fp, ordem_pass, antes)
         segmentos, vias, falhas, falharam, n_gnd, n_ok, n_cost, n_malha = r
-        print(f"  ordem {nome} primeiro: {n_ok} ligacoes, {len(falhas)} falhas",
-              flush=True)
+        print(f"  passagem {i_pass + 1} ({ordem_pass}), {len(antes)} redes na frente: "
+              f"{n_ok} ligacoes, {len(falhas)} falhas", flush=True)
         if melhor is None or len(falhas) < len(melhor[2]):
             melhor = r
-        if not falhas:
+            sem_ganho = 0
+        else:
+            sem_ganho += 1
+        if not falhas or sem_ganho >= 2:
             break
+        if i_pass >= 1:
+            # after the two orders, the failed-first passes (PASSAGENS_EXTRA)
+            novas = list(dict.fromkeys(falharam))
+            antes = novas + [r_ for r_ in antes if r_ not in novas]
     segmentos, vias, falhas, _f, n_gnd, n_ok, n_cost, n_malha = melhor
 
     ruins = conferir(segmentos, vias)

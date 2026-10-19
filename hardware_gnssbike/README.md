@@ -6,7 +6,7 @@
 
 ![Estado](https://img.shields.io/badge/estado-esquem%C3%A1tico%2C%20placa%20e%20caixa%20em%20CAD-EF6C00)
 ![Placa](https://img.shields.io/badge/placa-34%20%C3%97%2095%20mm%20%C2%B7%204%20camadas-0082FC)
-![Caixa](https://img.shields.io/badge/caixa-62%20%C3%97%20106%20%C3%97%2017%20mm-0082FC)
+![Caixa](https://img.shields.io/badge/caixa-64%20%C3%97%20106%20%C3%97%2018%2C2%20mm-0082FC)
 ![MCU](https://img.shields.io/badge/MCU-nRF54LM20A-00A9CE)
 ![DRC](https://img.shields.io/badge/DRC-0%20erros-2E7D32)
 ![Regras](https://img.shields.io/badge/regras%20de%20ficha-25%20de%2029%20medidas-2E7D32)
@@ -35,7 +35,7 @@ componente.
 > ([09](09-dry-run-da-pcb.md), [10](10-dry-run-2026-09-26.md), 2026-09-26)
 > —, e a caixa existe como proposta medida por um dry run próprio (12
 > regras cumpridas, 0 violadas, [04](04-pcb-e-caixa.md#a-placa-de-hoje-dentro-da-caixa-do-conceito));
-> mas nenhuma foi feita e nenhum componente passou por bancada. A revisão do esquemático de 2026-10-18 ([11](11-revisao-do-esquematico.md)) achou 6 bloqueios: ele só vai para a fábrica depois das correções. Este aviso já disse "0 ligações sem trilha" com 47 em aberto:
+> mas nenhuma foi feita e nenhum componente passou por bancada. A revisão do esquemático de 2026-10-18 ([11](11-revisao-do-esquematico.md)) achou 6 bloqueios, e as correções entraram no gerador no mesmo dia; a placa ainda não vai para a fábrica: o roteamento não fecha (60 itens desconectados em 2026-10-19, com o DRC sem nenhum erro), e a dobra das fitas das telas e a polaridade do LED do Azumo só se confirmam com as peças na mão. Este aviso já disse "0 ligações sem trilha" com 47 em aberto:
 > o DRC rodava só com erros, e os não roteados são aviso. Todo valor
 > abaixo vem de ficha ou de conta feita aqui, e está marcado como tal. O
 > que depende de decisão, de ficha por ler ou de medida está na lista de
@@ -60,7 +60,7 @@ fontes, cada um na sua pasta (2026-09-26):
 | | `gnssbike-3d-montagem.png` | a pilha: display, placa e célula |
 | | `gnssbike-3d-caixa-aberta.png`, `-frente.png`, `-explodida.png` | a caixa com a placa, a célula e o display dentro |
 | [`docs/img/`](../docs/img/) | [`manual-de-montagem.svg`](../docs/img/manual-de-montagem.svg) | o **manual de montagem**: as peças em escala e os oito passos |
-| [`docs/img/chicote-solar.svg`](../docs/img/chicote-solar.svg) | como ligar os seis módulos solares na placa |
+| | [`chicote-solar.svg`](../docs/img/chicote-solar.svg) | como ligar os seis módulos solares na placa |
 
 ## Índice
 
@@ -90,7 +90,7 @@ flowchart TB
         GAUGE --> NPM
         PV["6 módulos solares<br/>KXOB25-05X3F"] --> AEM["ADP5091<br/>colheita solar"]
         AEM --> GAUGE
-        NPM --> RAILS(("3V0 · SD3V0 · 3V3BL<br/>1V8 montado, sem carga"))
+        NPM --> RAILS(("3V0 · 3V3BL<br/>1V8 e SD3V0 sem carga"))
         CELL --> TPS["TPS7A02 1,8 V"] --> VBCKP(("VBCKP"))
     end
 
@@ -102,12 +102,16 @@ flowchart TB
 
     subgraph F3["Folha 3 · GNSS"]
         MAXF["u-blox MAX-F10S<br/>L1 + L5 · a 3,0 V, sem tradutor"]
-        ANT1["antena L1/L5<br/>Unictron H2UJ4U1H2Q0100"] --- MAXF
+        ANT1["antena de chip L1/L5<br/>Unictron H2UJ4U1H2Q0100"] --- JPRF["JP301<br/>escolhe a antena"]
+        UFL["u.FL J302<br/>antena externa"] --- JPRF
+        JPRF --- MAXF
     end
 
     subgraph F4["Folha 4 · Display"]
-        FPC["Hirose FH12-10S-0.5SH<br/>10 vias"] --- PANEL["JDI LPM027M128C<br/>8 cores, com luz"]
-        BL["luz do painel<br/>HC-FPC-05, 5 vias"] -.->|"ordem das vias em aberto"| PANEL
+        FPC["J401 · Molex 503480-1000<br/>sinal das duas telas"] --- PANEL["JDI LPM027M128C<br/>8 cores, com luz"]
+        FPC -.- SHARP["ou Sharp LS027B7DH01A<br/>nua ou Azumo 11103-06"]
+        BOOST["TPS610997<br/>5 V da Sharp"] -.->|"JP401"| FPC
+        BL["J402 e J403 · Molex 503480<br/>luz da JDI e do Azumo"] --- PANEL
     end
 
     subgraph F5["Folha 5 · Memória e sensores"]
@@ -117,7 +121,7 @@ flowchart TB
 
     subgraph F6["Folha 6 · Interface"]
         KEYS["3 teclas<br/>XunPu TS-1088R"]
-        BUZ["buzzer<br/>Murata PKLCS1212"]
+        BUZ["buzzer<br/>Same Sky CPT-12123"]
         RGB["LED RGB<br/>S4-3528RGBTA-A"]
     end
 
@@ -128,7 +132,7 @@ flowchart TB
     RAILS --> F6
     MOD -.->|"spi00"| NOR
     MOD -.->|"i2c23"| SENS
-    MOD -.->|"uart21"| TXU
+    MOD -.->|"uart21"| MAXF
     MOD -.->|"spi22"| FPC
     MOD -.->|"i2c30"| NPM
     MOD -.->|"GPIO e PWM"| F6
@@ -143,10 +147,10 @@ bloco, e vale dizer exatamente qual foi usada em cada caso:
 |---|---|---|
 | Rádio de 2,4 GHz e alimentação do MCU | **módulo ME54BS13**: casamento, antena de PCB e cristais são do módulo, não deste projeto; o que sobra para a placa é o desacoplamento, a zona livre da antena e os pads de USB, SWD e console | ficha MinewSemi ME54BS13 V1.0.0, de 2026-06-23 (pinagem, p. 6 a 9; regras de PCB, 7.2 e 7.3); a pinagem e as cotas do desenho mecânico estão transcritas em [`cad/parts.py`](cad/parts.py) e [`cad/footprints.py`](cad/footprints.py) |
 | Caminho de energia | **configuração 1 da lista de referência da Nordic** para o nPM1300 (tabelas 39 e 40 da ficha), com os indutores e capacitores que ela pede | ficha nPM1300 v1.1, conferida em [15](../docs/15-avaliacao-componentes.md#detalhes-para-o-esquemático) |
-| Colheita solar | **lista mínima de materiais da e-peas** (tabela 43 da ficha do AEM10900), com a exceção registrada do indutor | ficha AEM1090x v2.4.0 |
+| Colheita solar | **circuito de aplicação do ADP5091**, no lugar do AEM10900 desde 2026-09-24: os quatro divisores entre `REF` e `AGND` da figura 42, o MPPT da figura 45, os valores da tabela 8 e o indutor de 22 µH que a ficha fixa; o corte térmico, que o ADP5091 não tem, é um comparador externo | ficha ADP5091 Rev. A (D14145-0-5/17(A)), pinagem pela tabela 5 e pela figura 3 |
 | Medidor de bateria | **circuito de aplicação do MAX17262** com sensor entre BATT e SYS | ficha Maxim |
 | GNSS | **projeto de referência do MAX-F10S**: entrada com SAW, LNA e SAW já dentro do módulo; a placa entrega alimentação limpa, a linha de 50 Ω e a zona livre | ficha MAX-F10S R03, conferida em [15](../docs/15-avaliacao-componentes.md#gnss) |
-| Display | ficha do painel e do conector: ordem dos 10 pinos, EXTMODE no VDD, VCOM pelo EXTCOMIN | fichas JDI LPM027M128**B** Ver.01 e Sharp LS027B7DH01 (LD-28305A); do **C**, que é a tela montada, as especificações publicadas da `3LPM027M128C specification ver.02` — 10 vias de sinal, **5 vias só para a luz**, 2,67 V e 16 mA ([06](06-conectores-e-pontos-de-teste.md#j402--luz-do-lpm027m128c)). Os PDF da JDI estão 404: falta a **ordem das cinco vias** |
+| Display | fichas das duas telas e do conector: ordem dos 10 pinos, EXTMODE no VDD, VCOM pelo EXTCOMIN, e a tensão de cada tela no `JP401` | JDI LPM027M128C specification ver.02 (sinal em 1.4.1, luz em 1.4.2, desenho na p. 34) e LPM027M128**B** Ver.01; Sharp LCP-2110015A e LD-28305A; Azumo, desenho T7 de 2022-01-10; Molex SD-503480-001 ([06](06-conectores-e-pontos-de-teste.md#j401--display)) |
 
 > [!IMPORTANT]
 > **O documento de diretrizes de projeto de hardware do nRF54LM20 da
@@ -216,7 +220,8 @@ E quatro contas estavam erradas, com a pior no calor: dentro da caixa não é
 "o carregador mais a perda dos reguladores", é **tudo o que entra pelo cabo
 e não vira química na célula** — 1,89 W, que põem a caixa em **45,1 °C** a
 25 °C de ambiente (44,7 na caixa do conceito, de 192 cm²; a proposta de
-62 × 106 × 17 tem 189), empate com o corte do JEITA **antes de qualquer sol**.
+62 × 106 × 17 tem 189; a de 64 × 106 × 18,2, de 2026-10-19, tem 198 cm² e
+dá 44,1), empate com o corte do JEITA **antes de qualquer sol**.
 
 ### O que os dry-runs deixaram para trás
 
@@ -241,14 +246,14 @@ esquemático não está pronto para virar layout**.
 - [x] **Corte térmico da carga solar** — **decidido em 2026-09-26: comparador TLV7031 com o divisor do NTC alimentado pelo painel**, saída em OU de diodos no `DIS_SW`. Só o lado quente; o frio está logo abaixo ([07](07-sequencias-e-protecao.md#o-corte-térmico-da-carga-solar)).
 - [ ] **Carga solar abaixo de 0 °C** — o comparador só corta o lado quente, e uma célula de lítio carregada abaixo de zero deposita lítio metálico. Segundo comparador (a outra metade de um TLV7032) com a referência do frio, ou aceitar o risco pelo clima de uso ([01](01-esquematico.md#folha-1--energia)).
 - [ ] **Célula de 60 mm numa placa com 58,1 mm entre as duas antenas** — a célula de 36 × 60 não cabe atrás da placa sem entrar 1,9 mm na área da antena GNSS ou na do módulo, que recusam metal; e o display de 61,8 mm cobre 7,2 mm da antena GNSS. Célula de até 58 mm, ou outra caixa ([04](04-pcb-e-caixa.md#as-duas-sombras-display-e-bateria)).
-- [x] **Qual painel** — **decidido em 2026-09-23: o JDI LPM027M128C**, peça única de 2,7", 400 × 240, MIP de 8 cores e **com luz frontal integrada**, no lugar do par Sharp LS027B7DH01A + filme Azumo. Sem etapa de laminação, mesma resolução, consumo menor e cor. A Sharp continua sendo o **plano B** no mesmo conector. O que a decisão custa: R$ 776 contra US$ 90,06 do par, **sem canal autorizado e sem garantia** ([01](01-esquematico.md#folha-4--display), [19](../docs/19-lista-de-compras.md#display)).
+- [x] **Qual painel** — **decidido em 2026-09-23: o JDI LPM027M128C**, peça única de 2,7", 400 × 240, MIP de 8 cores e **com luz frontal integrada**, no lugar do par Sharp LS027B7DH01A + filme Azumo. Sem etapa de laminação, mesma resolução, consumo menor e cor. O que a decisão custa: R$ 776 contra US$ 90,06 do par, **sem canal autorizado e sem garantia**. Em 2026-10-18 a JDI saiu de venda: a decisão D1 manda comprar agora todas as telas do lote, mais duas de reserva, e a placa passou a aceitar também a Sharp, nua ou como o Azumo 11103-06, no mesmo `J401`, com um boost de 5 V para ela ([01](01-esquematico.md#folha-4--display), [19](../docs/19-lista-de-compras.md#display)).
 - [x] **Qual antena** — **resolvida no CAD**: a **Unictron H2UJ4U1H2Q0100**, de 5 × 3 mm, no lugar da TE L000670 de 10,75 mm que não cabia na zona reservada. A zona da antena caiu de 40,5 × 14,5 para 15,0 × 9,35 mm e a peça passou a morar **na placa**, e não fora dela ([04](04-pcb-e-caixa.md#zonas-proibidas)).
-- [ ] **Acertar `docs/15` e `docs/19` ao módulo montado** — este esquemático e o CAD já usam o **MinewSemi ME54BS13**, mas a [avaliação](../docs/15-avaliacao-componentes.md#módulo-do-mcu) e a [lista de compras](../docs/19-lista-de-compras.md#mcu-e-rádio) ainda dão o Fanstel BM20C como escolhido e o ME54BS13 como plano B a US$ 9,00, quando a loja da MinewSemi o vende a **US$ 6,00**. Os dois documentos só mudam com a decisão do dono.
+- [ ] **Fechar a escolha do módulo** — este esquemático e o CAD usam o **MinewSemi ME54BS13**, e desde 2026-10-19 a [lista de compras](../docs/19-lista-de-compras.md#mcu-e-rádio) também, como peça consignada, com o Fanstel BM20C de alternativa. A [avaliação](../docs/15-avaliacao-componentes.md#módulo-do-mcu) guarda a escolha do BM20C de 2026-09-18, com uma nota do estado atual. Confirmar o ME54BS13 como escolha do projeto, com a certificação e o cristal abaixo em aberto, é decisão do dono.
 
 ### Fichas que precisam ser lidas
 
-- [ ] **Ordem das cinco vias do conector da luz** — a ficha do C dá duas interfaces, **10 vias de sinal e 5 vias só para a luz**, as duas com passo de 0,5 mm, mais 2,67 V e 16 mA, e o `J402` já é esse conector. Falta **qual via é anodo, qual é catodo e quais não se usam**: os dois PDF da JDI respondem 404 ([06](06-conectores-e-pontos-de-teste.md#j402--luz-do-lpm027m128c)).
-- [x] **Peça do conector de 5 vias** — **resolvida**: o `J402` é a **HCTL HC-FPC-05-10-5RLTAG** (LCSC C5213728), 5 vias com passo de 0,5 mm, no lugar do Molex de 4 vias herdado do filme da Sharp. Falta só a **ordem** das vias, logo acima.
+- [x] **Ordem das cinco vias do conector da luz** — **lida na spec ver.02, 1.4.2**: 1 a 4 são os catodos, um por LED, e 5 é o anodo comum, com o pino 1 do lado da fita de sinal ([06](06-conectores-e-pontos-de-teste.md#j402--luz-da-jdi)).
+- [x] **Peça do conector de 5 vias** — o `J402` foi a HCTL HC-FPC-05-10-5RLTAG (LCSC C5213728) de 2026-09-25 a 2026-10-18, e é o **Molex 503480-0540** (LCSC C5527934) desde então: o HCTL pedia 3,0 mm de condutor exposto, e a fita da luz tem 2,2 a 2,8.
 - [ ] **Domínio de tensão dos pinos digitais do nPM1300** — se for o `VSYS`, o `PMIC_INT` e o I²C da energia não casam com os 3,0 V do MCU ([02](02-calculos.md#pull-ups-do-i²c)).
 - [ ] **De que lado do sensor interno ficam o `BATT` e o `SYS` do MAX17262** — trocar os dois inverte o sinal da corrente ([01](01-esquematico.md#folha-1--energia)).
 - [ ] **Brown-out e `VSYSPOF` do nPM1300** — a partida suave já está levantada (cerca de 1,2 ms, 360 µs/V), estes dois não ([07](07-sequencias-e-protecao.md)).
@@ -258,22 +263,25 @@ esquemático não está pronto para virar layout**.
 - [ ] **Certificação do ME54BS13** — a ficha V0.5.0 não traz nenhuma e a V1.0.0 não foi lida quanto a isso. O módulo que este esquemático descrevia antes, o Fanstel BM20C, trazia FCC, ISED, TELEC e conformidade europeia; **esse aval não vale para o ME54BS13 até alguém ler a ficha**.
 - [ ] **Tolerância do cristal de 32,768 kHz do módulo** — o ANT+ pede ±50 ppm e essa tolerância **não está levantada para o ME54BS13**. Perguntar à MinewSemi, e medir o LFCLK contra o 1 PPS do receptor no protótipo.
 - [ ] **Um termistor para o corte térmico, não dois** — o `RT101` da placa é o do comparador; a via 4 do `J102` (`TH_MON`) fica sem montar. Em paralelo dão 5 kΩ e o comparador corta a carga solar com cada NTC a 25,7 °C ([01](01-esquematico.md#folha-1--energia)).
-- [ ] **Pinagem e faixas do TLV7031 na ficha SNOSD54** — o `U105` está em `cad/parts.py` como **não confirmado**: conferir pino a pino, e a faixa de modo comum das entradas, antes de fabricar ([07](07-sequencias-e-protecao.md#o-corte-térmico-da-carga-solar)).
-- [ ] **Indutor do ADP5091** — o `L103` está em 22 µH, Isat ≥ 390 mA, **sem peça escolhida na LCSC** (`cad/parts.py`); o AEM10900 e o seu 4,7 µH saíram em 2026-09-25 ([02](02-calculos.md#colheita-solar)).
+- [x] **Pinagem do TLV7031** — **conferida na revisão de 2026-10-18** (ficha SLVSE13J): o símbolo tinha a pinagem da TLV7031S e foi renumerado para a TLV7031DCKR (1 `OUT`, 2 `V−`, 3 `IN+`, 4 `IN−`, 5 `V+`), com o código C2863637; a alimentação passou ao `VBAT_SYS`, dentro dos 1,6 a 6,5 V da ficha. A faixa de modo comum das entradas não está registrada, e as entradas ficam entre 0 e os 2,07 V do painel em vazio ([07](07-sequencias-e-protecao.md#o-corte-térmico-da-carga-solar)).
+- [x] **Indutor do ADP5091** — o `L103` é o **Sunlord SPH252012H220MT** (22 µH, Isat 0,45 A, 1008, LCSC C98385), no land de 1008 desenhado; o AEM10900 e o seu 4,7 µH saíram em 2026-09-24 ([02](02-calculos.md#colheita-solar)).
 - [ ] **Os seis pinos do ADP5091 sem nó** — `REF` ganhou nó em 2026-09-26 (os divisores do `TERM` e do `SETSD` penduram nele, figura 42 da ficha, e não no `BAT` como estava); ficam abertos `SETPG`, `SETHYST`, `PGOOD` e `LLD` (saídas e ajustes do `PGOOD`, que ninguém lê) e `BACK_UP` (sem célula primária; `SETBK` ao `AGND` como a ficha manda). Conferir na Rev. A se `SETPG`/`SETHYST` abertos são aceitos ([03](03-netlist.md#pinos-de-configuração-amarrados-em-cobre)).
-- [ ] **O filme Azumo na LS027B7DH01A** — só no plano B: ele foi feito para a LS027B7DH01 sem o A ([19](../docs/19-lista-de-compras.md#display)).
+- [ ] **O que o código do Azumo entrega** — o desenho T7 de 2022-01-10 põe a LS027B7DH01A na lista de peças do 11103-06, um módulo só, e a lista de compras de 2026-09-18 o tratava como filme a laminar sobre uma Sharp à parte. Conferir com a Azumo antes de pedir ([19](../docs/19-lista-de-compras.md#display)).
 
 ### O que precisa de bancada
 
 - [ ] **Painel com um módulo tapado** — confirmar que o arranjo em paralelo sem diodo perde pouco ([02](02-calculos.md#série-ou-paralelo)).
 - [ ] **Calor do carregador na caixa vedada** — 1,50 W no pior caso põem a junção perto de 73 °C e a caixa inteira de 8 a 16 °C acima do ambiente; o corte por temperatura da célula pode disparar antes do fim da carga, e ao sol isso fica pior ([02](02-calculos.md#calor-do-carregador), [calor da caixa](02-calculos.md#calor-da-caixa-inteira)).
 - [ ] **Isolação entre a antena do GNSS e a do rádio** — o S21, não só a geometria ([04](04-pcb-e-caixa.md#as-duas-antenas)).
-- [ ] **Tensão direta do filme de luz** — só no plano B: sem ela o `R_BL` da montagem com a Sharp não fecha. Com o JDI o `R_BL` é 39 Ω, fechado pela ficha ([02](02-calculos.md#luz-do-display)).
+- [ ] **A luz do Azumo** — o `R410` de 39,2 Ω dá 13 mA com a tensão direta de 2,8 V e 8 mA com 3,0 V, as duas pontas do desenho; a polaridade fica em jumpers (`JP402` e `JP403`, ou `JP404` e `JP405`) porque o desenho T7 e a folha de 2020 se contradizem: teste de diodo antes de montar ([06](06-conectores-e-pontos-de-teste.md#j403--luz-do-azumo-no-verso)). Com a JDI, a luz tem um resistor de 150 Ω por catodo.
+- [ ] **A dobra das fitas das telas** — o alcance calculado de cada fita até a boca do conector tem cerca de 0,6 mm de folga; medir com a tela na mão ([11](11-revisao-do-esquematico.md#as-duas-telas-na-mesma-placa)).
 
 ### O que falta definir
 
 - [ ] **Pilha de camadas do fabricante** — sem ela não há largura de trilha, nem 50 Ω da antena, nem 90 Ω do USB ([02](02-calculos.md#corrente-por-trilho-e-largura-de-trilha)).
-- [ ] **Atribuição das quatro vias do conector do filme de luz** — só no plano B: o número de vias é 4, mas **qual contato leva o quê não está em arquivo nenhum do projeto**; sai do desenho 12369-01_T4 da Azumo ([06](06-conectores-e-pontos-de-teste.md#no-plano-b-o-filme-e-o-conector-de-4-vias)).
+- [x] **Atribuição das quatro vias do conector da luz do Azumo** — pelo desenho T7, a fita tem dois pads de 0,80 mm a passo de 1,00 mm, e cada um cobre duas vias do `J403` (1-2 e 3-4); qual par é o anodo fica nos jumpers de polaridade, logo acima ([06](06-conectores-e-pontos-de-teste.md#j403--luz-do-azumo-no-verso)).
+- [ ] **Terminar o roteamento** — em 2026-10-19 ficam 60 itens desconectados, a maior parte de trilhos de alimentação na zona de energia, e o DRC não acusa erro nenhum ([11](11-revisao-do-esquematico.md#resposta-curta), [CAD](cad/README.md#o-que-falta)).
+- [ ] **Códigos da LCSC que faltam** — 48 resistores, seis jumpers de 0 Ω, os LEDs de carga, os conectores `J102` e `J103` e as chaves do LED RGB não têm código no gerador, e o conector SWD `J202` não foi escolhido ([05](05-materiais.md#o-que-ainda-não-tem-código-de-compra)).
 - [ ] **Pinagem do conector da bateria, com o fabricante do pack** — o cobre segue a proposta de [06](06-conectores-e-pontos-de-teste.md#j102--bateria) desde 2026-09-26 (1 e 6 `VBAT+`, 2 e 5 `GND`, 3 `NTC_BAT`, 4 reservada); até então tinha 1, 4 e 6 com os outros soltos, e um cabo feito como o documento pedia punha o positivo no `GND`. Falta o fabricante do pack confirmar.
 - [ ] **Ordem das quatro vias do chicote do painel** — a tabela de [J103](06-conectores-e-pontos-de-teste.md#j103--painel-solar) segue a ordem dos pinos do footprint; confirmar o contato 1 na marca da carcaça `ZHR-4` antes de crimpar.
 

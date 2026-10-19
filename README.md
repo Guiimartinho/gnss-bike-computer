@@ -63,7 +63,7 @@ flowchart LR
 | | |
 |---|---|
 | ![A caixa proposta, vista de frente: janela do display, três teclas sob a membrana, módulos solares nos chanfros e na faceta](docs/img/hardware/gnssbike-3d-caixa-frente.png) | ![A caixa em vista explodida: tampa com o display colado, teclas, módulos e coberturas, a porta do USB-C](docs/img/hardware/gnssbike-3d-caixa-explodida.png) |
-| *A caixa proposta em 2026-09-26, 62 × 106 × 17 mm, medida por um dry run próprio* | *Explodida: tampa com o display, teclas, módulos solares, porta do USB-C* |
+| *A caixa proposta, 64 × 106 × 18,2 mm desde 2026-10-19, medida por um dry run próprio* | *Explodida: tampa com o display, teclas, módulos solares, porta do USB-C* |
 
 ![Manual de montagem: as peças em escala e os oito passos, do chicote solar ao fechamento do aparelho](docs/img/manual-de-montagem.svg)
 

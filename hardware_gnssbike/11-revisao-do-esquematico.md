@@ -2,18 +2,83 @@
 
 Este documento responde às duas perguntas do dono antes de mandar a placa para a fábrica: o esquemático está certo, isto é, a placa montada a partir dele funciona sem se danificar? Alguma peça está em fim de vida ou não se consegue comprar? A revisão cobriu as 163 peças e as 143 redes do esquemático gerado por [`cad/`](cad/README.md). Cada tipo de peça foi auditado contra a ficha do fabricante, os pinos e footprints foram conferidos às cegas por um segundo revisor, cada achado grave foi verificado por outro agente, e três revisões de circuito procuraram o que impede a placa de funcionar. Nada foi montado nem medido: tudo o que está aqui foi tirado do netlist, das fichas e dos arquivos do CAD.
 
-**Nesta página:** [resposta curta](#resposta-curta) · [bloqueios](#bloqueios) · [fim de vida e fornecimento](#fim-de-vida-e-fornecimento) · [graves](#graves) · [o que está certo](#o-que-está-certo) · [decisões do dono](#decisões-do-dono) · [caminho até a fábrica](#caminho-até-a-fábrica) · [método](#método)
+**Nesta página:** [resposta curta](#resposta-curta) · [correções aplicadas](#correções-aplicadas) · [as duas telas](#as-duas-telas-na-mesma-placa) · [bloqueios](#bloqueios) · [fim de vida e fornecimento](#fim-de-vida-e-fornecimento) · [graves](#graves) · [o que está certo](#o-que-está-certo) · [decisões do dono](#decisões-do-dono) · [caminho até a fábrica](#caminho-até-a-fábrica) · [método](#método)
 
 ## Resposta curta
 
 > [!IMPORTANT]
-> **Do jeito que está, o esquemático não vai para a fábrica.** Há **6 bloqueios** (a placa não funcionaria), **2 peças fora de venda ou em fim de vida** (o display e o buzzer) e **15 problemas graves** de causas distintas, 2 deles só de firmware. Todos têm correção proposta; quatro pedem uma decisão do dono. O resto do circuito foi conferido e está certo: árvore de energia, mapa de pinos do módulo, domínios e pinos do nRF54LM20A, interface do GNSS, gravação pela SWD, barramento I²C e polaridades.
+> **As correções foram aplicadas em 2026-10-18** ([abaixo](#correções-aplicadas)): os 6 bloqueios, as 2 peças fora de venda ou em fim de vida e os 15 graves estão resolvidos no gerador, e a placa aceita a JDI ou a Sharp no mesmo conector. **A placa ainda não vai para a fábrica**: o roteamento não fecha (60 itens desconectados em 2026-10-19, com o DRC sem nenhum erro), e a dobra das fitas das telas e a polaridade do LED do Azumo só se confirmam com as peças na mão. O que vinha abaixo é o retrato da revisão antes das correções.
 
 | Pergunta | Resposta |
 |---|---|
 | O esquemático está certo? | **Não ainda.** Dois footprints errados (BMP585 e LED RGB) e um incompleto (OPT3001), o comparador com a pinagem de outra variante, o jumper de RF que nunca liga a antena de chip e os dois conectores do display com o lado de contato e a posição errados |
 | Alguma peça em fim de vida? | **Duas.** A tela JDI LPM027M128C saiu de venda: nenhum distribuidor autorizado a vende; o buzzer Murata PKLCS1212E4001-R1 está em *Last Time Buy* até 31/03/2027 e tem substituto ativo no mesmo land |
 | O resto se compra? | Sim: 48 dos 69 itens conferidos estão ativos e com código certo. Os outros precisam de código de peça (capacitores, resistores, `L103`, `J202`, `JP101`) ou de código corrigido (`U105`, `L301`). O módulo e a flash vão como peça consignada na JLCPCB |
+
+## Correções aplicadas
+
+O dono aprovou a lista e as decisões D1 a D4 em 2026-10-18 e, no mesmo dia, pediu os conectores das duas telas na placa, para escolher a tela sem refazer a PCB. Tudo entrou no gerador de [`cad/`](cad/README.md); o esquemático, a placa e a caixa foram regerados e conferidos pelas mesmas regras de antes.
+
+| Item | O que mudou | Onde |
+|---|---|---|
+| B1 | BMP585: footprint pela figura 29 da ficha, pads nos quatro lados, sem cobre sob o corpo | `footprints.py` |
+| B2 | LED RGB: os quatro pads com o y certo, marca no canto chanfrado do vermelho | `footprints.py` |
+| B3, D4 | TLV7031DCKR: símbolo renumerado (1 OUT, 2 V−, 3 IN+, 4 IN−, 5 V+), código C2863637 | `parts.py` |
+| B4 | JP301: `COMUM` no pad do meio, `UFL` e `CHIP` nas pontas | `parts.py` |
+| B5, B6 | conectores Molex 503480, de contato dos dois lados, onde as fitas caem; ver [as duas telas](#as-duas-telas-na-mesma-placa) | `parts.py`, `make_pcb.py` |
+| G1 | OPT3001: pad térmico 7 no GND e land da p. 42 da ficha; o roteador não põe via sob nenhum dos quatro pads térmicos | `footprints.py`, `route.py` |
+| G2 | L101 e L102 no land da Murata DFE201610 | `footprints.py` |
+| G3 | comparador do corte térmico no `VBAT_SYS`, que o ship mode não corta | `nets.py` |
+| G4 | C107 no `PVDD`, junto do pino 4 do nPM1300; C108 no `3V3BL` | `nets.py`, `make_pcb.py` |
+| G5, D2 | TVS do VBUS: Nexperia PESD24VS1UL, 24 V de trabalho, unidirecional, SOD-882 (C477994) | `parts.py`, `footprints.py` |
+| G6 | flash no `3V0`; o `LDSW1` fica sem carga, com o ponto de teste | `nets.py`, `parts.py` |
+| G7 | marca de pino 1 na serigrafia de todo footprint gerado | `footprints.py` |
+| G8, D3 | LEDs de carga e de erro na fileira das teclas, entre a primeira e a segunda, cada um com a sua janela. **Desvio da recomendação**: junto do `D601` eles ficavam a menos de 5 mm do keep-out da antena do módulo ou no corredor do par USB | `make_pcb.py`, `make_caixa.py` |
+| G9 | `D101` junto do VBUS do USB-C; `D105` junto do `J103`, no verso | `make_pcb.py` |
+| G10 | USB-C 1,10 mm mais perto da borda, na linha "PCB EDGE" da HRO | `make_pcb.py`, `check_pcb.py` |
+| G11 | a tela de 2,2 mm e a união das duas telas na caixa, que passa a 63 × 106 × 18,2 mm (64 desde 2026-10-19, pelos bolsos dos módulos solares: [12](12-revisao-da-caixa.md#1--painéis-solares)) | `make_caixa.py`, `make_dxf.py` |
+| G12 | JEITA: carga só de 0 a 45 °C | devicetree |
+| G13 | UART do GNSS a 9600 Bd | devicetree, binding |
+| Fornecimento | buzzer Same Sky CPT-12123-81-SMT-TR (C3812179) com o land da ficha; `L301` com código de capacitor de 3,6 pF; `L103`, `R116` e `R123` (110 kΩ) com peça; códigos da LCSC em toda peça montada, pela tabela de fornecimento da revisão: os passivos, os LEDs de carga, os transistores, o `J102`, o `J103`, o nPM1300 e o MAX-F10S. Em 2026-10-18 só os capacitores tinham entrado, e 48 dos 51 resistores ficaram sem código até 2026-10-19 (achado da sincronização dos documentos). Sem código ficam o módulo de rádio (consignado), o `J202` (peça não escolhida), as peças não montadas, as telas e os módulos solares (fora da placa) e os pontos de teste | `parts.py`, `footprints.py` |
+
+Achados no caminho, e corrigidos:
+
+- **A janela do LED RGB nunca abria.** Ela cai dentro do rebaixo da membrana das teclas, e o fundo desse rebaixo era desenhado só com os furos das teclas. As janelas dos LEDs agora são cortadas também nele, sob a membrana de TPU natural, translúcida, e o CX9 do dry run da caixa acusa uma janela fechada.
+- **Nove peças de pinagem não confirmada** tinham sido confirmadas pela conferência cega (`D105`, `D106`, `D107`, `J103`, `J302` e `Q401` a `Q603`) e saíram da lista. Ficam os seis módulos solares, cuja ficha não numera os terminais.
+- **A exportação para o Freerouting recusava a placa em silêncio**: os dois furos M2 se chamavam `REF**`. Agora são `H1` e `H2`.
+- **Os três conectores Molex abriam para dentro da placa** (achado da segunda conferência cega, a dos pinos e footprints mudados no dia, que confirmou os outros nove itens). A fita entra pelo lado dos pregos de fixação, e os rabichos dos terminais ficam atrás, sob o atuador: a seção Y-Y, as vistas de frente, de lado e de baixo e a área de pega do desenho dizem o mesmo. O footprint foi redesenhado com a frente no lado dos pregos, o pad 1 no circuito 1 da Molex e o land na posição do contorno do desenho (estava 0,1 a 0,2 mm deslocado do corpo); a boca continua em x = 1,27 mm. Como o circuito 1 passou para a ponta de y menor, as redes foram renumeradas para o pino 1 de cada fita continuar caindo no mesmo lugar: o pino 1 das telas no circuito 10 do `J401`, o primeiro catodo da JDI no circuito 5 do `J402`, o anodo do Azumo no par 1-2 do `J403`.
+- **O indutor e os capacitores do boost da Sharp ficavam a 17–23 mm do TPS610997**, e a TI pede que fiquem o mais perto possível (SLVSD88M 8.4.1). Agora o `U402` fica junto do `J401`, e o `L401`, o `C405`, o `C406` e o `C407` encostam nos pinos `SW`, `VIN` e `VOUT`.
+
+## As duas telas na mesma placa
+
+Pedido do dono em 2026-10-18: a placa aceita a **JDI LPM027M128C** ou a **Sharp LS027B7DH01A**, nua ou como o módulo **Azumo 11103-06**, que é a Sharp com luz frontal, sem refazer a PCB. As cotas vêm das fichas: JDI spec Rev.02 p. 34; Sharp LCP-2110015A e LD-28305A; Azumo, desenho T7 de 2022-01-10.
+
+```mermaid
+flowchart LR
+    B3["3V0 do bloco<br/>JP104"] --> JP["JP401<br/>3 pads"]
+    U["U402 TPS610997<br/>boost de 5,0 V<br/>EN no P3.07"] --> JP
+    B3 --> U
+    JP -->|"3V0: JDI<br/>5V0: Sharp"| J1["J401 · Molex 503480-1000<br/>sinal das duas telas"]
+    L["3V3BL<br/>LDSW2"] --> J2["J402 · 503480-0540<br/>luz da JDI"]
+    L --> JPA["JP402 a JP405<br/>polaridade"]
+    JPA --> J3["J403 · 503480-0440<br/>luz do Azumo, no verso"]
+    J2 --> Q["Q401<br/>PWM da luz"]
+    J3 --> Q
+```
+
+| O quê | Como ficou |
+|---|---|
+| Fita de sinal | **um conector só**, o `J401`: as fitas das duas telas saem do meio da borda longa e caem no mesmo lugar, com a mesma ordem de dez pinos. Boca para a borda esquerda em x = 1,27 mm, centro em y = 31,5 mm; a fita entra pelo lado dos pregos, e o pino 1 das telas cai no circuito 10 do conector |
+| Contato | Molex 503480, **dos dois lados**: as fitas chegam dobradas sob o vidro com os contatos para cima, e o lado deixa de importar |
+| Tensão | `JP401`, três pads: 3V0 para a JDI (montado), 5V0 para a Sharp. O 5 V vem de um TPS610997 (4,90 a 5,10 V; o REG710 dá 4,7 V no mínimo, abaixo dos 4,8 V da Sharp) |
+| Proteção | **o boost só liga com o firmware da Sharp** (`power-gpios` só no overlay dela): com o firmware da JDI, um `JP401` esquecido na posição de 5 V dá 0 V, não 5 V |
+| Luz da JDI | `J402`, 503480-0540, centro em y = 16,8 mm. O receptor GNSS e a rede π andaram 2,67 mm para a direita para dar lugar a ele |
+| Luz do Azumo | `J403`, 503480-0440, **no verso**: a fita de 27,8 mm contorna a borda esquerda. A polaridade fica em jumpers (`JP402` a `JP405`), porque o desenho T7 e a folha de 2020 se contradizem |
+| Barra do Azumo | atrás do vidro, a 0,59 mm da placa: a faixa de y = 53,6 a 60,5 mm fica sem peça na frente |
+| Caixa | bolso da união dos contornos (43,02 × 64,57 mm), tela de 2,2 mm, janela centrada na área ativa, que fica 1,67 mm à direita do meio da placa |
+| Firmware | a JDI é o padrão; a Sharp é `TELA=sharp` em `tools/fw/fw.sh`, com o overlay `zephyr_app/boards/gnssbike_sharp.overlay` |
+
+O que só a tela na mão confirma: a dobra de cada fita até a boca do conector (o alcance calculado tem cerca de 0,6 mm de folga) e a polaridade do LED do Azumo (teste de diodo antes de ligar).
 
 ## Bloqueios
 

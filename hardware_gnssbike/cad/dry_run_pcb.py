@@ -152,7 +152,9 @@ REGRAS = [
 # As pecas cujo corpo vem de um modelo do fabricante: sao as unicas em que
 # o modelo pode estar girado em relacao ao footprint, porque as outras tem o
 # corpo desenhado aqui a partir da cota da ficha.
-CORPOS_CONFERIDOS = ("J101", "J103", "J402")
+# J402 left on 2026-10-18: it is the Molex 503480-0540 now, a footprint drawn
+# by footprints.py with a box for a body, not a maker's model
+CORPOS_CONFERIDOS = ("J101", "J103")
 
 # What each rail carries, and where the number comes from. Without this a
 # trace width is a guess.
@@ -473,7 +475,8 @@ def _ilhas_sob_o_corpo(ref: str, pecas: dict):
 
 # Os conectores cujos rabichos de solda a ME5 confere: os que tem modelo do
 # fabricante ou da biblioteca do KiCad no GLB e ilhas de sinal numa fileira.
-RABICHOS_CONFERIDOS = ("J101", "J102", "J103", "J401", "J402")
+# J401 and J402 left on 2026-10-18 for the same reason (Molex 503480, boxes)
+RABICHOS_CONFERIDOS = ("J101", "J102", "J103")
 
 # Models whose solder contacts have a colour of their own in the maker's
 # STEP, so that the contacts can be told from the nails' plate. Measured in
