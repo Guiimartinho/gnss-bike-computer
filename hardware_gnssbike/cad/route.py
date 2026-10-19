@@ -63,6 +63,7 @@ import heapq
 import math
 import pathlib
 import sys
+import time
 
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -124,6 +125,16 @@ CUSTO_VIA = 16.0            # in grid steps, about 2,4 mm
 PASSAGENS_EXTRA = 0
 # How far a bent ground stub may look for room for its via, mm
 RAIO_TERRA = 3.0
+# Rip-up and reroute (uma_passagem): a net that failed is searched again over
+# the copper of the nets that may be torn up, at CUSTO_MACIO a step on top of
+# the usual; when the way is blocked by at most RRR_MAX_BLOQ of them, they are
+# torn up, the failed net is routed first and they after it, and the change
+# stays only if the failures of all of them together went down. RRR_RODADAS
+# sweeps over the failed nets, RRR_SEGUNDOS at most.
+CUSTO_MACIO = 6.0
+RRR_MAX_BLOQ = 6
+RRR_RODADAS = 6
+RRR_SEGUNDOS = 3600
 CUSTO_CURVA = 0.7             # virar 90 graus
 CUSTO_CURVA_45 = 0.2          # virar 45: meia virada, meio custo
 # A maze search that cannot get through explores everything it is allowed to
@@ -527,6 +538,22 @@ class Grade:
                 return False
         return True
 
+    def livre_macio(self, k, rede: str, off, macio: dict) -> bool:
+        """livre_t, except that a cell held only by copper that may be torn
+        up (`macio`: cell -> the nets whose tracks or vias claim it) counts
+        as free. The rip-up search walks over it to find who is in the way."""
+        c, ix, iy = k
+        t = self.t
+        for dx, dy in off:
+            kk = (c, ix + dx, iy + dy)
+            d = t.get(kk)
+            if d is None or d == rede or kk in macio:
+                continue
+            if d == KEEPOUT_LIVRE and (rede in REDES_DO_KEEPOUT or rede == self.ko_extra):
+                continue
+            return False
+        return True
+
     def cabe_via(self, ix: int, iy: int, rede: str) -> bool:
         # Two vias of the SAME net still may not share a hole. The ground
         # stubs put five pairs of vias exactly on top of each other, at
@@ -692,7 +719,7 @@ def a_estrela(g: Grade, rede: str, inicio: tuple[int, int, int],
               orcamento: int = ORCAMENTO, so_camada: int | None = None,
               perto_de: frozenset | None = None,
               campos: list | None = None, larg_estreita: float = LARGURA,
-              fim_via: bool = False):
+              fim_via: bool = False, macio: dict | None = None):
     """Shortest path from one cell to any target, changing layer at a cost.
 
     `campos` are the pad fields of this net, in CELL coordinates. Inside one
@@ -705,7 +732,8 @@ def a_estrela(g: Grade, rede: str, inicio: tuple[int, int, int],
 
     With `fim_via` the search ends on the first cell where a via of this net
     fits clear of every pad, and `alvos` may be empty: that is a ground stub
-    looking for its way down to the plane.
+    looking for its way down to the plane. With `macio` it may also walk over
+    copper that can be torn up, at CUSTO_MACIO a step (rip-up and reroute).
     """
     if inicio in alvos:
         return [inicio]
@@ -723,6 +751,11 @@ def a_estrela(g: Grade, rede: str, inicio: tuple[int, int, int],
                 if x0 <= ix <= x1 and y0 <= iy <= y1:
                     return off_estreito
         return off
+    def passa(k, off) -> bool:
+        if g.livre_t(k, rede, off):
+            return True
+        return macio is not None and g.livre_macio(k, rede, off, macio)
+
     if alvos:
         tx = sum(t[1] for t in alvos) / len(alvos)
         ty = sum(t[2] for t in alvos) / len(alvos)
@@ -762,7 +795,8 @@ def a_estrela(g: Grade, rede: str, inicio: tuple[int, int, int],
         vizinhos = [(c, ix + 1, iy), (c, ix - 1, iy), (c, ix, iy + 1),
                     (c, ix, iy - 1)]
         for dx, dy in ((1, 1), (1, -1), (-1, 1), (-1, -1)):
-            if g.livre_t((c, ix + dx, iy), rede, _off(ix + dx, iy)) and                     g.livre_t((c, ix, iy + dy), rede, _off(ix, iy + dy)):
+            if passa((c, ix + dx, iy), _off(ix + dx, iy)) and \
+                    passa((c, ix, iy + dy), _off(ix, iy + dy)):
                 vizinhos.append((c, ix + dx, iy + dy))
         if so_camada is None:
             vizinhos += [(k, ix, iy) for k in range(NC) if k != c]
@@ -771,7 +805,7 @@ def a_estrela(g: Grade, rede: str, inicio: tuple[int, int, int],
                 continue
             if not (bx0 <= v[1] <= bx1 and by0 <= v[2] <= by1):
                 continue
-            if not g.dentro(v[1], v[2]) or                     not g.livre_t(v, rede, _off(v[1], v[2])):
+            if not g.dentro(v[1], v[2]) or not passa(v, _off(v[1], v[2])):
                 continue
             if v[0] != c:
                 # a layer change is a via: every via here goes right through
@@ -779,7 +813,7 @@ def a_estrela(g: Grade, rede: str, inicio: tuple[int, int, int],
                 # for its hole
                 if not g.cabe_via(v[1], v[2], rede):
                     continue
-                if not g.livre_t((v[0], ix, iy), rede, _off(ix, iy)):
+                if not passa((v[0], ix, iy), _off(ix, iy)):
                     continue
             if v[0] != c:
                 passo = CUSTO_VIA
@@ -819,6 +853,8 @@ def a_estrela(g: Grade, rede: str, inicio: tuple[int, int, int],
                 # partner is cheaper than going its own way, so the two stay
                 # together instead of crossing the board separately
                 passo *= 0.35
+            if macio is not None and not g.livre_t(v, rede, _off(v[1], v[2])):
+                passo += CUSTO_MACIO
             novo = custo + passo
             if novo < melhor.get(v, float("inf")):
                 melhor[v] = novo
@@ -1465,7 +1501,7 @@ def podar_soltas(segmentos: list, vias: list, todos: list) -> int:
 
 
 def uma_passagem(arv, numeros, todos, por_rede, caixa_fp, prioridade,
-                 antes: list | tuple = ()):
+                 antes: list | tuple = (), rasgar: bool = False):
     """One routing attempt with a given order. Returns what came out.
 
     `antes` are nets routed right after PRIMEIRO, ahead of everything else:
@@ -1589,15 +1625,18 @@ def uma_passagem(arv, numeros, todos, por_rede, caixa_fp, prioridade,
     n_ok = 0
     fechou = [False]
     caminhos: dict[str, frozenset] = {}
-    # The RF lines go FIRST, not last: their width and their path are the
-    # only ones that are not negotiable, and they have to leave the
-    # receiver's pin before anything else takes the room. The area under the
-    # receiver is closed to foreign signals right after they are drawn.
-    rf = [r for r in NAO_ROTEAR if r in por_rede]
-    for rede in rf + ordem + resto:
+
+    def rotear(rede: str, macio: dict | None = None) -> tuple[int, list, set]:
+        """Every connection of one net, on the grid as it stands.
+
+        With `macio`, a connection the strict search cannot make is searched
+        again over the copper that may be torn up, and nothing is drawn at
+        all: what comes back is the set of nets in the way.
+        """
+        ok, fs, bloq = 0, [], set()
         pads = por_rede[rede]
         if len(pads) < 2:
-            continue
+            return ok, fs, bloq
         # A track may not be wider than the pad it lands on. A 0.4 mm
         # power track ending on a 0.25 mm pad sticks out on both sides and
         # lands 0.100 mm from the neighbouring pad - seven of the nineteen
@@ -1689,13 +1728,24 @@ def uma_passagem(arv, numeros, todos, por_rede, caixa_fp, prioridade,
                               campos=campos_cel, larg_estreita=larg_pad)
                 if p:
                     break
+            if p is None and macio is not None:
+                # the soft search: over the copper that may be torn up, to
+                # learn whose it is; nothing is drawn
+                p = a_estrela(g, rede, next(iter(alvo)), feito, 350,
+                              so_camada=so_camada, perto_de=perto,
+                              campos=campos_cel, larg_estreita=larg_pad,
+                              macio=macio)
+                if p is not None:
+                    bloq |= no_caminho(g, rede, p, macio)
+                    feito |= set(p)
+                    continue
             if p is None:
-                falhas.append(f"{rede}: nao roteou")
-                falharam.append(rede)
+                fs.append(f"{rede}: nao roteou")
                 continue
-            emitir(p, rede, larg, larg_pad, campo)
+            if macio is None:
+                emitir(p, rede, larg, larg_pad, campo)
             feito |= set(p)
-            n_ok += 1
+            ok += 1
             if rede == PAR[0]:
                 # the cells its partner should hug: the path itself and one
                 # step around it, which at a 0.15 mm grid is the pair pitch
@@ -1705,12 +1755,147 @@ def uma_passagem(arv, numeros, todos, por_rede, caixa_fp, prioridade,
                         for dy in (-2, -1, 0, 1, 2):
                             viz.add((cx_ + dx, cy_ + dy))
                 caminhos[rede] = frozenset(viz)
+        return ok, fs, bloq
+
+    def refazer_grade() -> None:
+        """The grid again from the board and the copper in the lists, as
+        the pass drew it: the same marks, in the same object."""
+        novo = base(arv, todos)
+        for p0_, p1_, c_, r_, w_ in segmentos:
+            novo.trilha(c_, p0_, p1_, w_, r_, folga_de(r_))
+        for x_, y_, r_ in vias:
+            novo.via(x_, y_, r_, folga_de(r_))
+        if fechou[0]:
+            fechar_sob_gnss(novo)
+        g.t, g.v, g.fixo, g.postas = novo.t, novo.v, novo.fixo, novo.postas
+
+    # The RF lines go FIRST, not last: their width and their path are the
+    # only ones that are not negotiable, and they have to leave the
+    # receiver's pin before anything else takes the room. The area under the
+    # receiver is closed to foreign signals right after they are drawn.
+    falhas_terra = list(falhas)
+    ok_rede: dict[str, int] = {}
+    falhas_rede: dict[str, list] = {}
+    rf = [r for r in NAO_ROTEAR if r in por_rede]
+    ordem_total = rf + ordem + resto
+    for rede in ordem_total:
+        ok_rede[rede], falhas_rede[rede], _b = rotear(rede)
+
+    # Rip-up and reroute, since 2026-10-19: one pass in order leaves the nets
+    # that came late with no way through, and no order fixes that for all of
+    # them (the failed-first passes made it worse). Ground, the USB pair and
+    # the RF lines are never torn up: their copper is placed by rule.
+    if rasgar:
+        fixas = {"GND"} | set(NAO_ROTEAR) | set(PAR)
+        t_rrr = time.time()
+        n_tent = n_aceito = 0
+        antes_total = sum(len(v) for v in falhas_rede.values())
+        for _rodada in range(RRR_RODADAS):
+            houve = False
+            macio = pintar_macio(segmentos, vias, fixas)
+            for rede in [r for r in ordem_total if falhas_rede.get(r) and r not in fixas]:
+                if time.time() - t_rrr > RRR_SEGUNDOS:
+                    break
+                if not falhas_rede.get(rede):
+                    continue
+                _o, _f, bloq = rotear(rede, macio=macio)
+                bloq -= fixas
+                bloq.discard(rede)
+                if not bloq or len(bloq) > RRR_MAX_BLOQ:
+                    continue
+                afetadas = [rede] + sorted(bloq, key=alcance, reverse=True)
+                antes_n = sum(len(falhas_rede.get(r, [])) for r in afetadas)
+                # what to go back to: the copper, and the grid as it is, so
+                # a refused try costs a copy and not a redraw of the board
+                guarda = (list(segmentos), list(vias))
+                grade = (g.t.copy(), g.v.copy(), set(g.fixo), set(g.postas))
+                segmentos[:] = [s for s in segmentos if s[3] not in afetadas]
+                vias[:] = [v for v in vias if v[2] not in afetadas]
+                refazer_grade()
+                novo_ok, novo_f = {}, {}
+                for r in afetadas:
+                    novo_ok[r], novo_f[r], _b = rotear(r)
+                n_tent += 1
+                if sum(len(v) for v in novo_f.values()) < antes_n:
+                    ok_rede.update(novo_ok)
+                    falhas_rede.update(novo_f)
+                    n_aceito += 1
+                    houve = True
+                    # the copper changed: who holds which cell, again
+                    macio = pintar_macio(segmentos, vias, fixas)
+                else:
+                    segmentos[:], vias[:] = guarda
+                    g.t, g.v, g.fixo, g.postas = grade
+            if not houve or time.time() - t_rrr > RRR_SEGUNDOS:
+                break
+        depois_total = sum(len(v) for v in falhas_rede.values())
+        print(f"  rasgar e refazer: {n_tent} tentativas, {n_aceito} aceitas, "
+              f"{antes_total} -> {depois_total} falhas, "
+              f"{time.time() - t_rrr:.0f} s", flush=True)
+
+    falhas[:] = falhas_terra + [f for r in ordem_total for f in falhas_rede.get(r, [])]
+    falharam[:] = [r for r in ordem_total for _f in falhas_rede.get(r, [])]
+    n_ok = sum(ok_rede.values())
 
     n_cost = costurar(g, vias)
     n_cost += costurar_rf(g, vias, segmentos)
     n_malha = costurar_area(g, vias)
     podar_soltas(segmentos, vias, todos)
     return segmentos, vias, falhas, falharam, n_gnd, n_ok, n_cost, n_malha
+
+
+def pintar_macio(segmentos, vias, fixas: set) -> dict:
+    """cell -> the nets whose copper claims it, among those that may be torn
+    up, painted with the radii Grade.trilha and Grade.via use. A cell that
+    copper of a net in `fixas` also claims is left out: it stays hard."""
+    dono: dict = {}
+    duro: set = set()
+
+    def disco(c, x, y, offs, rede):
+        cx, cy = int(round(x / PASSO)), int(round(y / PASSO))
+        for dx, dy in offs:
+            k = (c, cx + dx, cy + dy)
+            if rede in fixas:
+                duro.add(k)
+            else:
+                dono.setdefault(k, set()).add(rede)
+
+    cache: dict[float, list] = {}
+
+    def offs_de(raio: float) -> list:
+        if raio not in cache:
+            n = int(math.ceil(raio / PASSO))
+            cache[raio] = [(dx, dy) for dx in range(-n, n + 1) for dy in range(-n, n + 1)
+                           if math.hypot(dx * PASSO, dy * PASSO) <= raio + 1e-9]
+        return cache[raio]
+
+    for p0, p1, c, rede, w in segmentos:
+        offs = offs_de(round(w / 2 + folga_de(rede) + LARGURA / 2, 4))
+        n = max(1, int(math.ceil(math.hypot(p1[0] - p0[0], p1[1] - p0[1]) / (PASSO / 2))))
+        for i in range(n + 1):
+            f = i / n
+            disco(c, p0[0] + (p1[0] - p0[0]) * f, p0[1] + (p1[1] - p0[1]) * f, offs, rede)
+    for x, y, rede in vias:
+        offs = offs_de(round(VIA_D / 2 + folga_de(rede) + LARGURA / 2, 4))
+        for c in range(NC):
+            disco(c, x, y, offs, rede)
+    for k in duro:
+        dono.pop(k, None)
+    return {k: frozenset(v) for k, v in dono.items()}
+
+
+def no_caminho(g: Grade, rede: str, caminho, macio: dict) -> set:
+    """The nets a soft path runs over: the owners of every cell around it
+    that the strict search would have refused."""
+    off = _disco_off(extra_de(rede))
+    redes: set = set()
+    for c, ix, iy in caminho:
+        for dx, dy in off:
+            kk = (c, ix + dx, iy + dy)
+            d = g.t.get(kk)
+            if d is not None and d != rede and kk in macio:
+                redes |= macio[kk]
+    return redes
 
 
 def conferir(segmentos, vias) -> list[str]:
@@ -1848,7 +2033,8 @@ def main() -> int:
     ordens = ["curtas", "alimentacao"] + ["curtas"] * PASSAGENS_EXTRA
     for i_pass, ordem_pass in enumerate(ordens):
         r = uma_passagem(arv, numeros, todos, por_rede, caixa_fp, ordem_pass, antes)
-        segmentos, vias, falhas, falharam, n_gnd, n_ok, n_cost, n_malha = r
+        r = r + (ordem_pass,)
+        segmentos, vias, falhas, falharam, n_gnd, n_ok, n_cost, n_malha = r[:8]
         print(f"  passagem {i_pass + 1} ({ordem_pass}), {len(antes)} redes na frente: "
               f"{n_ok} ligacoes, {len(falhas)} falhas", flush=True)
         if melhor is None or len(falhas) < len(melhor[2]):
@@ -1862,7 +2048,14 @@ def main() -> int:
             # after the two orders, the failed-first passes (PASSAGENS_EXTRA)
             novas = list(dict.fromkeys(falharam))
             antes = novas + [r_ for r_ in antes if r_ not in novas]
-    segmentos, vias, falhas, _f, n_gnd, n_ok, n_cost, n_malha = melhor
+    # the best order once more, now with the rip-up and reroute at its end
+    melhor_ordem = melhor[-1]
+    r = uma_passagem(arv, numeros, todos, por_rede, caixa_fp, melhor_ordem, (), rasgar=True)
+    print(f"  {melhor_ordem} com rasgar e refazer: {r[5]} ligacoes, {len(r[2])} falhas",
+          flush=True)
+    if len(r[2]) <= len(melhor[2]):
+        melhor = r + (melhor_ordem,)
+    segmentos, vias, falhas, _f, n_gnd, n_ok, n_cost, n_malha = melhor[:8]
 
     ruins = conferir(segmentos, vias)
     print(f"  conferencia geometrica: {len(ruins)} pares perto demais")

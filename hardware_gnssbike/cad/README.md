@@ -210,13 +210,22 @@ falta de espaço:
 | pad de terra sem lugar para via reta | ficava solto | saída dobrada até onde uma via cabe |
 | grade de 0,15 mm num passo de 0,4 | duas saídas de terra a 0,11 mm de uma esfera do TPS610997 | toda saída de terra passa por uma conferência geométrica contra os pads reais |
 | trilhos roteados por último | os trilhos largos achavam a placa cheia | uma segunda passagem roteia os trilhos primeiro, e fica a melhor |
+| um passe em ordem não volta atrás | quem vinha tarde não achava caminho | *rip-up and reroute*: a rede que falhou é procurada de novo por cima do cobre que pode ser desfeito; se até 6 redes estão no caminho, elas saem, a que falhou passa primeiro, elas voltam depois, e a troca só fica se as falhas de todas juntas caírem |
 
-Com isso o DRC não acusa erro nenhum, e ficam **60 itens desconectados**,
-quase todos de trilhos de alimentação e de sinais que atravessam a zona de
-energia. Passagens extras com as redes que falharam na frente pioraram o
-resultado (`PASSAGENS_EXTRA = 0`). O que falta é um roteador que desfaça
-trilha para abrir caminho (*rip-up and reroute*), ou terminar à mão no
-roteador interativo do KiCad a partir deste arquivo.
+O DRC não acusa erro nenhum. Com as causas acima corrigidas e com os
+trilhos primeiro, eram 60 itens desconectados; o *rip-up and reroute* leva
+a **48** (61 tentativas, 9 aceitas, uns 23 minutos) e para sozinho quando
+uma rodada inteira não melhora nada. Passagens extras com as redes que
+falharam na frente pioraram o resultado (`PASSAGENS_EXTRA = 0`). Terra, o
+par USB e as linhas de RF nunca são desfeitos.
+
+O que sobra são trilhos de alimentação (`VBAT_SYS`, `VSYS`, `3V0`,
+`3V0_SENS`) e sinais que atravessam a zona de energia (os I²C, o SPI da
+tela, os do GNSS). A zona ocupa a largura toda da placa no meio dela, e
+todo sinal do módulo, embaixo, para o receptor, os sensores e a tela, em
+cima, passa por ela. Fechar o resto pede mexer na colocação ali (abrir um
+corredor de sinais ao lado dela) ou terminar à mão no roteador interativo
+do KiCad, a partir deste arquivo.
 
 A ordem importa por dois motivos. Sem `--como-esta`, o passo 4 **regera a
 placa** e apaga as trilhas. E **sem o passo 3 o DRC mente**: os geradores
