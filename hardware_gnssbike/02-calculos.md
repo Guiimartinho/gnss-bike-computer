@@ -168,21 +168,23 @@ a partir das seções acima):
 
 | Nó | Pior caso | Classe | Quando |
 |---|---|---|---|
-| `VBUS` | até 1500 mA | **larga** | com uma fonte de 1,5 A |
-| `VSYS` | 671 mA | **larga** | sistema mais carga |
-| `VBAT` | 600 mA | **larga** | carga |
+| `VBUS` | 671 mA | **energia** | carga mais sistema; os 1500 mA de uma fonte de 1,5 A são o que ela oferece, não o que entra (o carregador é linear) |
+| `VSYS` | 74 mA; 0,47 A com os reguladores na corrente nominal | **energia** | a carga da célula não sai pelo pino `VSYS`: o carregador fica entre o `VSYS` interno e o `VBAT` (ficha do nPM1300, PS v1.1, CHARGER). O pior caso de projeto soma o BUCK1 e o BUCK2 a 200 mA, a `LDSW2` a 100 mA e os LED, com a célula a 3,0 V; até 2026-10-19 esta linha dizia 671 mA, sistema mais carga |
+| `VBAT` | 600 mA | **energia** | carga |
 | `1V8` | 0 | sinal | montado, sem carga, desde 2026-09-26 |
 | `3V0` | 47 mA; 123 mA no pico de partida do receptor | média | o receptor está aqui desde 2026-09-26 |
 | `3V3BL` | 16 mA | sinal | luz acesa |
 | `SD3V0_FLASH` (o `3V0` pelo `JP106`) | 3,1 mA | sinal | apagando um setor; até 2026-10-18 era o `SD3V0` da `LDSW1`, que ficou sem carga |
 | `VBCKP` | 28 µA | sinal | backup do receptor |
+| `VBUSOUT` | poucos mA | sinal | a detecção de USB do módulo e o divisor de 100 kΩ e 180 kΩ, por uma chave de 7,5 Ω dentro do nPM1300 (`RVBUSOUT`): a 100 mA ela já derrubaria 0,75 V |
 
 > [!IMPORTANT]
 > **A largura em milímetros não sai daqui.** Ela depende da espessura do
 > cobre e da pilha do fabricante, que [04](04-pcb-e-caixa.md#camadas) ainda
 > não tem. O que este documento fixa é a **corrente**; a largura sai da
-> IPC-2152 quando a pilha existir. Os três nós marcados como "larga" são
-> os que não podem sair com largura de sinal.
+> IPC-2152 quando a pilha existir. Os três nós marcados como "energia" são
+> os que não podem sair com largura de sinal nem passar por dentro da placa
+> ([08](08-layout.md#largura-de-trilha)).
 
 ## Pull-ups do I²C
 
@@ -836,7 +838,7 @@ Dito aqui para não passar por esquecimento.
 | Não calculado | Por quê | Quando vira necessário |
 |---|---|---|
 | Ondulação e resposta transitória dos bucks | os valores vêm da lista de referência da Nordic, tabelas 39 e 40 | se algum componente sair dessa lista |
-| Largura de trilha em milímetros | depende da pilha do fabricante, que [04](04-pcb-e-caixa.md#camadas) ainda não tem; a [corrente](#corrente-por-trilho-e-largura-de-trilha) está fixada | no layout |
+| Largura de trilha em milímetros | depende da pilha do fabricante, que [04](04-pcb-e-caixa.md#camadas) ainda não tem; a [corrente](#corrente-por-trilho-e-largura-de-trilha) está fixada, e o CAD usa três classes conferidas pela IPC-2221 com cobre de 35 µm ([08](08-layout.md#largura-de-trilha)) | quando a pilha do fabricante chegar |
 | Impedância da linha da antena GNSS e o par de 90 Ω do USB | idem | no layout |
 | Integridade de sinal do SPI do display | 2 MHz no máximo, trilha curta: não é regime crítico | se a FPC ficar longa |
 | **Caminho elétrico da luz do LPM027M128C** | o FPC de 10 vias não tem par de LED e nenhuma fonte do projeto diz se o C traz um FPC maior ou um rabicho próprio ([luz do display](#luz-do-display)) | **antes do layout** |

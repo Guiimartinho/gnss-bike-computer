@@ -7,3 +7,7 @@
 (rule "folga interna do TPS7A02 em X2SON de 1 x 1 mm"
 	(constraint clearance (min 0.115mm))
 	(condition "A.memberOfFootprint('U104') && B.memberOfFootprint('U104')"))
+
+(rule "ponte de terra do ALRT dentro do WLP do MAX17262"
+	(constraint track_width (min 0.1mm))
+	(condition "A.Type == 'Track' && A.NetName == 'GND' && A.intersectsCourtyard('U102')"))

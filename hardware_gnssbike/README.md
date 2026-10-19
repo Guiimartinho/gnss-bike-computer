@@ -29,13 +29,14 @@ componente.
 
 > [!WARNING]
 > **Nada disto foi montado, medido ou fabricado.** A placa existe como
-> arquivo de CAD — 156 peças, 114 redes, 1.417 segmentos, 549 vias, **196
-> ligações roteadas e 75 sem trilha** (58 itens desconectados no DRC
-> completo, 0 erros) e 25 das 33 regras das fichas cumpridas
-> ([09](09-dry-run-da-pcb.md), [10](10-dry-run-2026-09-26.md), 2026-09-26)
+> arquivo de CAD — 166 peças, 118 redes, 2.702 segmentos, 774 vias, **todas
+> as ligações roteadas** (0 itens desconectados e 0 erros no DRC completo,
+> [CAD](cad/README.md#o-acabamento-uma-ligação-de-cada-vez), 2026-10-19) e
+> 24 das 30 regras das fichas cumpridas, 2 violadas e 4 sem medir
+> ([09](09-dry-run-da-pcb.md))
 > —, e a caixa existe como proposta medida por um dry run próprio (12
 > regras cumpridas, 0 violadas, [04](04-pcb-e-caixa.md#a-placa-de-hoje-dentro-da-caixa-do-conceito));
-> mas nenhuma foi feita e nenhum componente passou por bancada. A revisão do esquemático de 2026-10-18 ([11](11-revisao-do-esquematico.md)) achou 6 bloqueios, e as correções entraram no gerador no mesmo dia; a placa ainda não vai para a fábrica: o roteamento não fecha (48 itens desconectados em 2026-10-19, com o DRC sem nenhum erro), e a dobra das fitas das telas e a polaridade do LED do Azumo só se confirmam com as peças na mão. Este aviso já disse "0 ligações sem trilha" com 47 em aberto:
+> mas nenhuma foi feita e nenhum componente passou por bancada. A revisão do esquemático de 2026-10-18 ([11](11-revisao-do-esquematico.md)) achou 6 bloqueios, e as correções entraram no gerador no mesmo dia; a placa ainda não vai para a fábrica: o roteamento fechou em 2026-10-19, mas o dry run ainda viola a `RF9` (a sombra do display perto da antena do módulo) e a `AL1` (o `C304` longe do `U301`), e a dobra das fitas das telas e a polaridade do LED do Azumo só se confirmam com as peças na mão. Este aviso já disse "0 ligações sem trilha" com 47 em aberto:
 > o DRC rodava só com erros, e os não roteados são aviso. Todo valor
 > abaixo vem de ficha ou de conta feita aqui, e está marcado como tal. O
 > que depende de decisão, de ficha por ler ou de medida está na lista de
@@ -281,7 +282,7 @@ esquemático não está pronto para virar layout**.
 - [ ] **Pilha de camadas do fabricante** — sem ela não há largura de trilha, nem 50 Ω da antena, nem 90 Ω do USB ([02](02-calculos.md#corrente-por-trilho-e-largura-de-trilha)).
 - [x] **Atribuição das quatro vias do conector da luz do Azumo** — pelo desenho T7, a fita tem dois pads de 0,80 mm a passo de 1,00 mm, e cada um cobre duas vias do `J403` (1-2 e 3-4); qual par é o anodo fica nos jumpers de polaridade, logo acima ([06](06-conectores-e-pontos-de-teste.md#j403--luz-do-azumo-no-verso)).
 - [x] **Redesenhar a área da antena de chip pela figura 5-1 da Unictron** — feito em 2026-10-19: o `C305` e o `C306` deitados na borda, nas pontas do recorte, cada um no fim da faixa de 0,35 mm que vem do pino de terra da antena, com a outra ponta no terra de fora do recorte, e os valores no pino que a figura 8-1 manda ([11](11-revisao-do-esquematico.md#correções-aplicadas)). A sintonia é de bancada.
-- [ ] **Terminar o roteamento** — em 2026-10-19 ficam 48 itens desconectados, depois do *rip-up and reroute*: trilhos de alimentação e sinais que atravessam a zona de energia; o DRC não acusa erro nenhum ([11](11-revisao-do-esquematico.md#resposta-curta), [CAD](cad/README.md#o-que-falta)).
+- [x] **Terminar o roteamento** — fechado em 2026-10-19: o `route.py` faz a placa base e o `acabar.py` fecha o resto, uma ligação de cada vez; o DRC completo dá 0 itens desconectados e 0 erros, sem trilha nem via solta ([CAD](cad/README.md#o-acabamento-uma-ligação-de-cada-vez)).
 - [ ] **Códigos da LCSC que faltam** — 48 resistores, seis jumpers de 0 Ω, os LEDs de carga, os conectores `J102` e `J103` e as chaves do LED RGB não têm código no gerador, e o conector SWD `J202` não foi escolhido ([05](05-materiais.md#o-que-ainda-não-tem-código-de-compra)).
 - [ ] **Pinagem do conector da bateria, com o fabricante do pack** — o cobre segue a proposta de [06](06-conectores-e-pontos-de-teste.md#j102--bateria) desde 2026-09-26 (1 e 6 `VBAT+`, 2 e 5 `GND`, 3 `NTC_BAT`, 4 reservada); até então tinha 1, 4 e 6 com os outros soltos, e um cabo feito como o documento pedia punha o positivo no `GND`. Falta o fabricante do pack confirmar.
 - [ ] **Ordem das quatro vias do chicote do painel** — a tabela de [J103](06-conectores-e-pontos-de-teste.md#j103--painel-solar) segue a ordem dos pinos do footprint; confirmar o contato 1 na marca da carcaça `ZHR-4` antes de crimpar.

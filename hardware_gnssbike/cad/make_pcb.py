@@ -52,6 +52,14 @@ RAIO_COURTYARD_FURO = 2.45     # F.CrtYd of MountingHole_2.2mm_M2.kicad_mod
 FOLGA = 0.05                   # between two courtyards: the courtyard
                                # already carries the maker's clearance
 PASSO = 0.5                    # placement grid
+# The signal corridor beside the power band, on both faces (x0, y0, x1, y1):
+# no part may land in it, so the signals between the module at the bottom
+# and the receiver, the display and the flash at the top have a way round
+# the converters (decision of the owner, 2026-10-19; route.CORREDOR_SINAIS
+# is the same strip, up to the band's top edge). From y 38, under the
+# display connector's transistor and the boost's inductor, to y 64, over
+# the left key.
+CORREDOR_SINAIS = (0.8, 38.0, 6.8, 64.0)
 
 # The part that anchors each zone of 04-pcb-e-caixa.md.
 ANCORAS: dict[str, str] = {
@@ -68,11 +76,23 @@ ANCORAS: dict[str, str] = {
     "J101": "ZONA_USB_C",
     "U505": "ZONA_LUZ_AMBIENTE_OPT3001",
 }
+# Where the search for a part that follows an anchor starts, off the
+# anchor's centre (mm): a chip that would land against its anchor's pins.
+# The ADP5091 landed 2,2 mm from the right side of the nPM1300, with the
+# capacitors of VSYS, VBUSOUT and VBUS between them: eight pins (CC1, CC2,
+# VBUSOUT, VBUS, VSYS, VBAT_SYS, NTC_BAT, RVSET1) had one channel of 0,65 mm
+# to leave by, where one track fits (2026-10-19). Started 9 mm right and
+# 3 mm up, it lands 1,5 mm further right and nothing else moves.
+AFASTADO: dict[str, tuple[float, float]] = {"U103": (9.0, -3.0)}
 # Parts that follow an anchor instead of a zone of their own.
 JUNTO: dict[str, str] = {
     "U102": "U101", "U103": "U101", "U104": "U101",
-    "L101": "U101", "L102": "U101", "L103": "U103",
-    "J102": "U101", "JP101": "U101", "RT101": "U101",
+    "J102": "U101", "JP101": "U101",
+    # The NTC of the solar cut-off reads the cell, on the back, beside the
+    # harvester whose charge it stops. Until 2026-10-19 it followed U101 and
+    # landed under the nPM1300's exposed pad: on the heat of the charger
+    # (08-layout.md, "Termica no cobre") and on the pad's thermal vias
+    "RT101": "U103",
     "D101": "J101", "D102": "J101",
     # the boost of the Sharp beside the display connector it feeds
     "U402": "J401",
@@ -470,6 +490,12 @@ DECOPLA: dict[str, str] = {
     # close to the chip as possible (SLVSD88M 8.4.1); left to the netlist,
     # they landed 17 to 23 mm away (blind check of 2026-10-18)
     "L401": "U402", "C405": "U402", "C406": "U402", "C407": "U402",
+    # The inductors of the three converters the same way, against the
+    # switching pin, which is the loop the nPM1300 and ADP5091 layouts want
+    # shortest (AL3). As JUNTO parts they took a free spot by the chip at 0
+    # degrees, and L102 ended with its switching pad on the far side
+    # (2026-10-19).
+    "L101": "U101", "L102": "U101", "L103": "U103",
     # a TVS goes at the connector it protects, not at the chip behind it:
     # as a JUNTO only, the first pass laid D101 beside the VBUS pin of the
     # nPM1300, 44 mm from J101, because that chip has the most pins on the
@@ -481,7 +507,8 @@ DECOPLA: dict[str, str] = {
 # input capacitor of PVDD (npm1300-a2).
 PINO_ALVO: dict[str, str] = {"C107": "PVDD", "L401": "SW", "C405": "VIN",
                              "C406": "VOUT", "C407": "VOUT",
-                             "R406": "K1", "R407": "K2", "R408": "K3", "R409": "K4"}
+                             "R406": "K1", "R407": "K2", "R408": "K3", "R409": "K4",
+                             "L101": "SW1", "L102": "SW2", "L103": "SW"}
 # How far a fixed part may stand out of the outline. The USB-C receptacle is
 # meant to: its drawing puts the "PCB EDGE" line 3,19 mm in front of the
 # footprint origin, and the shell goes on past it (usb-c-x1, 2026-10-18).
@@ -933,9 +960,17 @@ def colocar() -> tuple[dict[str, tuple[float, float, int, bool]], list[str]]:
     # the DRC. Both ends are fixed parts, so the strip stops FOLGA short of
     # each courtyard; x 3 to 8,5 keeps the cell connector (x >= 10,22) out
     # of it.
-    corredores = [(19.4, 68.3, 22.8, M.H - 19.3), (3.0, 80.0, 8.5, 85.3)]
+    # The last two (2026-10-19) are the pair's way from the diode to the
+    # module: up from the diode's exit, between the light sensor (to x
+    # 4,25) and the diode (from y 78,35), and right along the gap under the
+    # SWD header's pads, short of the header (from x 9,9); from there the
+    # header and the cell connector keep the gap themselves. JP101, R112
+    # and R114 sat in it, and the pair had nowhere to turn.
+    corredores = [(19.4, 68.3, 22.8, M.H - 19.3), (3.0, 80.0, 8.5, 85.3),
+                  (4.3, 74.4, 6.2, 78.3), (4.3, 74.4, 9.8, 75.65)]
     postos_face: dict[bool, list[tuple[float, float, float, float]]] = {
-        False: list(furos) + corredores, True: list(furos)}
+        False: list(furos) + corredores + [CORREDOR_SINAIS],
+        True: list(furos) + [CORREDOR_SINAIS]}
     falhas: list[str] = []
 
     def por(ref: str, cx: float, cy: float, ang: int = 0,
@@ -1014,13 +1049,14 @@ def colocar() -> tuple[dict[str, tuple[float, float, int, bool]], list[str]]:
                     y - px * math.sin(r) + py * math.cos(r))
         return None
 
-    def pads_locais(ref: str) -> list[tuple[float, float]]:
-        """Every pad of a footprint, as an offset from the footprint origin."""
+    def pads_locais(ref: str, numero: str | None = None) -> list[tuple[float, float]]:
+        """Every pad of a footprint, or only pad `numero`, as an offset from
+        the footprint origin."""
         arv = fp_load.parse(fp_load.carregar(FPS.FP[ref][0])[0])
         saida = []
         for p in fp_load.kids(arv, "pad"):
             a = fp_load.kid(p, "at")
-            if a:
+            if a and (numero is None or str(p[1]) == numero):
                 saida.append((float(a[1]), float(a[2])))
         return saida
 
@@ -1051,11 +1087,16 @@ def colocar() -> tuple[dict[str, tuple[float, float, int, bool]], list[str]]:
                 numero = next(q.number for q in P.PARTS[outro].pins
                               if q.name == pino or q.number == pino)
                 p = pad_global(outro, numero)
+                # this part's own pad on the same net: the one that has to
+                # face the pin
+                meu = next(pn for r, pn in pinos if r == ref)
+                meu_num = next(q.number for q in P.PARTS[ref].pins
+                               if q.name == meu or q.number == meu)
                 if p and (melhor is None or len(P.PARTS[outro].pins) > melhor[2]):
-                    melhor = (p, outro, len(P.PARTS[outro].pins))
+                    melhor = (p, outro, len(P.PARTS[outro].pins), meu_num)
         if melhor is None:
             return False
-        (px, py), dono, _n = melhor
+        (px, py), dono, _n, meu_num = melhor
         dx, dy, _a, _b = lugar[dono]
         v = math.hypot(px - dx, py - dy) or 1.0
         ux, uy = (px - dx) / v, (py - dy) / v
@@ -1070,11 +1111,16 @@ def colocar() -> tuple[dict[str, tuple[float, float, int, bool]], list[str]]:
         # against a 2.00 limit while a slot 1.90 mm away was free one grid
         # step up - the old rule could not see it, because by centre distance
         # that slot was the worse of the two.
-        locais = pads_locais(ref)
+        # And the pad that counts is the one on the PIN's net, in all four
+        # orientations: scored by its nearest pad, a capacitor could face the
+        # pin with its ground pad, and an inductor put its output pad by the
+        # switching pin and its switching pad on the far side - which is how
+        # BUCK2_SW ran 6,3 mm round L102 and then did not route (2026-10-19).
+        locais = pads_locais(ref, meu_num) or pads_locais(ref)
         fora = max((math.hypot(a, b) for a, b in locais), default=0.0)
         espelha = -1.0 if ref in ATRAS else 1.0
         melhor_pos, melhor_d = None, float("inf")
-        caixas = {a: caixa(ref, a) for a in (0, 90)}
+        caixas = {a: caixa(ref, a) for a in (0, 90, 180, 270)}
         postos = postos_face[ref in ATRAS]
         if ref in PASSANTE:
             postos = postos + postos_face[ref not in ATRAS]
@@ -1125,6 +1171,10 @@ def colocar() -> tuple[dict[str, tuple[float, float, int, bool]], list[str]]:
         everything else. Alphabetical order - which is what this did before -
         put C101 ahead of C112 for no reason at all.
         """
+        if ref in DECOPLA and ref.startswith("L"):
+            # a converter's inductor before its capacitors: it is the
+            # biggest part of the loop and the one with a pin to face
+            return (0, 1.0, ref)
         if ref not in DECOPLA or not ref.startswith("C"):
             return (2, 0.0, ref)
         # The radio module's own decoupling picks first, whatever its value:
@@ -1164,7 +1214,18 @@ def colocar() -> tuple[dict[str, tuple[float, float, int, bool]], list[str]]:
         if ref.startswith("TP"):
             continue                     # depois do desacoplamento
         dx, dy = lugar[dono][0], lugar[dono][1]
-        por(ref, dx, dy, ROTACAO.get(ref, 0))
+        ox, oy = AFASTADO.get(ref, (0.0, 0.0))
+        por(ref, dx + ox, dy + oy, ROTACAO.get(ref, 0))
+        # A chip that follows an anchor takes its own decoupling with it,
+        # before the next chip is placed. Placing every chip of the power
+        # band first and their capacitors after (the second pass below) gave
+        # the ring round the TPS7A02 to its neighbours, and C113 and C114
+        # landed 3,1 and 4,9 mm from pins that want them within 2 (AL1 of the
+        # dry run, until 2026-10-19).
+        if ref in lugar:
+            for cap in sorted((c for c, d in DECOPLA.items() if d == ref),
+                              key=ordem_de_encostar):
+                encostar(cap)
 
     # second pass: now the chips that follow an anchor are placed too
     for ref in sorted(FPS.FP, key=ordem_de_encostar):
