@@ -37,7 +37,7 @@ flowchart TB
 | Testes de host | `bash tools/fw/host_tests.sh` (53 conjuntos, 714 casos) |
 | Telas da interface no PC (LVGL) | `python tools/ui/render_screens.py` (44 quadros, 2 temas cada, gera `docs/img/telas-lvgl/` e `docs/telas/`) |
 | Converter um percurso do Strava para o formato do projeto | `python tools/route_convert.py entrada.gpx saida.RTE` (e `--selftest`) |
-| Cadeia da placa nova (ordem e intérpretes nas armadilhas) | `python hardware_gnssbike/cad/make_pcb.py` → `route.py` → `"D:/KiCAD/bin/python.exe" hardware_gnssbike/cad/fill_zones.py` → `check_pcb.py --como-esta` → `dry_run_pcb.py` → `make_3d.py` → `make_2d.py` → `montagem.py` |
+| Cadeia da placa nova (ordem e intérpretes nas armadilhas) | `python hardware_gnssbike/cad/make_pcb.py` → `route.py` → `acabar.py` → `"D:/KiCAD/bin/python.exe" hardware_gnssbike/cad/fill_zones.py` → `check_pcb.py --como-esta` → `dry_run_pcb.py` → `make_3d.py` → `make_2d.py` → `montagem.py` |
 | Dry run e desenho da caixa (depois da cadeia da placa) | `python hardware_gnssbike/caixa/dry_run_caixa.py` e `python hardware_gnssbike/caixa/make_caixa.py` (PDF e STL em `caixa/`, vistas em `docs/img/hardware/`) |
 | Material da revisão do esquemático (cópia do projeto, netlist, PDF, ERC completo, DRC com paridade, resumos) | `python tools/review/prepare.py` (em `.claude/reviews/<data>-esquematico/`, fora do git) |
 | Diagramas e links da documentação | `python tools/docs/mermaid_check.py` e `python tools/docs/links_check.py` |
