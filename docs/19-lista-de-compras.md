@@ -368,8 +368,8 @@ sobra, com mínimo de dez. Medido em 2026-10-19, para duas placas:
 
 | Tela | Linhas na Mouser | Total no preço da quantidade |
 |---|---|---|
-| JDI | 63 | US$ 148,03 |
-| Sharp com a luz do Azumo | 65 | US$ 153,19 |
+| JDI | 64 | US$ 151,65 |
+| Sharp com a luz do Azumo | 66 | US$ 156,81 |
 
 Trocado só na Mouser, com o mesmo valor, tamanho e tolerância, porque o
 fabricante da peça da LCSC estava sem estoque lá: o 4,87 kΩ (Panasonic
@@ -377,16 +377,45 @@ ERJ-2RKF4871X), o 2,67 MΩ (Vishay CRCW04022M67FKED), o NTC (Murata
 NCP15XH103F03RC, 10 kΩ e B 3380 a 1 %), o 4,7 µF de 0402 (TDK
 C1005X5R1A475M050BC) e o 100 nF de 0603 (TDK C1608X7R1H104K080AA).
 
+Trocado porque a Mouser não vende a peça da LCSC, e assenta nas ilhas como
+estão: o indutor `L103`, Murata LQH2HPZ220MJRL no lugar do Sunlord. São os
+mesmos 22 µH, com Isat de 530 mA contra os 390 que o ADP5091 pede e DCR de
+0,84 Ω contra 0,91; os eletrodos de 0,65 mm nas pontas dos 2,5 mm caem nas
+ilhas de 1,25 × 2,2 mm do land 1008, e o land da ficha da Murata (0,625 ×
+2,0 mm) fica dentro delas.
+
 Sem estoque na Mouser em 2026-10-19, com o prazo dela: o TPD4E05U06 (`D102`,
 84 dias), o OPT3001 (`U505`, 84), o conector da bateria JST SM06B-SRSS-TB
 (`J102`, 112), o TLV7031 (`U105`, 140), a MX25R6435F (`U501`, 364) e o
 PESD3V3S1UB (`D105`, 365). Esses valem a DigiKey ou a LCSC.
 
 A Mouser não vende, e vêm da LCSC: o LED RGB TUOZHAN (`D601`), as chaves
-XunPu (`SW601` a `SW603`), o USB-C HRO (`J101`), o indutor Sunlord (`L103`),
-a antena de chip Unictron (`E301`) e o 18 MΩ (`R116`), que não existe em
-0402 a 1 % em marca nenhuma dela. Os footprints são dessas peças, e por isso
-elas não foram trocadas. O módulo `U201` vem da DigiKey ou da MinewSemi.
+XunPu (`SW601` a `SW603`), o USB-C HRO (`J101`), a antena de chip Unictron
+(`E301`) e o 18 MΩ (`R116`), que não existe em 0402 a 1 % em marca nenhuma
+dela. O módulo `U201` vem da DigiKey ou da MinewSemi.
+
+### Substitutos que a Mouser tem e que mudam alguma coisa
+
+Procurados em 2026-10-19, com a regra de não mexer no roteamento: cada um
+assenta nas ilhas que a placa já tem, conferido contra o desenho da ficha.
+Nenhum entrou no pedido, porque cada um muda algo além da peça; a escolha é
+do dono.
+
+| Peça | Substituto | Estoque e preço | O que muda |
+|---|---|---|---|
+| `D601`, LED RGB TUOZHAN | Cree CLV1A-FKB-CK1VW1DE1BB7C3C3, ou Broadcom ASMB-MTB1-0B3A2 | 36.104 a US$ 0,32; 178.280 a US$ 0,61 | o anodo e o verde caem nas ilhas certas, e o vermelho e o azul trocam de lugar: o firmware troca os dois canais de PWM (os três resistores são de 1 kΩ). A marca do pino 1 dessas peças fica no vermelho, e a serigrafia marca o vermelho do TUOZHAN, no canto oposto: a peça vai com a marca no canto do `KB` |
+| `SW601` a `SW603`, XunPu TS-1088R-02026 | Alps SKRKAEE020 | 8.171 a US$ 0,35 | mesmo corpo (3,9 × 2,9 × 2,0 mm) e dois terminais, cujo land (0,8 × 2,0 a ±2,1 mm) fica dentro das ilhas de hoje; a força cai de 2,55 N para 1,57 N, mais leve com luva |
+| `U501`, MX25R6435F (sem estoque na Mouser, prazo de 364 dias) | Renesas AT25SF641B-SPB-T, ou GigaDevice GD25WQ64ESIGR | 6.538 a US$ 2,06; 915 a US$ 2,15 | mesmo SOP-8 de 208 mil e mesma pinagem; o devicetree da placa muda (`jedec-id`, a tabela SFDP, os tempos do deep power-down e sai o `mxicy,mx25r-power-mode`). A AT25SF641B vai de 2,7 a 3,6 V, com deep power-down de 1 µA típico e 5 µA máximo contra os 0,007 µA da Macronix; a GD25WQ64E vai de 1,65 a 3,6 V, como a Macronix, e o consumo dela não foi conferido (a Mouser recusa o download automático da ficha) |
+| `R116`, 18 MΩ | o par do MPPT em 10 MΩ (`R116`, Yageo RC0402FR-0710ML) e 2,4 MΩ (`R117`, RC0402FR-072M4L) | 212.163 e 459.990 a US$ 0,01 | a razão do MPPT vai de 0,8072 para 0,8065, mais perto do alvo de 0,8068 (1,67 V sobre 2,07 V): 0,6 mV de erro no ponto de máxima potência contra 0,9. O divisor cai de 22,3 para 12,4 MΩ, ainda acima dos 6 MΩ da equação 7 da ficha; muda o valor no projeto, não a placa |
+
+Sem substituto que assente nas ilhas, e por isso da LCSC:
+
+- **USB-C (`J101`):** o GCT USB4105-GF-A tem os mesmos 16 contatos e os
+  mesmos pinos de posicionamento, mas as pernas de trás da carcaça pedem
+  rasgo de 1,4 mm e a placa tem 1,2 mm, e os contatos ficam 0,37 mm mais
+  para dentro das ilhas. Pode servir; não está garantido.
+- **Antena (`E301`):** uma antena de chip de outro fabricante pede a sua
+  própria área sem cobre e a sua própria sintonia, e isso é placa nova.
 
 ## Antes de fechar o pedido
 

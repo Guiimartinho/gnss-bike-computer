@@ -96,6 +96,13 @@ MOUSER: dict[str, tuple[str, str, str]] = {
                 "NTC 10 k 1 %, B25/50 3380 K 1 %, 0402: o TDK sem estoque na Mouser"),
     "C23733": ("TDK", "C1005X5R1A475M050BC", "4,7 uF 10 V X5R 20 % 0402: o Samsung sem estoque na Mouser"),
     "C1591": ("TDK", "C1608X7R1H104K080AA", "100 nF 50 V X7R 10 % 0603: o Samsung sem estoque na Mouser"),
+    # Mouser does not sell the Sunlord. The Murata sits on the board's 1008
+    # land as it is: its electrodes (0.65 mm at each end of 2.5 mm) fall on
+    # the 1.25 x 2.2 pads at +-1.075, and its datasheet's own land (0.625 x
+    # 2.0 at +-0.94) lies inside them. Isat 530 mA against the 390 the
+    # ADP5091 asks, DCR 0.84 ohm against the Sunlord's 0.91.
+    "C98385": ("Murata", "LQH2HPZ220MJRL",
+               "22 uH 20 %, Isat 530 mA, DCR 0,84 ohm, 2,5 x 2,0 mm: o Sunlord nao existe na Mouser"),
     # the same parts, under the codes Mouser sells them by
     "C160405": ("JST", "SM06B-SRSS-TB(LF)(SN)", "codigo da Mouser"),
     "C485354": ("JST", "S4B-ZR-SM4A-TF(LF)(SN)", "codigo da Mouser"),
@@ -108,7 +115,6 @@ FORA_DA_MOUSER: dict[str, str] = {
     "C2827321": "LED RGB TUOZHAN, o footprint e dele; LCSC",
     "C455280": "chave XunPu, o footprint e dela; LCSC",
     "C165948": "USB-C HRO, o footprint e dele; LCSC",
-    "C98385": "indutor Sunlord 22 uH 1008; LCSC",
     "C6569550": "antena de chip Unictron; LCSC",
 }
 
