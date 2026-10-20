@@ -8,6 +8,12 @@ of, goes to a CSV for LCSC's BOM tool, by the LCSC code the BOM already
 carries, and LCSC rounds each line up to its own minimum; the few parts
 that come from DigiKey or elsewhere are printed with their codes.
 
+Each Mouser line carries the lifecycle status the API gives, and the parts
+on their way out (end of life, obsolete, not for new designs) are listed
+at the end, to be swapped or sent elsewhere in mpn.py. The API is not the
+last word: on 2026-10-19 Mouser's BOM tool flagged two parts obsolete that
+it gave no status at all (mpn.DIGIKEY).
+
 The API key is personal: it is read from MOUSER_API_KEY or from
 .claude/local/mouser_api_key, which git does not see, and it is never
 printed.
@@ -35,6 +41,8 @@ SAIDA = HERE.parent / "fabricacao"
 API = "https://api.mouser.com/api/v1/search/partnumber?apiKey="
 # small passives are cheap at ten and easy to lose: a few spares each
 PASSIVOS = ("C", "R", "L", "FB", "JP")
+# what the search API's LifecycleStatus says of a part on its way out
+SAINDO = ("end of life", "obsolete", "not recommended", "last time")
 
 
 def chave() -> str:
@@ -100,7 +108,7 @@ def main() -> int:
     if not bom.exists():
         raise SystemExit(f"falta {bom.name}: rode make_fab.py antes")
     linhas = list(csv.DictReader(open(bom, encoding="utf-8")))
-    pedidos, fora = [], []
+    pedidos, fora, digikey = [], [], []
     for ln in linhas:
         refs = ln["Designator"].split(",")
         lcsc = ln["LCSC Part #"]
@@ -114,6 +122,11 @@ def main() -> int:
             fab, num = MPN.MPN[lcsc]
             fora.append((",".join(refs), fab, num, len(refs) * placas, MPN.FORA_DA_MOUSER[lcsc], lcsc))
             continue
+        if lcsc in MPN.DIGIKEY:
+            fab, num = MPN.MPN[lcsc]
+            codigo, nota = MPN.DIGIKEY[lcsc]
+            digikey.append((",".join(refs), codigo, fab, num, len(refs) * placas, nota))
+            continue
         fab, num = MPN.MPN[lcsc]
         nota = ""
         if lcsc in MPN.MOUSER:
@@ -121,36 +134,35 @@ def main() -> int:
         pedidos.append({"refs": refs, "fab": fab, "mpn": num, "lcsc": lcsc, "nota": nota})
     achados = consultar([p["mpn"] for p in pedidos])
     total, n_mouser = 0.0, 0
-    lcsc, digikey = [], []
+    lcsc, saindo = [], []
     saida = SAIDA / f"mouser-{variante}.csv"
     with open(saida, "w", encoding="utf-8", newline="") as f:
         w = csv.writer(f)
         w.writerow(["Mouser No", "Mfr No", "Manufacturer", "Quantity", "Unit Price (USD)",
-                    "Ext. Price (USD)", "Stock", "Lead Time", "Customer No", "Description", "Note"])
+                    "Ext. Price (USD)", "Stock", "Lead Time", "Lifecycle", "Customer No", "Description",
+                    "Note"])
         for p in pedidos:
             m = achados.get(p["mpn"].upper())
             q = quantidade(p["refs"], placas, m)
             estoque = int(m.get("AvailabilityInStock") or 0) if m else 0
             if estoque < q:
-                # a backorder is months: the part comes from elsewhere, and
-                # as the project names it, not as Mouser's swap does
+                # a backorder is months: the part comes from LCSC, and as
+                # the project names it, not as Mouser's swap does
                 motivo = (f"Mouser sem estoque ({estoque}, prazo {m.get('LeadTime') or '?'})" if m
                           else "nao achado na Mouser")
                 fab, num = MPN.MPN[p["lcsc"]]
-                if p["lcsc"] in MPN.DIGIKEY:
-                    codigo, nota = MPN.DIGIKEY[p["lcsc"]]
-                    digikey.append((",".join(p["refs"]), codigo, fab, num, len(p["refs"]) * placas,
-                                    f"{motivo}; {nota}"))
-                else:
-                    lcsc.append((p["lcsc"], quantidade(p["refs"], placas, None), fab, num,
-                                 ",".join(p["refs"]), motivo))
+                lcsc.append((p["lcsc"], quantidade(p["refs"], placas, None), fab, num,
+                             ",".join(p["refs"]), motivo))
                 continue
             un = preco(m, q)
             total += un * q
             n_mouser += 1
+            ciclo = m.get("LifecycleStatus") or ""
+            if any(s in ciclo.lower() for s in SAINDO):
+                saindo.append((",".join(p["refs"]), m["ManufacturerPartNumber"], ciclo))
             w.writerow([m["MouserPartNumber"], m["ManufacturerPartNumber"], m.get("Manufacturer", p["fab"]), q,
-                        f"{un:.4f}", f"{un * q:.2f}", estoque, m.get("LeadTime") or "", ",".join(p["refs"]),
-                        (m.get("Description") or "")[:80], p["nota"]])
+                        f"{un:.4f}", f"{un * q:.2f}", estoque, m.get("LeadTime") or "", ciclo,
+                        ",".join(p["refs"]), (m.get("Description") or "")[:80], p["nota"]])
     for refs, fab, num, q, onde, codigo in fora:
         if codigo:
             lcsc.append((codigo, quantidade(refs.split(","), placas, None), fab, num, refs, onde))
@@ -165,6 +177,8 @@ def main() -> int:
             w.writerow(linha)
     print(f"{saida.name}: {n_mouser} linhas para {placas} placa(s), {variante}; "
           f"US$ {total:.2f} nos precos da quantidade")
+    for refs, num, ciclo in saindo:
+        print(f"    ATENCAO {refs}: {num} esta '{ciclo}' na Mouser; troque ou mande para outra loja em mpn.py")
     print(f"{saida_lcsc.name}: {len(lcsc)} linhas, o que a Mouser nao vende ou nao tem em estoque "
           f"(a LCSC arredonda cada uma ao lote minimo dela):")
     for codigo, q, fab, num, refs, motivo in sorted(lcsc, key=lambda x: x[4]):

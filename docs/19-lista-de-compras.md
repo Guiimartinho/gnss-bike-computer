@@ -372,14 +372,16 @@ duas placas:
 
 | Tela | Linhas na Mouser | Total na Mouser, no preço da quantidade | Linhas na LCSC |
 |---|---|---|---|
-| JDI | 58 | US$ 135,09 | 10 |
-| Sharp com a luz do Azumo | 60 | US$ 140,25 | 10 |
+| JDI | 56 | US$ 110,09 | 10 |
+| Sharp com a luz do Azumo | 58 | US$ 115,25 | 10 |
 
 Trocado só na Mouser, com o mesmo valor, tamanho e tolerância, porque o
 fabricante da peça da LCSC estava sem estoque lá: o 4,87 kΩ (Panasonic
 ERJ-2RKF4871X), o 2,67 MΩ (Vishay CRCW04022M67FKED), o NTC (Murata
-NCP15XH103F03RC, 10 kΩ e B 3380 a 1 %), o 4,7 µF de 0402 (TDK
-C1005X5R1A475M050BC) e o 100 nF de 0603 (TDK C1608X7R1H104K080AA).
+NCU15XH103F60RC, 10 kΩ e B25/50 de 3380 K a 1 %, de -55 a 125 °C; o
+NCP15XH103F03RC da Murata, que entrou antes, está em fim de vida), o 4,7 µF
+de 0402 (TDK C1005X5R1A475M050BC) e o 100 nF de 0603 (TDK
+C1608X7R1H104K080AA).
 
 Trocado porque a Mouser não vende a peça da LCSC, e assenta nas ilhas como
 estão: o indutor `L103`, Murata LQH2HPZ220MJRL no lugar do Sunlord. São os
@@ -394,6 +396,30 @@ pedido da LCSC, que tinha: o TPD4E05U06 (`D102`, 203.470 na LCSC), o OPT3001
 TLV7031 (`U105`, 5.253) e o PESD3V3S1UB-N da BORN (`D105`, 9.805). A
 MX25R6435F (`U501`) vai pela DigiKey (1092-1200-ND, 2.478 a US$ 3,29), porque
 a LCSC tinha só 2, a US$ 6,30.
+
+A ferramenta de BOM da Mouser marcou três linhas como obsoletas em
+2026-10-19. O NTC estava mesmo em fim de vida (a API da Mouser diz "End of
+Life") e foi trocado acima. Para o ADP5091ACPZ-2-R7 (`U103`) e o
+MAX17262REWL+T (`U102`), a API da Mouser não dá status nenhum, a página da
+ADI os dá em produção (cópias do Internet Archive de 2025 e de fevereiro de
+2026, porque o site da ADI recusou a conexão) e a DigiKey os tem como
+ativos. Os dois vão pela DigiKey, sem mudar a placa:
+505-ADP5091ACPZ-2-R7CT-ND (806 a US$ 8,81; a Mouser tinha 9, sem estoque de
+fábrica) e 175-MAX17262REWL+TCT-ND (18.827 a US$ 4,10). As trocas que a
+Mouser tem mudam o projeto:
+
+- o MAX17262HEWL+T, no mesmo WLP de 9 esferas, mede com 30 mΩ em vez de 7.
+  Ele é feito para células de 30 mAh a 2 Ah e aguenta 0,69 A contínuos,
+  contra 1,68 A do de 7 mΩ, enquanto a nossa célula tem 2000 mAh e carrega a
+  600 mA; a escala de corrente do driver também muda (ficha 19-100308,
+  Rev. 1, páginas 16, 22 e 28);
+- o ADP5091ACPZ-1-R7 tem pico de corrente de entrada de 200 mA contra os
+  300 do -2 (guia de pedido da ficha), e o ADP5092 só existe com 200 mA.
+
+O `mouser.py` põe o ciclo de vida que a API dá na coluna `Lifecycle` e, no
+fim, avisa das linhas que estão saindo de linha. Nenhuma linha do pedido de
+2026-10-19 aparece assim, mas a ferramenta de BOM da Mouser pode marcar
+peças que a API não marca, como marcou essas duas.
 
 A Mouser não vende, e vêm da LCSC (estoque de 2026-10-19): o LED RGB TUOZHAN
 (`D601`, 1.668.220 a US$ 0,024), as chaves XunPu (`SW601` a `SW603`, 105.840

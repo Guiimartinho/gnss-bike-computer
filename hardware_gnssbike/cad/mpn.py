@@ -8,10 +8,11 @@ series, the antenna's C0G tuning caps in Murata's GJM15 at +-0.1 pF), and
 checked to exist at Mouser through its search API (mouser.py).
 
 MOUSER holds the parts swapped for that one distributor, same spec, because
-the maker of the part above had no stock there on 2026-10-19. FORA_DA_MOUSER
-holds what Mouser does not sell at all, and where it comes from instead: the
-board was drawn for parts LCSC sells, and some of those makers sell nowhere
-else. Their footprints are those parts' own, so they are not swapped here.
+the maker of the part above had no stock there on 2026-10-19. DIGIKEY holds
+the parts bought at DigiKey instead. FORA_DA_MOUSER holds what Mouser does
+not sell at all, and where it comes from instead: the board was drawn for
+parts LCSC sells, and some of those makers sell nowhere else. Their
+footprints are those parts' own, so they are not swapped here.
 """
 from __future__ import annotations
 
@@ -92,8 +93,11 @@ MPN: dict[str, tuple[str, str]] = {
 MOUSER: dict[str, tuple[str, str, str]] = {
     "C25902": ("Panasonic", "ERJ-2RKF4871X", "4,87 k 1 % 0402: a Yageo sem estoque na Mouser"),
     "C477658": ("Vishay", "CRCW04022M67FKED", "2,67 M 1 % 0402: a Yageo sem estoque na Mouser"),
-    "C209959": ("Murata", "NCP15XH103F03RC",
-                "NTC 10 k 1 %, B25/50 3380 K 1 %, 0402: o TDK sem estoque na Mouser"),
+    # Murata's NCP15XH103F03RC took the TDK's place first, and Mouser gives
+    # it as end of life on 2026-10-19: the NCU15 series is its successor
+    "C209959": ("Murata", "NCU15XH103F60RC",
+                "NTC 10 k 1 %, B25/50 3380 K 1 %, 0402: o TDK sem estoque na Mouser, "
+                "e o NCP15XH103F03RC da Murata em fim de vida"),
     "C23733": ("TDK", "C1005X5R1A475M050BC", "4,7 uF 10 V X5R 20 % 0402: o Samsung sem estoque na Mouser"),
     "C1591": ("TDK", "C1608X7R1H104K080AA", "100 nF 50 V X7R 10 % 0603: o Samsung sem estoque na Mouser"),
     # Mouser does not sell the Sunlord. The Murata sits on the board's 1008
@@ -111,11 +115,21 @@ MOUSER: dict[str, tuple[str, str, str]] = {
     "C88374": ("Hirose", "U.FL-R-SMT-1(10)", "codigo da Mouser"),
 }
 
-# What Mouser has no stock of and LCSC is not the place for either: the
-# MX25R6435F, of which LCSC had 2 at US$ 6.30 on 2026-10-19
+# Bought at DigiKey whatever Mouser shows. The MX25R6435F: Mouser had none
+# and LCSC 2, at US$ 6.30, on 2026-10-19. The two ADI parts: Mouser's BOM
+# tool flagged them obsolete that day, though its search API gives them no
+# lifecycle status, ADI lists them in production and DigiKey as active.
+# The swaps Mouser has change the board: the MAX17262HEWL senses with 30
+# mOhm, not 7 (0.69 A continuous, for cells up to 2 Ah, where ours is
+# 2000 mAh charged at 600 mA, and the driver's current scale changes), and
+# the ADP5091ACPZ-1 peaks at 200 mA of input against the -2's 300.
 DIGIKEY: dict[str, tuple[str, str]] = {
     "C2802844": ("1092-1200-ND", "2.478 na DigiKey em 2026-10-19, a US$ 3,29 (MX25R6435FM2IL0, em tubo); "
                                  "a LCSC tinha 2, a US$ 6,30"),
+    "C579259": ("505-ADP5091ACPZ-2-R7CT-ND", "806 na DigiKey em 2026-10-19, a US$ 8,81, ativa; "
+                                             "a Mouser tinha 9 e a marca como obsoleta"),
+    "C5328777": ("175-MAX17262REWL+TCT-ND", "18.827 na DigiKey em 2026-10-19, a US$ 4,10, ativa; "
+                                            "a Mouser a marca como obsoleta"),
 }
 
 # Not sold by Mouser: why, and LCSC is where it comes from. On 2026-10-19
