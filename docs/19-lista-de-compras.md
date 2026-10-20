@@ -395,11 +395,12 @@ TLV7031 (`U105`, 5.253) e o PESD3V3S1UB-N da BORN (`D105`, 9.805). A
 MX25R6435F (`U501`) vai pela DigiKey (1092-1200-ND, 2.478 a US$ 3,29), porque
 a LCSC tinha só 2, a US$ 6,30.
 
-A Mouser não vende, e vêm da LCSC: o LED RGB TUOZHAN (`D601`, 1.668.220 a
-US$ 0,024), as chaves XunPu (`SW601` a `SW603`), o USB-C HRO (`J101`), a
-antena de chip Unictron (`E301`, 5.209 a US$ 0,53) e o 18 MΩ (`R116`), que
-não existe em 0402 a 1 % em marca nenhuma dela. O módulo `U201` vem da
-DigiKey ou da MinewSemi.
+A Mouser não vende, e vêm da LCSC (estoque de 2026-10-19): o LED RGB TUOZHAN
+(`D601`, 1.668.220 a US$ 0,024), as chaves XunPu (`SW601` a `SW603`, 105.840
+a US$ 0,054), o USB-C HRO (`J101`, 330.885 a US$ 0,17), a antena de chip
+Unictron (`E301`, 5.209 a US$ 0,53) e o 18 MΩ (`R116`, 1.000 em lote de 100),
+que não existe em 0402 a 1 % em marca nenhuma da Mouser. O módulo `U201` vem
+da DigiKey ou da MinewSemi.
 
 ### Substitutos que a Mouser tem e que mudam alguma coisa
 
