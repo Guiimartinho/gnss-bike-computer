@@ -1,10 +1,12 @@
-"""The Mouser order for the board's parts, from the BOM make_fab.py wrote.
+"""The parts order for the board, Mouser first, from the BOM make_fab.py wrote.
 
 Each BOM line goes to its manufacturer part number (mpn.py), the Mouser
 search API gives the Mouser number, the stock and the price breaks, and a
 CSV for Mouser's BOM tool comes out with the quantity for the boards asked
-and the price at that quantity. What Mouser does not sell is listed apart,
-with where it comes from.
+and the price at that quantity. What Mouser does not sell, or has no stock
+of, goes to a CSV for LCSC's BOM tool, by the LCSC code the BOM already
+carries, and LCSC rounds each line up to its own minimum; the few parts
+that come from DigiKey or elsewhere are printed with their codes.
 
 The API key is personal: it is read from MOUSER_API_KEY or from
 .claude/local/mouser_api_key, which git does not see, and it is never
@@ -106,11 +108,11 @@ def main() -> int:
             for ref in refs:
                 if ref in MPN.SEM_LCSC:
                     fab, num, onde = MPN.SEM_LCSC[ref]
-                    fora.append((ref, fab, num, len(refs) * placas, onde))
+                    fora.append((ref, fab, num, len(refs) * placas, onde, ""))
             continue
         if lcsc in MPN.FORA_DA_MOUSER:
             fab, num = MPN.MPN[lcsc]
-            fora.append((",".join(refs), fab, num, len(refs) * placas, MPN.FORA_DA_MOUSER[lcsc]))
+            fora.append((",".join(refs), fab, num, len(refs) * placas, MPN.FORA_DA_MOUSER[lcsc], lcsc))
             continue
         fab, num = MPN.MPN[lcsc]
         nota = ""
@@ -118,8 +120,8 @@ def main() -> int:
             fab, num, nota = MPN.MOUSER[lcsc]
         pedidos.append({"refs": refs, "fab": fab, "mpn": num, "lcsc": lcsc, "nota": nota})
     achados = consultar([p["mpn"] for p in pedidos])
-    total = 0.0
-    sem_estoque, nao_achados = [], []
+    total, n_mouser = 0.0, 0
+    lcsc, digikey = [], []
     saida = SAIDA / f"mouser-{variante}.csv"
     with open(saida, "w", encoding="utf-8", newline="") as f:
         w = csv.writer(f)
@@ -128,30 +130,48 @@ def main() -> int:
         for p in pedidos:
             m = achados.get(p["mpn"].upper())
             q = quantidade(p["refs"], placas, m)
-            if m is None:
-                nao_achados.append(p["mpn"])
-                w.writerow(["", p["mpn"], p["fab"], q, "", "", "nao achado", "", ",".join(p["refs"]), "", p["nota"]])
+            estoque = int(m.get("AvailabilityInStock") or 0) if m else 0
+            if estoque < q:
+                # a backorder is months: the part comes from elsewhere, and
+                # as the project names it, not as Mouser's swap does
+                motivo = (f"Mouser sem estoque ({estoque}, prazo {m.get('LeadTime') or '?'})" if m
+                          else "nao achado na Mouser")
+                fab, num = MPN.MPN[p["lcsc"]]
+                if p["lcsc"] in MPN.DIGIKEY:
+                    codigo, nota = MPN.DIGIKEY[p["lcsc"]]
+                    digikey.append((",".join(p["refs"]), codigo, fab, num, len(p["refs"]) * placas,
+                                    f"{motivo}; {nota}"))
+                else:
+                    lcsc.append((p["lcsc"], quantidade(p["refs"], placas, None), fab, num,
+                                 ",".join(p["refs"]), motivo))
                 continue
             un = preco(m, q)
-            estoque = int(m.get("AvailabilityInStock") or 0)
-            if estoque < q:
-                sem_estoque.append(f"{p['mpn']} ({estoque} em estoque, {q} pedidos, prazo "
-                                   f"{m.get('LeadTime') or '?'}): {','.join(p['refs'])}")
             total += un * q
+            n_mouser += 1
             w.writerow([m["MouserPartNumber"], m["ManufacturerPartNumber"], m.get("Manufacturer", p["fab"]), q,
                         f"{un:.4f}", f"{un * q:.2f}", estoque, m.get("LeadTime") or "", ",".join(p["refs"]),
                         (m.get("Description") or "")[:80], p["nota"]])
-    print(f"{saida.name}: {len(pedidos)} linhas para {placas} placa(s), {variante}; "
+    for refs, fab, num, q, onde, codigo in fora:
+        if codigo:
+            lcsc.append((codigo, quantidade(refs.split(","), placas, None), fab, num, refs, onde))
+        else:
+            digikey.append((refs, "", fab, num, q, onde))
+    saida_lcsc = SAIDA / f"lcsc-{variante}.csv"
+    with open(saida_lcsc, "w", encoding="utf-8", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["LCSC Part Number", "Quantity", "Manufacturer", "Manufacturer Part Number",
+                    "Customer Part Number", "Note"])
+        for linha in sorted(lcsc, key=lambda x: x[4]):
+            w.writerow(linha)
+    print(f"{saida.name}: {n_mouser} linhas para {placas} placa(s), {variante}; "
           f"US$ {total:.2f} nos precos da quantidade")
-    if sem_estoque:
-        print("  sem estoque suficiente (pedido entra com prazo):")
-        for s in sem_estoque:
-            print(f"    {s}")
-    if nao_achados:
-        print("  nao achados na Mouser:", ", ".join(nao_achados))
-    print("  comprar fora da Mouser:")
-    for refs, fab, num, q, onde in fora:
-        print(f"    {refs}: {fab} {num} x{q} - {onde}")
+    print(f"{saida_lcsc.name}: {len(lcsc)} linhas, o que a Mouser nao vende ou nao tem em estoque "
+          f"(a LCSC arredonda cada uma ao lote minimo dela):")
+    for codigo, q, fab, num, refs, motivo in sorted(lcsc, key=lambda x: x[4]):
+        print(f"    {refs}: {codigo} {fab} {num} x{q} - {motivo}")
+    print("  DigiKey e outras lojas:")
+    for refs, codigo, fab, num, q, onde in digikey:
+        print(f"    {refs}: {fab} {num} x{q}{' (' + codigo + ')' if codigo else ''} - {onde}")
     for refs, fab, num, q, onde in MPN.FORA_DA_PLACA:
         print(f"    {refs} (fora da placa): {fab} {num} x{q * placas} - {onde}")
     return 0

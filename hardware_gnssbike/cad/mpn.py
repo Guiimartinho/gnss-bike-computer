@@ -84,7 +84,7 @@ MPN: dict[str, tuple[str, str]] = {
     "C88896": ("Murata", "GJM1555C1H6R8BB01D"),
     "C88980": ("Murata", "BLM18KG221SN1D"),
     "C90462": ("TI", "OPT3001DNPR"),
-    "C920299": ("Nexperia", "PESD3V3S1UB,115"),
+    "C920299": ("BORN", "PESD3V3S1UB-N"),            # LCSC's maker, checked 2026-10-19
     "C98385": ("Sunlord", "SPH252012H220MT"),
 }
 
@@ -103,13 +103,25 @@ MOUSER: dict[str, tuple[str, str, str]] = {
     # ADP5091 asks, DCR 0.84 ohm against the Sunlord's 0.91.
     "C98385": ("Murata", "LQH2HPZ220MJRL",
                "22 uH 20 %, Isat 530 mA, DCR 0,84 ohm, 2,5 x 2,0 mm: o Sunlord nao existe na Mouser"),
+    # BORN's PESD3V3S1UB-N is a copy of Nexperia's: Mouser has the original
+    "C920299": ("Nexperia", "PESD3V3S1UB,115", "o original do PESD3V3S1UB-N da BORN: 3,3 V em SOD-523, 1 uA de fuga"),
     # the same parts, under the codes Mouser sells them by
     "C160405": ("JST", "SM06B-SRSS-TB(LF)(SN)", "codigo da Mouser"),
     "C485354": ("JST", "S4B-ZR-SM4A-TF(LF)(SN)", "codigo da Mouser"),
     "C88374": ("Hirose", "U.FL-R-SMT-1(10)", "codigo da Mouser"),
 }
 
-# Not sold by Mouser: where each comes from instead
+# What Mouser has no stock of and LCSC is not the place for either: the
+# MX25R6435F, of which LCSC had 2 at US$ 6.30 on 2026-10-19
+DIGIKEY: dict[str, tuple[str, str]] = {
+    "C2802844": ("1092-1200-ND", "2.478 na DigiKey em 2026-10-19, a US$ 3,29 (MX25R6435FM2IL0, em tubo); "
+                                 "a LCSC tinha 2, a US$ 6,30"),
+}
+
+# Not sold by Mouser: why, and LCSC is where it comes from. On 2026-10-19
+# the owner kept the project's parts for these rather than the Mouser
+# substitutes, which change the firmware, the key force or the MPPT values
+# (docs/19, "Substitutos que a Mouser tem e que mudam alguma coisa")
 FORA_DA_MOUSER: dict[str, str] = {
     "C423222": "18 M 1 % 0402 nao existe na Mouser em marca nenhuma; LCSC (UNI-ROYAL)",
     "C2827321": "LED RGB TUOZHAN, o footprint e dele; LCSC",

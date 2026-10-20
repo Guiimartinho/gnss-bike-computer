@@ -189,7 +189,7 @@ python hardware_gnssbike/cad/check_pcb.py --como-esta      # 5. confere o arquiv
 python hardware_gnssbike/cad/dry_run_pcb.py               # 6. as regras das fichas
 python hardware_gnssbike/cad/impedancia.py                # a impedancia das linhas na pilha do fabricante
 python hardware_gnssbike/cad/make_fab.py                  # Gerber, furacao, BOM e CPL da JLCPCB em ../fabricacao/
-python hardware_gnssbike/cad/mouser.py jdi 2              # o pedido das pecas na Mouser (chave em .claude/local/)
+python hardware_gnssbike/cad/mouser.py jdi 2              # o pedido na Mouser e o resto na LCSC (chave em .claude/local/)
 ```
 
 O `route.py` é um labirinto A\* numa grade de 0,15 mm: faz bem o que pede
