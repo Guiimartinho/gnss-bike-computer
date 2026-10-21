@@ -188,6 +188,7 @@ python hardware_gnssbike/cad/acabar.py                    # 3. fecha o resto, um
 "D:/KiCAD/bin/python.exe" hardware_gnssbike/cad/fill_zones.py   # 4. preenche as malhas de terra
 python hardware_gnssbike/cad/check_pcb.py --como-esta      # 5. confere o arquivo como esta
 python hardware_gnssbike/cad/dry_run_pcb.py               # 6. as regras das fichas
+python hardware_gnssbike/cad/aplicar_modelos.py           # um modelo 3D novo na placa roteada, sem mexer no cobre
 python hardware_gnssbike/cad/impedancia.py                # a impedancia das linhas na pilha do fabricante
 python hardware_gnssbike/cad/make_fab.py                  # Gerber, furacao, BOM e CPL da JLCPCB em ../fabricacao/
 python hardware_gnssbike/cad/mouser.py jdi 2              # o pedido na Mouser e as planilhas da LCSC e da DigiKey (chave em .claude/local/)
@@ -282,7 +283,8 @@ inteiros.
 
 **Medido em 2026-10-19**, na placa do repositório: o DRC completo com as
 malhas preenchidas dá **0 itens desconectados, 0 erros e nenhuma trilha ou
-via solta**. O dry run mede as 32 regras e não viola nenhuma; duas têm
+via solta**. O dry run cumpre 35 medidas e não viola nenhuma (eram 32 até a
+`ME5` voltar a medir os conectores da tela, em 2026-10-21); duas regras têm
 desvio aceito pelo dono, com conferência de bancada
 ([09](../09-dry-run-da-pcb.md#resultado-de-2026-10-19-com-o-roteamento-fechado)).
 Os trilhos de carga correm com 0,25 mm nas faces de fora e estreitam a 0,15
@@ -383,6 +385,18 @@ próprios, o módulo de rádio, o receptor GNSS, as três teclas, o buzzer e o
 receptáculo USB-C eram **tijolos pretos iguais** numa vista que existe
 justamente para conferir se a peça é a que se pensa.
 
+Desde que a placa foi roteada, um modelo novo não pode entrar regerando a
+placa: o `make_pcb.py` coloca tudo de novo e desfaz o roteamento. O
+`aplicar_modelos.py` calcula, peça por peça, o bloco `(model ...)` que o
+`make_pcb.py` escreveria agora e troca só esse bloco no arquivo, no formato
+do KiCad. Quando rodou pela primeira vez, em 2026-10-21, as únicas
+diferenças eram os indutores `L101`, `L102` e `L401` e o boost `U402`, que
+estavam sem corpo porque o KiCad não tem modelo para eles e a tabela de
+alturas não os tinha. A lista das 24 caixas e de onde baixar o STEP de cada
+peça está em [`3d/LEIAME.md`](3d/LEIAME.md). As imagens mostram a montagem da
+JDI: sem as peças que ela não leva e com o 0 Ω do `JP301` e do `JP401` no
+par de ilhas que ela usa.
+
 **Esquemático** — os 7 arquivos abrem; o **próprio KiCad** percorre a
 hierarquia e exporta o netlist; os **100 nós elétricos saem iguais** aos da
 lista de nós, pino a pino; nenhum nó a mais; os 37 pinos sem ligação são
@@ -398,9 +412,9 @@ borda; nada dentro das áreas de antena; a placa cabe na caixa; os três planos
 de terra existem.
 
 **Regras das fichas** ([09](../09-dry-run-da-pcb.md#resultado-de-2026-10-19-com-o-roteamento-fechado))
-— na placa roteada de 2026-10-19, **32 cumpridas, 2 com desvio aceito pelo
-dono** (o `RF9` e o `C210` da `AL1`), **nenhuma violada e nenhuma sem
-medida**. Antes, as duas que falhavam na placa de 55 × 97 caíram quando a
+— na placa roteada, **35 cumpridas desde 2026-10-21** (32 em 2026-10-19),
+**2 com desvio aceito pelo dono** (o `RF9` e o `C210` da `AL1`), **nenhuma
+violada e nenhuma sem medida**. Antes, as duas que falhavam na placa de 55 × 97 caíram quando a
 placa passou a ser dimensionada pelo circuito; o `RF9` voltou em 2026-10-18,
 quando o contorno da tela passou a servir às três (JDI, Sharp e Azumo) e a
 sombra dela chegou a 13,4 mm do módulo:

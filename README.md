@@ -78,7 +78,7 @@ A placa existe como **arquivo de CAD**, gerado por programa e **roteado por
 inteiro** em 2026-10-19: 138 componentes na montagem da JDI (146 na da
 Sharp), 118 redes, 2.683 trechos de trilha e 769 vias. O DRC completo dá 0
 itens desconectados e 0 erros, e as regras que as fichas dos componentes e a
-IPC-2221B impõem, medidas uma a uma, dão 32 cumpridas, 2 com desvio aceito
+IPC-2221B impõem, medidas uma a uma, dão 35 cumpridas, 2 com desvio aceito
 pelo dono e conferência de bancada, e nenhuma violada
 ([dry run de 2026-10-19](hardware_gnssbike/09-dry-run-da-pcb.md#resultado-de-2026-10-19-com-o-roteamento-fechado)).
 Os arquivos de fábrica da JLCPCB e as listas de compra da Mouser, da LCSC e

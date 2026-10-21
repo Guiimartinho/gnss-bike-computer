@@ -928,9 +928,10 @@ def placa_3d() -> tuple[np.ndarray, np.ndarray]:
     pt, pc = M3.triangulos(j, bina, fora)
     pt = np.stack([pt[..., 0] * 1000.0, -pt[..., 1] * 1000.0, pt[..., 2] * 1000.0], axis=-1)
     extra_t, extra_c = M3.caixas_das_pecas(fora)
+    jump_t, jump_c = M3.jumpers_da_montagem()
     silk_t, silk_c = M3.serigrafia()
-    partes_t = [pt] + ([extra_t] if len(extra_t) else []) + ([silk_t] if len(silk_t) else [])
-    partes_c = [pc] + ([extra_c] if len(extra_c) else []) + ([silk_c] if len(silk_c) else [])
+    partes_t = [pt] + [m for m in (extra_t, jump_t, silk_t) if len(m)]
+    partes_c = [pc] + [c for m, c in ((extra_t, extra_c), (jump_t, jump_c), (silk_t, silk_c)) if len(m)]
     t = np.concatenate(partes_t) + np.array([PLACA_X0 - MP.ORIGEM[0], PLACA_Y0 - MP.ORIGEM[1], PLACA_Z0])
     return t, np.concatenate(partes_c)
 

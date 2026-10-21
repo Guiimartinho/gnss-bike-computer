@@ -9,7 +9,7 @@
 ![Caixa](https://img.shields.io/badge/caixa-64%20%C3%97%20106%20%C3%97%2018%2C2%20mm-0082FC)
 ![MCU](https://img.shields.io/badge/MCU-nRF54LM20A-00A9CE)
 ![DRC](https://img.shields.io/badge/DRC-0%20erros-2E7D32)
-![Regras](https://img.shields.io/badge/regras%20de%20ficha-32%20cumpridas%2C%200%20violadas-2E7D32)
+![Regras](https://img.shields.io/badge/regras%20de%20ficha-35%20cumpridas%2C%200%20violadas-2E7D32)
 ![Caixa medida](https://img.shields.io/badge/dry%20run%20da%20caixa-12%20cumpridas%2C%201%20sem%20medida-2E7D32)
 ![Montada](https://img.shields.io/badge/montada-n%C3%A3o-C62828)
 
@@ -32,7 +32,7 @@ componente.
 > arquivo de CAD — 166 peças, 118 redes, 2.683 segmentos, 769 vias, **todas
 > as ligações roteadas** (0 itens desconectados e 0 erros no DRC completo,
 > [CAD](cad/README.md#o-acabamento-uma-ligação-de-cada-vez), 2026-10-19) e
-> as 32 regras das fichas medidas, nenhuma violada e 2 com desvio aceito
+> as regras das fichas medidas, 35 cumpridas, nenhuma violada e 2 com desvio aceito
 > ([09](09-dry-run-da-pcb.md))
 > —, e a caixa existe como proposta medida por um dry run próprio (12
 > regras cumpridas, 0 violadas e 1 ainda sem medida, [caixa](caixa/README.md));

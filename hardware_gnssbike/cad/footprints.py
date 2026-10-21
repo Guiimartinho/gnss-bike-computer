@@ -786,6 +786,16 @@ ALTURA: dict[str, tuple[float, str]] = {
         "6,000 e altura 3,751"),
     "Diode_SMD:D_SOD-523": (0.65, "altura corrente de um SOD-523 - a peca do "
         "D105 ainda nao foi escolhida"),
+    # KiCad's own footprint for the converters' inductors (L101, L102, L401)
+    # points at a model the library does not ship, and with no height here
+    # the three showed as bare pads in the 3D until 2026-10-21
+    "Inductor_SMD:L_Murata_DFE201610P": (1.00, "Murata DFE201610E: 1,0 mm, "
+        "a descricao do proprio footprint no KiCad (2.0x1.6x1.0mm) e o 10 do "
+        "codigo da serie - CONFERIR no desenho da Murata"),
+    # the Sharp build's 5 V boost (U402): the same story, no model in KiCad
+    "Package_BGA:Texas_DSBGA-6_0.855x1.255mm_Layout2x3_P0.4mm_LevelB": (0.625,
+        "altura maxima corrente do encapsulamento YFF (DSBGA) da TI - "
+        "CONFERIR no desenho do TPS610997"),
 
     "Connector_FFC-FPC:TE_0-1734839-5_1x05-1MP_P0.5mm_Horizontal": (1.20,
         "conector FPC horizontal de passo 0,5 - CONFERIR: a peca ainda nao "
@@ -933,6 +943,21 @@ MODELO_GIRADO = {
     # right, over the pads. On the front at 270 degrees the offset maps
     # x -> +y and y -> +x, measured with test exports; none is needed.
     "HC-FPC-05-10-5RLTAG": (180, 0.0, 0.0),
+    # Molex's own STEPs of the Easy-On 503480 (via TraceParts, fetched by the
+    # owner on 2026-10-21) are drawn Y up with the origin at circuit 1: as
+    # they come, the connector stood on its side, 4 mm tall and 1 mm thick.
+    # An entry of six numbers turns about X, Y and Z and offsets in X, Y and
+    # Z. Measured on the exported GLB of a board holding the part alone: -90
+    # about X lays it on the board (body z 0.85..1.87, 1.02 mm tall), and
+    # then the fitting nails and the contact feet sit on the wrong sides
+    # until a 180 about Z puts the nails on their pads at the mouth and the
+    # feet on the signal row. The offsets, from two test moves (model x
+    # moves the body to -y on the board, model y to -x): J401's feet centred
+    # on the signal pads (29.57) and its nails on theirs (26.94 against
+    # 26.92), the housing on the F.Fab front face and its full length; the
+    # model runs 0.4 mm past the F.Fab at the back, where the feet are.
+    "Molex_503480-1000_1x10_P0.50mm": (-90, 0, 180, 2.25, 0.22, 0),
+    "Molex_503480-0540_1x05_P0.50mm": (-90, 0, 180, 1.0, 0.22, 0),
 }
 
 # The same model on the BACK face needs another turn AND another offset, and
@@ -953,7 +978,24 @@ MODELO_GIRADO = {
 # model of this table on the other face measures it again the same way.
 MODELO_GIRADO_VERSO = {
     "JST_ZH_S4B-ZR-SM4A-TF_1x04-1MP_P1.50mm_Horizontal": (180, -2.25, 1.86),
+    # J403, the Azumo light's 503480-0440 on the back (2026-10-21): on this
+    # face the 180 about Z of the front puts the nails and the feet on the
+    # wrong sides again, so it is -90 about X alone, and the test moves give
+    # model x to -y and model y to +x on the board. Measured: the body on
+    # the F.Fab (x 40.27, y 81.33..85.03) and 1.02 mm under the board, the
+    # feet centred on the signal pads (43.57), the nails on theirs (40.94
+    # against 40.92)
+    "Molex_503480-0440_1x04_P0.50mm": (-90, 0, 0, -0.75, -0.22, 0),
 }
+
+
+def _giro_desloca(v: tuple) -> tuple[tuple, tuple]:
+    """A MODELO_GIRADO entry as (rotate xyz, offset xyz): three numbers turn
+    about Z alone and offset in X and Y, six turn about X, Y and Z and
+    offset in X, Y and Z."""
+    if len(v) == 3:
+        return (0, 0, v[0]), (v[1], v[2], 0)
+    return tuple(v[:3]), tuple(v[3:])
 
 
 def modelo_no_verso(corpo: str) -> str:
@@ -967,21 +1009,21 @@ def modelo_no_verso(corpo: str) -> str:
     base = m.group(1).rsplit("/", 1)[-1].rsplit(".", 1)[0]
     if base not in MODELO_GIRADO_VERSO:
         return corpo
-    giro, ox, oy = MODELO_GIRADO_VERSO[base]
+    giro, desloca = _giro_desloca(MODELO_GIRADO_VERSO[base])
     inicio = m.start()
     trecho = corpo[inicio:]
-    trecho = _re.sub(r"\(offset\s*\(xyz [^)]*\)\s*\)", "(offset (xyz %g %g 0))" % (ox, oy), trecho, count=1)
-    trecho = _re.sub(r"\(rotate\s*\(xyz [^)]*\)\s*\)", "(rotate (xyz 0 0 %d))" % giro, trecho, count=1)
+    trecho = _re.sub(r"\(offset\s*\(xyz [^)]*\)\s*\)", "(offset (xyz %g %g %g))" % desloca, trecho, count=1)
+    trecho = _re.sub(r"\(rotate\s*\(xyz [^)]*\)\s*\)", "(rotate (xyz %g %g %g))" % giro, trecho, count=1)
     return corpo[:inicio] + trecho
 
 
 def linha_de_modelo(rel: str) -> str:
     base = rel.rsplit("/", 1)[-1].rsplit(".", 1)[0]
-    giro, ox, oy = MODELO_GIRADO.get(base, (0, 0.0, 0.0))
+    giro, desloca = _giro_desloca(MODELO_GIRADO.get(base, (0, 0.0, 0.0)))
     return (TAB + '(model "${KIPRJMOD}/' + rel + '"' + NL +
-            TAB * 2 + "(offset (xyz %g %g 0))" % (ox, oy) + NL +
+            TAB * 2 + "(offset (xyz %g %g %g))" % desloca + NL +
             TAB * 2 + "(scale (xyz 1 1 1))" + NL +
-            TAB * 2 + "(rotate (xyz 0 0 %d))" % giro + NL +
+            TAB * 2 + "(rotate (xyz %g %g %g))" % giro + NL +
             TAB + ")" + NL)
 
 
