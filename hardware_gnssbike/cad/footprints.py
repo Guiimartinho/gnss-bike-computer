@@ -786,6 +786,16 @@ ALTURA: dict[str, tuple[float, str]] = {
         "6,000 e altura 3,751"),
     "Diode_SMD:D_SOD-523": (0.65, "altura corrente de um SOD-523 - a peca do "
         "D105 ainda nao foi escolhida"),
+    # KiCad's own footprint for the converters' inductors (L101, L102, L401)
+    # points at a model the library does not ship, and with no height here
+    # the three showed as bare pads in the 3D until 2026-10-21
+    "Inductor_SMD:L_Murata_DFE201610P": (1.00, "Murata DFE201610E: 1,0 mm, "
+        "a descricao do proprio footprint no KiCad (2.0x1.6x1.0mm) e o 10 do "
+        "codigo da serie - CONFERIR no desenho da Murata"),
+    # the Sharp build's 5 V boost (U402): the same story, no model in KiCad
+    "Package_BGA:Texas_DSBGA-6_0.855x1.255mm_Layout2x3_P0.4mm_LevelB": (0.625,
+        "altura maxima corrente do encapsulamento YFF (DSBGA) da TI - "
+        "CONFERIR no desenho do TPS610997"),
 
     "Connector_FFC-FPC:TE_0-1734839-5_1x05-1MP_P0.5mm_Horizontal": (1.20,
         "conector FPC horizontal de passo 0,5 - CONFERIR: a peca ainda nao "

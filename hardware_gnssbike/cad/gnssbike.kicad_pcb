@@ -1446,6 +1446,17 @@
 			(net 39 "GND")
 			(uuid "64480aec-d3ca-4dc4-843e-57265820da0b")
 		)
+		(model "${KIPRJMOD}/3d/Texas_DSBGA-6_0.855x1.255mm_Layout2x3_P0.4mm_LevelB.wrl"
+			(offset
+				(xyz 0 0 0)
+			)
+			(scale
+				(xyz 1 1 1)
+			)
+			(rotate
+				(xyz 0 0 0)
+			)
+		)
 	)
 	(footprint "Package_SON:Texas_X2SON-4_1x1mm_P0.65mm"
 		(layer "F.Cu")
@@ -3684,6 +3695,17 @@
 			(net 2 "3V0")
 			(uuid "8bf7f73a-30e4-4b88-a1e3-0a5a83d0c4ea")
 		)
+		(model "${KIPRJMOD}/3d/L_Murata_DFE201610P.wrl"
+			(offset
+				(xyz 0 0 0)
+			)
+			(scale
+				(xyz 1 1 1)
+			)
+			(rotate
+				(xyz 0 0 0)
+			)
+		)
 	)
 	(footprint "Resistor_SMD:R_0402_1005Metric"
 		(layer "F.Cu")
@@ -4267,6 +4289,17 @@
 			(layers "F.Cu" "F.Paste" "F.Mask")
 			(net 1 "1V8")
 			(uuid "083d8a9d-15be-44fd-a124-22e858e2a563")
+		)
+		(model "${KIPRJMOD}/3d/L_Murata_DFE201610P.wrl"
+			(offset
+				(xyz 0 0 0)
+			)
+			(scale
+				(xyz 1 1 1)
+			)
+			(rotate
+				(xyz 0 0 0)
+			)
 		)
 	)
 	(footprint "Resistor_SMD:R_0402_1005Metric"
@@ -13508,6 +13541,17 @@
 			(layers "F.Cu" "F.Paste" "F.Mask")
 			(net 105 "SW_5V0")
 			(uuid "997604aa-72b3-412c-9f27-fcb8a0bfafe0")
+		)
+		(model "${KIPRJMOD}/3d/L_Murata_DFE201610P.wrl"
+			(offset
+				(xyz 0 0 0)
+			)
+			(scale
+				(xyz 1 1 1)
+			)
+			(rotate
+				(xyz 0 0 0)
+			)
 		)
 	)
 	(footprint "MountingHole:MountingHole_2.2mm_M2"

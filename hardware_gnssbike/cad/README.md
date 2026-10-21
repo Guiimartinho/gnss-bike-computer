@@ -188,6 +188,7 @@ python hardware_gnssbike/cad/acabar.py                    # 3. fecha o resto, um
 "D:/KiCAD/bin/python.exe" hardware_gnssbike/cad/fill_zones.py   # 4. preenche as malhas de terra
 python hardware_gnssbike/cad/check_pcb.py --como-esta      # 5. confere o arquivo como esta
 python hardware_gnssbike/cad/dry_run_pcb.py               # 6. as regras das fichas
+python hardware_gnssbike/cad/aplicar_modelos.py           # um modelo 3D novo na placa roteada, sem mexer no cobre
 python hardware_gnssbike/cad/impedancia.py                # a impedancia das linhas na pilha do fabricante
 python hardware_gnssbike/cad/make_fab.py                  # Gerber, furacao, BOM e CPL da JLCPCB em ../fabricacao/
 python hardware_gnssbike/cad/mouser.py jdi 2              # o pedido na Mouser e as planilhas da LCSC e da DigiKey (chave em .claude/local/)
@@ -382,6 +383,18 @@ desenhava um paralelepípedo preto de contorno de footprint para os 23 corpos
 próprios, o módulo de rádio, o receptor GNSS, as três teclas, o buzzer e o
 receptáculo USB-C eram **tijolos pretos iguais** numa vista que existe
 justamente para conferir se a peça é a que se pensa.
+
+Desde que a placa foi roteada, um modelo novo não pode entrar regerando a
+placa: o `make_pcb.py` coloca tudo de novo e desfaz o roteamento. O
+`aplicar_modelos.py` calcula, peça por peça, o bloco `(model ...)` que o
+`make_pcb.py` escreveria agora e troca só esse bloco no arquivo, no formato
+do KiCad. Quando rodou pela primeira vez, em 2026-10-21, as únicas
+diferenças eram os indutores `L101`, `L102` e `L401` e o boost `U402`, que
+estavam sem corpo porque o KiCad não tem modelo para eles e a tabela de
+alturas não os tinha. A lista das 24 caixas e de onde baixar o STEP de cada
+peça está em [`3d/LEIAME.md`](3d/LEIAME.md). As imagens mostram a montagem da
+JDI: sem as peças que ela não leva e com o 0 Ω do `JP301` e do `JP401` no
+par de ilhas que ela usa.
 
 **Esquemático** — os 7 arquivos abrem; o **próprio KiCad** percorre a
 hierarquia e exporta o netlist; os **100 nós elétricos saem iguais** aos da

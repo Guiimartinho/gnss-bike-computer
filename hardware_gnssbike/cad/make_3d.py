@@ -102,6 +102,37 @@ def montagem_padrao() -> frozenset[str]:
     return frozenset(MF.SEM_PECA | MF.VARIANTES["jdi"]["sem_peca"])
 
 
+def jumpers_da_montagem() -> tuple[np.ndarray, np.ndarray]:
+    """The 0 ohm the default build puts on JP301 and JP401.
+
+    Their footprint is three pads and no body: the part sits across two of
+    them, and which two is the build's choice, which make_fab.py writes into
+    the placement file. KiCad's own 0402 resistor goes on that pair, turned
+    along it, in the board millimetres caixas_das_pecas() uses. Both
+    jumpers are on the front."""
+    sys.path.insert(0, str(HERE))
+    import footprints as FPS
+    import make_fab as MF
+
+    formas = ler_wrl(FPS.LIB3D / "Resistor_SMD.3dshapes" / "R_0402_1005Metric.wrl")
+    fps = MF.footprints()
+    tris: list[np.ndarray] = []
+    cols: list[np.ndarray] = []
+    for ref, (a, b) in MF.VARIANTES["jdi"]["jumpers"].items():
+        (ax, ay), (bx, by) = fps[ref][4][a], fps[ref][4][b]
+        cx, cy = (ax + bx) / 2, (ay + by) / 2
+        comp = math.hypot(bx - ax, by - ay)
+        ca, sa = (bx - ax) / comp, -(by - ay) / comp
+        for malha, cor in formas:
+            tris.extend(np.stack([cx + malha[..., 0] * ca + malha[..., 1] * sa,
+                                  cy - malha[..., 0] * sa + malha[..., 1] * ca,
+                                  FRENTE_Z + malha[..., 2]], axis=-1))
+            cols.extend([np.array(cor)] * len(malha))
+    if not tris:
+        return np.zeros((0, 3, 3)), np.zeros((0, 3))
+    return np.array(tris), np.array(cols)
+
+
 def triangulos(j: dict, bina: bytes,
                fora: frozenset[str] = frozenset()) -> tuple[np.ndarray, np.ndarray]:
     """Every triangle in world space, and the colour of each, but those of
@@ -689,6 +720,10 @@ def main() -> int:
     print("montagem da JDI, sem " + ", ".join(sorted(fora)))
     tris, cols = triangulos(j, bina, fora)
     extra_t, extra_c = caixas_das_pecas(fora)
+    jump_t, jump_c = jumpers_da_montagem()
+    if len(jump_t):
+        extra_t = np.concatenate([extra_t, jump_t])
+        extra_c = np.concatenate([extra_c, jump_c])
     n_corpos = len(extra_t)
     silk_t, silk_c = serigrafia()
     if len(silk_t):
