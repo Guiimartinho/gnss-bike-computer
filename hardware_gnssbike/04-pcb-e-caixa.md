@@ -362,15 +362,17 @@ na faixa de baixo ou na borda, fora da sombra da célula.
 
 ### A ordem de montagem
 
-![Manual de montagem: as peças em escala e os oito passos, do chicote solar ao fechamento do aparelho](../docs/img/manual-de-montagem.svg)
+![Manual de montagem: as peças em escala, o aparelho montado com dois cortes e os oito passos, do chicote solar ao fechamento do aparelho](../docs/img/manual-de-montagem.svg)
 
 O manual sai de [`tools/docs/assembly_manual.py`](../tools/docs/assembly_manual.py)
-e **todas as peças estão em escala**: a caixa de 62 × 106, a placa de 34 × 95,
-o display de 40,08 × 61,8, a célula de 36 × 60, os módulos de 23 × 8 e cada
-conector na posição que ocupa no arquivo da placa. As posições estão
-**escritas no script** (`CONEC`, `TECLAS`, `FUROS`), copiadas do
-`make_pcb.py`, e não lidas do arquivo: quando um conector se move no CAD,
-alguém tem de mover a folha junto (feito em 2026-09-26).
+e **todas as peças estão em escala**: a caixa de 64 × 106 × 18,2, a placa de
+34 × 95, o display de 40,08 × 61,8, a célula de 36 × 60, os módulos de
+23 × 8 e cada conector na posição que ocupa no arquivo da placa. Desde
+2026-10-20 as medidas são **lidas, não copiadas**: a caixa, os bolsos dos
+módulos e a pilha saem da `Caixa` do `make_caixa.py`, e os conectores, as
+teclas e os furos saem do arquivo da placa. Até então as posições estavam
+escritas no script, e a folha ficou um mês com a caixa de 62 × 106 × 17 e os
+conectores de 2026-09-26.
 
 A ordem não é arbitrária. Três coisas a decidem:
 

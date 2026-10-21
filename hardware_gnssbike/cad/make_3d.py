@@ -7,7 +7,11 @@ describes the nodes and the meshes, the binary chunk holds the vertices - and
 rasterises the triangles with a z-buffer, in numpy.
 
 Two pictures come out: the board seen from above, which is the placement, and
-an angled view, which is what the thing looks like.
+an angled view, which is what the thing looks like. They show the board as
+it is built by default, with the JDI display: the parts no build fits (the
+SWD header J202 among them) and the ones only the Sharp build fits are left
+out, as the fabrication files leave them (make_fab.py). The dry run still
+gets every body.
 
 Run: python hardware_gnssbike/cad/make_3d.py
 """
@@ -90,8 +94,18 @@ def matriz(no: dict) -> np.ndarray:
     return m
 
 
-def triangulos(j: dict, bina: bytes) -> tuple[np.ndarray, np.ndarray]:
-    """Every triangle in world space, and the colour of each."""
+def montagem_padrao() -> frozenset[str]:
+    """The parts the pictures leave off: what no build fits, and what only
+    the Sharp build does (make_fab.py)."""
+    import make_fab as MF
+
+    return frozenset(MF.SEM_PECA | MF.VARIANTES["jdi"]["sem_peca"])
+
+
+def triangulos(j: dict, bina: bytes,
+               fora: frozenset[str] = frozenset()) -> tuple[np.ndarray, np.ndarray]:
+    """Every triangle in world space, and the colour of each, but those of
+    the parts in `fora`: kicad-cli names each part's node by its reference."""
     cores = []
     for mat in j.get("materials", []):
         pbr = mat.get("pbrMetallicRoughness", {})
@@ -105,6 +119,8 @@ def triangulos(j: dict, bina: bytes) -> tuple[np.ndarray, np.ndarray]:
 
     def andar(i_no: int, pai: np.ndarray) -> None:
         no = j["nodes"][i_no]
+        if no.get("name") in fora:
+            return
         m = pai @ matriz(no)
         if "mesh" in no:
             for prim in j["meshes"][no["mesh"]].get("primitives", []):
@@ -440,8 +456,9 @@ def pecas_da_caixa(afastar: float = 0.0) -> tuple[np.ndarray, np.ndarray]:
     return np.array(tris), np.array(cols)
 
 
-def caixas_das_pecas() -> tuple[np.ndarray, np.ndarray]:
-    """Bodies for the parts whose footprint was generated here.
+def caixas_das_pecas(fora: frozenset[str] = frozenset()) -> tuple[np.ndarray, np.ndarray]:
+    """Bodies for the parts whose footprint was generated here, but those of
+    the parts in `fora`.
 
     KiCad's GLB carries only the STEP models of the library footprints, so the
     parts drawn in footprints.py - the radio module, the GNSS receiver, the
@@ -475,6 +492,8 @@ def caixas_das_pecas() -> tuple[np.ndarray, np.ndarray]:
     cols: list[np.ndarray] = []
     for f in fp_load.kids(arv, "footprint"):
         nome = f[1]
+        if next((pr[2] for pr in fp_load.kids(f, "property") if pr[1] == "Reference"), "") in fora:
+            continue
         # O corpo sai de tres lugares, nesta ordem: o .wrl que este projeto
         # desenhou, o .wrl da biblioteca do KiCad que o proprio footprint
         # aponta, e - so se nao houver nenhum - a caixa do contorno.
@@ -666,8 +685,10 @@ def main() -> int:
     if glb is None:
         return 1
     j, bina = ler_glb(glb)
-    tris, cols = triangulos(j, bina)
-    extra_t, extra_c = caixas_das_pecas()
+    fora = montagem_padrao()
+    print("montagem da JDI, sem " + ", ".join(sorted(fora)))
+    tris, cols = triangulos(j, bina, fora)
+    extra_t, extra_c = caixas_das_pecas(fora)
     n_corpos = len(extra_t)
     silk_t, silk_c = serigrafia()
     if len(silk_t):

@@ -923,9 +923,11 @@ def placa_3d() -> tuple[np.ndarray, np.ndarray]:
     if glb is None:
         raise SystemExit("sem GLB da placa")
     j, bina = M3.ler_glb(glb)
-    pt, pc = M3.triangulos(j, bina)
+    # the board as it is built by default, as make_3d.py draws it
+    fora = M3.montagem_padrao()
+    pt, pc = M3.triangulos(j, bina, fora)
     pt = np.stack([pt[..., 0] * 1000.0, -pt[..., 1] * 1000.0, pt[..., 2] * 1000.0], axis=-1)
-    extra_t, extra_c = M3.caixas_das_pecas()
+    extra_t, extra_c = M3.caixas_das_pecas(fora)
     silk_t, silk_c = M3.serigrafia()
     partes_t = [pt] + ([extra_t] if len(extra_t) else []) + ([silk_t] if len(silk_t) else [])
     partes_c = [pc] + ([extra_c] if len(extra_c) else []) + ([silk_c] if len(silk_c) else [])

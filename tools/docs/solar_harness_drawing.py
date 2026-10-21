@@ -18,18 +18,29 @@ Three panels:
 
 Everything is in millimetres and every frame carries its own px/mm, so a
 part drawn in two panels is the same part at two scales, never a sketch.
-Numbers come from hardware_gnssbike/06-conectores-e-pontos-de-teste.md,
-from cad/parts.py and from the board file.
+The case and its module pockets are read from make_caixa's Caixa, and J103,
+its contacts and the harvester from the board file; until 2026-10-20 they
+were typed, and the sheet kept the case of 2026-09-26 and showed the 0 ohm
+links on the wrong face. The wiring comes from cad/nets.py and
+hardware_gnssbike/06-conectores-e-pontos-de-teste.md.
 
 Usage: python tools/docs/solar_harness_drawing.py [output.svg]
        (default: docs/img/chicote-solar.svg)
 """
+import math
 import pathlib
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 OUT = (pathlib.Path(sys.argv[1]) if len(sys.argv) > 1
        else ROOT / "docs" / "img" / "chicote-solar.svg")
+sys.path.insert(0, str(ROOT / "hardware_gnssbike" / "caixa"))
+sys.path.insert(0, str(ROOT / "hardware_gnssbike" / "cad"))
+
+import make_caixa as MC  # noqa: E402
+
+PECAS = MC.ler_placa()               # board frame: x right, y down, mm
+CAIXA = MC.Caixa(PECAS)              # case frame
 
 CANVAS_W, CANVAS_H = 2380, 1320
 FONT = "Inter, 'Segoe UI', Roboto, Arial, sans-serif"
@@ -140,26 +151,36 @@ rotulo(40, 84, "GNSS Bike Computer · placa gnssbike · conector J103 · desenho
 
 # ============================================================== A · a caixa
 AX, AY, AW, AH = 40, 112, 500, 1156
+W_C, H_C = MC.W_C, MC.H_C
 moldura(AX, AY, AW, AH, "A · Onde fica cada módulo",
-        "a caixa vista de frente, 62 × 106 mm")
+        f"a caixa vista de frente, {W_C:g} × {H_C:g} mm")
 
 SA = 5.4
-cv = View(AX + (AW - 62 * SA) / 2, AY + 150, SA)
-cv.rect(0, 0, 62, 106, 7, fill="#eceef1", stroke="#aab0b8", stroke_width=0.5)
-cv.rect(0.6, 17.5, 6.2, 55.0, 2.8, fill="#e0e3e8", stroke="#b6bcc4", stroke_width=0.35)
-cv.rect(55.2, 17.5, 6.2, 55.0, 2.8, fill="#e0e3e8", stroke="#b6bcc4", stroke_width=0.35)
-cv.rect(9.0, 12.0, 44.0, 60.0, 1.2, fill="#d3d7dc", stroke="#aab0b8", stroke_width=0.35)
-cv.text(31.0, 43.0, "display", 16, "#868c94", "middle")
-cv.rect(7.5, 74.6, 47.0, 14.2, 1.6, fill="#e0e3e8", stroke="#b6bcc4", stroke_width=0.35)
+cv = View(AX + (AW - W_C * SA) / 2, AY + 150, SA)
+cv.rect(0, 0, W_C, H_C, MC.R_C, fill="#eceef1", stroke="#aab0b8", stroke_width=0.5)
+for bx in (0.0, W_C - MC.CHANFRO):
+    cv.rect(bx, MC.CHANFRO_Y[0], MC.CHANFRO, MC.CHANFRO_Y[1] - MC.CHANFRO_Y[0], 0.0,
+            fill="#e0e3e8", stroke="#b6bcc4", stroke_width=0.35)
+dx0, dy0, dx1, dy1 = CAIXA.display
+cv.rect(dx0, dy0, dx1 - dx0, dy1 - dy0, 1.2, fill="#d3d7dc", stroke="#aab0b8", stroke_width=0.35)
+cv.text((dx0 + dx1) / 2, (dy0 + dy1) / 2, "display", 16, "#868c94", "middle")
+fx0, fy0, fx1, fy1 = CAIXA.faceta
+cv.rect(fx0, fy0, fx1 - fx0, fy1 - fy0, 1.6, fill="#e0e3e8", stroke="#b6bcc4", stroke_width=0.35)
 
-MODULOS_NA_CAIXA = (
-    (0.95, 21.5, 5.5, 23.0, "PV103", COR["pv_b"], "esq"),
-    (0.95, 45.5, 5.5, 23.0, "PV104", COR["pv_b"], "esq"),
-    (55.55, 21.5, 5.5, 23.0, "PV105", COR["pv_c"], "dir"),
-    (55.55, 45.5, 5.5, 23.0, "PV106", COR["pv_c"], "dir"),
-    (7.9, 77.6, 23.0, 8.0, "PV101", COR["pv_a"], "baixo"),
-    (31.1, 77.6, 23.0, 8.0, "PV102", COR["pv_a"], "baixo"),
-)
+# the modules where the case's pockets hold them: two in the facet, two
+# along each bevel, lying across its 45-degree face (so 8 mm across the
+# face shows as 8 / sqrt(2) from the front)
+MODULOS_NA_CAIXA = []
+for b, ref in zip(CAIXA.bolsos_faceta, ("PV101", "PV102")):
+    cxm, cym = (b[0] + b[2]) / 2, (b[1] + b[3]) / 2
+    MODULOS_NA_CAIXA.append((cxm - MOD_W / 2, cym - MOD_H / 2, MOD_W, MOD_H, ref, COR["pv_a"], "baixo"))
+meia = MOD_H / 2 / math.sqrt(2)
+for (lado, ya, yb), ref in zip(CAIXA.modulos_chanfro, ("PV103", "PV104", "PV105", "PV106")):
+    xm = MC.CHANFRO / 2 if lado == "L" else W_C - MC.CHANFRO / 2
+    ym = (ya + yb) / 2
+    MODULOS_NA_CAIXA.append((xm - meia, ym - MOD_W / 2, 2 * meia, MOD_W, ref,
+                             COR["pv_b"] if lado == "L" else COR["pv_c"],
+                             "esq" if lado == "L" else "dir"))
 for x0, y0, w, h, ref, cor, lado in MODULOS_NA_CAIXA:
     cv.rect(x0, y0, w, h, 0.5, fill="#12161d", stroke=cor, stroke_width=0.8)
     if lado == "esq":
@@ -167,14 +188,14 @@ for x0, y0, w, h, ref, cor, lado in MODULOS_NA_CAIXA:
                 stroke=cor, stroke_width=0.35)
         cv.text(-6.0, y0 + h / 2 + 1.4, ref, 16, cor, "end", 700)
     elif lado == "dir":
-        cv.poly([(x0 + w + 0.6, y0 + h / 2), (67.0, y0 + h / 2)], fill="none",
+        cv.poly([(x0 + w + 0.6, y0 + h / 2), (W_C + 5.0, y0 + h / 2)], fill="none",
                 stroke=cor, stroke_width=0.35)
-        cv.text(68.0, y0 + h / 2 + 1.4, ref, 16, cor, "start", 700)
+        cv.text(W_C + 6.0, y0 + h / 2 + 1.4, ref, 16, cor, "start", 700)
     else:
-        cv.text(x0 + w / 2, y0 + h + 5.0, ref, 16, cor, "middle", 700)
+        cv.text(x0 + w / 2, y0 - 1.6, ref, 16, cor, "middle", 700)
 
 y = AY + 880
-for cor, txt in ((COR["pv_a"], "frente inclinada → <tspan font-weight='700'>PV_A</tspan>"),
+for cor, txt in ((COR["pv_a"], "faceta, abaixo das teclas → <tspan font-weight='700'>PV_A</tspan>"),
                  (COR["pv_b"], "chanfro esquerdo → <tspan font-weight='700'>PV_B</tspan>"),
                  (COR["pv_c"], "chanfro direito → <tspan font-weight='700'>PV_C</tspan>")):
     add(f'<rect x="{AX + 30}" y="{y - 13}" width="34" height="7" rx="3.5" fill="{cor}"/>')
@@ -186,9 +207,9 @@ rotulo(AX + 30, y + 40, "render com o guidão apontando para qualquer lado.", 16
        COR["fraco"])
 rotulo(AX + 30, y + 78, "Os seis ficam EM PARALELO, e não é escolha:", 16,
        COR["texto"], weight=700)
-rotulo(AX + 30, y + 102, "cada módulo abre em 2,07 V e o MPPT do colhedor", 16,
+rotulo(AX + 30, y + 102, "cada módulo abre em 2,07 V e o colhedor, o ADP5091,", 16,
        COR["texto"])
-rotulo(AX + 30, y + 126, "rastreia até 2,73 V. Dois em série dariam 4,14 V.", 16,
+rotulo(AX + 30, y + 126, "vai até 3,3 V na entrada. Dois em série dariam 4,14 V.", 16,
        COR["texto"])
 
 # ============================================================= B · o chicote
@@ -278,75 +299,79 @@ rotulo(BX + 40, BY + BH - 16,
 
 # ============================================================== C · a placa
 CX, CY, CW, CH = 1730, 112, 610, 1156
+PCB_W, PCB_H = MC.PLACA_W, MC.PLACA_H
 moldura(CX, CY, CW, CH, "C · Onde entra na placa",
-        "placa 34 × 95 mm · J103 no verso, em pé na borda esquerda")
+        f"placa {PCB_W:g} × {PCB_H:g} mm · J103 no verso, em pé na borda esquerda")
 
 SC = 5.6
-bv = View(CX + 40, CY + 150, SC)
-bv.rect(0, 0, 34, 95, 2.5, fill=COR["placa"], stroke="#1f4a28", stroke_width=0.4)
-bv.text(17, -4.0, "vista por tras (a placa virada)", 16, COR["fraco"], "middle")
+bv = View(CX + 40, CY + 130, SC)
+bv.rect(0, 0, PCB_W, PCB_H, 2.0, fill=COR["placa"], stroke="#1f4a28", stroke_width=0.4)
+bv.text(PCB_W / 2, -4.0, "vista por trás (a placa virada)", 16, COR["fraco"], "middle")
 
-# J103 sits at (4,9; 75,2) of the board, on the BACK, mouth to the board's
-# left edge (make_pcb.BORDA_FIXA, 2026-09-26). Seen from the back the board
-# is mirrored: the connector shows at x = 34 - 4,9 and its mouth points to
-# the right of this view, which is the board's left edge.
-JX, JY = 34.0 - 4.9, 75.2
-bv.rect(JX - 3.5, JY - ZH_L / 2, 7.0, ZH_L, 0.6, fill="#e9e4d7", stroke="#9a9488",
+# J103 is on the BACK, mouth to the board's left edge. Seen from the back the
+# board is mirrored in x: the connector shows on the right, its mouth to the
+# right of this view, and its contacts where the board file has them -
+# contact 1, PV_A, at the bottom
+j103 = PECAS["J103"]
+jx0, jy0, jx1, jy1 = j103["caixa"]
+bv.rect(PCB_W - jx1, jy0, jx1 - jx0, jy1 - jy0, 0.6, fill="#e9e4d7", stroke="#9a9488",
         stroke_width=0.35)
-for i, cor in enumerate((COR["pv_a"], COR["pv_b"], COR["pv_c"], COR["gnd"])):
-    bv.circle(JX - 1.0, JY - 2.25 + i * ZH_PASSO, 0.45, fill=cor)
-bv.text(JX, JY - 6.0, "J103", 17, "#f0f4f0", "middle", 700)
+CONTATO = {"PV_A": COR["pv_a"], "PV_B": COR["pv_b"], "PV_C": COR["pv_c"], "GND": COR["gnd"]}
+for pd in j103["pads"]:
+    if pd["rede"] in CONTATO:
+        bv.circle(PCB_W - pd["x"], pd["y"], 0.45, fill=CONTATO[pd["rede"]])
+bv.text(PCB_W - (jx0 + jx1) / 2, jy0 - 1.6, "J103", 17, "#f0f4f0", "middle", 700)
 # por onde o cabo entra
-bv.poly([(37.4, JY), (34.0, JY)], fill="none", stroke="#2b2b2b", stroke_width=0.3)
-bv.poly([(34.0, JY), (35.4, JY - 0.9), (35.4, JY + 0.9), (34.0, JY)],
+JY = j103["y"]
+bv.poly([(PCB_W + 3.4, JY), (PCB_W, JY)], fill="none", stroke="#2b2b2b", stroke_width=0.3)
+bv.poly([(PCB_W, JY), (PCB_W + 1.4, JY - 0.9), (PCB_W + 1.4, JY + 0.9), (PCB_W, JY)],
         fill="#2b2b2b", stroke="none")
-bv.text(38.2, JY - 0.4, "o cabo do", 15, "#2b2b2b", "start", 700)
-bv.text(38.2, JY + 3.4, "painel entra", 15, "#2b2b2b", "start", 700)
-bv.text(38.2, JY + 7.2, "por aqui", 15, "#2b2b2b", "start", 700)
+bv.text(PCB_W + 4.2, JY - 0.4, "o cabo do", 15, "#2b2b2b", "start", 700)
+bv.text(PCB_W + 4.2, JY + 3.4, "painel entra", 15, "#2b2b2b", "start", 700)
+bv.text(PCB_W + 4.2, JY + 7.2, "por aqui", 15, "#2b2b2b", "start", 700)
 
-# os tres 0 ohm e o caminho ate o colhedor
-for i, cor in enumerate((COR["pv_a"], COR["pv_b"], COR["pv_c"])):
-    yy = JY - 2.25 + i * ZH_PASSO
-    bv.poly([(JX - 3.7, yy), (23.0, yy)], fill="none", stroke=cor, stroke_width=0.35)
-    bv.rect(21.2, yy - 0.5, 1.8, 1.0, 0.15, fill="#d2d6dc", stroke=cor,
-            stroke_width=0.2)
-bv.text(22.1, JY + 8.6, "R113 · R114 · R115", 15, "#e4efe4", "middle", 700)
-bv.text(22.1, JY + 12.2, "0 Ω, um por face", 14, "#bdd3be", "middle")
-bv.poly([(20.8, JY), (17.0, JY), (17.0, 20.0), (13.6, 20.0)], fill="none",
-        stroke=COR["cobre"], stroke_width=0.55, stroke_linejoin="round")
-bv.rect(9.6, 18.0, 4.0, 4.0, 0.3, fill="#1b1d21", stroke="#454b53", stroke_width=0.25)
-bv.text(11.6, 15.6, "ADP5091", 15, "#e4efe4", "middle", 700)
-bv.text(11.6, 25.6, "colhedor", 14, "#bdd3be", "middle")
+# the harvester is on the FRONT: seen through the board, dashed
+u103 = PECAS["U103"]
+ux0, uy0, ux1, uy1 = u103["caixa"]
+bv.rect(PCB_W - ux1, uy0, ux1 - ux0, uy1 - uy0, 0.3, fill="none", stroke="#e4efe4",
+        stroke_width=0.3, stroke_dasharray="0.8 0.6")
+bv.text(PCB_W - ux1, uy0 - 1.6, "ADP5091 (U103)", 15, "#e4efe4", "start", 700)
+bv.text(PCB_W - ux1, uy1 + 4.0, "na frente", 14, "#bdd3be", "start")
 
 # o conector ampliado, abaixo da placa
-rotulo(CX + 40, CY + 690, "O conector, ampliado 4,8 ×", 20, "#111", weight=700)
-rotulo(CX + 40, CY + 716, "JST S4B-ZR-SM4A-TF na placa · ZH de 1,5 mm · 4 vias",
+SZ = 20.0
+rotulo(CX + 40, CY + 696, f"O conector, ampliado {SZ / 5.0:.1f} ×".replace(".", ","), 20, "#111",
+       weight=700)
+rotulo(CX + 40, CY + 720, "JST S4B-ZR-SM4A-TF na placa · ZH de 1,5 mm · 4 vias",
        16, COR["fraco"])
 
-SZ = 24.0
-zv = View(CX + 70, CY + 760, SZ)
+zv = View(CX + 70, CY + 748, SZ)
 zv.rect(0, 0, ZH_P, ZH_L, 0.6, fill="#e9e4d7", stroke="#9a9488", stroke_width=0.1)
-for i, (cor, nome) in enumerate(((COR["pv_a"], "1 · PV_A · frente inclinada"),
-                                 (COR["pv_b"], "2 · PV_B · chanfro esquerdo"),
+# in the same orientation as the board view above: contact 4 on top, 1 below
+for i, (cor, nome) in enumerate(((COR["gnd"], "4 · GND · os seis negativos"),
                                  (COR["pv_c"], "3 · PV_C · chanfro direito"),
-                                 (COR["gnd"], "4 · GND · os seis negativos"))):
+                                 (COR["pv_b"], "2 · PV_B · chanfro esquerdo"),
+                                 (COR["pv_a"], "1 · PV_A · faceta"))):
     yy = (ZH_L - 3 * ZH_PASSO) / 2 + i * ZH_PASSO
     zv.circle(ZH_P / 2, yy, 0.38, fill=cor, stroke="#ffffff", stroke_width=0.05)
     zv.poly([(ZH_P / 2, yy), (ZH_P + 1.2, yy)], fill="none", stroke=cor,
             stroke_width=0.09)
     zv.text(ZH_P + 1.6, yy + 0.24, nome, 18, COR["texto"], "start", 600)
 
+rotulo(CX + 40, CY + CH - 244,
+       "Na frente da placa, junto do J103, um 0 Ω por face", 16, COR["texto"])
+rotulo(CX + 40, CY + CH - 220,
+       "liga o grupo ao colhedor: R113 a faceta, R114 o", 16, COR["texto"])
 rotulo(CX + 40, CY + CH - 196,
-       "Os três 0 Ω não são enfeite: abrindo um deles, mede-se", 16, COR["texto"])
+       "chanfro esquerdo, R115 o direito. Abrindo um deles,", 16, COR["texto"])
 rotulo(CX + 40, CY + CH - 172,
-       "UMA face sozinha no sol. Com um fio de positivo só, os", 16, COR["texto"])
+       "mede-se UMA face sozinha no sol; com um fio de", 16, COR["texto"])
 rotulo(CX + 40, CY + CH - 148,
-       "seis dariam um número e nunca se saberia qual face", 16, COR["texto"])
-rotulo(CX + 40, CY + CH - 124, "está rendendo.", 16, COR["texto"])
-rotulo(CX + 40, CY + CH - 86,
+       "positivo só, nunca se saberia qual face está rendendo.", 16, COR["texto"])
+rotulo(CX + 40, CY + CH - 110,
        "O conector da bateria é de outra família de propósito", 16, COR["texto"])
-rotulo(CX + 40, CY + CH - 62,
-       "(JST GH de 1,25 mm): os dois não entram um no outro.", 16, COR["texto"])
+rotulo(CX + 40, CY + CH - 86,
+       "(JST SH de 1,0 mm): os dois não entram um no outro.", 16, COR["texto"])
 rotulo(CX + 40, CY + CH - 26,
        "A ordem das quatro vias ainda não foi conferida contra", 16, COR["pv_a"],
        weight=700)
