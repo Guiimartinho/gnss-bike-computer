@@ -362,18 +362,33 @@ python hardware_gnssbike/cad/make_fab.py              # as BOMs
 python hardware_gnssbike/cad/mouser.py jdi 2          # tela e numero de placas
 ```
 
-O resultado vai para `hardware_gnssbike/fabricacao/`: `mouser-<tela>.csv`, no
-formato que a ferramenta de BOM da Mouser aceita, e `lcsc-<tela>.csv`, no da
-LCSC, com o que a Mouser não vende ou não tem em estoque (pedido com prazo de
-três meses a um ano não serve). O que vem da DigiKey ou de outra loja sai na
-tela, com o código. Os passivos levam cinco de sobra, com mínimo de dez, e a
-LCSC arredonda cada linha ao lote mínimo dela. Medido em 2026-10-19, para
-duas placas:
+O resultado vai para `hardware_gnssbike/fabricacao/`, um arquivo por loja:
 
-| Tela | Linhas na Mouser | Total na Mouser, no preço da quantidade | Linhas na LCSC |
-|---|---|---|---|
-| JDI | 56 | US$ 110,09 | 10 |
-| Sharp com a luz do Azumo | 58 | US$ 115,25 | 10 |
+- `mouser-<tela>.csv`, no formato que a ferramenta de BOM da Mouser aceita,
+  com uma linha por peça, como o projeto da Mouser as junta;
+- `lcsc-<tela>.xlsx`, para a ferramenta de BOM da LCSC, com o que a Mouser
+  não vende ou não tem em estoque (pedido com prazo de três meses a um ano
+  não serve);
+- `digikey-<tela>.xlsx`, para o BOM Manager da DigiKey.
+
+As duas últimas são `.xlsx`: as duas ferramentas aceitam, e o Excel em
+português abre a planilha em colunas, onde um CSV com vírgula cai numa
+coluna só. O número do cliente de cada linha leva "GNSS Bike" e os
+designadores, e sai no pedido. O que nenhuma das três lojas vende aparece
+só na tela. Os passivos levam cinco de sobra, com mínimo de dez, e a LCSC
+arredonda cada linha ao lote mínimo dela. Medido em 2026-10-20, para duas
+placas:
+
+| Tela | Linhas na Mouser | Total na Mouser, no preço da quantidade | Linhas na LCSC | Linhas na DigiKey |
+|---|---|---|---|---|
+| JDI | 56 | US$ 134,83 | 10 | 3 |
+| Sharp com a luz do Azumo | 58 | US$ 139,98 | 10 | 4 |
+
+Na DigiKey vão a MX25R6435F (`U501`), o módulo `U201` (no Marketplace da
+DigiKey, enviado pela MinewSemi em uns nove dias), as células solares e,
+na montagem da Sharp, o módulo Azumo. A tela JDI só se compra fora das três
+lojas. O projeto "GNSS BIKE" que o dono montou na Mouser em 2026-10-20
+tem as mesmas 56 linhas da JDI com mais sobra, e soma US$ 202,06.
 
 Trocado só na Mouser, com o mesmo valor, tamanho e tolerância, porque o
 fabricante da peça da LCSC estava sem estoque lá: o 4,87 kΩ (Panasonic
@@ -403,10 +418,11 @@ Life") e foi trocado acima. Para o ADP5091ACPZ-2-R7 (`U103`) e o
 MAX17262REWL+T (`U102`), a API da Mouser não dá status nenhum, a página da
 ADI os dá em produção (cópias do Internet Archive de 2025 e de fevereiro de
 2026, porque o site da ADI recusou a conexão) e a DigiKey os tem como
-ativos. Os dois vão pela DigiKey, sem mudar a placa:
-505-ADP5091ACPZ-2-R7CT-ND (806 a US$ 8,81; a Mouser tinha 9, sem estoque de
-fábrica) e 175-MAX17262REWL+TCT-ND (18.827 a US$ 4,10). As trocas que a
-Mouser tem mudam o projeto:
+ativos. Os dois ficam na Mouser: o dono os manteve lá em 2026-10-20, quando
+ela tinha 9 e 722 e a exportação do projeto não marcava vida útil em linha
+nenhuma. Se faltarem, a DigiKey tem os mesmos: 505-ADP5091ACPZ-2-R7CT-ND
+(806 a US$ 8,81) e 175-MAX17262REWL+TCT-ND (18.827 a US$ 4,10), em
+2026-10-19. As trocas que a Mouser tem mudam o projeto:
 
 - o MAX17262HEWL+T, no mesmo WLP de 9 esferas, mede com 30 mΩ em vez de 7.
   Ele é feito para células de 30 mAh a 2 Ah e aguenta 0,69 A contínuos,

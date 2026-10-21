@@ -115,21 +115,21 @@ MOUSER: dict[str, tuple[str, str, str]] = {
     "C88374": ("Hirose", "U.FL-R-SMT-1(10)", "codigo da Mouser"),
 }
 
-# Bought at DigiKey whatever Mouser shows. The MX25R6435F: Mouser had none
-# and LCSC 2, at US$ 6.30, on 2026-10-19. The two ADI parts: Mouser's BOM
-# tool flagged them obsolete that day, though its search API gives them no
-# lifecycle status, ADI lists them in production and DigiKey as active.
-# The swaps Mouser has change the board: the MAX17262HEWL senses with 30
-# mOhm, not 7 (0.69 A continuous, for cells up to 2 Ah, where ours is
-# 2000 mAh charged at 600 mA, and the driver's current scale changes), and
-# the ADP5091ACPZ-1 peaks at 200 mA of input against the -2's 300.
-DIGIKEY: dict[str, tuple[str, str]] = {
-    "C2802844": ("1092-1200-ND", "2.478 na DigiKey em 2026-10-19, a US$ 3,29 (MX25R6435FM2IL0, em tubo); "
-                                 "a LCSC tinha 2, a US$ 6,30"),
-    "C579259": ("505-ADP5091ACPZ-2-R7CT-ND", "806 na DigiKey em 2026-10-19, a US$ 8,81, ativa; "
-                                             "a Mouser tinha 9 e a marca como obsoleta"),
-    "C5328777": ("175-MAX17262REWL+TCT-ND", "18.827 na DigiKey em 2026-10-19, a US$ 4,10, ativa; "
-                                            "a Mouser a marca como obsoleta"),
+# Bought at DigiKey whatever Mouser shows: the MX25R6435F, of which Mouser
+# had none and LCSC 2, at US$ 6.30, on 2026-10-19.
+#
+# The ADP5091ACPZ-2-R7 and the MAX17262REWL+T stay at Mouser, though its
+# BOM tool flagged them obsolete on 2026-10-19: its search API gives them
+# no lifecycle status, ADI lists them in production, DigiKey as active, and
+# the owner kept them there on 2026-10-20, with 9 and 722 in stock. The
+# swaps Mouser has change the board: the MAX17262HEWL senses with 30 mOhm,
+# not 7 (0.69 A continuous, for cells up to 2 Ah, where ours is 2000 mAh
+# charged at 600 mA, and the driver's current scale changes), and the
+# ADP5091ACPZ-1 peaks at 200 mA of input against the -2's 300.
+# (DigiKey code, the part number DigiKey sells under it, note)
+DIGIKEY: dict[str, tuple[str, str, str]] = {
+    "C2802844": ("1092-1200-ND", "MX25R6435FM2IL0",
+                 "em tubo; 2.438 na DigiKey em 2026-10-20, a US$ 3,29; a LCSC tinha 2, a US$ 6,30"),
 }
 
 # Not sold by Mouser: why, and LCSC is where it comes from. On 2026-10-19
@@ -144,13 +144,21 @@ FORA_DA_MOUSER: dict[str, str] = {
     "C6569550": "antena de chip Unictron; LCSC",
 }
 
-# Parts with no LCSC code, and the ones that live off the board
-SEM_LCSC: dict[str, tuple[str, str, str]] = {
-    "U201": ("MinewSemi", "ME54BS13-1Y20TI", "DigiKey 6024-ME54BS13-1Y20TITR-ND ou a loja da MinewSemi"),
+# Parts with no LCSC code: maker, part, DigiKey code and the note
+SEM_LCSC: dict[str, tuple[str, str, str, str]] = {
+    "U201": ("MinewSemi", "ME54BS13-1Y20TI", "6024-ME54BS13-1Y20TITR-ND",
+             "Marketplace da DigiKey, enviado pela MinewSemi em uns 9 dias (45 em 2026-10-20); "
+             "ou a loja da MinewSemi"),
 }
-FORA_DA_PLACA: list[tuple[str, str, str, int, str]] = [
-    ("PV101 a PV106", "ANYSOLAR", "KXOB25-05X3F-TR", 6, "DigiKey KXOB25-05X3FCT-ND"),
-    ("DS401 (tela JDI)", "JDI", "LPM027M128C", 1, "fora de venda: AliExpress, sem garantia"),
-    ("DS402 (tela Sharp)", "Sharp", "LS027B7DH01A", 1, "DigiKey 425-2908-ND"),
-    ("DS402 com luz", "Azumo", "11103-06", 1, "DigiKey 2004-11103-06_A1-ND"),
+# The parts that live off the board: refs, maker, part, per board, DigiKey
+# code ("" where DigiKey is not the place), the note, and the display
+# builds that take it. The Sharp build takes the Azumo module, which is the
+# Sharp with its front light in one part; the bare Sharp is only for a
+# build without the light.
+FORA_DA_PLACA: list[tuple[str, str, str, int, str, str, tuple[str, ...]]] = [
+    ("PV101 a PV106", "ANYSOLAR", "KXOB25-05X3F-TR", 6, "KXOB25-05X3FCT-ND", "", ("jdi", "sharp")),
+    ("DS401 (tela JDI)", "JDI", "LPM027M128C", 1, "", "fora de venda: AliExpress, sem garantia", ("jdi",)),
+    ("DS402 (Sharp com luz)", "Azumo", "11103-06", 1, "2004-11103-06_A1-ND", "", ("sharp",)),
+    ("DS402 (Sharp sem luz)", "Sharp", "LS027B7DH01A", 1, "",
+     "DigiKey 425-2908-ND, so numa montagem sem a luz, no lugar do Azumo", ("sharp",)),
 ]

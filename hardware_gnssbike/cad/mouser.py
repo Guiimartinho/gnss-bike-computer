@@ -4,15 +4,18 @@ Each BOM line goes to its manufacturer part number (mpn.py), the Mouser
 search API gives the Mouser number, the stock and the price breaks, and a
 CSV for Mouser's BOM tool comes out with the quantity for the boards asked
 and the price at that quantity. What Mouser does not sell, or has no stock
-of, goes to a CSV for LCSC's BOM tool, by the LCSC code the BOM already
-carries, and LCSC rounds each line up to its own minimum; the few parts
-that come from DigiKey or elsewhere are printed with their codes.
+of, goes to a spreadsheet for LCSC's BOM tool, by the LCSC code the BOM
+already carries, and LCSC rounds each line up to its own minimum; what is
+bought at DigiKey goes to one for DigiKey's, by its code. Both are .xlsx,
+which the two tools take and Excel opens the same in any language: a CSV
+opens in one column where the list separator is ';', as in Brazil. What
+none of the three sells is printed.
 
 Each Mouser line carries the lifecycle status the API gives, and the parts
 on their way out (end of life, obsolete, not for new designs) are listed
 at the end, to be swapped or sent elsewhere in mpn.py. The API is not the
 last word: on 2026-10-19 Mouser's BOM tool flagged two parts obsolete that
-it gave no status at all (mpn.DIGIKEY).
+it gave no status at all (mpn.py, above DIGIKEY).
 
 The API key is personal: it is read from MOUSER_API_KEY or from
 .claude/local/mouser_api_key, which git does not see, and it is never
@@ -31,6 +34,9 @@ import re
 import sys
 import time
 import urllib.request
+
+import openpyxl
+from openpyxl.styles import Font
 
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -101,6 +107,21 @@ def quantidade(refs: list[str], placas: int, p: dict | None) -> int:
     return q
 
 
+def planilha(caminho: pathlib.Path, cabecalho: list[str], linhas: list[list]) -> None:
+    """An .xlsx with the header in bold and columns wide enough to read."""
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "GNSS Bike"
+    ws.append(cabecalho)
+    for c in ws[1]:
+        c.font = Font(bold=True)
+    for ln in linhas:
+        ws.append(ln)
+    for col in ws.columns:
+        ws.column_dimensions[col[0].column_letter].width = min(60, max(len(str(c.value or "")) for c in col) + 2)
+    wb.save(caminho)
+
+
 def main() -> int:
     variante = sys.argv[1] if len(sys.argv) > 1 else "jdi"
     placas = int(sys.argv[2]) if len(sys.argv) > 2 else 2
@@ -108,33 +129,43 @@ def main() -> int:
     if not bom.exists():
         raise SystemExit(f"falta {bom.name}: rode make_fab.py antes")
     linhas = list(csv.DictReader(open(bom, encoding="utf-8")))
-    pedidos, fora, digikey = [], [], []
+    pedidos, pela_lcsc, digikey, outras = [], [], [], []
     for ln in linhas:
         refs = ln["Designator"].split(",")
         lcsc = ln["LCSC Part #"]
         if not lcsc:
             for ref in refs:
                 if ref in MPN.SEM_LCSC:
-                    fab, num, onde = MPN.SEM_LCSC[ref]
-                    fora.append((ref, fab, num, len(refs) * placas, onde, ""))
+                    fab, num, codigo, nota = MPN.SEM_LCSC[ref]
+                    (digikey if codigo else outras).append((ref, codigo, fab, num, placas, nota))
             continue
         if lcsc in MPN.FORA_DA_MOUSER:
             fab, num = MPN.MPN[lcsc]
-            fora.append((",".join(refs), fab, num, len(refs) * placas, MPN.FORA_DA_MOUSER[lcsc], lcsc))
+            pela_lcsc.append((lcsc, quantidade(refs, placas, None), fab, num, ",".join(refs),
+                              MPN.FORA_DA_MOUSER[lcsc]))
             continue
         if lcsc in MPN.DIGIKEY:
-            fab, num = MPN.MPN[lcsc]
-            codigo, nota = MPN.DIGIKEY[lcsc]
+            fab = MPN.MPN[lcsc][0]
+            codigo, num, nota = MPN.DIGIKEY[lcsc]
             digikey.append((",".join(refs), codigo, fab, num, len(refs) * placas, nota))
             continue
         fab, num = MPN.MPN[lcsc]
         nota = ""
         if lcsc in MPN.MOUSER:
             fab, num, nota = MPN.MOUSER[lcsc]
+        # BOM lines that differ only by footprint name are one part to buy,
+        # and Mouser's BOM tool joins them anyway
+        igual = next((p for p in pedidos if p["mpn"] == num), None)
+        if igual:
+            igual["refs"] += refs
+            continue
         pedidos.append({"refs": refs, "fab": fab, "mpn": num, "lcsc": lcsc, "nota": nota})
+    for refs, fab, num, por_placa, codigo, nota, telas in MPN.FORA_DA_PLACA:
+        if variante in telas:
+            (digikey if codigo else outras).append((refs, codigo, fab, num, por_placa * placas, nota))
     achados = consultar([p["mpn"] for p in pedidos])
     total, n_mouser = 0.0, 0
-    lcsc, saindo = [], []
+    saindo = []
     saida = SAIDA / f"mouser-{variante}.csv"
     with open(saida, "w", encoding="utf-8", newline="") as f:
         w = csv.writer(f)
@@ -151,8 +182,8 @@ def main() -> int:
                 motivo = (f"Mouser sem estoque ({estoque}, prazo {m.get('LeadTime') or '?'})" if m
                           else "nao achado na Mouser")
                 fab, num = MPN.MPN[p["lcsc"]]
-                lcsc.append((p["lcsc"], quantidade(p["refs"], placas, None), fab, num,
-                             ",".join(p["refs"]), motivo))
+                pela_lcsc.append((p["lcsc"], quantidade(p["refs"], placas, None), fab, num,
+                                  ",".join(p["refs"]), motivo))
                 continue
             un = preco(m, q)
             total += un * q
@@ -163,31 +194,33 @@ def main() -> int:
             w.writerow([m["MouserPartNumber"], m["ManufacturerPartNumber"], m.get("Manufacturer", p["fab"]), q,
                         f"{un:.4f}", f"{un * q:.2f}", estoque, m.get("LeadTime") or "", ciclo,
                         ",".join(p["refs"]), (m.get("Description") or "")[:80], p["nota"]])
-    for refs, fab, num, q, onde, codigo in fora:
-        if codigo:
-            lcsc.append((codigo, quantidade(refs.split(","), placas, None), fab, num, refs, onde))
-        else:
-            digikey.append((refs, "", fab, num, q, onde))
-    saida_lcsc = SAIDA / f"lcsc-{variante}.csv"
-    with open(saida_lcsc, "w", encoding="utf-8", newline="") as f:
-        w = csv.writer(f)
-        w.writerow(["LCSC Part Number", "Quantity", "Manufacturer", "Manufacturer Part Number",
-                    "Customer Part Number", "Note"])
-        for linha in sorted(lcsc, key=lambda x: x[4]):
-            w.writerow(linha)
+    # the customer number goes on the order and on the bags: the project's
+    # name and the designators
+    pela_lcsc.sort(key=lambda x: x[4])
+    saida_lcsc = SAIDA / f"lcsc-{variante}.xlsx"
+    planilha(saida_lcsc, ["LCSC Part Number", "Quantity", "Manufacturer", "Manufacturer Part Number",
+                          "Customer Part Number", "Note"],
+             [[codigo, q, fab, num, f"GNSS Bike {refs}", motivo]
+              for codigo, q, fab, num, refs, motivo in pela_lcsc])
+    saida_dk = SAIDA / f"digikey-{variante}.xlsx"
+    planilha(saida_dk, ["Digi-Key Part Number", "Manufacturer Part Number", "Manufacturer", "Quantity",
+                        "Customer Reference", "Reference Designator", "Note"],
+             [[codigo, num, fab, q, f"GNSS Bike {refs}", refs, nota]
+              for refs, codigo, fab, num, q, nota in digikey])
     print(f"{saida.name}: {n_mouser} linhas para {placas} placa(s), {variante}; "
           f"US$ {total:.2f} nos precos da quantidade")
     for refs, num, ciclo in saindo:
         print(f"    ATENCAO {refs}: {num} esta '{ciclo}' na Mouser; troque ou mande para outra loja em mpn.py")
-    print(f"{saida_lcsc.name}: {len(lcsc)} linhas, o que a Mouser nao vende ou nao tem em estoque "
+    print(f"{saida_lcsc.name}: {len(pela_lcsc)} linhas, o que a Mouser nao vende ou nao tem em estoque "
           f"(a LCSC arredonda cada uma ao lote minimo dela):")
-    for codigo, q, fab, num, refs, motivo in sorted(lcsc, key=lambda x: x[4]):
+    for codigo, q, fab, num, refs, motivo in pela_lcsc:
         print(f"    {refs}: {codigo} {fab} {num} x{q} - {motivo}")
-    print("  DigiKey e outras lojas:")
-    for refs, codigo, fab, num, q, onde in digikey:
-        print(f"    {refs}: {fab} {num} x{q}{' (' + codigo + ')' if codigo else ''} - {onde}")
-    for refs, fab, num, q, onde in MPN.FORA_DA_PLACA:
-        print(f"    {refs} (fora da placa): {fab} {num} x{q * placas} - {onde}")
+    print(f"{saida_dk.name}: {len(digikey)} linhas:")
+    for refs, codigo, fab, num, q, nota in digikey:
+        print(f"    {refs}: {codigo} {fab} {num} x{q}{' - ' + nota if nota else ''}")
+    print("  Outras lojas:")
+    for refs, codigo, fab, num, q, nota in outras:
+        print(f"    {refs}: {fab} {num} x{q} - {nota}")
     return 0
 
 
