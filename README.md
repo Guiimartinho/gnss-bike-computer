@@ -19,7 +19,7 @@
 O projeto leva para o nRF Connect SDK o **stravaV10**, firmware aberto de Vincent Gollé para a placa **myStravaB V3**: um aparelho em retrato com LCD de memória Sharp, GNSS MediaTek, barômetro, acelerômetro, medidor de bateria, microSD e rádio BLE + ANT+. O código original fica em [`legacy/`](legacy/) como referência de comportamento; o port em C puro sobre Zephyr fica em [`zephyr_app/`](zephyr_app/) e compila para o nRF54LM20 DK, para a placa do projeto (`gnssbike/nrf54lm20a/cpuapp`) e ainda para o nRF52840-DK, que saiu de uso. A próxima placa é própria, com o nRF54LM20A, GNSS de banda dupla, tela colorida e painéis solares na caixa que estendem a autonomia, sem sustentar o aparelho sozinhos; a especificação e a avaliação dos componentes estão em [`docs/`](docs/README.md).
 
 > [!WARNING]
-> O port **compila e passa nos testes de host, mas nunca rodou em placa nem nos DKs**. Segmentos, percursos, sensores BLE e ANT+, log no SD e a interface do legacy ainda não funcionam de ponta a ponta. A placa nova ainda não existe: nenhum componente foi comprado nem medido. O estado de cada área está em [docs/10-status-do-port.md](docs/10-status-do-port.md).
+> O port **compila e passa nos testes de host, mas nunca rodou em placa nem nos DKs**. Segmentos, percursos, sensores BLE e ANT+, log no SD e a interface do legacy ainda não funcionam de ponta a ponta. A placa nova está roteada e com os arquivos de fábrica prontos, mas não foi fabricada: nenhum componente foi comprado nem medido. O estado de cada área está em [docs/10-status-do-port.md](docs/10-status-do-port.md).
 
 ## Índice
 
@@ -54,37 +54,46 @@ flowchart LR
 
 <div align="center">
 
-![A placa em CAD, vista em ângulo: o USB-C na borda de cima, o módulo de rádio à esquerda e o receptor GNSS à direita](docs/img/hardware/gnssbike-3d-angulo.png)
+![A placa roteada em 3D, vista em ângulo: o USB-C na borda de cima, o módulo de rádio à esquerda e o receptor GNSS à direita](docs/img/hardware/gnssbike-3d-angulo.png)
 
-*A placa `gnssbike`, 34 × 95 mm em 4 camadas, gerada por programa a partir dos documentos de `hardware_gnssbike/`.*
+*A placa `gnssbike` roteada, 34 × 95 mm em 4 camadas, como sai na montagem da JDI, gerada por programa a partir dos documentos de `hardware_gnssbike/`.*
 
 </div>
+
+| | |
+|---|---|
+| ![A frente da placa: na borda esquerda, os dois conectores da tela, o J402 da luz da JDI em cima e o J401 do sinal embaixo; o receptor GNSS no alto, as três teclas no meio, o USB-C e o módulo de rádio embaixo](docs/img/hardware/gnssbike-3d-frente.png) | ![O verso da placa: o buzzer, o conector do painel solar J103 e as ilhas do J403, da luz do Azumo, vazias na montagem da JDI](docs/img/hardware/gnssbike-3d-tras.png) |
+| *Frente: os dois conectores da tela, na borda esquerda: o `J402`, da luz da JDI (5 vias), e o `J401`, do sinal (10 vias), que serve às duas telas* | *Verso: o buzzer, o `J103` do painel solar e as ilhas do `J403`, que recebe a luz do Azumo na montagem da Sharp* |
 
 | | |
 |---|---|
 | ![A caixa proposta, vista de frente: janela do display, três teclas sob a membrana, módulos solares nos chanfros e na faceta](docs/img/hardware/gnssbike-3d-caixa-frente.png) | ![A caixa em vista explodida: tampa com o display colado, teclas, módulos e coberturas, a porta do USB-C](docs/img/hardware/gnssbike-3d-caixa-explodida.png) |
 | *A caixa proposta, 64 × 106 × 18,2 mm desde 2026-10-19, medida por um dry run próprio* | *Explodida: tampa com o display, teclas, módulos solares, porta do USB-C* |
 
-![Manual de montagem: as peças em escala e os oito passos, do chicote solar ao fechamento do aparelho](docs/img/manual-de-montagem.svg)
+![Manual de montagem: as peças em escala, o aparelho montado com dois cortes e os oito passos, do chicote solar ao fechamento do aparelho](docs/img/manual-de-montagem.svg)
 
 A caixa foi desenhada em volta da placa real ([`hardware_gnssbike/caixa/`](hardware_gnssbike/caixa/README.md), decisões em [`hardware_gnssbike/04`](hardware_gnssbike/04-pcb-e-caixa.md#a-placa-de-hoje-dentro-da-caixa-do-conceito)); a placa, dimensionada pelo circuito e **não** pela caixa, tem 34 × 95 mm em 4 camadas, 6 módulos solares na faceta e nos chanfros laterais da caixa. A escolha de cada componente, com os números dos datasheets, está em [docs/15-avaliacao-componentes.md](docs/15-avaliacao-componentes.md); a lista de compras, validada peça a peça, em [docs/19-lista-de-compras.md](docs/19-lista-de-compras.md).
 
-A placa existe como **arquivo de CAD**, gerado por programa: 156 peças, 114
-redes, 1.417 segmentos, 549 vias, **196 ligações roteadas e 75 ainda sem
-trilha**, 0 erros no DRC completo, e 25 das 29 medidas que as fichas dos
-componentes e a IPC-2221B impõem, feitas uma a uma
-([dry-run de 2026-09-26](hardware_gnssbike/10-dry-run-2026-09-26.md)); a
-caixa existe como proposta em volta dela, medida por um dry run próprio (12
-regras cumpridas, 0 violadas). Nenhuma placa foi fabricada, nada foi
-impresso e nenhum componente passou por bancada. O esquemático, a placa, a
-caixa e como se confere cada etapa estão em
-[hardware_gnssbike/](hardware_gnssbike/README.md).
+A placa existe como **arquivo de CAD**, gerado por programa e **roteado por
+inteiro** em 2026-10-19: 138 componentes na montagem da JDI (146 na da
+Sharp), 118 redes, 2.683 trechos de trilha e 769 vias. O DRC completo dá 0
+itens desconectados e 0 erros, e as regras que as fichas dos componentes e a
+IPC-2221B impõem, medidas uma a uma, dão 32 cumpridas, 2 com desvio aceito
+pelo dono e conferência de bancada, e nenhuma violada
+([dry run de 2026-10-19](hardware_gnssbike/09-dry-run-da-pcb.md#resultado-de-2026-10-19-com-o-roteamento-fechado)).
+Os arquivos de fábrica da JLCPCB e as listas de compra da Mouser, da LCSC e
+da DigiKey saem por script ([19](docs/19-lista-de-compras.md#compra-na-mouser)).
+A caixa existe como proposta em volta da placa, medida por um dry run
+próprio (12 regras cumpridas, nenhuma violada, 1 ainda sem medida). Nenhuma
+placa foi fabricada, nada foi impresso e nenhum componente passou por
+bancada. O esquemático, a placa, a caixa e como se confere cada etapa estão
+em [hardware_gnssbike/](hardware_gnssbike/README.md).
 
 ```mermaid
 flowchart LR
     MCU["MinewSemi ME54BS13<br/>nRF54LM20A, BLE e ANT+"]
     GNSS2["u-blox MAX-F10S<br/>L1 + L5, 46,8 mW"] -->|UART| MCU
-    LCD2["JDI LPM027M128C de 8 cores,<br/>com luz frontal integrada"] ---|SPI| MCU
+    LCD2["JDI LPM027M128C de 8 cores, com luz,<br/>ou Sharp com a luz do Azumo"] ---|"SPI pelo J401"| MCU
     PWR["nPM1300, ADP5091, MAX17262<br/>USB-C e painel solar"] -.->|I2C| MCU
     SENS2["BMP585, BMI270,<br/>MMC5603NJ, OPT3001"] -->|I2C| MCU
     MEM["flash MX25R6435F<br/>8 MB, soldada"] ---|SPI| MCU
@@ -94,7 +103,7 @@ flowchart LR
 |---|---|---|
 | Carga | nPM1300 no USB-C, ADP5091 no painel, MAX17262 na célula | o painel carrega com o aparelho desligado e corte térmico próprio; o USB bloqueia a carga solar no hardware |
 | GNSS | u-blox MAX-F10S, banda dupla L1 + L5, com o MAX-M10N-10B (só L1) no mesmo footprint | 1 m de CEP contra 1,5 m, e o código do L5 contra o multipercurso de prédio e mata. Custa autonomia: o aparelho gasta cerca de 58 mW e dura cerca de 115 h sem sol, e o painel devolve de 23 a 46 min por hora de sol em vez de cobrir o consumo. Com o M10N em LEAP seriam cerca de 21 mW e 310 h (estimativas) |
-| Tela | JDI LPM027M128C de 8 cores, **com luz frontal integrada** (escolha do dono em 2026-09-23, no lugar do par Sharp + filme); a Sharp LS027B7DH01A com filme no mesmo conector, de reserva | o firmware atende as duas pelo mesmo driver, em retrato, com um tema para cada |
+| Tela | JDI LPM027M128C de 8 cores, **com luz frontal integrada** (escolha do dono em 2026-09-23); de reserva, a Sharp LS027B7DH01A, nua ou como o módulo Azumo 11103-06, que traz a luz | as duas entram pelo mesmo conector de sinal, o `J401` (10 vias, contato dos dois lados), na borda esquerda da placa, e a luz tem conector próprio: o `J402` (5 vias), ao lado dele, na JDI, e o `J403` (4 vias, no verso) no Azumo. A montagem da Sharp leva também o boost de 5 V. O firmware atende as duas pelo mesmo driver, em retrato, com um tema para cada |
 | USB e armazenamento | USB-C HRO TYPE-C-31-M-12 e flash MX25R6435F soldada | caixa sem tampas e sem cartão solto na vibração |
 
 ## Funcionalidades
@@ -143,7 +152,7 @@ flowchart TB
     ROOT --> LIB["libraries/<br/>bibliotecas do legacy"]
     ROOT --> TOOLS["tools/<br/>fw e docs do projeto · TDD, zpm, MMD, jumper do legacy"]
     ROOT --> HW["hardware/<br/>Eagle da myStravaB V3 (Gerbers da V2)"]
-    ROOT --> HWN["hardware_gnssbike/<br/>a placa nova: docs 01 a 10, cad (KiCad e geradores),<br/>esquematico, placa, caixa (PDF, STL, dry run), datasheets"]
+    ROOT --> HWN["hardware_gnssbike/<br/>a placa nova: docs 01 a 12, cad (KiCad e geradores),<br/>esquematico, placa, caixa (PDF, STL, dry run), datasheets,<br/>fabricacao (gerada, fora do git)"]
     ROOT --> DOCS["docs/<br/>documentação numerada, img (telas, hardware), historico"]
     ROOT --> AI["CLAUDE.md · AGENTS.md · .claude/skills/ · .claude/contexto/"]
     ROOT --> BAT["build.bat · flash.bat · recover.bat · serial.bat"]
@@ -171,7 +180,7 @@ flowchart TB
 | [16 · Arquitetura do firmware](docs/16-arquitetura-firmware.md) | arquitetura-alvo e máquinas de estado para a placa nova |
 | [17 · Dispositivos BLE e ANT+](docs/17-dispositivos-ble-ant.md) | catálogo de sensores e acessórios, prioridades e limites do rádio |
 | [18 · Interface e telas](docs/18-interface-telas.md) | interface LVGL da placa nova: todas as telas, desenhadas e testadas no PC, em 8 cores e em preto e branco |
-| [19 · Lista de compras](docs/19-lista-de-compras.md) | peças validadas em duas passagens, trocas, correções de integração e códigos da DigiKey |
+| [19 · Lista de compras](docs/19-lista-de-compras.md) | peças validadas em duas passagens, trocas, correções de integração, e o pedido dividido entre Mouser, LCSC e DigiKey |
 | [Hardware da placa nova](hardware_gnssbike/README.md) | o esquemático folha a folha, os cálculos, a lista de nós, a placa e a caixa, os conectores, o layout e os dois dry runs; o CAD em [`cad/`](hardware_gnssbike/cad/README.md), a caixa em [`caixa/`](hardware_gnssbike/caixa/README.md), os PDF em [`esquematico/`](hardware_gnssbike/esquematico/) e [`placa/`](hardware_gnssbike/placa/) |
 | [CHANGELOG](CHANGELOG.md) | histórico de mudanças |
 
@@ -181,10 +190,10 @@ flowchart TB
 - **Fase 1 do roteiro:** a base da arquitetura nova (serviços com thread própria, eventos no zbus, máquinas de sistema e de modo no SMF, watchdog por serviço, desligamento automático do legacy), feita em 2026-09-19.
 - **Novos alvos e rádio:** o port compila para o nRF54LM20 DK, e a pilha ANT do add-on `sdk-ant` v2.1.1 compila sobre o NCS v3.3.0 nos dois DKs (`ANT=1`); nada disso foi testado em placa.
 - **Interface:** os 44 quadros em LVGL, testadas no PC, rodam no firmware desde 2026-09-19 com um driver próprio da tela (JDI LPM027M128B em 8 cores ou Sharp em preto e branco, em retrato), teclas com toque longo e a máquina da luz; nunca vistas num painel.
-- **Placa nova:** desenho do aparelho, especificação ([14](docs/14-hardware-placa-nova.md)) e avaliação dos componentes ([15](docs/15-avaliacao-componentes.md)). O esquemático é do dono; antes do layout vêm os testes de bancada da carga dupla, do GNSS (C/N0 por banda e isolamento da antena contra o rádio de 2,4 GHz), da coexistência dos rádios e do display.
-- **Hardware da placa nova (2026-09-23 a 26):** o esquemático em sete folhas, a placa de 34 × 95 mm colocada e roteada por programa, o desenho de montagem, o manual e o chicote solar, dois dry runs (as regras das fichas e da IPC-2221 medidas no arquivo; a caixa medida contra a placa) e a proposta de caixa de 62 × 106 × 17 com STL para a primeira prova. Nada fabricado, nada impresso, nenhum componente na bancada; o que falta antes de mandar fabricar está em [`hardware_gnssbike/README.md`](hardware_gnssbike/README.md#antes-de-mandar-fabricar).
+- **Placa nova:** desenho do aparelho, especificação ([14](docs/14-hardware-placa-nova.md)) e avaliação dos componentes ([15](docs/15-avaliacao-componentes.md)). Os testes de bancada da carga dupla, do GNSS (C/N0 por banda e isolamento da antena contra o rádio de 2,4 GHz), da coexistência dos rádios e do display ficam para o protótipo.
+- **Hardware da placa nova (2026-09-23 a 10-20):** o esquemático em sete folhas, revisado em 2026-10-18; a placa de 34 × 95 mm colocada por programa e roteada por inteiro em 2026-10-19, que aceita a JDI ou a Sharp; o desenho de montagem, o manual e o chicote solar; os dry runs da placa (as regras das fichas e da IPC-2221 medidas no arquivo) e da caixa (a caixa medida contra a placa); a caixa de 64 × 106 × 18,2 com STL para a primeira prova; os arquivos de fábrica da JLCPCB e as listas de compra. Nada fabricado, nada impresso, nenhum componente na bancada; o que falta antes de mandar fabricar está em [`hardware_gnssbike/README.md`](hardware_gnssbike/README.md#antes-de-mandar-fabricar).
 - **Decidido:** ANT+ e BLE juntos (os equipamentos externos falam ANT+) e placa própria com o nRF54LM20A. Decisões e pendências em [docs/10-status-do-port.md](docs/10-status-do-port.md#decisões-do-dono).
-- **Próximo:** os testes de bancada da placa nova (carga dupla, isolamento entre as antenas, o display sobre a antena GNSS), o roteamento que falta e a primeira prova impressa da caixa; no firmware, fidelidade dos algoritmos, armazenamento, rádio e interface. Roteiro em [docs/10-status-do-port.md](docs/10-status-do-port.md#roteiro).
+- **Próximo:** as confirmações que faltam antes de mandar fabricar (o mapa de pads do módulo num exemplar real, o domínio de tensão do nPM1300, a pinagem da bateria), a compra das peças e a primeira prova impressa da caixa; depois, os testes de bancada da placa nova (carga dupla, isolamento entre as antenas, o display sobre a antena GNSS); no firmware, fidelidade dos algoritmos, armazenamento, rádio e interface. Roteiro em [docs/10-status-do-port.md](docs/10-status-do-port.md#roteiro).
 
 ## Créditos e licenças
 

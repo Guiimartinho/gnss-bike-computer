@@ -167,7 +167,7 @@ Colunas: função (com o designador), peça, código da LCSC, código da DigiKey
 | NTC do corte térmico (`RT101`) | 10 kΩ B3380; a validação de 2026-09-18 aprovou o TDK NTCG103JF103FT1 | C209959 | 445-2550-1-ND (o TDK) | 1.668.979 (o TDK) | 0,11 / 0,075 | 1 | 10 | aprovada; na face de trás, sob a célula. Que o C209959 seja o TDK não foi conferido |
 | Schottky do `DIS_SW` e da tecla central (`D106`, `D107`) | Diodes BAT54WS-7-F (SOD-323) | C124205 | não conferido | preço e estoque não conferidos | — | 2 | 12 | catodo no terminal 1, conferido na revisão de 2026-10-18 |
 | Painéis solares (`PV101` a `PV106`) | ANYSOLAR KXOB25-05X3F-TR | não vende | KXOB25-05X3FCT-ND | 5.038 | 3,23 / 2,64 | 6 | 36 | aprovada; a outra exceção da regra da JLCPCB, junto com o módulo |
-| Grampo da entrada solar (`D105`) | Nexperia PESD3V3S1UB-N | C920299 | — | LCSC: 14.270 (2026-09-25) | 0,023 | 1 | 10 | **escolhido em 2026-09-25**: ESD unidirecional 3,3 V em SOD-523, 1 µA de fuga máx., grampeia polaridade trocada em −0,7 V; não protege de fonte errada sustentada. Junto do `J103`, no verso, desde 2026-10-18 |
+| Grampo da entrada solar (`D105`) | BORN PESD3V3S1UB-N, cópia do Nexperia PESD3V3S1UB (a LCSC dá a BORN como fabricante, conferido em 2026-10-19) | C920299 | — | LCSC: 14.270 (2026-09-25) | 0,023 | 1 | 10 | **escolhido em 2026-09-25**: ESD unidirecional 3,3 V em SOD-523, 1 µA de fuga máx., grampeia polaridade trocada em −0,7 V; não protege de fonte errada sustentada. Junto do `J103`, no verso, desde 2026-10-18 |
 | Conector do painel (`J103`) | JST S4B-ZR-SM4A-TF | C485354 | não conferido | preço e estoque não conferidos | — | 1 | 6 | **a conferir na LCSC**; ZH de 1,5 mm, 4 vias, SMD lateral ([J103](../hardware_gnssbike/06-conectores-e-pontos-de-teste.md#j103--painel-solar)) |
 | Carcaça do cabo do painel | JST ZHR-4 | — | não conferido | preço e estoque não conferidos | — | 1 | 6 | a contraparte do `J103` |
 | Terminais do cabo do painel | JST SZH-002T-P0.5 | — | não conferido | preço e estoque não conferidos | — | 4 | 50 | AWG 32 a 28, crimpagem com o alicate da JST |
@@ -241,10 +241,11 @@ A placa aceita **duas telas no mesmo conector de sinal** desde 2026-10-18 ([revi
 
 As quantidades por placa saem do esquemático. Os resistores são de filme espesso, 0402 e ±1 %, salvo onde a linha diz outra coisa. Os códigos da LCSC vêm de [`cad/parts.py`](../hardware_gnssbike/cad/parts.py): os capacitores têm todos (menos o `C302`, que não é montado); dos resistores, só `R116`, `R123` e `R410`.
 
-> [!IMPORTANT]
-> **Faltam os códigos da LCSC de 48 resistores e de seis jumpers de 0 Ω**,
-> e sem eles a JLCPCB não monta. Os valores estão fechados; o trabalho é
-> achar o código de cada um e conferir o estoque no dia do pedido.
+> [!NOTE]
+> Desde 2026-10-18 toda peça montada tem código da LCSC no gerador, menos o
+> módulo `U201`, que vai consignado; o estoque se confere no dia do pedido.
+> O fabricante e o código de fabricante de cada peça, para comprar fora da
+> LCSC, estão em [`cad/mpn.py`](../hardware_gnssbike/cad/mpn.py).
 
 Capacitores:
 
@@ -345,6 +346,130 @@ O que não sai do estoque da LCSC para a montagem na JLCPCB, e onde comprar:
 | Bateria | fabricante de packs | 60 × 36 × 7 mm, PCM, NTC de 10 kΩ B3380, cabo com a JST SHR-06V-S-B, UN38.3 |
 | Tag-Connect | loja da Tag-Connect | a DigiKey tem só as versões com pernas, que pedem outro footprint |
 | BM20C direto | Fanstel, por e-mail | só se a alternativa for usada: US$ 6,50 (US$ 5,94 no lote de mil) |
+
+## Compra na Mouser
+
+Para fazer a placa na JLCPCB e comprar as peças na Mouser (pedido do dono em
+2026-10-19), o [`cad/mouser.py`](../hardware_gnssbike/cad/mouser.py) monta o
+pedido da BOM de cada tela: o código de fabricante de cada linha vem do
+[`cad/mpn.py`](../hardware_gnssbike/cad/mpn.py), e a API de busca da Mouser dá
+o código dela, o estoque, o prazo e o preço na quantidade. A chave da API é
+pessoal: fica em `.claude/local/mouser_api_key` ou em `MOUSER_API_KEY`, fora
+do git.
+
+```sh
+python hardware_gnssbike/cad/make_fab.py              # as BOMs
+python hardware_gnssbike/cad/mouser.py jdi 2          # tela e numero de placas
+```
+
+O resultado vai para `hardware_gnssbike/fabricacao/`, um arquivo por loja:
+
+- `mouser-<tela>.csv`, no formato que a ferramenta de BOM da Mouser aceita,
+  com uma linha por peça, como o projeto da Mouser as junta;
+- `lcsc-<tela>.xlsx`, para a ferramenta de BOM da LCSC, com o que a Mouser
+  não vende ou não tem em estoque (pedido com prazo de três meses a um ano
+  não serve);
+- `digikey-<tela>.xlsx`, para o BOM Manager da DigiKey.
+
+As duas últimas são `.xlsx`: as duas ferramentas aceitam, e o Excel em
+português abre a planilha em colunas, onde um CSV com vírgula cai numa
+coluna só. O número do cliente de cada linha leva "GNSS Bike" e os
+designadores, e sai no pedido. O que nenhuma das três lojas vende aparece
+só na tela. Os passivos levam cinco de sobra, com mínimo de dez, e a LCSC
+arredonda cada linha ao lote mínimo dela. Medido em 2026-10-20, para duas
+placas:
+
+| Tela | Linhas na Mouser | Total na Mouser, no preço da quantidade | Linhas na LCSC | Linhas na DigiKey |
+|---|---|---|---|---|
+| JDI | 56 | US$ 134,83 | 10 | 3 |
+| Sharp com a luz do Azumo | 58 | US$ 139,98 | 10 | 4 |
+
+Na DigiKey vão a MX25R6435F (`U501`), o módulo `U201` (no Marketplace da
+DigiKey, enviado pela MinewSemi em uns nove dias), as células solares e,
+na montagem da Sharp, o módulo Azumo. A tela JDI só se compra fora das três
+lojas. O projeto "GNSS BIKE" que o dono montou na Mouser em 2026-10-20
+tem as mesmas 56 linhas da JDI com mais sobra, e soma US$ 202,06.
+
+Trocado só na Mouser, com o mesmo valor, tamanho e tolerância, porque o
+fabricante da peça da LCSC estava sem estoque lá: o 4,87 kΩ (Panasonic
+ERJ-2RKF4871X), o 2,67 MΩ (Vishay CRCW04022M67FKED), o NTC (Murata
+NCU15XH103F60RC, 10 kΩ e B25/50 de 3380 K a 1 %, de -55 a 125 °C; o
+NCP15XH103F03RC da Murata, que entrou antes, está em fim de vida), o 4,7 µF
+de 0402 (TDK C1005X5R1A475M050BC) e o 100 nF de 0603 (TDK
+C1608X7R1H104K080AA).
+
+Trocado porque a Mouser não vende a peça da LCSC, e assenta nas ilhas como
+estão: o indutor `L103`, Murata LQH2HPZ220MJRL no lugar do Sunlord. São os
+mesmos 22 µH, com Isat de 530 mA contra os 390 que o ADP5091 pede e DCR de
+0,84 Ω contra 0,91; os eletrodos de 0,65 mm nas pontas dos 2,5 mm caem nas
+ilhas de 1,25 × 2,2 mm do land 1008, e o land da ficha da Murata (0,625 ×
+2,0 mm) fica dentro delas.
+
+Sem estoque na Mouser em 2026-10-19 (prazo de 84 a 365 dias), e por isso no
+pedido da LCSC, que tinha: o TPD4E05U06 (`D102`, 203.470 na LCSC), o OPT3001
+(`U505`, 2.743), o conector da bateria JST SM06B-SRSS-TB (`J102`, 667), o
+TLV7031 (`U105`, 5.253) e o PESD3V3S1UB-N da BORN (`D105`, 9.805). A
+MX25R6435F (`U501`) vai pela DigiKey (1092-1200-ND, 2.478 a US$ 3,29), porque
+a LCSC tinha só 2, a US$ 6,30.
+
+A ferramenta de BOM da Mouser marcou três linhas como obsoletas em
+2026-10-19. O NTC estava mesmo em fim de vida (a API da Mouser diz "End of
+Life") e foi trocado acima. Para o ADP5091ACPZ-2-R7 (`U103`) e o
+MAX17262REWL+T (`U102`), a API da Mouser não dá status nenhum, a página da
+ADI os dá em produção (cópias do Internet Archive de 2025 e de fevereiro de
+2026, porque o site da ADI recusou a conexão) e a DigiKey os tem como
+ativos. Os dois ficam na Mouser: o dono os manteve lá em 2026-10-20, quando
+ela tinha 9 e 722 e a exportação do projeto não marcava vida útil em linha
+nenhuma. Se faltarem, a DigiKey tem os mesmos: 505-ADP5091ACPZ-2-R7CT-ND
+(806 a US$ 8,81) e 175-MAX17262REWL+TCT-ND (18.827 a US$ 4,10), em
+2026-10-19. As trocas que a Mouser tem mudam o projeto:
+
+- o MAX17262HEWL+T, no mesmo WLP de 9 esferas, mede com 30 mΩ em vez de 7.
+  Ele é feito para células de 30 mAh a 2 Ah e aguenta 0,69 A contínuos,
+  contra 1,68 A do de 7 mΩ, enquanto a nossa célula tem 2000 mAh e carrega a
+  600 mA; a escala de corrente do driver também muda (ficha 19-100308,
+  Rev. 1, páginas 16, 22 e 28);
+- o ADP5091ACPZ-1-R7 tem pico de corrente de entrada de 200 mA contra os
+  300 do -2 (guia de pedido da ficha), e o ADP5092 só existe com 200 mA.
+
+O `mouser.py` põe o ciclo de vida que a API dá na coluna `Lifecycle` e, no
+fim, avisa das linhas que estão saindo de linha. Nenhuma linha do pedido de
+2026-10-19 aparece assim, mas a ferramenta de BOM da Mouser pode marcar
+peças que a API não marca, como marcou essas duas.
+
+A Mouser não vende, e vêm da LCSC (estoque de 2026-10-19): o LED RGB TUOZHAN
+(`D601`, 1.668.220 a US$ 0,024), as chaves XunPu (`SW601` a `SW603`, 105.840
+a US$ 0,054), o USB-C HRO (`J101`, 330.885 a US$ 0,17), a antena de chip
+Unictron (`E301`, 5.209 a US$ 0,53) e o 18 MΩ (`R116`, 1.000 em lote de 100),
+que não existe em 0402 a 1 % em marca nenhuma da Mouser. O módulo `U201` vem
+da DigiKey ou da MinewSemi.
+
+### Substitutos que a Mouser tem e que mudam alguma coisa
+
+Procurados em 2026-10-19, com a regra de não mexer no roteamento: cada um
+assenta nas ilhas que a placa já tem, conferido contra o desenho da ficha.
+Nenhum entrou no pedido: cada um muda algo além da peça, e em 2026-10-19 o
+dono ficou com as peças do projeto. Para o LED não há nada mais barato que
+sirva: na Mouser, o que assenta no land 3528 custa de US$ 0,27 a 0,32, e os
+mais baratos dela, de US$ 0,01 a 0,03, são LEDs de painel de vídeo de
+1,0 × 1,0 mm (Cree UHD111A) ou 2,0 × 2,0 mm (Cree CLMVC), que não alcançam
+as ilhas; o TUOZHAN sai a US$ 0,024 na LCSC.
+
+| Peça | Substituto | Estoque e preço | O que muda |
+|---|---|---|---|
+| `D601`, LED RGB TUOZHAN | Cree CLV1A-FKB-CK1VW1DE1BB7C3C3, ou Broadcom ASMB-MTB1-0B3A2 | 36.104 a US$ 0,32; 178.280 a US$ 0,61 | o anodo e o verde caem nas ilhas certas, e o vermelho e o azul trocam de lugar: o firmware troca os dois canais de PWM (os três resistores são de 1 kΩ). A marca do pino 1 dessas peças fica no vermelho, e a serigrafia marca o vermelho do TUOZHAN, no canto oposto: a peça vai com a marca no canto do `KB` |
+| `SW601` a `SW603`, XunPu TS-1088R-02026 | Alps SKRKAEE020 | 8.171 a US$ 0,35 | mesmo corpo (3,9 × 2,9 × 2,0 mm) e dois terminais, cujo land (0,8 × 2,0 a ±2,1 mm) fica dentro das ilhas de hoje; a força cai de 2,55 N para 1,57 N, mais leve com luva |
+| `U501`, MX25R6435F (sem estoque na Mouser, prazo de 364 dias) | Renesas AT25SF641B-SPB-T, ou GigaDevice GD25WQ64ESIGR | 6.538 a US$ 2,06; 915 a US$ 2,15 | mesmo SOP-8 de 208 mil e mesma pinagem; o devicetree da placa muda (`jedec-id`, a tabela SFDP, os tempos do deep power-down e sai o `mxicy,mx25r-power-mode`). A AT25SF641B vai de 2,7 a 3,6 V, com deep power-down de 1 µA típico e 5 µA máximo contra os 0,007 µA da Macronix; a GD25WQ64E vai de 1,65 a 3,6 V, como a Macronix, e o consumo dela não foi conferido (a Mouser recusa o download automático da ficha) |
+| `R116`, 18 MΩ | o par do MPPT em 10 MΩ (`R116`, Yageo RC0402FR-0710ML) e 2,4 MΩ (`R117`, RC0402FR-072M4L) | 212.163 e 459.990 a US$ 0,01 | a razão do MPPT vai de 0,8072 para 0,8065, mais perto do alvo de 0,8068 (1,67 V sobre 2,07 V): 0,6 mV de erro no ponto de máxima potência contra 0,9. O divisor cai de 22,3 para 12,4 MΩ, ainda acima dos 6 MΩ da equação 7 da ficha; muda o valor no projeto, não a placa |
+
+Sem substituto que assente nas ilhas, e por isso da LCSC:
+
+- **USB-C (`J101`):** o GCT USB4105-GF-A tem os mesmos 16 contatos e os
+  mesmos pinos de posicionamento, mas as pernas de trás da carcaça pedem
+  rasgo de 1,4 mm e a placa tem 1,2 mm, e os contatos ficam 0,37 mm mais
+  para dentro das ilhas. Pode servir; não está garantido.
+- **Antena (`E301`):** uma antena de chip de outro fabricante pede a sua
+  própria área sem cobre e a sua própria sintonia, e isso é placa nova.
 
 ## Antes de fechar o pedido
 

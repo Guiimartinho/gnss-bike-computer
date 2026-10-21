@@ -1,15 +1,16 @@
 # Projeto KiCad da placa
 
 Este diretório é o projeto de CAD do GNSS Bike Computer: **esquemático
-hierárquico em sete folhas** e **placa com as 156 peças posicionadas e
+hierárquico em sete folhas** e **placa com as 166 peças posicionadas e
 roteadas**, em KiCad 8, gerados a partir dos documentos de
 [`hardware_gnssbike/`](../README.md) e conferidos contra eles por programa.
 
 > [!WARNING]
 > **Nada aqui foi fabricado, montado ou medido.** Não existe placa, não existe
-> protótipo e nenhum número desta página saiu de bancada. O roteamento é
-> automático e **não está completo**: as ligações de RF ficam de fora de
-> propósito e parte das ligações continua sem trilha.
+> protótipo e nenhum número desta página saiu de bancada. O roteamento é feito
+> por programa e está **completo desde 2026-10-19** (0 itens desconectados e 0
+> erros no DRC completo), com rotina própria para as linhas de RF; nenhuma
+> placa de verdade o conferiu.
 
 ## O que abrir
 
@@ -147,7 +148,7 @@ tamanho: o capacitor de desacoplamento cai ao lado do CI que ele desacopla.
 | Redes | **118** (2026-10-19; eram 114 em 2026-09-26) |
 | Furos de fixação | **2**, M2, em (3,2; 7,0) e (14,4; 91,7) — decisão do dono em 2026-09-25 (dois furos), depois da conta de [02](../02-calculos.md#quantos-parafusos-a-placa-precisa); as posições são do dry run da caixa de 2026-09-26: nenhum sobre a célula, o segundo entre o USB-C (que andou 0,4 para a esquerda por ele) e o módulo, fora do lugar do sensor de luz e da faixa do verso que segura o `J103` |
 | Planos de terra | **3**, em `In1.Cu` e nas duas faces, preenchidos pelo `fill_zones.py` (com o Python do KiCad) |
-| Roteamento | **completo** em 2026-10-19: 2.702 segmentos e 774 vias, 374 delas de terra; 1.341 mm de trilha na frente, 1.760 na `In2.Cu` e 1.582 no verso. O `route.py` faz a placa base e o `acabar.py` fecha o resto ([abaixo](#o-acabamento-uma-ligação-de-cada-vez)); o par USB vai à mão, num corredor reservado de `D102` a `J101`, e `RF_IN`, `RF_ANT`, `RF_CHIP` e `RF_UFL` têm rotina própria |
+| Roteamento | **completo** em 2026-10-19: 2.683 segmentos e 769 vias, 372 delas de terra; 1.305 mm de trilha na frente, 1.770 na `In2.Cu` e 1.565 no verso, medidos depois do casamento do par USB. O `route.py` faz a placa base e o `acabar.py` fecha o resto ([abaixo](#o-acabamento-uma-ligação-de-cada-vez)); o par USB vai à mão, num corredor reservado de `D102` a `J101`, e `RF_IN`, `RF_ANT`, `RF_CHIP` e `RF_UFL` têm rotina própria |
 | Ligações sem trilha | **0**: o DRC completo (`--severity-all`), com as malhas preenchidas, não acha item desconectado, nem trilha ou via solta — a regra `RT1` do `dry_run_pcb.py`. Eram 58 em 2026-09-26 e 48 na manhã de 2026-10-19 |
 | Erros de DRC | **0**, com a ponte mínima de máscara da JLCPCB (0,1 mm) no setup da placa desde 2026-10-19; 25 avisos, os mesmos do arquivo de antes do roteamento: 23 de biblioteca de footprint e 2 de uma linha de serigrafia a 1,2 mm da borda de baixo. Os 3 do par USB contra o ponto de teste `TP101` saíram com o corredor do par em 2026-09-26 |
 
@@ -189,6 +190,7 @@ python hardware_gnssbike/cad/check_pcb.py --como-esta      # 5. confere o arquiv
 python hardware_gnssbike/cad/dry_run_pcb.py               # 6. as regras das fichas
 python hardware_gnssbike/cad/impedancia.py                # a impedancia das linhas na pilha do fabricante
 python hardware_gnssbike/cad/make_fab.py                  # Gerber, furacao, BOM e CPL da JLCPCB em ../fabricacao/
+python hardware_gnssbike/cad/mouser.py jdi 2              # o pedido na Mouser e as planilhas da LCSC e da DigiKey (chave em .claude/local/)
 ```
 
 O `route.py` é um labirinto A\* numa grade de 0,15 mm: faz bem o que pede
@@ -388,18 +390,22 @@ exatamente os que a lista deixa soltos; **nenhum fio passa por cima de
 componente** em folha nenhuma; nada fora da folha; nenhuma peça sobre outra;
 e todo rótulo hierárquico tem o pino de folha que responde por ele.
 
-**Placa** — o KiCad abre e roda o **DRC, que fecha em zero erro**, com as
-malhas preenchidas e 58 itens ainda sem trilha (2026-09-26); as **156 peças** estão lá,
-uma vez cada; **todo pad leva a rede da lista de nós** e nenhuma ligação ficou
-sem pad; nenhum contorno sobre outro; nada passa da borda; nada dentro das
-áreas de antena; a placa cabe na caixa; os três planos de terra existem.
+**Placa** — o KiCad abre e roda o **DRC completo, que fecha em zero erro e
+zero item desconectado**, com as malhas preenchidas (2026-10-19); as **166
+peças** estão lá, uma vez cada; **todo pad leva a rede da lista de nós** e
+nenhuma ligação ficou sem pad; nenhum contorno sobre outro; nada passa da
+borda; nada dentro das áreas de antena; a placa cabe na caixa; os três planos
+de terra existem.
 
-**Regras das fichas** ([09](../09-dry-run-da-pcb.md)) — **17 cumpridas, 0
-violadas, 5 que só bancada ou fabricante decidem**. As duas que falhavam na
-placa de 55 × 97 caíram sozinhas quando a placa passou a ser dimensionada
-pelo circuito:
+**Regras das fichas** ([09](../09-dry-run-da-pcb.md#resultado-de-2026-10-19-com-o-roteamento-fechado))
+— na placa roteada de 2026-10-19, **32 cumpridas, 2 com desvio aceito pelo
+dono** (o `RF9` e o `C210` da `AL1`), **nenhuma violada e nenhuma sem
+medida**. Antes, as duas que falhavam na placa de 55 × 97 caíram quando a
+placa passou a ser dimensionada pelo circuito; o `RF9` voltou em 2026-10-18,
+quando o contorno da tela passou a servir às três (JDI, Sharp e Azumo) e a
+sombra dela chegou a 13,4 mm do módulo:
 
-| Regra | Na placa de 55 × 97 | Na de 34 × 90 |
+| Regra | Na placa de 55 × 97 | Na de 34 × 90, em 2026-09-24 |
 |---|---|---|
 | `RF9`, os 25 mm do display | falhava: a sombra do display chegava a **11,3 mm** do módulo | **passa**: o display é mais largo que a placa e não fica mais sobre ela; o pior agora é o cabo plano `J402`, a 31,3 mm |
 | `AL1`, desacoplamento | falhava: `C114` a 3,3 mm do `U104` contra 2 | **passa**: o buzzer saiu de cima do regulador e o anel dele ficou livre |
@@ -416,8 +422,9 @@ pelo circuito:
 Os dois são land patterns de fabricante, não desenho nosso. O resto da placa
 segue **0,127 mm** de folga e **0,2 mm** de furo a cobre, que é o que uma
 fábrica de quatro camadas faz sem custo extra. **Nenhuma fábrica foi
-consultada** — e a pilha de camadas, a largura de 50 Ω e a de 90 Ω
-diferencial esperam a mesma resposta.
+consultada** sobre essas folgas; a pilha de camadas e as larguras de 50 Ω e
+de 90 Ω diferencial saem da JLC04081H-3313 da JLCPCB desde 2026-10-19
+([a pilha](#a-pilha-e-o-pedido-de-fabricação)).
 
 ## Serigrafia e pontos de teste
 

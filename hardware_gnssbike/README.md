@@ -9,8 +9,8 @@
 ![Caixa](https://img.shields.io/badge/caixa-64%20%C3%97%20106%20%C3%97%2018%2C2%20mm-0082FC)
 ![MCU](https://img.shields.io/badge/MCU-nRF54LM20A-00A9CE)
 ![DRC](https://img.shields.io/badge/DRC-0%20erros-2E7D32)
-![Regras](https://img.shields.io/badge/regras%20de%20ficha-25%20de%2029%20medidas-2E7D32)
-![Caixa medida](https://img.shields.io/badge/dry%20run%20da%20caixa-12%20de%2012-2E7D32)
+![Regras](https://img.shields.io/badge/regras%20de%20ficha-32%20cumpridas%2C%200%20violadas-2E7D32)
+![Caixa medida](https://img.shields.io/badge/dry%20run%20da%20caixa-12%20cumpridas%2C%201%20sem%20medida-2E7D32)
 ![Montada](https://img.shields.io/badge/montada-n%C3%A3o-C62828)
 
 </div>
@@ -29,14 +29,14 @@ componente.
 
 > [!WARNING]
 > **Nada disto foi montado, medido ou fabricado.** A placa existe como
-> arquivo de CAD — 166 peças, 118 redes, 2.702 segmentos, 774 vias, **todas
+> arquivo de CAD — 166 peças, 118 redes, 2.683 segmentos, 769 vias, **todas
 > as ligações roteadas** (0 itens desconectados e 0 erros no DRC completo,
 > [CAD](cad/README.md#o-acabamento-uma-ligação-de-cada-vez), 2026-10-19) e
 > as 32 regras das fichas medidas, nenhuma violada e 2 com desvio aceito
 > ([09](09-dry-run-da-pcb.md))
 > —, e a caixa existe como proposta medida por um dry run próprio (12
-> regras cumpridas, 0 violadas, [04](04-pcb-e-caixa.md#a-placa-de-hoje-dentro-da-caixa-do-conceito));
-> mas nenhuma foi feita e nenhum componente passou por bancada. A revisão do esquemático de 2026-10-18 ([11](11-revisao-do-esquematico.md)) achou 6 bloqueios, e as correções entraram no gerador no mesmo dia; a placa ainda não vai para a fábrica: o roteamento fechou em 2026-10-19 e o dry run não viola regra nenhuma, mas faltam escolhas e confirmações da lista abaixo (o módulo e o espelhamento do mapa de pads dele, o domínio de tensão dos pinos do nPM1300, o conector SWD, a pinagem da bateria com o fabricante do pack), os arquivos de fábrica, e a dobra das fitas das telas e a polaridade do LED do Azumo só se confirmam com as peças na mão. Este aviso já disse "0 ligações sem trilha" com 47 em aberto:
+> regras cumpridas, 0 violadas e 1 ainda sem medida, [caixa](caixa/README.md));
+> mas nenhuma foi feita e nenhum componente passou por bancada. A revisão do esquemático de 2026-10-18 ([11](11-revisao-do-esquematico.md)) achou 6 bloqueios, e as correções entraram no gerador no mesmo dia; a placa ainda não vai para a fábrica: o roteamento fechou em 2026-10-19, o dry run não viola regra nenhuma e os arquivos da JLCPCB já saem do `make_fab.py`, mas faltam escolhas e confirmações da lista abaixo (o módulo e o espelhamento do mapa de pads dele, o domínio de tensão dos pinos do nPM1300, o conector SWD, a pinagem da bateria com o fabricante do pack), e a dobra das fitas das telas e a polaridade do LED do Azumo só se confirmam com as peças na mão. Este aviso já disse "0 ligações sem trilha" com 47 em aberto:
 > o DRC rodava só com erros, e os não roteados são aviso. Todo valor
 > abaixo vem de ficha ou de conta feita aqui, e está marcado como tal. O
 > que depende de decisão, de ficha por ler ou de medida está na lista de
@@ -55,13 +55,13 @@ fontes, cada um na sua pasta (2026-09-26):
 | [`esquematico/`](esquematico/) | [`gnssbike-esquematico.pdf`](esquematico/gnssbike-esquematico.pdf) | as sete páginas do esquemático, com símbolo de peça de verdade |
 | [`placa/`](placa/) | [`gnssbike-pcb.pdf`](placa/gnssbike-pcb.pdf) | sete páginas: uma por camada de cobre, mais a de conjunto |
 | | [`gnssbike-2d.svg`](placa/gnssbike-2d.svg) | as quatro camadas numa folha só, para olhar rápido |
-| | [`gnssbike-montagem.pdf`](placa/gnssbike-montagem.pdf) | o desenho de montagem, 156 peças com linha de chamada |
+| | [`gnssbike-montagem.pdf`](placa/gnssbike-montagem.pdf) | o desenho de montagem, 166 peças com linha de chamada |
 | [`caixa/`](caixa/README.md) | [`gnssbike-caixa.pdf`](caixa/gnssbike-caixa.pdf) e os `caixa-*.stl` | a proposta de caixa, medida pelo `dry_run_caixa.py`, e as peças para a primeira prova impressa |
-| [`docs/img/hardware/`](../docs/img/hardware/) | `gnssbike-3d-frente.png`, `-tras.png`, `-angulo.png` | a placa vista de cima, de baixo e em ângulo |
+| [`docs/img/hardware/`](../docs/img/hardware/) | `gnssbike-3d-frente.png`, `-tras.png`, `-angulo.png` | a placa vista de cima, de baixo e em ângulo, como sai na montagem da JDI (sem as peças que ela não leva, como o `J202`) |
 | | `gnssbike-3d-montagem.png` | a pilha: display, placa e célula |
 | | `gnssbike-3d-caixa-aberta.png`, `-frente.png`, `-explodida.png` | a caixa com a placa, a célula e o display dentro |
-| [`docs/img/`](../docs/img/) | [`manual-de-montagem.svg`](../docs/img/manual-de-montagem.svg) | o **manual de montagem**: as peças em escala e os oito passos |
-| | [`chicote-solar.svg`](../docs/img/chicote-solar.svg) | como ligar os seis módulos solares na placa |
+| [`docs/img/`](../docs/img/) | [`manual-de-montagem.svg`](../docs/img/manual-de-montagem.svg) | o **manual de montagem**: as peças em escala, o aparelho montado com dois cortes e os oito passos, com as medidas lidas da caixa e da placa |
+| | [`chicote-solar.svg`](../docs/img/chicote-solar.svg) | como ligar os seis módulos solares na placa, com a caixa e o `J103` lidos dos arquivos |
 
 ## Índice
 
