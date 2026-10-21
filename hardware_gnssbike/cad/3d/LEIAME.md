@@ -2,8 +2,8 @@
 
 Das 168 footprints da placa, contadas em 2026-10-21:
 - **121** usam o modelo da própria biblioteca do KiCad;
-- **3** usam o STEP do fabricante que está em `real/`: o USB-C `J101`, o conector da bateria `J102` e o do painel `J103`;
-- **24** recebem uma **caixa desenhada por este projeto**, com a medida do encapsulamento, porque nem o KiCad nem `real/` têm modelo para elas;
+- **6** usam o STEP do fabricante que está em `real/`: o USB-C `J101`, o conector da bateria `J102`, o do painel `J103` e os três Molex 503480 da tela, `J401`, `J402` e `J403` (STEP da Molex, pela TraceParts, baixados pelo dono em 2026-10-21);
+- **21** recebem uma **caixa desenhada por este projeto**, com a medida do encapsulamento, porque nem o KiCad nem `real/` têm modelo para elas;
 - **20** não têm corpo, e isso está certo: os furos, os pontos de teste, as ilhas do Tag-Connect e os dois jumpers de três ilhas (`JP301` e `JP401`). O 0 Ω dos jumpers, só o `make_3d.py` desenha, no par de ilhas da montagem.
 
 > [!NOTE]
@@ -25,7 +25,13 @@ Das 168 footprints da placa, contadas em 2026-10-21:
    numa exportação de teste. Escreva em `footprints.MODELO_GIRADO`, ou em
    `MODELO_GIRADO_VERSO` para peça no verso, e rode o `aplicar_modelos.py` de
    novo. Meça, não calcule: o STEP de fabricante pode vir girado 180° ou não
-   ([armadilhas](../../../.claude/contexto/armadilhas-hardware.md)).
+   ([armadilhas](../../../.claude/contexto/armadilhas-hardware.md)). Uma
+   entrada de três números gira só em Z; uma de seis gira em X, Y e Z e
+   desloca em X, Y e Z. É o caso dos Molex 503480, que a Molex desenha com o
+   Y para cima e a origem no circuito 1. Eles foram medidos numa placa só com
+   a peça: os pregos e os pés de solda, separados pela cor, contra as ilhas
+   deles, e dois deslocamentos de prova para saber para onde o corpo anda. No
+   verso, o giro e o sentido do deslocamento mudam, e se mede de novo.
 4. Rode `python ../dry_run_pcb.py`, cujas regras `ME4` a `ME6` medem o corpo
    contra as ilhas e o `F.Fab`, e depois `python ../make_3d.py`.
 
@@ -43,15 +49,12 @@ do KiCad.
 > **gerador**, em [`../footprints.py`](../footprints.py), com a altura de
 > cada caixa e a origem dela (`ALTURA` e `PACOTE`).
 
-## As 24 caixas, e o que procurar
+## As 21 caixas, e o que procurar
 
 O nome do footprint é o nome do arquivo a salvar em `real/`.
 
 | Footprint | Peças | Peça a procurar | A caixa representa bem? |
 |---|---|---|---|
-| `Molex_503480-1000_1x10_P0.50mm` | `J401` | Molex 503480-1000 (LCSC C127355) | não: o conector tem atuador e contatos |
-| `Molex_503480-0540_1x05_P0.50mm` | `J402` | Molex 503480-0540 (C5527934) | não |
-| `Molex_503480-0440_1x04_P0.50mm` | `J403` | Molex 503480-0440 (C3170007) | não |
 | `SW_TS-1088R_3.9x3mm` | `SW601` a `SW603` | XunPu TS-1088R-02026 (C455280) | não: falta o êmbolo |
 | `LED_RGB_3528_3.5x2.8mm` | `D601` | TUOZHAN S4-3528RGBTA-A (C2827321) | não: falta a lente |
 | `SOT-523` | `Q401`, `Q601` a `Q603` | Diodes DMG1012T-7 (C20512) | não: faltam as pernas |
@@ -73,8 +76,9 @@ mostram a da JDI.
 
 ## Prioridade, se for baixar
 
-Valem mais os três Molex da tela, as teclas, o LED RGB, os MOSFETs em SOT-523
-e o buzzer: neles a caixa fica longe da peça de verdade. Os CI, os módulos, a
+Valem mais as teclas, o LED RGB, os MOSFETs em SOT-523 e o buzzer: neles a
+caixa fica longe da peça de verdade. Os três Molex da tela já têm o STEP do
+fabricante. Os CI, os módulos, a
 antena e os indutores são blocos também na vida real, e a caixa com a medida
 da ficha já mostra o que importa: o contorno e a altura que a tampa tem de
 acomodar.

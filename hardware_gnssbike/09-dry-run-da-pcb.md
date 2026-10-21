@@ -187,6 +187,13 @@ pelo dono, 0 violadas, 0 sem medida**. O DRC completo do KiCad, com as
 malhas preenchidas e a ponte mínima de máscara da JLCPCB (0,1 mm), dá 0 itens
 desconectados e 0 erros.
 
+Em 2026-10-21 os três conectores da tela ganharam o STEP da Molex. A `ME5`
+voltou a medir os pés de solda do `J401` e do `J402` e passou a medir os do
+`J403`, e os três ficam do lado das ilhas de sinal. Com isso o dry run conta
+**35 medidas cumpridas**, com os mesmos 2 desvios, 0 violadas e 0 sem medida.
+A `ME6` mede 139 corpos, contando os indutores dos conversores e o `U402`,
+que estavam sem corpo.
+
 | Id | O que mediu |
 |---|---|
 | RF2 | a ponta de RF do módulo encosta na borda direita (0,0 mm), com o corpo para dentro |

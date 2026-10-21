@@ -123,7 +123,8 @@ def main() -> int:
             de = agora[0].rsplit("/", 1)[-1] if agora else "sem corpo"
             para = alvo[0].rsplit("/", 1)[-1] if alvo else "sem corpo"
             resumo.append(f"  {ref}: {de} -> {para}"
-                          + (f" (giro {alvo[3][2]:g}, desloca {alvo[1][0]:g}; {alvo[1][1]:g})" if alvo else ""))
+                          + (f" (giro {' '.join(f'{v:g}' for v in alvo[3])},"
+                             f" desloca {' '.join(f'{v:g}' for v in alvo[1])})" if alvo else ""))
         i = fim
     for a, b, novo in sorted(trocas, reverse=True):
         texto = texto[:a] + novo + texto[b:]

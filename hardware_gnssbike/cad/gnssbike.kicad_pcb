@@ -23480,15 +23480,15 @@
 			(roundrect_rratio 0.25)
 			(uuid "cb428b6b-e22f-4088-81c6-2acf0d3a55fe")
 		)
-		(model "${KIPRJMOD}/3d/Molex_503480-1000_1x10_P0.50mm.wrl"
+		(model "${KIPRJMOD}/3d/real/Molex_503480-1000_1x10_P0.50mm.step"
 			(offset
-				(xyz 0 0 0)
+				(xyz 2.25 0.22 0)
 			)
 			(scale
 				(xyz 1 1 1)
 			)
 			(rotate
-				(xyz 0 0 0)
+				(xyz -90 0 180)
 			)
 		)
 	)
@@ -30477,15 +30477,15 @@
 			(roundrect_rratio 0.25)
 			(uuid "ccd58c7c-4a78-4990-8b01-282850f37a6a")
 		)
-		(model "${KIPRJMOD}/3d/Molex_503480-0540_1x05_P0.50mm.wrl"
+		(model "${KIPRJMOD}/3d/real/Molex_503480-0540_1x05_P0.50mm.step"
 			(offset
-				(xyz 0 0 0)
+				(xyz 1 0.22 0)
 			)
 			(scale
 				(xyz 1 1 1)
 			)
 			(rotate
-				(xyz 0 0 0)
+				(xyz -90 0 180)
 			)
 		)
 	)
@@ -34623,15 +34623,15 @@
 			(roundrect_rratio 0.25)
 			(uuid "33c6cb87-5342-4bbc-8761-90c5a732e093")
 		)
-		(model "${KIPRJMOD}/3d/Molex_503480-0440_1x04_P0.50mm.wrl"
+		(model "${KIPRJMOD}/3d/real/Molex_503480-0440_1x04_P0.50mm.step"
 			(offset
-				(xyz 0 0 0)
+				(xyz -0.75 -0.22 0)
 			)
 			(scale
 				(xyz 1 1 1)
 			)
 			(rotate
-				(xyz 0 0 0)
+				(xyz -90 0 0)
 			)
 		)
 	)

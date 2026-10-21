@@ -695,8 +695,9 @@ def _ilhas_sob_o_corpo(ref: str, pecas: dict):
 
 # Os conectores cujos rabichos de solda a ME5 confere: os que tem modelo do
 # fabricante ou da biblioteca do KiCad no GLB e ilhas de sinal numa fileira.
-# J401 and J402 left on 2026-10-18 for the same reason (Molex 503480, boxes)
-RABICHOS_CONFERIDOS = ("J101", "J102", "J103")
+# J401 and J402 left on 2026-10-18, when the Molex 503480 was a box, and
+# came back with J403 on 2026-10-21, with Molex's own STEPs
+RABICHOS_CONFERIDOS = ("J101", "J102", "J103", "J401", "J402", "J403")
 
 # Models whose solder contacts have a colour of their own in the maker's
 # STEP, so that the contacts can be told from the nails' plate. Measured in

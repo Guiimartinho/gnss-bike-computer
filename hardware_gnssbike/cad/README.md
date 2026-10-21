@@ -283,7 +283,8 @@ inteiros.
 
 **Medido em 2026-10-19**, na placa do repositório: o DRC completo com as
 malhas preenchidas dá **0 itens desconectados, 0 erros e nenhuma trilha ou
-via solta**. O dry run mede as 32 regras e não viola nenhuma; duas têm
+via solta**. O dry run cumpre 35 medidas e não viola nenhuma (eram 32 até a
+`ME5` voltar a medir os conectores da tela, em 2026-10-21); duas regras têm
 desvio aceito pelo dono, com conferência de bancada
 ([09](../09-dry-run-da-pcb.md#resultado-de-2026-10-19-com-o-roteamento-fechado)).
 Os trilhos de carga correm com 0,25 mm nas faces de fora e estreitam a 0,15
@@ -411,9 +412,9 @@ borda; nada dentro das áreas de antena; a placa cabe na caixa; os três planos
 de terra existem.
 
 **Regras das fichas** ([09](../09-dry-run-da-pcb.md#resultado-de-2026-10-19-com-o-roteamento-fechado))
-— na placa roteada de 2026-10-19, **32 cumpridas, 2 com desvio aceito pelo
-dono** (o `RF9` e o `C210` da `AL1`), **nenhuma violada e nenhuma sem
-medida**. Antes, as duas que falhavam na placa de 55 × 97 caíram quando a
+— na placa roteada, **35 cumpridas desde 2026-10-21** (32 em 2026-10-19),
+**2 com desvio aceito pelo dono** (o `RF9` e o `C210` da `AL1`), **nenhuma
+violada e nenhuma sem medida**. Antes, as duas que falhavam na placa de 55 × 97 caíram quando a
 placa passou a ser dimensionada pelo circuito; o `RF9` voltou em 2026-10-18,
 quando o contorno da tela passou a servir às três (JDI, Sharp e Azumo) e a
 sombra dela chegou a 13,4 mm do módulo:
